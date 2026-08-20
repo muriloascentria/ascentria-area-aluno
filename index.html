@@ -1229,12 +1229,21 @@ const POST_TYPES = {
 };
 let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 
-const LIVE_SESSIONS = [
-  {id:1,title:'Encontro em grupo — Planejamento de Q4',date:'25 ago',day:'25',month:'AGO',time:'19h00 · Turma 2026.1',type:'upcoming',desc:'Sessão coletiva para estruturar metas e prioridades do próximo trimestre.'},
-  {id:2,title:'Hot Seat — Precificação de protocolos',date:'02 set',day:'02',month:'SET',time:'19h30 · Todas as turmas',type:'upcoming',desc:'Traga a precificação do seu protocolo para ser analisada ao vivo pela mentora e pela turma.'},
-  {id:3,title:'Aula ao vivo — Funil de Conteúdo',date:'10 ago',day:'10',month:'AGO',time:'Gravação disponível',type:'past',desc:'Como estruturar conteúdo por etapa de consciência do paciente.'},
-  {id:4,title:'Encontro em grupo — Boas-vindas 2026.1',date:'01 ago',day:'01',month:'AGO',time:'Gravação disponível',type:'past',desc:'Abertura da turma, apresentação do Método Essência e networking entre alunos.'},
-];
+let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+const MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function mapLiveSessionRow(row){
+  const [y,m,d] = row.event_date.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  const hoje = new Date(); hoje.setHours(0,0,0,0); dt.setHours(0,0,0,0);
+  return {
+    id: row.id, title: row.title,
+    date: `${String(d).padStart(2,'0')} ${MESES_ABREV[m-1]}`,
+    day: String(d).padStart(2,'0'), month: MESES_ABREV[m-1].toUpperCase(),
+    time: row.event_time || '', desc: row.description || '',
+    type: dt >= hoje ? 'upcoming' : 'past',
+    _eventDate: row.event_date,
+  };
+}
 
 let MATERIALS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 
@@ -1400,7 +1409,7 @@ async function bootstrapData(){
   STUDENTS.length = 0;
   profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
 
-  const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:postRows}] = await Promise.all([
+  const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:postRows},{data:liveRows}] = await Promise.all([
     sb.from('module_checklist_state').select('*'),
     sb.from('panel_data').select('*'),
     sb.from('panel_overrides').select('*'),
@@ -1408,7 +1417,11 @@ async function bootstrapData(){
     sb.from('courses').select('*, course_materials(*)').order('mod_id').order('order_index'),
     sb.from('materials').select('*').order('id'),
     sb.from('community_posts').select('*, community_comments(*), community_likes(*)').order('created_at',{ascending:false}),
+    sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
   ]);
+
+  LIVE_SESSIONS.length = 0;
+  (liveRows||[]).forEach(row=>LIVE_SESSIONS.push(mapLiveSessionRow(row)));
 
   Object.keys(CHECKLIST_STATE).forEach(k=>delete CHECKLIST_STATE[k]);
   (mcs||[]).forEach(row=>{
@@ -1557,6 +1570,16 @@ async function syncMaterialInsert(m){
 }
 function syncMaterialDelete(id){
   syncNow(sb.from('materials').delete().eq('id', id));
+}
+async function syncLiveSessionInsert(row){
+  const { data, error } = await sb.from('live_sessions').insert({
+    title: row.title, event_date: row.event_date, event_time: row.event_time, description: row.description,
+  }).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncLiveSessionDelete(id){
+  syncNow(sb.from('live_sessions').delete().eq('id', id));
 }
 
 /* ================= LOGIN ================= */
@@ -3056,6 +3079,32 @@ function renderConteudo(){
       <div class="field full"><label>Link (PDF, planilha, página, etc.)</label><input class="ps-input" type="text" id="new-material-link" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-material-btn">${icon('upload')} Publicar material</button></div>
     </div>
+
+    <h2 class="section-title">${icon('calendar')} Eventos / Aulas ao Vivo</h2>
+    <p class="section-sub" style="margin-top:-6px">Aparecem na Agenda ao Vivo de todos os alunos — como próximos encontros (se a data for futura) ou gravações (se já passou).</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Situação</th><th></th></tr></thead>
+        <tbody>
+          ${LIVE_SESSIONS.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
+            <tr>
+              <td style="min-width:220px">${l.title}</td>
+              <td style="white-space:nowrap">${l.date}</td>
+              <td style="min-width:180px">${l.time||'—'}</td>
+              <td>${l.type==='upcoming'? '<span class="pill live">Próximo</span>' : '<span class="pill replay">Passado</span>'}</td>
+              <td><button class="btn-mini danger" data-del-live="${l.id}">${icon('trash')} Remover</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="add-form">
+      <div class="field full"><label>Título do evento</label><input class="ps-input" type="text" id="new-live-title" placeholder="Ex.: Encontro em grupo — Planejamento de Q4"></div>
+      <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-live-date"></div>
+      <div class="field"><label>Horário / detalhes</label><input class="ps-input" type="text" id="new-live-time" placeholder="Ex.: 19h00 · Turma 2026.1"></div>
+      <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-live-desc" placeholder="Do que trata este encontro..."></textarea></div>
+      <div class="actions"><button class="btn-accent" id="add-live-btn">${icon('upload')} Publicar evento</button></div>
+    </div>
   `;
   bindConteudoCourseEvents();
   document.getElementById('add-course-btn').addEventListener('click',()=>{
@@ -3100,6 +3149,27 @@ function renderConteudo(){
     try{
       m.id = await syncMaterialInsert(m);
       MATERIALS.push(m);
+      renderConteudo();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-del-live]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const idx = LIVE_SESSIONS.findIndex(l=>l.id==btn.dataset.delLive);
+      if(idx>-1){ syncLiveSessionDelete(LIVE_SESSIONS[idx].id); LIVE_SESSIONS.splice(idx,1); }
+      renderConteudo();
+    });
+  });
+  document.getElementById('add-live-btn').addEventListener('click', async ()=>{
+    const title = document.getElementById('new-live-title').value.trim();
+    const eventDate = document.getElementById('new-live-date').value;
+    const eventTime = document.getElementById('new-live-time').value.trim();
+    const description = document.getElementById('new-live-desc').value.trim();
+    if(!title || !eventDate) return;
+    const btn = document.getElementById('add-live-btn');
+    btn.disabled = true;
+    try{
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, description});
+      LIVE_SESSIONS.push(mapLiveSessionRow(row));
       renderConteudo();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
