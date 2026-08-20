@@ -1794,7 +1794,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral};
-  const NEEDS_STUDENT = ['inicio','aulas','comunidade','dashboard','painel','sessoes','metas','interno'];
+  const NEEDS_STUDENT = ['inicio','comunidade','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
     return;
@@ -1850,7 +1850,7 @@ function renderInicio(){
 /* ================= VIEW: AULAS ================= */
 function courseTileHtml(c){
   const s = getStudent(currentStudentId);
-  const pct = s.courseProgress[c.id] || 0;
+  const pct = s ? (s.courseProgress[c.id] || 0) : 0;
   return `
     <button class="course-tile" data-id="${c.id}">
       <div class="course-thumb" style="--tint1:${c.tint[0]};--tint2:${c.tint[1]}">
@@ -1886,7 +1886,7 @@ function renderAulas(){
 function openCourseModal(id){
   const c = getCourse(id);
   const s = getStudent(currentStudentId);
-  const pct = s.courseProgress[id]||0;
+  const pct = s ? (s.courseProgress[id]||0) : 0;
   const done = pct===100;
   const yt = youtubeId(c.videoLink);
   const materiais = c.materiais || [];
@@ -1902,7 +1902,7 @@ function openCourseModal(id){
       <h3>${c.title}</h3>
       <p class="desc">${c.desc} <br><br>${c.duration}.</p>
       <div class="modal-actions">
-        <button class="btn-accent ${done?'done':''}" id="modal-toggle-done">${done? icon('check')+' Concluída' : 'Marcar como assistida'}</button>
+        ${s? `<button class="btn-accent ${done?'done':''}" id="modal-toggle-done">${done? icon('check')+' Concluída' : 'Marcar como assistida'}</button>` : ''}
         ${(c.videoLink && !yt)? `<a class="btn-outline" href="${c.videoLink}" target="_blank" rel="noopener">${icon('video')} Assistir no link</a>` : ''}
         <button class="btn-outline" id="modal-close-2">Fechar</button>
       </div>
@@ -1920,12 +1920,14 @@ function openCourseModal(id){
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('modal-close').addEventListener('click',closeModal);
   document.getElementById('modal-close-2').addEventListener('click',closeModal);
-  document.getElementById('modal-toggle-done').addEventListener('click',()=>{
-    s.courseProgress[id] = s.courseProgress[id]===100? 60 : 100;
-    syncCourseProgress(s.id, id, s.courseProgress[id]);
-    closeModal();
-    renderCurrentView();
-  });
+  if(s){
+    document.getElementById('modal-toggle-done').addEventListener('click',()=>{
+      s.courseProgress[id] = s.courseProgress[id]===100? 60 : 100;
+      syncCourseProgress(s.id, id, s.courseProgress[id]);
+      closeModal();
+      renderCurrentView();
+    });
+  }
 }
 function closeModal(){ document.getElementById('modal-backdrop').classList.remove('open'); }
 document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.target.id==='modal-backdrop') closeModal(); });
