@@ -314,8 +314,8 @@
     color:var(--text);padding:10px 12px;font-size:13.5px;resize:vertical;min-height:92px;font-family:inherit;
   }
   .composer textarea:focus{outline:none;border-color:var(--accent);}
-  .composer .send-wrap{display:flex;align-items:flex-end;}
-  .type-select{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .composer-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap;}
+  .type-select{display:flex;gap:6px;flex-wrap:wrap;}
   .type-pill{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim);background:var(--bg-elev);}
   .type-pill .icon{width:12px;height:12px;}
   .type-pill.tag-duvida.active{background:var(--danger-soft);color:var(--danger);border-color:transparent;}
@@ -342,7 +342,9 @@
   .post-type-badge.tag-conquista{background:var(--success-soft);color:var(--success);}
   .staff-note{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--danger);background:var(--danger-soft);padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:12px;}
   .staff-note.answered{color:var(--success);background:var(--success-soft);}
+  .staff-note.new-reply{color:var(--accent-2);background:var(--accent-soft);}
   .staff-tag{display:inline-block;font-size:9.5px;font-weight:800;color:var(--accent-2);background:var(--accent-soft);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle;text-transform:uppercase;letter-spacing:.02em;}
+  .post.post-unseen{border-color:var(--accent-2);box-shadow:0 0 0 1px var(--accent-2);}
   .post-text{font-size:13.5px;line-height:1.55;color:var(--text);margin-bottom:12px;}
   .post-actions{display:flex;gap:18px;}
   .post-action{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);}
@@ -1498,7 +1500,7 @@ async function bootstrapData(){
   (postRows||[]).forEach(p=>{
     COMMUNITY_POSTS.push({
       id:p.id, authorId:p.author_id, type:p.type, time:timeAgo(p.created_at), text:p.text,
-      courseId:p.course_id||null,
+      courseId:p.course_id||null, notifyAuthor:!!p.notify_author,
       likes:(p.community_likes||[]).length,
       liked:(p.community_likes||[]).some(l=>l.student_id===currentUser.id),
       comments:(p.community_comments||[]).map(c=>({authorId:c.author_id, text:c.text})),
@@ -1544,7 +1546,32 @@ function syncPanelOverride(sid, topicId, filled){
 async function createCommunityPost(authorId, type, text, courseId){
   const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text, course_id:courseId||null}).select().single();
   if(error) throw error;
-  return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, courseId:data.course_id||null, likes:0, liked:false, comments:[]};
+  return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, courseId:data.course_id||null, notifyAuthor:false, likes:0, liked:false, comments:[]};
+}
+function setPostNotifyAuthor(postId, value){
+  syncNow(sb.from('community_posts').update({notify_author:value}).eq('id',postId));
+}
+/* Quando alguém comenta na publicação de outra pessoa, sinaliza o autor original (usado sobretudo
+   para avisar o aluno quando a equipe interna responde a uma dúvida/comentário dele). */
+function maybeNotifyPostAuthor(p){
+  if(p.authorId===actingAuthorId()) return; // comentando na própria publicação, ninguém a avisar
+  p.notifyAuthor = true;
+  setPostNotifyAuthor(p.id, true);
+}
+/* Marca como "vistas" as publicações do próprio usuário que tinham uma resposta nova pendente —
+   chamado depois de renderizar uma lista de posts, para o sininho não continuar acusando novidade
+   depois que a pessoa já abriu a tela e viu a resposta. */
+function markVisiblePostsSeen(posts){
+  const myId = actingAuthorId();
+  let changed = false;
+  posts.forEach(p=>{
+    if(p.authorId===myId && p.notifyAuthor){
+      p.notifyAuthor = false;
+      setPostNotifyAuthor(p.id, false);
+      changed = true;
+    }
+  });
+  if(changed) updateNotifBadge();
 }
 function syncCommunityLike(postId, sid, liked){
   if(liked) syncNow(sb.from('community_likes').upsert({post_id:postId, student_id:sid}));
@@ -1738,13 +1765,17 @@ function isAnswered(p){
 function updateNotifBadge(){
   const dot = document.getElementById('notif-dot');
   const badge = document.getElementById('notif-badge');
-  const duvidas = COMMUNITY_POSTS.filter(p=>p.type==='duvida' && !isAnswered(p)).length;
   if(currentRole==='staff'){
+    const duvidas = COMMUNITY_POSTS.filter(p=>p.type==='duvida' && !isAnswered(p)).length;
     dot.style.display = 'none';
     badge.style.display = duvidas>0 ? 'flex' : 'none';
     badge.textContent = duvidas;
   } else {
-    dot.style.display = duvidas>0 ? 'block' : 'none';
+    // Para quem não é equipe interna, o sino avisa quando UMA publicação/comentário SEU recebeu
+    // uma resposta nova ainda não vista (ver maybeNotifyPostAuthor / markVisiblePostsSeen).
+    const myId = actingAuthorId();
+    const hasNewReply = myId ? COMMUNITY_POSTS.some(p=>p.authorId===myId && p.notifyAuthor) : false;
+    dot.style.display = hasNewReply ? 'block' : 'none';
     badge.style.display = 'none';
   }
 }
@@ -1982,11 +2013,13 @@ function courseCommentsHtml(c){
         ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
         <div style="flex:1">
           <textarea id="cm-new-post" placeholder="Deixe uma dúvida ou comentário sobre esta aula..."></textarea>
-          <div class="type-select" id="cm-type-select">
-            ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedCoursePostType===k?'active':''}" data-cm-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+          <div class="composer-footer">
+            <div class="type-select" id="cm-type-select">
+              ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedCoursePostType===k?'active':''}" data-cm-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+            </div>
+            <button class="btn-accent" id="cm-post-btn">Publicar</button>
           </div>
         </div>
-        <div class="send-wrap"><button class="btn-accent" id="cm-post-btn">Publicar</button></div>
       </div>` : `<p class="section-sub">Nenhuma conta disponível para comentar no momento.</p>`}
       <div id="cm-posts-list">${posts.map(p=>postHtml(p,false,false)).join('') || '<p class="section-sub">Nenhum comentário nesta aula ainda.</p>'}</div>
     </div>`;
@@ -1994,6 +2027,7 @@ function courseCommentsHtml(c){
 function bindCourseComments(c){
   const modalEl = document.getElementById('modal');
   const me = getPerson(actingAuthorId());
+  markVisiblePostsSeen(COMMUNITY_POSTS.filter(p=>p.courseId===c.id));
   modalEl.querySelectorAll('#cm-type-select [data-cm-type]').forEach(btn=>{
     btn.addEventListener('click',()=>{ selectedCoursePostType = btn.dataset.cmType; openCourseModal(c.id); });
   });
@@ -2030,6 +2064,7 @@ function bindCourseComments(c){
       const p = COMMUNITY_POSTS.find(x=>x.id==pid);
       p.comments.push({authorId:actingAuthorId(), text:input.value.trim()});
       syncCommunityComment(p.id, actingAuthorId(), input.value.trim());
+      maybeNotifyPostAuthor(p);
       updateNotifBadge();
       openCourseModal(c.id);
     };
@@ -2197,14 +2232,16 @@ function postHtml(p,compact,showCourseTag){
   const replyAuthor = getPerson(actingAuthorId());
   const answered = isAnswered(p);
   const nameTag = (person)=> person.role==='staff' ? ` <span class="staff-tag">Equipe interna</span>` : '';
+  const isMine = p.authorId===actingAuthorId();
   return `
-    <div class="post post-border-${t.css}">
+    <div class="post post-border-${t.css}${(isMine && p.notifyAuthor)?' post-unseen':''}">
       <div class="post-head">
         ${initialsAvatar(author.initials,author.color,undefined,author.avatarUrl)}
         <div class="who"><div class="name">${author.name}${nameTag(author)}</div><div class="time">${p.time}</div></div>
         <span class="post-type-badge tag-${t.css}">${icon(t.icon,'tiny')}${t.label}</span>
       </div>
       ${course? `<div class="post-course-tag">${icon('film','tiny')} Sobre a aula: <b>${course.title}</b></div>` : ''}
+      ${(isMine && p.notifyAuthor)? `<div class="staff-note new-reply">${icon('bell','tiny')} Nova resposta da equipe interna!</div>` : ''}
       <div class="post-text">${p.text}</div>
       ${p.type==='duvida'? (answered
         ? `<div class="staff-note answered">${icon('check','tiny')} Respondida pela equipe interna.</div>`
@@ -2242,17 +2279,20 @@ function renderComunidade(){
       ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
       <div style="flex:1">
         <textarea id="new-post" placeholder="Compartilhe algo com a turma..."></textarea>
-        <div class="type-select" id="type-select">
-          ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+        <div class="composer-footer">
+          <div class="type-select" id="type-select">
+            ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+          </div>
+          <button class="btn-accent" id="post-btn">Publicar</button>
         </div>
       </div>
-      <div class="send-wrap"><button class="btn-accent" id="post-btn">Publicar</button></div>
     </div>` : ''}
     <div class="community-filters" id="community-filters">
       ${filters.map(f=>`<button class="filter-tab ${communityFilter===f.id?'active':''}" data-filter="${f.id}">${f.label}</button>`).join('')}
     </div>
     <div id="posts-list">${visible.map(p=>postHtml(p,false,true)).join('') || '<p class="section-sub">Nenhuma publicação nesse filtro ainda.</p>'}</div>
   `;
+  markVisiblePostsSeen(visible);
   root.querySelectorAll('#type-select [data-type]').forEach(btn=>{
     btn.addEventListener('click',()=>{ selectedPostType = btn.dataset.type; renderComunidade(); });
   });
@@ -2292,6 +2332,7 @@ function renderComunidade(){
       const p = COMMUNITY_POSTS.find(x=>x.id==pid);
       p.comments.push({authorId:actingAuthorId(), text:input.value.trim()});
       syncCommunityComment(p.id, actingAuthorId(), input.value.trim());
+      maybeNotifyPostAuthor(p);
       updateNotifBadge();
       renderComunidade();
     };
