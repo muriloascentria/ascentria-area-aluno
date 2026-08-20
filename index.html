@@ -44,6 +44,10 @@
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
   ::-webkit-scrollbar-track{background:transparent;}
   a{color:inherit;text-decoration:none;}
+  .desc a{color:var(--accent);text-decoration:underline;word-break:break-word;}
+  .post-course-tag{font-size:11.5px;color:var(--text-mute);display:flex;align-items:center;gap:4px;margin:2px 0 8px;}
+  .course-comments{margin-top:22px;padding-top:18px;border-top:1px solid var(--border);}
+  .course-comments .composer{margin-bottom:16px;}
   button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
   table{font-family:inherit;}
   .icon{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0;}
@@ -247,7 +251,10 @@
     height:120px;position:relative;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(135deg,var(--tint1,#8d916f),var(--tint2,#bec6b1));
   }
-  .course-thumb .play-fill{width:34px;height:34px;opacity:.92;}
+  .course-thumb.has-cover{background-size:cover;background-position:center;}
+  .course-thumb.has-cover::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.18);}
+  .course-thumb .play-badge{position:relative;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;}
+  .course-thumb .play-fill{width:20px;height:20px;opacity:.95;color:#fff;}
   .course-thumb .progress-mini{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(0,0,0,0.35);}
   .course-thumb .progress-mini .fill{height:100%;background:#fff;}
   .course-thumb .done-badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
@@ -652,7 +659,7 @@
     <div class="nav-group-label">Minha Área</div>
     <button class="nav-item individual" data-view="sessoes"></button>
     <button class="nav-item individual" data-view="metas"></button>
-    <a class="nav-item individual" id="nav-prontuarios" href="https://app.ascentria.cloud/" target="_blank" rel="noopener">
+    <a class="nav-item individual" id="nav-prontuarios" href="https://app.ascentria.cloud/dashboard" target="_blank" rel="noopener">
       <svg class="icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
       <span>Prontuários</span>
     </a>
@@ -1254,6 +1261,7 @@ let currentView = 'inicio';
 let panelQuadrantId = null;
 let communityFilter = 'todas';
 let selectedPostType = 'interacao';
+let selectedCoursePostType = 'duvida'; // tipo padrão pré-selecionado no mural de comentários dentro de cada aula
 let CHECKLIST_STATE = {}; // in-memory, chave `${studentId}:${moduleId}` -> array de booleans
 let internoDiagTab = 'wispform';
 let INTERNAL_DIAG = {}; // in-memory, chave `${studentId}:wispform`/`:abertura` -> array de respostas (flat)
@@ -1472,6 +1480,7 @@ async function bootstrapData(){
   (postRows||[]).forEach(p=>{
     COMMUNITY_POSTS.push({
       id:p.id, authorId:p.author_id, type:p.type, time:timeAgo(p.created_at), text:p.text,
+      courseId:p.course_id||null,
       likes:(p.community_likes||[]).length,
       liked:(p.community_likes||[]).some(l=>l.student_id===currentUser.id),
       comments:(p.community_comments||[]).map(c=>({authorId:c.author_id, text:c.text})),
@@ -1514,10 +1523,10 @@ function syncPanelData(sid, topicId, data){
 function syncPanelOverride(sid, topicId, filled){
   syncNow(sb.from('panel_overrides').upsert({student_id:sid, topic_id:topicId, filled}));
 }
-async function createCommunityPost(authorId, type, text){
-  const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text}).select().single();
+async function createCommunityPost(authorId, type, text, courseId){
+  const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text, course_id:courseId||null}).select().single();
   if(error) throw error;
-  return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, likes:0, liked:false, comments:[]};
+  return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, courseId:data.course_id||null, likes:0, liked:false, comments:[]};
 }
 function syncCommunityLike(postId, sid, liked){
   if(liked) syncNow(sb.from('community_likes').upsert({post_id:postId, student_id:sid}));
@@ -1841,7 +1850,7 @@ function renderInicio(){
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
 
     <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
-    <div>${COMMUNITY_POSTS.slice(0,2).map(p=>postHtml(p,true)).join('')}</div>
+    <div>${COMMUNITY_POSTS.slice(0,2).map(p=>postHtml(p,true,true)).join('')}</div>
   `;
   bindCourseTiles();
   document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
@@ -1851,10 +1860,12 @@ function renderInicio(){
 function courseTileHtml(c){
   const s = getStudent(currentStudentId);
   const pct = s ? (s.courseProgress[c.id] || 0) : 0;
+  const yt = youtubeId(c.videoLink);
+  const coverStyle = yt ? `background-image:url('https://img.youtube.com/vi/${yt}/hqdefault.jpg');` : '';
   return `
     <button class="course-tile" data-id="${c.id}">
-      <div class="course-thumb" style="--tint1:${c.tint[0]};--tint2:${c.tint[1]}">
-        ${fillIcon('play','play-fill')}
+      <div class="course-thumb ${yt?'has-cover':''}" style="--tint1:${c.tint[0]};--tint2:${c.tint[1]};${coverStyle}">
+        <div class="play-badge">${fillIcon('play','play-fill')}</div>
         ${pct===100? `<div class="done-badge">${icon('check')}</div>`:''}
         <div class="progress-mini"><div class="fill" style="width:${pct}%"></div></div>
       </div>
@@ -1900,7 +1911,7 @@ function openCourseModal(id){
     <div class="modal-body">
       <div class="cat">${c.cat}</div>
       <h3>${c.title}</h3>
-      <p class="desc">${c.desc} <br><br>${c.duration}.</p>
+      <p class="desc">${linkify(c.desc)} <br><br>${escapeHtml(c.duration)}.</p>
       <div class="modal-actions">
         ${s? `<button class="btn-accent ${done?'done':''}" id="modal-toggle-done">${done? icon('check')+' Concluída' : 'Marcar como assistida'}</button>` : ''}
         ${(c.videoLink && !yt)? `<a class="btn-outline" href="${c.videoLink}" target="_blank" rel="noopener">${icon('video')} Assistir no link</a>` : ''}
@@ -1916,6 +1927,7 @@ function openCourseModal(id){
             </div>
           `).join('')}
         </div>` : ''}
+      ${courseCommentsHtml(c)}
     </div>`;
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('modal-close').addEventListener('click',closeModal);
@@ -1928,6 +1940,74 @@ function openCourseModal(id){
       renderCurrentView();
     });
   }
+  bindCourseComments(c);
+}
+/* ---- Dúvidas e comentários por aula — reaproveita o mesmo modelo de post da Comunidade, filtrado por courseId ---- */
+function courseCommentsHtml(c){
+  const s = getStudent(currentStudentId);
+  const posts = COMMUNITY_POSTS.filter(p=>p.courseId===c.id);
+  return `
+    <div class="course-comments">
+      <div class="ps-h">${icon('comment')} Dúvidas e comentários desta aula</div>
+      ${s? `
+      <div class="composer">
+        ${initialsAvatar(s.initials,s.color,undefined,s.avatarUrl)}
+        <div style="flex:1">
+          <textarea id="cm-new-post" placeholder="Deixe uma dúvida ou comentário sobre esta aula..."></textarea>
+          <div class="type-select" id="cm-type-select">
+            ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedCoursePostType===k?'active':''}" data-cm-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+          </div>
+        </div>
+        <div class="send-wrap"><button class="btn-accent" id="cm-post-btn">Publicar</button></div>
+      </div>` : `<p class="section-sub">Selecione um aluno em "Visão Geral" para comentar em nome dele.</p>`}
+      <div id="cm-posts-list">${posts.map(p=>postHtml(p,false,false)).join('') || '<p class="section-sub">Nenhum comentário nesta aula ainda.</p>'}</div>
+    </div>`;
+}
+function bindCourseComments(c){
+  const modalEl = document.getElementById('modal');
+  const s = getStudent(currentStudentId);
+  modalEl.querySelectorAll('#cm-type-select [data-cm-type]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ selectedCoursePostType = btn.dataset.cmType; openCourseModal(c.id); });
+  });
+  const postBtn = modalEl.querySelector('#cm-post-btn');
+  if(postBtn){
+    postBtn.addEventListener('click', async ()=>{
+      const ta = modalEl.querySelector('#cm-new-post');
+      if(!ta.value.trim()) return;
+      postBtn.disabled = true;
+      try{
+        const post = await createCommunityPost(currentStudentId, selectedCoursePostType, ta.value.trim(), c.id);
+        COMMUNITY_POSTS.unshift(post);
+        updateNotifBadge();
+        openCourseModal(c.id);
+      }catch(e){ console.error(e); postBtn.disabled = false; }
+    });
+  }
+  modalEl.querySelectorAll('[data-like]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!s) return;
+      const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.like);
+      p.liked = !p.liked;
+      p.likes += p.liked? 1 : -1;
+      syncCommunityLike(p.id, currentStudentId, p.liked);
+      openCourseModal(c.id);
+    });
+  });
+  modalEl.querySelectorAll('[data-comment-send]').forEach(btn=>{
+    const send = ()=>{
+      if(!s) return;
+      const pid = btn.dataset.commentSend;
+      const input = modalEl.querySelector(`[data-comment-input="${pid}"]`);
+      if(!input.value.trim()) return;
+      const p = COMMUNITY_POSTS.find(x=>x.id==pid);
+      p.comments.push({authorId:currentStudentId, text:input.value.trim()});
+      syncCommunityComment(p.id, currentStudentId, input.value.trim());
+      openCourseModal(c.id);
+    };
+    btn.addEventListener('click',send);
+    const input = modalEl.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+  });
 }
 function closeModal(){ document.getElementById('modal-backdrop').classList.remove('open'); }
 document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.target.id==='modal-backdrop') closeModal(); });
@@ -2079,9 +2159,12 @@ function openCadastroModal(){
 }
 
 /* ================= VIEW: COMUNIDADE ================= */
-function postHtml(p,compact){
+function postHtml(p,compact,showCourseTag){
   const author = getStudent(p.authorId);
+  if(!author) return '';
   const t = POST_TYPES[p.type] || POST_TYPES.interacao;
+  const course = (showCourseTag && p.courseId) ? getCourse(p.courseId) : null;
+  const replyAuthor = getStudent(currentStudentId);
   return `
     <div class="post post-border-${t.css}">
       <div class="post-head">
@@ -2089,6 +2172,7 @@ function postHtml(p,compact){
         <div class="who"><div class="name">${author.name}</div><div class="time">${p.time}</div></div>
         <span class="post-type-badge tag-${t.css}">${icon(t.icon,'tiny')}${t.label}</span>
       </div>
+      ${course? `<div class="post-course-tag">${icon('film','tiny')} Sobre a aula: <b>${course.title}</b></div>` : ''}
       <div class="post-text">${p.text}</div>
       ${p.type==='duvida'? `<div class="staff-note">${icon('bell','tiny')} Equipe interna notificada — vamos responder em breve.</div>` : ''}
       <div class="post-actions">
@@ -2097,12 +2181,13 @@ function postHtml(p,compact){
       </div>
       ${!compact? `
         <div class="comments">
-          ${p.comments.map(c=>`<div class="comment">${initialsAvatar(getStudent(c.authorId).initials,getStudent(c.authorId).color,22,getStudent(c.authorId).avatarUrl)}<div><b>${getStudent(c.authorId).name}</b>${c.text}</div></div>`).join('')}
+          ${p.comments.map(c=>{ const a=getStudent(c.authorId); return a? `<div class="comment">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div><b>${a.name}</b>${c.text}</div></div>` : ''; }).join('')}
+          ${replyAuthor? `
           <div class="comment-composer">
-            ${initialsAvatar(getStudent(currentStudentId).initials,getStudent(currentStudentId).color,22,getStudent(currentStudentId).avatarUrl)}
+            ${initialsAvatar(replyAuthor.initials,replyAuthor.color,22,replyAuthor.avatarUrl)}
             <input type="text" placeholder="Escreva um comentário..." data-comment-input="${p.id}">
             <button class="btn-mini" data-comment-send="${p.id}">Enviar</button>
-          </div>
+          </div>` : ''}
         </div>`:''}
     </div>`;
 }
@@ -2130,7 +2215,7 @@ function renderComunidade(){
     <div class="community-filters" id="community-filters">
       ${filters.map(f=>`<button class="filter-tab ${communityFilter===f.id?'active':''}" data-filter="${f.id}">${f.label}</button>`).join('')}
     </div>
-    <div id="posts-list">${visible.map(p=>postHtml(p,false)).join('') || '<p class="section-sub">Nenhuma publicação nesse filtro ainda.</p>'}</div>
+    <div id="posts-list">${visible.map(p=>postHtml(p,false,true)).join('') || '<p class="section-sub">Nenhuma publicação nesse filtro ainda.</p>'}</div>
   `;
   document.querySelectorAll('#type-select [data-type]').forEach(btn=>{
     btn.addEventListener('click',()=>{ selectedPostType = btn.dataset.type; renderComunidade(); });
@@ -2396,6 +2481,17 @@ function renderPainel(){
 }
 /* ---- Painel do Método: dados estruturados por seção (fields / list / table / swatches / checklist) ---- */
 function escapeAttr(v){ return String(v==null? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function escapeHtml(v){ return String(v==null? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* Converte URLs "https://..."/"http://..." dentro de um texto em links clicáveis, escapando o resto do texto com segurança. */
+function linkify(text){
+  const escaped = escapeHtml(text);
+  return escaped.replace(/(https?:\/\/[^\s<]+)/g, (url)=>{
+    const m = url.match(/[).,;:!?]+$/);
+    const trail = m ? m[0] : '';
+    const clean = trail ? url.slice(0, -trail.length) : url;
+    return `<a href="${clean}" target="_blank" rel="noopener">${clean}</a>${trail}`;
+  });
+}
 function getTopicData(sid, topicId){
   const key = sid+':'+topicId;
   if(!(key in PANEL_DATA)){
