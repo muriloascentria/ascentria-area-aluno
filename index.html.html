@@ -1,0 +1,3362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ascentria · Método Essência — Área do Aluno</title>
+<style>
+  :root{
+    /* Paleta Ascentria — Manual da Marca (2024, @studioanamo):
+       Reseda Green (cor principal) = accent · French Gray (cor principal) = shared
+       Copper (cor secundária) = individual · Platinum/Pakistan/Mint = tons de apoio */
+    --bg:#0c0d0b;
+    --bg-elev:#151713;
+    --bg-card:#1c1e19;
+    --bg-card-hover:#242720;
+    --border:#2c3028;
+    --text:#f2f2f5;
+    --text-dim:#a3a3b8;
+    --text-mute:#6b6b82;
+    --accent:#8d916f;
+    --accent-2:#bec6b1;
+    --accent-soft:rgba(141,145,111,0.15);
+    --individual:#ab6f30;
+    --individual-soft:rgba(171,111,48,0.15);
+    --shared:#7c89a5;
+    --shared-soft:rgba(124,137,165,0.15);
+    --success:#22c55e;
+    --success-soft:rgba(34,197,94,0.15);
+    --danger:#f43f5e;
+    --danger-soft:rgba(244,63,94,0.15);
+    --radius:14px;
+    --radius-sm:8px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  table{font-family:inherit;}
+  .icon{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;display:block;flex-shrink:0;}
+  .icon.tiny{width:12px;height:12px;}
+
+  /* ---------- LOGIN ---------- */
+  #login-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:radial-gradient(circle at 20% 20%, rgba(141,145,111,0.18), transparent 45%),
+               radial-gradient(circle at 80% 70%, rgba(171,111,48,0.12), transparent 45%),
+               var(--bg);
+    padding:24px;
+  }
+  .login-box{
+    width:100%;
+    max-width:460px;
+    background:var(--bg-elev);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:40px 36px;
+  }
+  .brand-mark{
+    display:flex;align-items:center;gap:10px;margin-bottom:6px;
+  }
+  .brand-dot{width:12px;height:12px;border-radius:4px;background:linear-gradient(135deg,var(--accent),var(--accent-2));flex-shrink:0;}
+  .brand-name{font-size:14px;font-weight:700;letter-spacing:0.3px;}
+  .login-box h1{font-size:22px;font-weight:700;margin-top:22px;margin-bottom:6px;}
+  .login-box p.sub{color:var(--text-dim);font-size:14px;margin-bottom:26px;}
+  .student-pick{
+    display:flex;flex-direction:column;gap:10px;margin-bottom:22px;
+  }
+  .student-card{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--bg-card);
+    transition:border-color .15s, background .15s;
+    text-align:left;
+  }
+  .student-card:hover{border-color:var(--accent);background:var(--bg-card-hover);}
+  .student-card.selected{border-color:var(--accent);background:var(--accent-soft);}
+  .avatar{
+    width:38px;height:38px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;color:#0c0d0b;flex-shrink:0;
+  }
+  .student-card .meta{flex:1;min-width:0;}
+  .student-card .meta .name{font-size:14px;font-weight:600;}
+  .student-card .meta .turma{font-size:12px;color:var(--text-mute);}
+  .login-box .field{margin-bottom:16px;}
+  .login-box .field label{display:block;font-size:11.5px;font-weight:600;color:var(--text-dim);margin-bottom:6px;}
+  .btn-primary{
+    width:100%;padding:13px;border-radius:var(--radius-sm);
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;font-weight:700;font-size:14px;
+    margin-top:6px;
+  }
+  .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-primary.staff{background:linear-gradient(135deg,var(--danger),#fb7185);}
+  .login-note{margin-top:16px;font-size:12px;color:var(--text-mute);line-height:1.5;}
+  .login-tabs{display:flex;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;margin:22px 0 24px;}
+  .login-tabs button{flex:1;padding:10px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:6px;}
+  .login-tabs button .icon{width:14px;height:14px;}
+  .login-tabs button.active{background:var(--accent);color:#fff;}
+  .login-tabs button.active.staff-tab{background:var(--danger);}
+  .staff-login-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);margin-bottom:22px;}
+  .staff-login-card .icon-wrap{width:42px;height:42px;border-radius:50%;background:var(--danger-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .staff-login-card .icon-wrap .icon{stroke:var(--danger);width:20px;height:20px;}
+  .staff-login-card .name{font-size:14px;font-weight:700;}
+  .staff-login-card .email{font-size:12px;color:var(--text-mute);}
+
+  /* ---------- APP SHELL ---------- */
+  #app{display:none;min-height:100vh;}
+  #app.active{display:flex;}
+  .sidebar{
+    width:250px;flex-shrink:0;
+    background:var(--bg-elev);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+    padding:22px 14px;
+    position:sticky;top:0;height:100vh;
+    overflow-y:auto;
+  }
+  .sidebar .brand-mark{padding:0 8px;margin-bottom:28px;}
+  .nav-group-label{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.8px;
+    color:var(--text-mute);padding:0 10px;margin:18px 0 8px;font-weight:700;
+    display:flex;align-items:center;gap:6px;
+  }
+  .nav-group-label .icon{width:12px;height:12px;stroke:var(--danger);}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;
+    padding:9px 10px;border-radius:var(--radius-sm);
+    font-size:13.5px;font-weight:500;color:var(--text-dim);
+    margin-bottom:2px;width:100%;text-align:left;
+  }
+  .nav-item:hover{background:var(--bg-card);color:var(--text);}
+  .nav-item.active{background:var(--accent-soft);color:var(--accent-2);font-weight:700;}
+  .nav-item.active .icon{stroke:var(--accent-2);}
+  .nav-item.individual.active{background:var(--individual-soft);color:var(--individual);}
+  .nav-item.individual.active .icon{stroke:var(--individual);}
+  .nav-item.shared.active{background:var(--shared-soft);color:var(--shared);}
+  .nav-item.shared.active .icon{stroke:var(--shared);}
+  .nav-item.restrict.active{background:var(--danger-soft);color:var(--danger);}
+  .nav-item.restrict.active .icon{stroke:var(--danger);}
+  .sidebar-footer{margin-top:auto;padding-top:14px;border-top:1px solid var(--border);}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{
+    height:64px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;border-bottom:1px solid var(--border);
+    position:sticky;top:0;background:rgba(12,13,11,0.85);backdrop-filter:blur(8px);z-index:20;
+    gap:16px;
+  }
+  .topbar-title{font-size:16px;font-weight:700;white-space:nowrap;}
+  .topbar-title .badge-individual{
+    font-size:11px;font-weight:700;color:var(--individual);background:var(--individual-soft);
+    padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle;white-space:nowrap;
+  }
+  .topbar-title .badge-shared{
+    font-size:11px;font-weight:700;color:var(--shared);background:var(--shared-soft);
+    padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle;white-space:nowrap;
+  }
+  .topbar-title .badge-restrict{
+    font-size:11px;font-weight:700;color:var(--danger);background:var(--danger-soft);
+    padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle;white-space:nowrap;
+  }
+  .topbar-right{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .role-toggle{display:flex;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:3px;gap:2px;}
+  .role-toggle button{padding:6px 12px;border-radius:16px;font-size:11.5px;font-weight:700;color:var(--text-dim);white-space:nowrap;}
+  .role-toggle button.active{background:var(--accent);color:#fff;}
+  .role-toggle button.active.staff-active{background:var(--danger);}
+  .icon-btn{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-card);color:var(--text-dim);position:relative;flex-shrink:0;}
+  .icon-btn:hover{color:var(--text);}
+  #menu-btn{display:none;}
+  .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:45;}
+  .sidebar-backdrop.open{display:block;}
+  .dot-alert{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--danger);}
+  .notif-badge{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;padding:0 4px;border-radius:20px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;border:2px solid var(--bg-elev);}
+  .profile-switch{position:relative;}
+  .profile-btn{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border-radius:24px;background:var(--bg-card);}
+  .profile-btn .avatar{width:26px;height:26px;font-size:11px;}
+  .profile-btn span{font-size:13px;font-weight:600;white-space:nowrap;}
+  .profile-dropdown{
+    position:absolute;right:0;top:44px;width:240px;
+    background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-sm);
+    box-shadow:0 12px 30px rgba(0,0,0,0.4);padding:8px;display:none;z-index:30;
+  }
+  .profile-dropdown.open{display:block;}
+  .profile-dropdown .label{font-size:11px;color:var(--text-mute);padding:6px 8px;text-transform:uppercase;letter-spacing:0.5px;}
+  .profile-dropdown .opt{display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;width:100%;text-align:left;font-size:13px;}
+  .profile-dropdown .opt:hover{background:var(--bg-card);}
+  .profile-dropdown .opt .avatar{width:24px;height:24px;font-size:10px;}
+  .profile-dropdown .cadastro-opt{font-weight:700;color:var(--individual);}
+  .profile-dropdown .cadastro-opt .icon{stroke:var(--individual);width:16px;height:16px;}
+  .dropdown-divider{height:1px;background:var(--border);margin:6px 2px;}
+
+  .content{padding:26px 28px 60px;max-width:1240px;width:100%;margin:0 auto;}
+  .view{display:none;}
+  .view.active{display:block;animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  h2.section-title{font-size:19px;font-weight:700;margin:30px 0 14px;display:flex;align-items:center;gap:8px;}
+  h2.section-title:first-child{margin-top:0;}
+  .section-sub{color:var(--text-dim);font-size:13px;margin-top:-8px;margin-bottom:16px;}
+
+  /* Hero / greeting */
+  .hero{
+    background:linear-gradient(120deg, rgba(141,145,111,0.16), rgba(190,198,177,0.06));
+    border:1px solid var(--border);border-radius:var(--radius);
+    padding:26px 28px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+  }
+  .hero h1{font-size:23px;font-weight:800;margin-bottom:6px;}
+  .hero p{color:var(--text-dim);font-size:14px;}
+  .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px;}
+  .stat-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:14px 16px;min-width:150px;flex:1;
+  }
+  .stat-card.clickable{cursor:pointer;transition:border-color .15s,transform .15s;}
+  .stat-card.clickable:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .stat-card .label{font-size:11.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+  .stat-card .value{font-size:20px;font-weight:800;}
+  .stat-card .value.accent{color:var(--accent-2);}
+  .stat-card .value.individual{color:var(--individual);}
+  .stat-card .value.shared{color:var(--shared);}
+
+  /* Course rows / carousel */
+  .row-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;}
+  .course-tile{
+    flex:0 0 220px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+    overflow:hidden;transition:transform .15s, border-color .15s;text-align:left;
+  }
+  .course-tile:hover{transform:translateY(-3px);border-color:var(--accent);}
+  .course-thumb{
+    height:120px;position:relative;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--tint1,#8d916f),var(--tint2,#bec6b1));
+  }
+  .course-thumb .play-fill{width:34px;height:34px;opacity:.92;}
+  .course-thumb .progress-mini{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(0,0,0,0.35);}
+  .course-thumb .progress-mini .fill{height:100%;background:#fff;}
+  .course-thumb .done-badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+  .course-thumb .done-badge .icon{width:13px;height:13px;stroke:var(--success);}
+  .course-info{padding:10px 12px 12px;}
+  .course-info .cat{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.4px;}
+  .course-info .title{font-size:13.5px;font-weight:700;margin:3px 0 4px;line-height:1.3;}
+  .course-info .meta{font-size:11.5px;color:var(--text-dim);}
+
+  .category-block{margin-bottom:8px;}
+
+  /* Modal */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(5,5,10,0.7);display:none;
+    align-items:center;justify-content:center;z-index:100;padding:20px;overflow-y:auto;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal{
+    width:100%;max-width:560px;background:var(--bg-elev);border:1px solid var(--border);
+    border-radius:var(--radius);overflow:hidden;margin:auto;max-height:90vh;overflow-y:auto;
+  }
+  .modal:has(.form-modal){max-width:680px;}
+  .modal-player{
+    height:220px;background:linear-gradient(135deg,var(--tint1,#8d916f),var(--tint2,#bec6b1));
+    display:flex;align-items:center;justify-content:center;position:relative;
+  }
+  .modal-player .play-fill{width:56px;height:56px;}
+  .modal-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.4);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;z-index:2;}
+  .modal-yt{position:relative;width:100%;padding-top:56.25%;background:#000;}
+  .modal-yt iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .modal:has(.modal-yt){max-width:680px;}
+  .course-materials{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+  .course-materials .ps-h{margin-top:0;}
+  .material-link-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+  .material-link-row:last-child{border-bottom:none;}
+  .material-link-row .title{font-size:13px;font-weight:600;}
+  .modal-body{padding:20px 22px 24px;}
+  .modal-body .cat{font-size:11px;color:var(--accent-2);text-transform:uppercase;font-weight:700;letter-spacing:.4px;}
+  .modal-body h3{font-size:18px;margin:6px 0 8px;}
+  .modal-body p.desc{font-size:13.5px;color:var(--text-dim);line-height:1.55;margin-bottom:16px;}
+  .modal-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-outline{padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-dim);}
+  .btn-outline:hover{border-color:var(--accent);color:var(--text);}
+  .btn-accent{padding:10px 16px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;font-weight:700;}
+  .btn-accent.done{background:var(--success);}
+  .gabarito{font-size:11.5px;color:var(--text-mute);background:var(--bg-card);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-style:italic;line-height:1.5;}
+  .form-modal textarea{width:100%;min-height:90px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:14px;}
+  .form-modal textarea:focus{outline:none;border-color:var(--shared);}
+
+  /* Community */
+  .composer{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;margin-bottom:20px;display:flex;gap:12px;
+  }
+  .composer textarea{
+    flex:1;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-sm);
+    color:var(--text);padding:10px 12px;font-size:13.5px;resize:none;min-height:44px;font-family:inherit;
+  }
+  .composer textarea:focus{outline:none;border-color:var(--accent);}
+  .composer .send-wrap{display:flex;align-items:flex-end;}
+  .type-select{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .type-pill{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim);background:var(--bg-elev);}
+  .type-pill .icon{width:12px;height:12px;}
+  .type-pill.tag-duvida.active{background:var(--danger-soft);color:var(--danger);border-color:transparent;}
+  .type-pill.tag-interacao.active{background:var(--accent-soft);color:var(--accent-2);border-color:transparent;}
+  .type-pill.tag-conquista.active{background:var(--success-soft);color:var(--success);border-color:transparent;}
+  .community-filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .filter-tab{font-size:12px;font-weight:700;padding:6px 13px;border-radius:20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);}
+  .filter-tab.active{background:var(--accent);color:#fff;border-color:transparent;}
+  .post{
+    background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:14px;
+  }
+  .post.post-border-duvida{border-left-color:var(--danger);}
+  .post.post-border-interacao{border-left-color:var(--accent);}
+  .post.post-border-conquista{border-left-color:var(--success);}
+  .post-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .post-head .avatar{width:34px;height:34px;font-size:12px;}
+  .post-head .who{flex:1;min-width:0;}
+  .post-head .who .name{font-size:13.5px;font-weight:700;}
+  .post-head .who .time{font-size:11.5px;color:var(--text-mute);}
+  .post-type-badge{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;}
+  .post-type-badge.tag-duvida{background:var(--danger-soft);color:var(--danger);}
+  .post-type-badge.tag-interacao{background:var(--accent-soft);color:var(--accent-2);}
+  .post-type-badge.tag-conquista{background:var(--success-soft);color:var(--success);}
+  .staff-note{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--danger);background:var(--danger-soft);padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:12px;}
+  .post-text{font-size:13.5px;line-height:1.55;color:var(--text);margin-bottom:12px;}
+  .post-actions{display:flex;gap:18px;}
+  .post-action{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);}
+  .post-action:hover{color:var(--accent-2);}
+  .post-action.liked{color:var(--individual);}
+  .post-action.liked .icon{fill:var(--individual);stroke:var(--individual);}
+  .post-action .icon{width:15px;height:15px;}
+  .comments{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+  .comment{display:flex;gap:8px;font-size:12.5px;}
+  .comment b{font-weight:700;margin-right:4px;}
+  .comment .avatar{width:22px;height:22px;font-size:9px;flex-shrink:0;}
+  .comment-composer{display:flex;align-items:center;gap:8px;margin-top:4px;}
+  .comment-composer .avatar{width:22px;height:22px;font-size:9px;flex-shrink:0;}
+  .comment-composer input{flex:1;background:var(--bg-elev);border:1px solid var(--border);border-radius:20px;color:var(--text);padding:7px 12px;font-size:12.5px;font-family:inherit;}
+  .comment-composer input:focus{outline:none;border-color:var(--accent);}
+  .comment-composer .btn-mini{flex-shrink:0;padding:6px 10px;}
+
+  /* Agenda */
+  .agenda-list{display:flex;flex-direction:column;gap:10px;}
+  .agenda-card{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:14px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .agenda-date{
+    width:56px;height:56px;flex-shrink:0;border-radius:10px;background:var(--accent-soft);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--accent-2);
+  }
+  .agenda-date .d{font-size:18px;font-weight:800;line-height:1;}
+  .agenda-date .m{font-size:10px;text-transform:uppercase;font-weight:700;}
+  .agenda-info{flex:1;min-width:180px;}
+  .agenda-info .title{font-size:14px;font-weight:700;margin-bottom:2px;}
+  .agenda-info .meta{font-size:12px;color:var(--text-dim);}
+  .agenda-card.past{opacity:0.75;}
+  .agenda-card.past .agenda-date{background:var(--bg-elev);color:var(--text-mute);}
+  .pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+  .pill.live{background:var(--danger-soft);color:var(--danger);}
+  .pill.replay{background:var(--bg-elev);color:var(--text-mute);}
+
+  /* Materials */
+  .materials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+  .material-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;gap:12px;align-items:flex-start;}
+  .material-icon{width:38px;height:38px;border-radius:10px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .material-icon .icon{stroke:var(--accent-2);}
+  .material-card .mi{flex:1;min-width:0;}
+  .material-card .title{font-size:13.5px;font-weight:700;margin-bottom:2px;}
+  .material-card .meta{font-size:11.5px;color:var(--text-mute);margin-bottom:8px;}
+  .btn-mini{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--accent-2);}
+  .btn-mini .icon{width:13px;height:13px;}
+
+  /* Ring */
+  .progress-hero{display:flex;gap:26px;align-items:center;flex-wrap:wrap;}
+  .ring{width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;}
+  .ring .ring-inner{width:92px;height:92px;border-radius:50%;background:var(--bg-elev);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .ring .ring-inner .pct{font-size:22px;font-weight:800;}
+  .ring .ring-inner .lbl{font-size:10px;color:var(--text-mute);text-transform:uppercase;}
+  .bar{height:7px;background:var(--bg-elev);border-radius:6px;overflow:hidden;}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--individual),#c6aa83);border-radius:6px;}
+  .cert-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--success);background:var(--success-soft);padding:2px 8px;border-radius:20px;margin-left:8px;}
+
+  /* Dashboard: module bars */
+  .module-bars{display:flex;flex-direction:column;gap:14px;margin-top:18px;}
+  .module-bar-row{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;}
+  .module-bar-row .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px;flex-wrap:wrap;}
+  .module-bar-row .top .name{font-size:13.5px;font-weight:700;}
+  .module-bar-row .top .frac{font-size:11.5px;color:var(--text-mute);}
+  .module-bar-row .top .pct{font-size:12.5px;font-weight:700;color:var(--shared);}
+  .module-bar{height:8px;background:var(--bg-elev);border-radius:6px;overflow:hidden;}
+  .module-bar .fill{height:100%;background:linear-gradient(90deg,var(--shared),#c5c9d1);border-radius:6px;}
+  .module-bar-row.clickable{cursor:pointer;transition:border-color .15s;}
+  .module-bar-row.clickable:hover{border-color:var(--shared);}
+  .module-bar-cta{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--shared);margin-top:8px;}
+  .module-bar-cta .icon{stroke:var(--shared);}
+
+  .kpi-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;}
+  .kpi-tile{flex:1;min-width:150px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+  .kpi-tile .label{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
+  .kpi-tile .value{font-size:19px;font-weight:800;color:var(--shared);}
+  .kpi-note{font-size:11.5px;color:var(--text-mute);margin-top:10px;font-style:italic;}
+
+  /* Module checklist modal */
+  .mod-check-list{max-height:48vh;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;}
+  .mod-check-item{display:flex;align-items:flex-start;gap:10px;padding:8px 8px;border-radius:6px;font-size:13px;cursor:pointer;}
+  .mod-check-item:hover{background:var(--bg-card);}
+  .mod-check-item .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;}
+  .mod-check-item .box .icon{width:12px;height:12px;stroke:#fff;stroke-width:3;}
+  .mod-check-item.done .box{background:var(--success);border-color:var(--success);}
+  .mod-check-item .txt{line-height:1.45;color:var(--text);}
+  .mod-check-item.done .txt{color:var(--text-mute);text-decoration:line-through;}
+
+  /* Cadastro (dados pessoais) */
+  .dias-card{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin:14px 0 4px;background:var(--bg-card);}
+  .dias-card .dc-col{flex:1;padding:14px 16px;text-align:center;border-right:1px solid var(--border);}
+  .dias-card .dc-col:last-child{border-right:none;}
+  .dias-card .dc-label{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
+  .dias-card .dc-value{font-size:14px;font-weight:700;}
+  .dias-card .dc-highlight{background:var(--individual-soft);}
+  .dias-card .dc-highlight .dc-value.big{font-size:26px;font-weight:800;color:var(--individual);}
+  .dias-card.overdue .dc-highlight{background:var(--danger-soft);}
+  .dias-card.overdue .dc-highlight .dc-value.big{color:var(--danger);}
+
+  /* Painel do Método */
+  .quadrant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .quadrant-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:left;transition:border-color .15s,transform .15s;width:100%;}
+  .quadrant-card:hover{border-color:var(--shared);transform:translateY(-2px);}
+  .quadrant-card .qi{width:42px;height:42px;border-radius:12px;background:var(--shared-soft);display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .quadrant-card .qi .icon{stroke:var(--shared);}
+  .quadrant-card .title{font-size:15px;font-weight:700;margin-bottom:6px;}
+  .quadrant-card .meta{font-size:12px;color:var(--text-dim);margin-bottom:12px;}
+
+  .back-row{margin-bottom:16px;}
+  .back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-dim);}
+  .back-btn:hover{color:var(--text);}
+  .back-btn .icon{width:15px;height:15px;}
+
+  .topic-row{display:flex;align-items:center;gap:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px;text-align:left;width:100%;}
+  .topic-row:hover{border-color:var(--shared);}
+  .topic-status{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .topic-status.filled{background:var(--success);}
+  .topic-status.pending{background:var(--text-mute);}
+  .topic-row .ti{flex:1;min-width:0;}
+  .topic-row .ti .title{font-size:13.5px;font-weight:700;margin-bottom:2px;}
+  .topic-row .ti .desc{font-size:12px;color:var(--text-dim);}
+  .topic-row .tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;}
+  .topic-row .tag.filled{background:var(--success-soft);color:var(--success);}
+  .topic-row .tag.pending{background:var(--bg-elev);color:var(--text-mute);}
+
+  /* Painel do Método: formulários subdivididos por seção */
+  .ps-section{margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+  .ps-section:last-of-type{border-bottom:none;margin-bottom:6px;padding-bottom:0;}
+  .ps-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--shared);margin-bottom:10px;}
+  .ps-label{display:block;font-size:11.5px;font-weight:600;color:var(--text-dim);margin-bottom:4px;margin-top:10px;}
+  .ps-label:first-of-type{margin-top:0;}
+  .ps-input{
+    width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+    color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical;
+  }
+  textarea.ps-input{min-height:38px;}
+  .ps-input:focus{outline:none;border-color:var(--shared);}
+  .ps-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  .ps-row .goal-check{margin-top:0;}
+  .ps-remove{width:28px;height:28px;flex-shrink:0;border-radius:var(--radius-sm);color:var(--text-mute);display:flex;align-items:center;justify-content:center;}
+  .ps-remove:hover{color:var(--danger);background:var(--danger-soft);}
+  .ps-remove .icon{width:14px;height:14px;}
+  .ps-add{margin-top:2px;}
+  .ps-plus{width:13px;height:13px;}
+  .ps-swatches{display:flex;gap:10px;flex-wrap:wrap;}
+  .ps-swatch{display:flex;align-items:center;gap:6px;}
+  .ps-swatch-dot{width:20px;height:20px;border-radius:6px;border:1px solid var(--border);flex-shrink:0;}
+  .ps-swatch .ps-input{width:88px;}
+  .ps-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px;}
+  .ps-table th{text-align:left;font-size:10px;text-transform:uppercase;color:var(--text-mute);padding:6px 8px;white-space:nowrap;}
+  .ps-table td{padding:4px 6px;}
+  .ps-table .ps-cell{min-width:110px;}
+  .ps-rowlabel{font-size:12px;font-weight:700;color:var(--text-dim);white-space:nowrap;padding-right:10px;}
+
+  /* Individual: sessions */
+  .session-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
+  .session-card .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .session-card .top .title{font-size:14.5px;font-weight:700;}
+  .session-card .top .date{font-size:12px;color:var(--text-mute);}
+  .session-card .notes{font-size:13px;color:var(--text-dim);line-height:1.6;background:var(--bg-elev);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;}
+  .session-card .foot{display:flex;gap:10px;flex-wrap:wrap;}
+
+  /* Individual: goals */
+  .goal-card{
+    display:flex;align-items:flex-start;gap:12px;background:var(--bg-card);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px;
+  }
+  .goal-check{
+    width:22px;height:22px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;transition:all .15s;
+  }
+  .goal-check.checked{background:var(--individual);border-color:var(--individual);}
+  .goal-check .icon{width:13px;height:13px;stroke:#0c0d0b;display:none;}
+  .goal-check.checked .icon{display:block;}
+  .goal-body{flex:1;}
+  .goal-body .title{font-size:13.5px;font-weight:700;margin-bottom:3px;}
+  .goal-body .title.done{text-decoration:line-through;color:var(--text-mute);}
+  .goal-body .due{font-size:11.5px;color:var(--text-mute);}
+  .goal-body .desc{font-size:12.5px;color:var(--text-dim);margin-top:4px;line-height:1.5;}
+
+  /* Staff / internal */
+  .staff-banner{display:flex;align-items:center;gap:10px;background:var(--danger-soft);border:1px solid rgba(244,63,94,0.3);color:#fca5b5;border-radius:var(--radius-sm);padding:12px 16px;font-size:12.5px;margin-bottom:22px;}
+  .staff-banner .icon{stroke:var(--danger);flex-shrink:0;}
+  .diag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:8px;}
+  .diag-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+  .diag-item .label{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px;}
+  .diag-item .value{font-size:13px;font-weight:600;line-height:1.4;}
+  .diag-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:22px;}
+  .diag-panel .ps-section:first-of-type .ps-h{margin-top:0;}
+  .field-error{color:var(--danger);font-size:11.5px;margin:-6px 0 10px;}
+  .stage-tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap;text-transform:uppercase;}
+  .stage-tag.abertura{background:rgba(155,164,186,0.15);color:#c5c9d1;}
+  .stage-tag.ser{background:rgba(130,137,102,0.15);color:#b4b49a;}
+  .stage-tag.conectar{background:rgba(124,137,165,0.15);color:#9ba4ba;}
+  .stage-tag.transformar{background:rgba(171,111,48,0.15);color:#c6aa83;}
+  .stage-tag.gerenciar{background:rgba(92,93,70,0.15);color:#89886d;}
+  .stage-tag.fechamento{background:var(--danger-soft);color:var(--danger);}
+  .module-block{margin-bottom:26px;}
+  .module-block-h{font-size:13px;font-weight:700;color:var(--text-dim);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .course-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);margin-bottom:6px;}
+  .course-row.dragging{opacity:0.4;}
+  .course-row .drag-handle{cursor:grab;color:var(--text-mute);flex-shrink:0;}
+  .course-row .drag-handle:active{cursor:grabbing;}
+  .course-row .ct-title{flex:1;min-width:0;font-size:13.5px;font-weight:600;}
+  .course-row .ct-title .dur{display:block;font-size:11.5px;font-weight:400;color:var(--text-mute);margin-top:1px;}
+  .course-row .ct-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+  .reorder-btn{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--text-mute);}
+  .reorder-btn:hover{background:var(--bg-card-hover);color:var(--text);}
+  .reorder-btn:disabled{opacity:0.25;cursor:not-allowed;}
+  .reorder-btn .icon{width:14px;height:14px;}
+  .diag-qa{margin-bottom:14px;}
+  .diag-answer{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;color:var(--text);line-height:1.5;margin-top:4px;white-space:pre-wrap;}
+  .diag-qa-actions{display:flex;gap:14px;margin-top:6px;}
+  .diag-qa-actions .btn-mini{font-size:11.5px;}
+  .btn-mini.danger{color:var(--danger);}
+  .sync-ok{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--success);}
+  .sync-ok .icon{width:13px;height:13px;stroke:var(--success);}
+
+  /* Add-entry forms (checklist / registro de contatos) */
+  .add-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;background:var(--bg-card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin:14px 0 26px;}
+  .add-form .field{display:flex;flex-direction:column;}
+  .add-form .field.full{grid-column:1/-1;}
+  .add-form label{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
+  .add-form textarea.ps-input{min-height:38px;}
+  .add-form .actions{display:flex;}
+  .add-form .actions .btn-accent{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .table-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border);}
+  .check-table{width:100%;border-collapse:collapse;background:var(--bg-card);font-size:12.5px;min-width:640px;}
+  .check-table th{text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--text-mute);padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg-elev);white-space:nowrap;}
+  .check-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .check-table tr:last-child td{border-bottom:none;}
+  .status-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .status-pill.status-Concluida{background:var(--success-soft);color:var(--success);}
+  .status-pill.status-Pendente{background:var(--individual-soft);color:var(--individual);}
+  .status-pill.status-Atrasada{background:var(--danger-soft);color:var(--danger);}
+  .resp-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg-elev);color:var(--text-dim);white-space:nowrap;}
+
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text-mute);font-size:13px;}
+
+  @media (max-width:880px){
+    .sidebar{position:fixed;left:-260px;top:0;transition:left .2s;z-index:50;box-shadow:0 0 40px rgba(0,0,0,0.5);}
+    .sidebar.open{left:0;}
+    .content{padding:20px 16px 50px;}
+    .topbar{padding:0 14px;gap:10px;}
+    #menu-btn{display:flex;}
+    .topbar-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .role-toggle span, .role-toggle{font-size:11px;}
+  }
+  @media (max-width:520px){
+    .topbar{gap:6px;}
+    .topbar-right{gap:8px;}
+    .role-toggle button{padding:6px 8px;font-size:10px;}
+    .profile-btn span{display:none;}
+    .profile-btn{padding:5px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="brand-mark">
+      <div class="brand-dot"></div>
+      <div class="brand-name">ASCENTRIA · MÉTODO ESSÊNCIA</div>
+    </div>
+    <div class="login-tabs" id="login-tabs">
+      <button data-tab="entrar" class="active">Entrar</button>
+      <button data-tab="criar">Criar conta</button>
+    </div>
+
+    <div id="login-panel-entrar">
+      <h1>Bem-vindo(a) de volta</h1>
+      <p class="sub">Entre com o e-mail e a senha da sua conta do Método Essência.</p>
+      <div class="field full"><label>E-mail</label><input class="ps-input" type="email" id="li-email" placeholder="voce@email.com"></div>
+      <div class="field full"><label>Senha</label><input class="ps-input" type="password" id="li-senha" placeholder="Sua senha"></div>
+      <p class="field-error" id="li-error" style="display:none"></p>
+      <button class="btn-primary" id="login-btn">Entrar na plataforma</button>
+      <p class="login-note">Esqueceu a senha ou ainda não tem conta? Use a aba "Criar conta" para se cadastrar, ou peça para a equipe interna criar seu acesso.</p>
+    </div>
+
+    <div id="login-panel-criar" style="display:none">
+      <h1>Criar minha conta</h1>
+      <p class="sub">Toda conta nova começa como Aluno. O acesso da Equipe Interna é liberado manualmente pela administração.</p>
+      <div class="field full"><label>Nome completo</label><input class="ps-input" type="text" id="cr-nome" placeholder="Seu nome completo"></div>
+      <div class="field full"><label>E-mail</label><input class="ps-input" type="email" id="cr-email" placeholder="voce@email.com"></div>
+      <div class="field full"><label>Senha</label><input class="ps-input" type="password" id="cr-senha" placeholder="Crie uma senha (mín. 6 caracteres)"></div>
+      <p class="field-error" id="cr-error" style="display:none"></p>
+      <button class="btn-primary" id="signup-btn">Criar conta</button>
+      <p class="login-note">Ao criar sua conta, você poderá preencher seus dados de matrícula e acompanhar sua jornada no Método Essência.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-mark">
+      <div class="brand-dot"></div>
+      <div class="brand-name">ASCENTRIA · MÉTODO ESSÊNCIA</div>
+    </div>
+
+    <button class="nav-item" data-view="inicio"></button>
+
+    <div class="nav-group-label">Área Coletiva</div>
+    <button class="nav-item" data-view="aulas"></button>
+    <button class="nav-item" data-view="comunidade"></button>
+    <button class="nav-item" data-view="agenda"></button>
+    <button class="nav-item" data-view="materiais"></button>
+
+    <div class="nav-group-label">Meu Método</div>
+    <button class="nav-item shared" data-view="dashboard"></button>
+    <button class="nav-item shared" data-view="painel"></button>
+
+    <div class="nav-group-label">Minha Área</div>
+    <button class="nav-item individual" data-view="sessoes"></button>
+    <button class="nav-item individual" data-view="metas"></button>
+    <a class="nav-item individual" id="nav-prontuarios" href="https://app.ascentria.cloud/" target="_blank" rel="noopener">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
+      <span>Prontuários</span>
+    </a>
+
+    <div class="nav-group-label" id="staff-group-label" style="display:none"><svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Equipe Interna</div>
+    <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
+
+    <div class="sidebar-footer">
+      <button class="nav-item" id="logout-btn"></button>
+    </div>
+  </aside>
+
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="icon-btn" id="menu-btn" title="Menu">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="topbar-title" id="topbar-title">Início</div>
+      <div class="topbar-right">
+        <div class="role-toggle" id="role-toggle">
+          <button data-role="aluno">Aluno</button>
+          <button data-role="staff">Equipe Interna</button>
+        </div>
+        <button class="icon-btn" id="notif-btn" title="Notificações">
+          <span class="dot-alert" id="notif-dot"></span>
+          <span class="notif-badge" id="notif-badge" style="display:none"></span>
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        </button>
+        <div class="profile-switch">
+          <button class="profile-btn" id="profile-btn">
+            <div class="avatar" id="profile-avatar"></div>
+            <span id="profile-name"></span>
+            <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="profile-dropdown" id="profile-dropdown">
+            <button class="opt cadastro-opt" id="open-cadastro"></button>
+            <div class="dropdown-divider"></div>
+            <div class="label" id="profile-dropdown-label">Visualizar como (demo)</div>
+            <div id="profile-options"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="view" id="view-inicio"></div>
+      <div class="view" id="view-aulas"></div>
+      <div class="view" id="view-comunidade"></div>
+      <div class="view" id="view-agenda"></div>
+      <div class="view" id="view-materiais"></div>
+      <div class="view" id="view-dashboard"></div>
+      <div class="view" id="view-painel"></div>
+      <div class="view" id="view-sessoes"></div>
+      <div class="view" id="view-metas"></div>
+      <div class="view" id="view-interno"></div>
+      <div class="view" id="view-conteudo"></div>
+      <div class="view" id="view-visaogeral"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ================= SUPABASE ================= */
+const SUPABASE_URL = 'https://yahjhvnubmmfvxbjxmoo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_hTf2iElAndlBIxkT1Ko7FQ_9zULkdyh';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ================= ICONS ================= */
+const ICONS = {
+  home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  film:'<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M16 3v18M2 8h6M16 8h6M2 16h6M16 16h6"/>',
+  users:'<circle cx="9" cy="8" r="3"/><path d="M2.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M15.8 20c.1-2.3 1.3-3.9 3.2-4.6"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9" fill="currentColor"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="M7.5 12l3 3 6-6.5"/>',
+  video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 9.5l6-3.2v11.4l-6-3.2z"/>',
+  logout:'<path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/><path d="M9 17l5-5-5-5"/><path d="M14 12H2"/>',
+  download:'<path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  play:'<path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none"/>',
+  heart:'<path d="M12 21s-7-4.35-9.5-8.5C.8 8.7 3.2 5.3 6.6 5.3c2 0 3.6 1.4 5.4 3.3 1.8-1.9 3.4-3.3 5.4-3.3 3.4 0 5.8 3.4 4.1 7.2C19 16.65 12 21 12 21z"/>',
+  comment:'<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-4-1L3 20l1.1-4.4A8.5 8.5 0 1 1 21 11.5z"/>',
+  bell:'<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  award:'<circle cx="12" cy="8" r="5"/><path d="M8.5 12.5L7 21l5-2.5L17 21l-1.5-8.5"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  back:'<path d="M15 6l-6 6 6 6"/>',
+  chart:'<path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2 20h20"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-4 2 2-6z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.7 2.7 0 1 1 3.8 2.5c-.9.4-1.4 1-1.4 2.1"/><path d="M12 17.2h.01"/>',
+  tick:'<path d="M5 13l4 4L19 7"/>',
+  idcard:'<rect x="3" y="5" width="18" height="14" rx="2.2"/><circle cx="8.3" cy="12" r="2.1"/><path d="M6 16.3c.4-1.4 1.4-2.1 2.3-2.1s1.9.7 2.3 2.1"/><path d="M13.3 9.5h5M13.3 12.5h5M13.3 15.5h3.3"/>',
+  upload:'<path d="M12 21V9m0 0l-4.5 4.5M12 9l4.5 4.5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  trash:'<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/>',
+  drag:'<circle cx="9" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.1" fill="currentColor" stroke="none"/>',
+  up:'<path d="M12 19V5M5 12l7-7 7 7"/>',
+  down:'<path d="M12 5v14M5 12l7 7 7-7"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+};
+function icon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24">${ICONS[name]}</svg>`;}
+function fillIcon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24" fill="currentColor" stroke="none">${ICONS[name]}</svg>`;}
+
+/* ================= DATA: NAV ================= */
+const NAV_LABELS = {
+  inicio:['home','Início'], aulas:['film','Aulas'], comunidade:['users','Comunidade'],
+  agenda:['calendar','Agenda ao Vivo'], materiais:['folder','Materiais'],
+  dashboard:['chart','Dashboard'], painel:['compass','Painel do Método'],
+  sessoes:['video','Minhas Sessões 1:1'], metas:['target','Minhas Metas'],
+  interno:['lock','Acompanhamento Interno'],
+  conteudo:['upload','Gerenciar Conteúdo'],
+  visaogeral:['users','Visão Geral'],
+};
+const BADGE = {
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict',
+};
+const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
+
+/* ================= DATA: MÉTODO ESSÊNCIA ================= */
+// Estrutura e volumetria refletem o checklist real da planilha "Dashboard" do Método Essência
+// (165 itens: aulas assistidas, resumos e tarefas, distribuídos nos 5 módulos abaixo).
+const MODULES = [
+  {id:'introducao', name:'Introdução', total:4},
+  {id:'ser', name:'Ser', total:42},
+  {id:'conectar', name:'Conectar', total:59},
+  {id:'transformar', name:'Transformar', total:28},
+  {id:'gerenciar', name:'Gerenciar', total:32},
+];
+const TOTAL_ITEMS = MODULES.reduce((a,m)=>a+m.total,0);
+
+// Itens reais do checklist "PROGRESSO NO MÉTODO ESSÊNCIA" da planilha Dashboard
+// (colunas MÓDULO / ORIENTAÇÃO / CHECK), usados na tela de Dashboard para marcar
+// aula assistida / resumo feito / tarefa concluída, item a item.
+const MODULE_CHECKLIST = {
+  introducao: [
+    'Assistir aula sobre o Método Essência.',
+    'Resumir aula sobre o Método Essência.',
+    'Assistir aula sobre o Plano 30 Dias.',
+    'Entrar na Comunidade do WhatsApp do Método Essência e em especial nos grupos: DÚVIDAS, INTERAÇÕES, AVISOS.',
+  ],
+  ser: [
+    'Assistir aula sobre o Módulo SER.',
+    'Resumir aula sobre o Módulo SER.',
+    'Assistir aula sobre O Seu Cliente Ideal.',
+    'Resumir aula sobre O Seu Cliente Ideal.',
+    'Assistir aula sobre Nicho.',
+    'Resumir aula sobre Nicho.',
+    'TAREFA: Desenhar seu Nicho.',
+    'Assistir aula sobre Dados Sociodemográficos.',
+    'Resumir aula sobre Dados Sociodemográficos.',
+    'TAREFA: Desenhar os Dados Sociodemográficos.',
+    'Assistir aula sobre Dores, Desejos, Medos e Crenças.',
+    'Resumir aula sobre Dores, Desejos, Medos e Crenças.',
+    'TAREFA: Desenhar as Dores, Desejos, Medos e Crenças.',
+    'TAREFA: Incluir tudo no Painel do Método.',
+    'Assistir aula sobre Princípios do Seu Negócio.',
+    'Resumir aula sobre Princípios do Seu Negócio.',
+    'TAREFA: Desenhar Princípios do Seu Negócio.',
+    'Assistir aula sobre Identidade de Valor.',
+    'Resumir aula sobre Identidade de Valor.',
+    'TAREFA: Desenhar Identidade de Valor.',
+    'A Transformação que Você Gera.',
+    'A Transformação que Você Gera.',
+    'TAREFA: Desenhar A Transformação que Você Gera.',
+    'TAREFA: Incluir tudo no painel do método.',
+    'Assistir aula sobre Visual que Vende.',
+    'Resumir aula sobre Visual que Vende.',
+    'Assistir aula sobre Arquétipos de Marca.',
+    'Resumir aula sobre Arquétipos de Marca.',
+    'TAREFA: Desenhar os três Arquétipos de Marca',
+    'Assistir aula sobre Moodboard.',
+    'Resumir aula sobre Moodboard.',
+    'TAREFA: Desenhar o Moodboard.',
+    'Assistir aula sobre Paleta de Cores.',
+    'Resumir aula sobre Paleta de Cores.',
+    'TAREFA: Escolher a Paleta de Cores.',
+    'Assistir aula sobre Fontes.',
+    'Resumir aula sobre Fontes.',
+    'TAREFA: Escolhar as Fontes.',
+    'Assistir aula sobre Papelaria',
+    'Resumir aula sobre Papelaria',
+    'TAREFA: Fazer a Papelaria',
+    'TAREFA: Incluir tudo no painel do método.',
+  ],
+  conectar: [
+    'Assistir aula sobre o Módulo CONECTAR.',
+    'Resumir aula sobre o Módulo CONECTAR.',
+    'Assistir aula sobre Pontos de Contato Digitais.',
+    'Resumir aula sobre Pontos de Contato Digitais.',
+    'TAREFA: Fazer a conta do Instagram.',
+    'TAREFA: Fazer a conta no TikTok.',
+    'TAREFA: Fazer a conta no Google Meu Negócio.',
+    'TAREFA: Fazer a página do Facebook.',
+    'TAREFA: Fazer a conta no LinkedIn.',
+    'Assistir aula sobre Aflorando a Necessidade.',
+    'Resumir aula sobre Aflorando a Necessidade.',
+    'Assistir aula sobre Níveis de Consciência.',
+    'Resumir aula sobre Níveis de Consciência.',
+    'Assistir aula sobre Funil de Conteúdo.',
+    'Resumir aula sobre Funil de Conteúdo.',
+    'Assistir aula sobre Estrutura dos Conteúdos.',
+    'Resumir aula sobre Estrutura dos Conteúdos.',
+    'TAREFA: Montar seu funil de conteúdo.',
+    'Assistir aula sobre Conteúdo das Redes Sociais.',
+    'Resumir aula sobre Conteúdo das Redes Sociais.',
+    'Assistir aula sobre Avaliação do Conteúdo.',
+    'Resumir aula sobre Avaliação do Conteúdo.',
+    'TAREFA: Avaliar 1 conteúdo.',
+    'Assistir aula sobre Vendas.',
+    'Resumir aula sobre Vendas.',
+    'Assistir aula sobre Paciente Procura o Profissional.',
+    'Resumir aula sobre Paciente Procura o Profissional.',
+    'Assistir aula sobre Protocolo de Mensagens.',
+    'Resumir aula sobre Protocolo de Mensagens.',
+    'TAREFA: Deixar o Protocolo de Mensagens pronto de acordo com seu tom de voz.',
+    'Assistir aula sobre Primeira Consulta.',
+    'Resumir aula sobre Primeira Consulta.',
+    'Assistir aula sobre Antes da Consulta de Retorno.',
+    'Resumir aula sobre Antes da Consulta de Retorno.',
+    'Assistir aula sobre Consulta de Retorno.',
+    'Resumir aula sobre Consulta de Retorno.',
+    'Assistir aula sobre Estrutura de Consulta.',
+    'Resumir aula sobre Estrutura de Consulta.',
+    'Assistir aula sobre Novo Protocolo Terapêutico.',
+    'Resumir aula sobre Novo Protocolo Terapêutico.',
+    'Assistir aula sobre Profissional Procura o Cliente.',
+    'Resumir aula sobre Profissional Procura o Cliente.',
+    'Assistir aula sobre Venda Consultiva.',
+    'Resumir aula sobre Venda Consultiva.',
+    'TAREFA: Realizar a jornada completa com um cliente.',
+    'Assistir aula sobre Captação Off-line.',
+    'Resumir aula sobre Captação Off-line.',
+    'TAREFA: Fazer a lista e realizar a indicação de 10 profissionais.',
+    'TAREFA: Fazer os 3 projetos mensais.',
+    'TAREFA: Fazer parcerias profissionais.',
+    'TAREFA: Construir atuação especializada subnichada comunicada.',
+    'TAREFA: Construir de comunidade.',
+    'TAREFA: Eventos de autoridade local.',
+    'TAREFA: Captar e realizar jornada com cliente âncora.',
+    'TAREFA: Estar presente em ambientes de decisão.',
+    'TAREFA: Palestras gratuitas em locais estratégicos.',
+    'TAREFA: Ocupação institucional de confiança.',
+    'TAREFA: Subir no Painel do Método os 10 parceiros.',
+    'TAREFA: Subir no Painel do Método os 3 Projetos Mensais.',
+  ],
+  transformar: [
+    'Assistir aula sobre o Módulo TRANSFORMAR.',
+    'Resumir aula sobre o Módulo TRANSFORMAR.',
+    'Assistir aula sobre a Jornada do Paciente.',
+    'Resumir aula sobre a Jornada do Paciente.',
+    'Assistir aula sobre o Agendamento.',
+    'Resumir aula sobre o Agendamento.',
+    'TAREFA: Criar conta no Google para usar o Google Agenda (se já possui, utilize a sua).',
+    'Assistir aula sobre o Registro de Pacientes.',
+    'Resumir aula sobre o Registro de Pacientes.',
+    'TAREFA: Criar conta no Wispform, Typeform ou formulário de sua preferência.',
+    'Assistir aula sobre Orientações.',
+    'Resumir aula sobre Orientações.',
+    'TAREFA: Fazer seu manual de orientações.',
+    'Assistir aula sobre Confirmação.',
+    'Resumir aula sobre Confirmação.',
+    'Assistir aula sobre Pós-Atendimento.',
+    'Resumir aula sobre Pós-Atendimento.',
+    'Assistir aula sobre Avaliação.',
+    'Resumir aula sobre Avaliação.',
+    'TAREFA: Fazer a sua escala de NPS.',
+    'Assistir aula sobre Relacionamento.',
+    'Resumir aula sobre Relacionamento.',
+    'Assistir aula sobre Método de Atendimento.',
+    'Resumir aula sobre Método de Atendimento.',
+    'Assistir aula sobre Diferenciação e Nursebook.',
+    'Resumir aula sobre Diferenciação e Nursebook.',
+    'TAREFA: Selecionar e implementar os itens de diferenciação para o seu consultório.',
+    'Resumir aula sobre Relacionamento.',
+  ],
+  gerenciar: [
+    'Assistir aula sobre Registros de Pacientes.',
+    'Resumir aula sobre Registros de Pacientes.',
+    'TAREFA: Fazer o formulário de registros de pacientes.',
+    'Assistir aula sobre Prontuários.',
+    'Resumir aula sobre Prontuários.',
+    'TAREFA: Assinar plataforma de prontuário ou copiar modelo de prontuário para o seu DRIVE.',
+    'Assistir aula sobre Contratos.',
+    'Resumir aula sobre Contratos.',
+    'TAREFA: Fazer seu Contrato de Consultas e Contrato de Protocolos.',
+    'Assistir aula sobre Documentação Operacional.',
+    'Resumir aula sobre Documentação Operacional.',
+    'TAREFA: Fazer seus POPs, Políticas Internas e Protocolos Assistenciais de Enfermagem.',
+    'Assistir aula sobre Pasta de Documentos de Proteção Jurídica.',
+    'Resumir aula sobre Pasta de Documentos de Proteção Jurídica.',
+    'TAREFA: Fazer a sua Pasta de Documentos de Proteção Jurídica.',
+    'Assistir aula sobre Prescrição Medicamentosa Alopática e Manipulada, Solicitação de Exames.',
+    'Resumir aula sobre Prescrição Medicamentosa Alopática e Manipulada, Solicitação de Exames.',
+    'TAREFA: Fazer o seu Receituário e Requisição de Exames.',
+    'Assistir aula sobre Laudos, Atestado e Declarações de Enfermagem.',
+    'Resumir aula sobre Laudos, Atestado e Declarações de Enfermagem.',
+    'TAREFA: Fazer modelo de Laudo, Atestado e Declaração.',
+    'Assistir aula sobre Contabilidade e Conta Jurídica.',
+    'Resumir aula sobre Contabilidade e Conta Jurídica.',
+    'TAREFA: Ver seu enquadramento contábil e se necessário, abrir sua conta PJ.',
+    'Assistir aula sobre Financeiro.',
+    'Resumir aula sobre Faturamento.',
+    'Assistir aula sobre Precificação.',
+    'Resumir aula sobre Precificação.',
+    'TAREFA: Precificar seus protocolos.',
+    'Assistir aula sobre Crescimento.',
+    'Resumir aula sobre Crescimento.',
+    'TAREFA: Fazer sua planilha de rotina focada em CRESCIMENTO.',
+  ],
+};
+
+// Perguntas reais das abas "Respostas Wispform" e "Diagnóstico Abertura" da planilha
+// interna de Acompanhamento de Mentorados — usadas na tela Acompanhamento Interno.
+const WISPFORM_QUESTIONS = [
+  {cat:'1. Sobre Você e o Seu Negócio', perguntas:[
+    'Qual seu nome completo?',
+    'Há quanto tempo você tem consultório/clínica própria?',
+    'O consultório é sua única fonte de renda hoje?',
+    'Numa escala de 0 a 10, o quanto seu negócio está "redondo" hoje?',
+  ]},
+  {cat:'2. Ser | Marketing e Branding', perguntas:[
+    'Qual é o seu nicho e subnicho de atuação hoje?',
+    'Você já tem uma persona definida (dores, desejos, medos e crenças mapeados)?',
+    'Seus títulos de pós-graduação estão devidamente registrados no COREN?',
+    'Você tem uma frase de transformação clara e ela está presente nos seus materiais?',
+  ]},
+  {cat:'3. Conectar | Pontos de Contato', perguntas:[
+    'Quais canais digitais você já tem ativos?',
+    'Com que frequência você posta conteúdo hoje, na prática?',
+    'Como você atrai a maior parte dos seus pacientes hoje?',
+    'Em média, quantas conversas qualificadas você gera por mês?',
+  ]},
+  {cat:'4. Transformar | Jornada do Usuário e Vendas', perguntas:[
+    'Você já trabalha com protocolo/programa terapêutico estruturado?',
+    'Você oferece consulta de retorno como parte natural do seu fluxo?',
+    'De quem faz a primeira consulta, aproximadamente que % fecha um protocolo?',
+  ]},
+  {cat:'5. Gerenciar | Gestão e Financeiro', perguntas:[
+    'Você tem clareza dos seus custos fixos e variáveis do consultório?',
+    'Qual seu faturamento médio mensal hoje com o consultório?',
+    'Quantos pacientes ativos em acompanhamento/protocolo você tem hoje?',
+    'Você acompanha indicadores semanais do negócio?',
+  ]},
+  {cat:'6. Objetivos e Compromissos', perguntas:[
+    'Qual é hoje o seu maior gargalo?',
+    'Se essa mentoria funcionar muito bem, como fica seu consultório em 12 meses?',
+    'Quantas horas por semana você consegue dedicar à execução do negócio?',
+    'Existe algo no seu contexto que eu precise saber para te ajudar de forma realista?',
+  ]},
+];
+const DIAGNOSTICO_ABERTURA_QUESTIONS = [
+  {cat:'Abertura', perguntas:[
+    'Me conta sua trajetória: há quanto tempo você atua como enfermeiro(a)?',
+  ]},
+  {cat:'Módulo Ser', perguntas:[
+    'Missão, visão e valores: já existe formalizado ou está só na sua cabeça?',
+    'Como você definiria sua identidade visual hoje, consistente ou "cada canal de um jeito"?',
+    'O que te diferencia de outros enfermeiros do mesmo nicho? Você sabe articular isso com clareza?',
+  ]},
+  {cat:'Módulo Conectar', perguntas:[
+    'Sua conta é verificada? Sua bio comunica nicho, transformação e próximo passo?',
+    'Você sabe em que nível de consciência está a maior parte de quem te segue?',
+    'Seu conteúdo tem função clara (atrair, educar, converter) ou são posts soltos?',
+    'Já testou estratégias offline de captação? O que funcionou e o que não?',
+    'Você coleta depoimentos/prova social de forma contínua? Onde usa?',
+  ]},
+  {cat:'Módulo Transformar', perguntas:[
+    'Como é sua consulta inicial hoje: estrutura fixa ou varia muito?',
+    'Quando alguém pergunta "como funciona seu atendimento?", como você responde?',
+    'Você se sente seguro(a) na venda consultiva, ou é um ponto de insegurança?',
+    'Usa algum tipo de apresentação estruturada (tipo Digital Nursing Plan) pro paciente?',
+  ]},
+  {cat:'Módulo Gerenciar', perguntas:[
+    'Como está sua gestão de prontuários e contratos, formalizado ou informal?',
+    'Como você precifica hoje: cálculo de custos ou "o que o mercado cobra"?',
+    'Do seu faturamento, quanto é recorrente (acompanhamento) vs. pontual (avulso)?',
+    'Como está sua rotina: blocos de produtividade definidos ou "apagando incêndio"?',
+    'Quais tarefas consomem mais seu tempo, e quais você sabe que deveria fazer e não faz?',
+  ]},
+  {cat:'Objetivos e Compromissos', perguntas:[
+    'Você já tentou resolver esse gargalo antes? O que funcionou, o que não, e por quê?',
+    'O que você espera de mim como mentor, e o que acha que depende só de você?',
+  ]},
+];
+// Mapeia perguntas do Wispform para os campos já existentes em s.diagnostico/s.cadastro,
+// para que as 3 alunas de exemplo já apareçam com respostas coerentes pré-preenchidas.
+const WISPFORM_SEED_MAP = {
+  'Qual seu nome completo?': s=>s.cadastro.nomeCompleto,
+  'Há quanto tempo você tem consultório/clínica própria?': s=>s.diagnostico.tempoConsultorio,
+  'O consultório é sua única fonte de renda hoje?': s=>s.diagnostico.unicaRenda,
+  'Numa escala de 0 a 10, o quanto seu negócio está "redondo" hoje?': s=>s.diagnostico.nota,
+  'Qual é o seu nicho e subnicho de atuação hoje?': s=>`${s.diagnostico.nicho} — ${s.diagnostico.subnicho}`,
+  'Você já tem uma persona definida (dores, desejos, medos e crenças mapeados)?': s=>s.diagnostico.personaDefinida,
+  'Qual seu faturamento médio mensal hoje com o consultório?': s=>s.diagnostico.faturamentoMedio,
+  'Quantos pacientes ativos em acompanhamento/protocolo você tem hoje?': s=>String(s.diagnostico.pacientesAtivos),
+  'Você acompanha indicadores semanais do negócio?': s=>s.diagnostico.indicadoresSemanais,
+  'Qual é hoje o seu maior gargalo?': s=>s.diagnostico.maiorGargalo,
+  'Se essa mentoria funcionar muito bem, como fica seu consultório em 12 meses?': s=>s.diagnostico.objetivo12meses,
+  'Quantas horas por semana você consegue dedicar à execução do negócio?': s=>s.diagnostico.horasSemana,
+};
+
+let COURSES = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+
+// Cada tópico tem "sections" que descrevem os campos reais da planilha Painel do Método
+// (a mesma estrutura que você usa hoje: Dados Sociodemográficos, Dores, Desejos etc. para Persona,
+// tabelas para Páginas e Mídias / Funil de Conteúdo / Faturamento, etc.)
+const QUADRANTS = [
+  {id:'vendas',title:'Vendas & Diagnósticos',icon:'target',moduleId:'transformar',
+   meta:'Diagnósticos gratuitos e leads gerados pelo consultório.',
+   topics:[
+    {id:'diagnosticos-leads',title:'Diagnósticos e Leads',desc:'Registro de diagnósticos gratuitos realizados e leads gerados pelo consultório.',
+     sections:[
+       {type:'table',key:'diagnosticos',label:'Diagnósticos',columns:[
+         {key:'nome',label:'Nome'},{key:'documentos',label:'Documentos'},{key:'plataforma',label:'Link da Plataforma'},{key:'compartilhar',label:'Link para Compartilhar'},
+       ]},
+       {type:'table',key:'crm',label:'CRM dos Leads',columns:[
+         {key:'nome',label:'Nome'},{key:'email',label:'E-mail'},{key:'whatsapp',label:'WhatsApp'},{key:'etapa',label:'Etapa'},{key:'mensagem',label:'Mensagem'},{key:'data',label:'Data'},
+       ]},
+     ]},
+   ]},
+  {id:'marketing',title:'Marketing e Branding',icon:'film',moduleId:'ser',
+   meta:'Persona, posicionamento e identidade visual do consultório.',
+   topics:[
+    {id:'persona',title:'Persona',desc:'Dados sociodemográficos, dores, desejos, medos e crenças do paciente ideal.',
+     sections:[
+       {type:'fields',key:'socio',label:'Dados Sociodemográficos',fields:[
+         {key:'nome',label:'Nome'},{key:'sexo',label:'Sexo Biológico'},{key:'idade',label:'Idade'},{key:'estadoCivil',label:'Estado Civil'},{key:'profissao',label:'Profissão'},
+       ]},
+       {type:'list',key:'dores',label:'Dores',placeholder:'Ex.: Medo do parto normal'},
+       {type:'list',key:'desejos',label:'Desejos',placeholder:'Ex.: Ser protagonista do parto / confiar no corpo'},
+       {type:'list',key:'medos',label:'Medos e Crenças',placeholder:'Ex.: "Meu corpo não é capaz de parir naturalmente."'},
+     ]},
+    {id:'mvv',title:'Missão, Visão, Valores e Proposta de Valor',desc:'Direcionadores estratégicos e proposta de valor do consultório.',
+     sections:[
+       {type:'fields',key:'mvv',label:'Missão, Visão, Valores, Transformação e Proposta de Valor',fields:[
+         {key:'missao',label:'Missão'},{key:'visao',label:'Visão'},{key:'valores',label:'Valores'},{key:'transformacao',label:'Transformação'},
+         {key:'propostaValor',label:'Proposta de Valor',gabarito:'GABARITO: [Nome do consultório/protocolo] resolve [Problema específico] ao proporcionar [Benefício principal]. Diferentemente de [Concorrência ou Alternativa], oferecemos [Diferencial único] que [Resultado desejado pelo paciente].'},
+       ]},
+     ]},
+    {id:'identidade',title:'Identidade de Marca',desc:'Arquétipo, paleta de cores, tipografia e manual de marca.',
+     sections:[
+       {type:'fields',key:'marca',label:'Identidade de Marca',fields:[
+         {key:'arquetipo',label:'Arquétipos de Marca'},{key:'fontePrincipal',label:'Fonte Principal'},{key:'fonteSecundaria',label:'Fonte Secundária'},{key:'fonteTerciaria',label:'Fonte Terciária'},
+         {key:'marketingSonoro',label:'Marketing Sonoro'},{key:'marketingOlfativo',label:'Marketing Olfativo'},{key:'fotos',label:'Fotos (link)'},
+         {key:'manualMarca',label:'Manual de Marca (link)'},{key:'arquivosMarca',label:'Arquivos da Marca (link)'},{key:'papelaria',label:'Papelaria (link)'},
+       ]},
+       {type:'swatches',key:'paleta',label:'Paleta de Cores',count:5},
+     ]},
+    {id:'paginas',title:'Páginas e Mídias',desc:'Instagram, Google Meu Negócio, YouTube, Facebook e árvore de links.',
+     sections:[
+       {type:'table',key:'paginas',label:'Páginas e Mídias',columns:[
+         {key:'link',label:'Link'},{key:'acesso',label:'Informações de Acesso'},{key:'arquivos',label:'Arquivos'},
+       ],fixedRows:['Instagram','Google Meu Negócio','YouTube','Página do Facebook','Árvore de Links']},
+     ]},
+    {id:'funil',title:'Funil de Conteúdo',desc:'Estrutura de conteúdo por etapa de consciência do paciente.',
+     sections:[
+       {type:'table',key:'funil',label:'Funil de Conteúdo (semana)',columns:[
+         {key:'objetivo',label:'Objetivo (etapa de consciência)'},{key:'descricao',label:'Descrição'},{key:'formato',label:'Formato'},{key:'status',label:'Status'},
+       ],fixedRows:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']},
+     ]},
+    {id:'avaliacao',title:'Avaliação de Conteúdo',desc:'Indicadores de performance dos conteúdos publicados.',
+     sections:[
+       {type:'table',key:'avaliacao',label:'Avaliação de Conteúdo',columns:[
+         {key:'link',label:'Link'},{key:'views',label:'Views'},{key:'shared',label:'Shared'},{key:'saved',label:'Saved'},{key:'likes',label:'Likes'},
+         {key:'viewsSeg',label:'Views Seguidores'},{key:'viewsNaoSeg',label:'Views Não Seguidores'},{key:'insights',label:'Insights'},
+       ]},
+     ]},
+    {id:'projetos',title:'3 Projetos',desc:'Iniciativas prioritárias de marca em andamento, mês a mês.',
+     sections:[
+       {type:'table',key:'projetos',label:'Projetos',columns:[
+         {key:'mes',label:'Mês'},{key:'parceiro',label:'Parceiro'},{key:'descricao',label:'Descrição do Projeto'},{key:'data',label:'Data'},{key:'detalhes',label:'Detalhes'},
+         {key:'clientes',label:'Clientes'},{key:'avaliacaoGeral',label:'Avaliação Geral'},{key:'custos',label:'Custos'},{key:'retorno',label:'Retorno'},
+       ]},
+     ]},
+    {id:'parceiros',title:'10 Parceiros',desc:'Mapeamento de parcerias estratégicas para indicações.',
+     sections:[
+       {type:'table',key:'parceiros',label:'Parceiros',columns:[{key:'parceiro',label:'Parceiro'},{key:'nicho',label:'Nicho'},{key:'indicado',label:'Indicado'}],maxRows:10},
+     ]},
+   ]},
+  {id:'jornada',title:'Jornada do Usuário',icon:'compass',moduleId:'transformar',
+   meta:'Passo a passo real do agendamento ao pós-atendimento.',
+   topics:[
+    {id:'agendamento',title:'Agendamento',desc:'Dias e horários disponíveis, e estratégia de oferta de horário ao paciente.',
+     sections:[{type:'list',key:'acoes',label:'Ações e Estratégia',placeholder:'Ex.: Terça-feira — 09h, 14h, 17h'}]},
+    {id:'registro',title:'Registro de Paciente Novo',desc:'Como registrar os dados de um paciente novo.',
+     sections:[{type:'list',key:'acoes',label:'Ações',placeholder:'Ex.: Compartilhar o link do Wispform'}]},
+    {id:'pagamento',title:'Pagamento',desc:'Formas de pagamento e condições oferecidas.',
+     sections:[{type:'list',key:'acoes',label:'Ações',placeholder:'Ex.: Pix ou cartão de crédito, em até 12x'}]},
+    {id:'confirmacao',title:'Confirmação',desc:'Confirmação do atendimento e envio de termos.',
+     sections:[{type:'list',key:'acoes',label:'Ações',placeholder:'Ex.: Enviar termo de ciência via Autentique'}]},
+    {id:'orientacoes',title:'Orientações',desc:'Materiais e avisos enviados antes da sessão.',
+     sections:[{type:'list',key:'acoes',label:'Ações',placeholder:'Ex.: Compartilhar manual do paciente'}]},
+    {id:'pos-atendimento',title:'Pós-Atendimento',desc:'Retorno, contrato de protocolo e lembretes.',
+     sections:[{type:'list',key:'acoes',label:'Ações',placeholder:'Ex.: Agendar retorno (sessão de até 30 minutos)'}]},
+    {id:'avaliacao-jornada',title:'Avaliação',desc:'Coleta de avaliação do atendimento pelo paciente.',
+     sections:[{type:'list',key:'acoes',label:'Ações',placeholder:'Ex.: Enviar formulário de avaliação'}]},
+    {id:'relacionamento',title:'Relacionamento',desc:'Pós-venda: contato após 2 e 6 meses, aniversário, dia da profissão.',
+     sections:[{type:'list',key:'acoes',label:'Ações',placeholder:'Ex.: Felicitar aniversário com arte pronta do Canva'}]},
+   ]},
+  {id:'gestao',title:'Gestão de Negócio',icon:'folder',moduleId:'gerenciar',
+   meta:'Documentação, jurídico, financeiro e rotina do consultório.',
+   topics:[
+    {id:'contratos',title:'Termos e Contratos',desc:'Contrato de consulta e contrato de protocolo terapêutico.',
+     sections:[{type:'fields',key:'contratos',label:'Documentos',fields:[
+       {key:'consulta',label:'Contrato de Consulta (link)'},{key:'protocolo',label:'Contrato de Protocolo Terapêutico (link)'},
+     ]}]},
+    {id:'pops',title:'POPs',desc:'Procedimentos Operacionais Padrão do consultório.',
+     sections:[{type:'list',key:'pops',label:'Procedimentos',placeholder:'Ex.: Higienização da sala de atendimento'}]},
+    {id:'financeiro',title:'Financeiro',desc:'Custos fixos e variáveis do consultório.',
+     sections:[
+       {type:'list',key:'custosFixos',label:'Custos Fixos',placeholder:'Ex.: Aluguel — R$ 1.200'},
+       {type:'list',key:'custosVariaveis',label:'Custos Variáveis',placeholder:'Ex.: Internet — R$ 100'},
+     ]},
+    {id:'precificacao',title:'Precificação',desc:'Cálculo do preço do protocolo a partir dos custos.',
+     sections:[
+       {type:'list',key:'itens',label:'Itens de Custo',placeholder:'Ex.: Internet — R$ 100'},
+       {type:'fields',key:'calculo',label:'Cálculo',fields:[
+         {key:'custoHora',label:'Custo Hora Consultório'},{key:'lucro',label:'% Lucro'},{key:'precoProtocolo',label:'Preço do Protocolo'},
+       ]},
+     ]},
+    {id:'faturamento',title:'Faturamento',desc:'Faturamento mensal por modalidade de atendimento.',
+     sections:[{type:'table',key:'faturamento',label:'Faturamento Mensal',columns:[
+       {key:'mes',label:'Mês'},{key:'modalidade',label:'Modalidade'},{key:'faturamento',label:'Faturamento'},{key:'total',label:'Faturamento Total'},
+     ]}]},
+    {id:'rotina',title:'Rotina',desc:'Planejamento da rotina semanal, dia a dia.',
+     sections:[
+       {type:'list',key:'segunda',label:'Segunda'},{type:'list',key:'terca',label:'Terça'},{type:'list',key:'quarta',label:'Quarta'},
+       {type:'list',key:'quinta',label:'Quinta'},{type:'list',key:'sexta',label:'Sexta'},{type:'list',key:'sabado',label:'Sábado'},{type:'list',key:'domingo',label:'Domingo'},
+     ]},
+    {id:'checklist-gestao',title:'Checklist',desc:'Checklist geral de ações da gestão do negócio.',
+     sections:[{type:'checklist',key:'acoes',label:'Ações',placeholder:'Ex.: Revisar POPs do trimestre'}]},
+   ]},
+];
+// Overrides manuais de preenchimento definidos pelo usuário durante a sessão (demo, em memória).
+const PANEL_OVERRIDES = {};
+// Valores digitados nos formulários do Painel do Método, por aluno + tópico (demo, em memória).
+const PANEL_DATA = {};
+// Exemplo real pré-preenchido de Persona (baseado no seu PDF de referência), por aluno.
+const PANEL_SEED = {
+  ana:{ persona:{
+    socio:{nome:'Marina (persona)',sexo:'Feminino',idade:'34 anos',estadoCivil:'Casada',profissao:'Advogada'},
+    dores:['Já tentou várias dietas restritivas e sempre recupera o peso','Sente vergonha de falar sobre o próprio corpo','Não tem tempo para cozinhar refeições saudáveis no dia a dia'],
+    desejos:['Emagrecer sem passar fome','Ter mais energia no dia a dia','Criar uma relação saudável com a comida'],
+    medos:['"Já tentei de tudo, acho que meu metabolismo é lento demais."','"Não vou conseguir manter a rotina com a correria do trabalho."'],
+  }},
+  bruno:{ persona:{ socio:{nome:'',sexo:'',idade:'',estadoCivil:'',profissao:''}, dores:[], desejos:[], medos:[] }},
+  carla:{ persona:{
+    socio:{nome:'Fernanda',sexo:'Feminino',idade:'47 anos',estadoCivil:'Casada',profissao:'Professora'},
+    dores:['Ondas de calor frequentes que atrapalham o sono','Sente que "perdeu a energia de antes"','Medo de estar sozinha nessa fase, sem apoio humanizado'],
+    desejos:['Atravessar o climatério com mais leveza','Entender o que está acontecendo com o próprio corpo','Reduzir os sintomas sem recorrer só à reposição hormonal'],
+    medos:['"Isso é coisa da idade, não tem muito o que fazer."','"Minha mãe sofreu muito nessa fase, acho que vou ser igual."','"Já é tarde para melhorar minha qualidade de vida."'],
+  }},
+};
+
+/* ================= DATA: ALUNOS ================= */
+const STUDENTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+
+// Os 3 formatos de publicação do mural — espelham os grupos reais da Comunidade
+// do WhatsApp do Método Essência (DÚVIDAS, INTERAÇÕES) mais CONQUISTAS.
+// Publicações do tipo "duvida" ativam a equipe interna (ver updateNotifBadge()).
+const POST_TYPES = {
+  duvida:    {label:'Dúvida',     icon:'help',    css:'duvida'},
+  interacao: {label:'Interação',  icon:'comment', css:'interacao'},
+  conquista: {label:'Conquista',  icon:'award',   css:'conquista'},
+};
+let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+
+let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+const MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function mapLiveSessionRow(row){
+  const [y,m,d] = row.event_date.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  const hoje = new Date(); hoje.setHours(0,0,0,0); dt.setHours(0,0,0,0);
+  return {
+    id: row.id, title: row.title,
+    date: `${String(d).padStart(2,'0')} ${MESES_ABREV[m-1]}`,
+    day: String(d).padStart(2,'0'), month: MESES_ABREV[m-1].toUpperCase(),
+    time: row.event_time || '', desc: row.description || '',
+    type: dt >= hoje ? 'upcoming' : 'past',
+    _eventDate: row.event_date,
+  };
+}
+
+let MATERIALS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+
+/* ================= STATE ================= */
+let currentStudentId = null;
+let currentRole = 'aluno';
+let currentView = 'inicio';
+let panelQuadrantId = null;
+let communityFilter = 'todas';
+let selectedPostType = 'interacao';
+let CHECKLIST_STATE = {}; // in-memory, chave `${studentId}:${moduleId}` -> array de booleans
+let internoDiagTab = 'wispform';
+let INTERNAL_DIAG = {}; // in-memory, chave `${studentId}:wispform`/`:abertura` -> array de respostas (flat)
+let INTERNAL_DIAG_EDITING = {}; // mesma chave -> array de booleans (true = campo aberto para edição)
+
+function getStudent(id){ return STUDENTS.find(s=>s.id===id); }
+function getCourse(id){ return COURSES.find(c=>c.id===id); }
+function youtubeId(url){
+  if(!url) return null;
+  const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+function getModule(id){ return MODULES.find(m=>m.id===id); }
+function initialsAvatar(initials,color,size,avatarUrl){
+  const sizeStyle = size?`width:${size}px;height:${size}px;font-size:${size*0.34}px`:'';
+  if(avatarUrl){
+    return `<div class="avatar" style="background:${color};${sizeStyle};background-image:url('${escapeAttr(avatarUrl)}');background-size:cover;background-position:center;color:transparent"></div>`;
+  }
+  return `<div class="avatar" style="background:${color};${sizeStyle}">${initials}</div>`;
+}
+function overallProgress(s){
+  let done=0;
+  MODULES.forEach(m=>done+=s.moduleProgress[m.id]);
+  return Math.round(done/TOTAL_ITEMS*100);
+}
+function getModuleChecklistState(sid, modId){
+  const key = sid+':'+modId;
+  if(!(key in CHECKLIST_STATE)){
+    const s = getStudent(sid);
+    const done = (s.moduleProgress && s.moduleProgress[modId]) || 0;
+    CHECKLIST_STATE[key] = MODULE_CHECKLIST[modId].map((_,i)=>i<done);
+  }
+  return CHECKLIST_STATE[key];
+}
+function getInternalAnswers(sid, type){
+  const key = sid+':'+type;
+  if(!(key in INTERNAL_DIAG)){
+    const groups = type==='wispform' ? WISPFORM_QUESTIONS : DIAGNOSTICO_ABERTURA_QUESTIONS;
+    const flat = groups.flatMap(g=>g.perguntas);
+    if(type==='wispform'){
+      const s = getStudent(sid);
+      INTERNAL_DIAG[key] = flat.map(q => WISPFORM_SEED_MAP[q] ? WISPFORM_SEED_MAP[q](s) : '');
+    } else {
+      INTERNAL_DIAG[key] = flat.map(()=>'');
+    }
+  }
+  return INTERNAL_DIAG[key];
+}
+function getInternalEditing(sid, type){
+  const key = sid+':'+type;
+  if(!(key in INTERNAL_DIAG_EDITING)){
+    const answers = getInternalAnswers(sid, type);
+    INTERNAL_DIAG_EDITING[key] = answers.map(a => !a); // vazio -> aberto para preencher; já preenchido -> salvo
+  }
+  return INTERNAL_DIAG_EDITING[key];
+}
+function formatDateBR(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+}
+function formatDateObjBR(dt){
+  return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+}
+function addMonths(iso, months){
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y, (m-1)+months, d);
+}
+function diasRestantes(s){
+  const fim = addMonths(s.cadastro.dataMatricula, s.cadastro.duracaoMeses);
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  fim.setHours(0,0,0,0);
+  return Math.round((fim - hoje) / 86400000);
+}
+// Mês corrente do programa (1 a 12) desde a data de matrícula.
+function mesPrograma(s){
+  const [y,m,d] = s.cadastro.dataMatricula.split('-').map(Number);
+  const inicio = new Date(y, m-1, d);
+  const hoje = new Date();
+  let meses = (hoje.getFullYear()-inicio.getFullYear())*12 + (hoje.getMonth()-inicio.getMonth());
+  if(hoje.getDate() < inicio.getDate()) meses--;
+  return Math.min(12, Math.max(1, meses+1));
+}
+// Estágio do Método Essência conforme o mês do programa (ver cronograma dos 12 meses).
+function estagioMentoria(mes){
+  if(mes<=1) return {label:'Abertura', cls:'abertura'};
+  if(mes<=3) return {label:'Módulo Ser', cls:'ser'};
+  if(mes<=6) return {label:'Módulo Conectar', cls:'conectar'};
+  if(mes<=9) return {label:'Módulo Transformar', cls:'transformar'};
+  if(mes<=11) return {label:'Módulo Gerenciar', cls:'gerenciar'};
+  return {label:'Fechamento', cls:'fechamento'};
+}
+
+/* ================= AUTH / DATA BOOTSTRAP (Supabase) ================= */
+let currentUser = null;      // usuário autenticado no Supabase
+let currentUserRole = null;  // papel REAL da conta ('aluno'|'staff') — não confundir com currentRole (visualização atual)
+let currentUserProfile = null; // linha de profiles do próprio usuário logado (fallback quando não há mentorados)
+
+function timeAgo(iso){
+  if(!iso) return '';
+  const diffMin = Math.round((Date.now() - new Date(iso).getTime())/60000);
+  if(diffMin < 1) return 'agora mesmo';
+  if(diffMin < 60) return `há ${diffMin} min`;
+  const diffH = Math.round(diffMin/60);
+  if(diffH < 24) return `há ${diffH} hora${diffH>1?'s':''}`;
+  const diffD = Math.round(diffH/24);
+  if(diffD === 1) return 'ontem';
+  return `há ${diffD} dias`;
+}
+
+function mapProfileRow(p){
+  const sc = p.student_cadastro || {};
+  const diag = p.diagnostico || {};
+  const moduleProgress = {};
+  MODULES.forEach(m=>moduleProgress[m.id]=0);
+  (p.module_progress||[]).forEach(mp=>{ moduleProgress[mp.module_id] = mp.done; });
+  const courseProgress = {};
+  (p.course_progress||[]).forEach(cp=>{ courseProgress[cp.course_id] = cp.pct; });
+  return {
+    id: p.id, name: p.name, initials: p.initials, color: p.color, turma: p.turma || '—', avatarUrl: p.avatar_url || null,
+    cadastro:{
+      nomeCompleto: sc.nome_completo || p.name || '',
+      email: sc.email || '',
+      telefone: sc.telefone || '',
+      cpf: sc.cpf || '',
+      cidade: sc.cidade || '',
+      dataMatricula: sc.data_matricula || new Date().toISOString().slice(0,10),
+      duracaoMeses: sc.duracao_meses || 12,
+      plano: sc.plano || '—',
+    },
+    moduleProgress, courseProgress,
+    progressoMentorado: diag.progresso_mentorado || 0,
+    progressoMentor: diag.progresso_mentor || 0,
+    diagnostico:{
+      nicho: diag.nicho || '—', subnicho: diag.subnicho || '—', tempoConsultorio: diag.tempo_consultorio || '—',
+      unicaRenda: diag.unica_renda || '—', nota: diag.nota || '—', personaDefinida: diag.persona_definida || '—',
+      faturamentoMedio: diag.faturamento_medio || '—', pacientesAtivos: diag.pacientes_ativos || 0,
+      indicadoresSemanais: diag.indicadores_semanais || '—', leadsMes: diag.leads_mes || 0,
+      taxaConversao: diag.taxa_conversao || '—', maiorGargalo: diag.maior_gargalo || '—',
+      objetivo12meses: diag.objetivo_12meses || '—', horasSemana: diag.horas_semana || '—',
+    },
+    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||''})),
+    sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,hasFile:x.has_file,transcricao:x.transcricao})),
+    contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions})),
+  };
+}
+
+async function bootstrapData(){
+  const PROFILE_SELECT = '*, student_cadastro(*), diagnostico(*), module_progress(*), checklist_items(*), sessions(*), contatos(*), course_progress(*)';
+  const { data: profiles, error: perr } = await sb.from('profiles').select(PROFILE_SELECT).order('name');
+  if(perr) throw perr;
+
+  const me = profiles.find(p=>p.id===currentUser.id);
+  currentUserRole = me ? me.role : 'aluno';
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null} : null;
+
+  STUDENTS.length = 0;
+  profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
+
+  const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:postRows},{data:liveRows}] = await Promise.all([
+    sb.from('module_checklist_state').select('*'),
+    sb.from('panel_data').select('*'),
+    sb.from('panel_overrides').select('*'),
+    sb.from('internal_diag_answers').select('*'),
+    sb.from('courses').select('*, course_materials(*)').order('mod_id').order('order_index'),
+    sb.from('materials').select('*').order('id'),
+    sb.from('community_posts').select('*, community_comments(*), community_likes(*)').order('created_at',{ascending:false}),
+    sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
+  ]);
+
+  LIVE_SESSIONS.length = 0;
+  (liveRows||[]).forEach(row=>LIVE_SESSIONS.push(mapLiveSessionRow(row)));
+
+  Object.keys(CHECKLIST_STATE).forEach(k=>delete CHECKLIST_STATE[k]);
+  (mcs||[]).forEach(row=>{
+    const key = row.student_id+':'+row.module_id;
+    if(!CHECKLIST_STATE[key]){
+      const total = (MODULE_CHECKLIST[row.module_id]||[]).length;
+      CHECKLIST_STATE[key] = new Array(total).fill(false);
+    }
+    if(row.item_idx < CHECKLIST_STATE[key].length) CHECKLIST_STATE[key][row.item_idx] = row.checked;
+  });
+
+  Object.keys(PANEL_DATA).forEach(k=>delete PANEL_DATA[k]);
+  (pd||[]).forEach(row=>{ PANEL_DATA[row.student_id+':'+row.topic_id] = row.data || {}; });
+
+  Object.keys(PANEL_OVERRIDES).forEach(k=>delete PANEL_OVERRIDES[k]);
+  (po||[]).forEach(row=>{ PANEL_OVERRIDES[row.student_id+':'+row.topic_id] = row.filled; });
+
+  Object.keys(INTERNAL_DIAG).forEach(k=>delete INTERNAL_DIAG[k]);
+  ['wispform','abertura'].forEach(type=>{
+    const groups = type==='wispform' ? WISPFORM_QUESTIONS : DIAGNOSTICO_ABERTURA_QUESTIONS;
+    const flatLen = groups.reduce((a,g)=>a+g.perguntas.length,0);
+    const bySid = {};
+    (ida||[]).filter(r=>r.diag_type===type).forEach(r=>{
+      if(!bySid[r.student_id]) bySid[r.student_id] = new Array(flatLen).fill('');
+      if(r.idx < flatLen) bySid[r.student_id][r.idx] = r.answer || '';
+    });
+    Object.keys(bySid).forEach(sid=>{ INTERNAL_DIAG[sid+':'+type] = bySid[sid]; });
+  });
+
+  COURSES.length = 0;
+  (courseRows||[]).forEach(c=>{
+    COURSES.push({
+      id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration || '—',
+      tint:[c.tint1 || '#8d916f', c.tint2 || '#bec6b1'],
+      desc:c.description || '', videoLink:c.video_link || '',
+      materiais:(c.course_materials||[]).map(m=>({title:m.title, link:m.link, _id:m.id})),
+    });
+  });
+
+  MATERIALS.length = 0;
+  (materialRows||[]).forEach(m=>MATERIALS.push({id:m.id, title:m.title, type:m.type, link:m.link||'', size:m.size||''}));
+
+  COMMUNITY_POSTS.length = 0;
+  (postRows||[]).forEach(p=>{
+    COMMUNITY_POSTS.push({
+      id:p.id, authorId:p.author_id, type:p.type, time:timeAgo(p.created_at), text:p.text,
+      likes:(p.community_likes||[]).length,
+      liked:(p.community_likes||[]).some(l=>l.student_id===currentUser.id),
+      comments:(p.community_comments||[]).map(c=>({authorId:c.author_id, text:c.text})),
+    });
+  });
+
+  currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
+}
+
+async function enterApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').classList.add('active');
+  setupNav();
+  renderProfile();
+  setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
+  goTo(currentUserRole==='staff' ? 'visaogeral' : 'inicio');
+}
+
+/* ================= SYNC: grava mutações locais de volta no Supabase ================= */
+const _debounceTimers = {};
+function debounceSync(key, fn, delay=700){
+  clearTimeout(_debounceTimers[key]);
+  _debounceTimers[key] = setTimeout(()=>{ fn().catch(e=>console.error('sync', key, e)); }, delay);
+}
+function syncNow(promiseLike){
+  Promise.resolve(promiseLike).then(r=>{ if(r && r.error) console.error('sync', r.error); }).catch(e=>console.error('sync', e));
+}
+function syncCourseProgress(sid, courseId, pct){
+  syncNow(sb.from('course_progress').upsert({student_id:sid, course_id:courseId, pct}));
+}
+function syncModuleChecklist(sid, modId, idx, checked){
+  syncNow(sb.from('module_checklist_state').upsert({student_id:sid, module_id:modId, item_idx:idx, checked}));
+}
+function syncModuleProgress(sid, modId, done){
+  syncNow(sb.from('module_progress').upsert({student_id:sid, module_id:modId, done}));
+}
+function syncPanelData(sid, topicId, data){
+  debounceSync('panel:'+sid+':'+topicId, ()=>sb.from('panel_data').upsert({student_id:sid, topic_id:topicId, data}));
+}
+function syncPanelOverride(sid, topicId, filled){
+  syncNow(sb.from('panel_overrides').upsert({student_id:sid, topic_id:topicId, filled}));
+}
+async function createCommunityPost(authorId, type, text){
+  const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text}).select().single();
+  if(error) throw error;
+  return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, likes:0, liked:false, comments:[]};
+}
+function syncCommunityLike(postId, sid, liked){
+  if(liked) syncNow(sb.from('community_likes').upsert({post_id:postId, student_id:sid}));
+  else syncNow(sb.from('community_likes').delete().eq('post_id',postId).eq('student_id',sid));
+}
+function syncCommunityComment(postId, authorId, text){
+  syncNow(sb.from('community_comments').insert({post_id:postId, author_id:authorId, text}));
+}
+function syncChecklistItemStatus(id, status){
+  syncNow(sb.from('checklist_items').update({status}).eq('id', id));
+}
+async function syncChecklistItemInsert(sid, item){
+  const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs}).select().single();
+  if(error) throw error;
+  return data.id;
+}
+function syncInternalDiagAnswer(sid, diagType, idx, answer){
+  syncNow(sb.from('internal_diag_answers').upsert({student_id:sid, diag_type:diagType, idx, answer}));
+}
+async function syncContatoInsert(sid, c){
+  const { data, error } = await sb.from('contatos').insert({student_id:sid, data:c.data, responsavel:c.responsavel, resumo:c.resumo, link_gravacao:c.linkGravacao, link_transcricao:c.linkTranscricao, synced_to_sessions:false}).select().single();
+  if(error) throw error;
+  return data.id;
+}
+async function syncContatoSyncSession(contatoId, sid, sess){
+  const { data, error } = await sb.from('sessions').insert({student_id:sid, title:sess.title, date:sess.date, notes:sess.notes, has_file:sess.hasFile, transcricao:sess.transcricao}).select().single();
+  if(error) throw error;
+  const { error: uerr } = await sb.from('contatos').update({synced_to_sessions:true}).eq('id', contatoId);
+  if(uerr) throw uerr;
+  return data.id;
+}
+function syncCourseInsert(course){
+  syncNow(sb.from('courses').insert({id:course.id, mod_id:course.modId, cat:course.cat, title:course.title, duration:course.duration, tint1:course.tint[0], tint2:course.tint[1], description:course.desc, video_link:course.videoLink, order_index:course._orderIndex||0}));
+}
+async function syncCourseUpdate(course){
+  const { error } = await sb.from('courses').update({mod_id:course.modId, cat:course.cat, title:course.title, duration:course.duration, description:course.desc, video_link:course.videoLink}).eq('id', course.id);
+  if(error) throw error;
+  await sb.from('course_materials').delete().eq('course_id', course.id);
+  if(course.materiais.length){
+    const { error: merr } = await sb.from('course_materials').insert(course.materiais.map(m=>({course_id:course.id, title:m.title, link:m.link})));
+    if(merr) throw merr;
+  }
+}
+function syncCourseDelete(courseId){
+  syncNow(sb.from('courses').delete().eq('id', courseId));
+}
+function syncCourseOrder(courses){
+  syncNow(Promise.all(courses.map((c,i)=>sb.from('courses').update({order_index:i}).eq('id',c.id))));
+}
+async function syncMaterialInsert(m){
+  const { data, error } = await sb.from('materials').insert({title:m.title, type:m.type, link:m.link}).select().single();
+  if(error) throw error;
+  return data.id;
+}
+function syncMaterialDelete(id){
+  syncNow(sb.from('materials').delete().eq('id', id));
+}
+async function syncLiveSessionInsert(row){
+  const { data, error } = await sb.from('live_sessions').insert({
+    title: row.title, event_date: row.event_date, event_time: row.event_time, description: row.description,
+  }).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncLiveSessionDelete(id){
+  syncNow(sb.from('live_sessions').delete().eq('id', id));
+}
+
+/* ================= LOGIN ================= */
+function renderLogin(){
+  document.querySelectorAll('#login-tabs [data-tab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#login-tabs [data-tab]').forEach(b=>b.classList.toggle('active', b===btn));
+      document.getElementById('login-panel-entrar').style.display = btn.dataset.tab==='entrar' ? 'block' : 'none';
+      document.getElementById('login-panel-criar').style.display = btn.dataset.tab==='criar' ? 'block' : 'none';
+    });
+  });
+
+  document.getElementById('login-btn').addEventListener('click', async ()=>{
+    const email = document.getElementById('li-email').value.trim();
+    const senha = document.getElementById('li-senha').value;
+    const errEl = document.getElementById('li-error');
+    errEl.style.display='none';
+    if(!email || !senha){ errEl.textContent='Informe e-mail e senha.'; errEl.style.display='block'; return; }
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if(error){
+      btn.disabled = false; btn.textContent = 'Entrar na plataforma';
+      errEl.textContent = 'E-mail ou senha inválidos.'; errEl.style.display='block'; return;
+    }
+    currentUser = data.user;
+    try{
+      await bootstrapData();
+      await enterApp();
+    }catch(e){
+      console.error(e);
+      errEl.textContent = 'Não foi possível carregar seus dados. Tente novamente.'; errEl.style.display='block';
+    }
+    btn.disabled = false; btn.textContent = 'Entrar na plataforma';
+  });
+
+  document.getElementById('signup-btn').addEventListener('click', async ()=>{
+    const nome = document.getElementById('cr-nome').value.trim();
+    const email = document.getElementById('cr-email').value.trim();
+    const senha = document.getElementById('cr-senha').value;
+    const errEl = document.getElementById('cr-error');
+    errEl.style.color = 'var(--danger)';
+    errEl.style.display='none';
+    if(!nome || !email || !senha){ errEl.textContent='Preencha todos os campos.'; errEl.style.display='block'; return; }
+    if(senha.length < 6){ errEl.textContent='A senha precisa ter ao menos 6 caracteres.'; errEl.style.display='block'; return; }
+    const initials = nome.split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+    const btn = document.getElementById('signup-btn');
+    btn.disabled = true; btn.textContent = 'Criando...';
+    const { data, error } = await sb.auth.signUp({ email, password: senha, options:{ data:{ name: nome, initials } } });
+    btn.disabled = false; btn.textContent = 'Criar conta';
+    if(error){
+      errEl.textContent = /already/i.test(error.message||'') ? 'Este e-mail já está cadastrado.' : 'Não foi possível criar a conta.';
+      errEl.style.display='block'; return;
+    }
+    if(!data.session){
+      errEl.style.color = 'var(--accent)';
+      errEl.textContent = 'Conta criada! Verifique seu e-mail para confirmar o acesso antes de entrar.';
+      errEl.style.display='block'; return;
+    }
+    currentUser = data.user;
+    try{
+      await bootstrapData();
+      await enterApp();
+    }catch(e){
+      console.error(e);
+      errEl.textContent = 'Conta criada, mas não foi possível carregar seus dados agora. Tente entrar novamente.'; errEl.style.display='block';
+    }
+  });
+}
+
+/* ================= NAV / SHELL ================= */
+function setupNav(){
+  document.querySelectorAll('.nav-item[data-view]').forEach(btn=>{
+    const view = btn.dataset.view;
+    const [ic,label] = NAV_LABELS[view];
+    btn.innerHTML = `${icon(ic)}<span>${label}</span>`;
+    btn.addEventListener('click',()=>goTo(view));
+  });
+  document.getElementById('logout-btn').innerHTML = `${icon('logout')}<span>Sair</span>`;
+  document.getElementById('logout-btn').addEventListener('click', async ()=>{
+    await sb.auth.signOut();
+    currentUser = null; currentUserRole = null; currentStudentId = null;
+    document.getElementById('app').classList.remove('active');
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('li-email').value=''; document.getElementById('li-senha').value='';
+    document.querySelectorAll('#login-tabs [data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab==='entrar'));
+    document.getElementById('login-panel-entrar').style.display='block';
+    document.getElementById('login-panel-criar').style.display='none';
+  });
+  document.getElementById('profile-btn').addEventListener('click',(e)=>{
+    e.stopPropagation();
+    document.getElementById('profile-dropdown').classList.toggle('open');
+  });
+  document.addEventListener('click',()=>document.getElementById('profile-dropdown').classList.remove('open'));
+  document.querySelectorAll('#role-toggle [data-role]').forEach(btn=>{
+    btn.addEventListener('click',()=>setRole(btn.dataset.role));
+  });
+  document.getElementById('open-cadastro').innerHTML = currentUserRole==='staff'
+    ? `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`
+    : `${icon('idcard')}<span>Meus Dados Cadastrais</span>`;
+  document.getElementById('open-cadastro').addEventListener('click',(e)=>{
+    e.stopPropagation();
+    document.getElementById('profile-dropdown').classList.remove('open');
+    if(currentUserRole==='staff') openStaffInfoModal();
+    else openCadastroModal();
+  });
+  document.getElementById('notif-btn').addEventListener('click',()=>{
+    communityFilter = currentRole==='staff' ? 'duvida' : 'todas';
+    goTo('comunidade');
+  });
+  document.getElementById('menu-btn').addEventListener('click',()=>{
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-backdrop').classList.add('open');
+  });
+  document.getElementById('sidebar-backdrop').addEventListener('click',()=>{
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-backdrop').classList.remove('open');
+  });
+  document.getElementById('nav-prontuarios').addEventListener('click',()=>{
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-backdrop').classList.remove('open');
+  });
+}
+
+function updateNotifBadge(){
+  const dot = document.getElementById('notif-dot');
+  const badge = document.getElementById('notif-badge');
+  const duvidas = COMMUNITY_POSTS.filter(p=>p.type==='duvida').length;
+  if(currentRole==='staff'){
+    dot.style.display = 'none';
+    badge.style.display = duvidas>0 ? 'flex' : 'none';
+    badge.textContent = duvidas;
+  } else {
+    dot.style.display = duvidas>0 ? 'block' : 'none';
+    badge.style.display = 'none';
+  }
+}
+
+function setRole(role){
+  currentRole = role;
+  document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
+  document.querySelectorAll('#role-toggle [data-role]').forEach(b=>{
+    const active = b.dataset.role===role;
+    b.classList.toggle('active', active);
+    b.classList.toggle('staff-active', active && role==='staff');
+  });
+  document.getElementById('staff-group-label').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('nav-visaogeral').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('nav-interno').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('nav-conteudo').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
+  document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
+  updateNotifBadge();
+  if(role==='aluno' && (currentView==='interno' || currentView==='conteudo' || currentView==='visaogeral')){ goTo('inicio'); }
+}
+
+function renderProfile(){
+  const s = getStudent(currentStudentId) || currentUserProfile;
+  if(!s){
+    document.getElementById('profile-name').textContent = '';
+    document.getElementById('profile-options').innerHTML = '<div class="label" style="padding:8px 10px">Nenhum mentorado cadastrado ainda.</div>';
+    return;
+  }
+  const pa = document.getElementById('profile-avatar');
+  pa.style.background = s.color;
+  if(s.avatarUrl){
+    pa.style.backgroundImage = `url('${s.avatarUrl}')`; pa.style.backgroundSize='cover'; pa.style.backgroundPosition='center';
+    pa.textContent = '';
+  } else {
+    pa.style.backgroundImage = ''; pa.textContent = s.initials;
+  }
+  document.getElementById('profile-name').textContent = s.name.split(' ')[0];
+  const opts = document.getElementById('profile-options');
+  opts.innerHTML = STUDENTS.map(st=>`
+    <button class="opt" data-id="${st.id}">
+      ${initialsAvatar(st.initials,st.color,24,st.avatarUrl)}
+      <span>${st.name}</span>
+    </button>
+  `).join('');
+  opts.querySelectorAll('.opt').forEach(el=>{
+    el.addEventListener('click',()=>{
+      currentStudentId = el.dataset.id;
+      panelQuadrantId = null;
+      renderProfile();
+      renderCurrentView();
+      document.getElementById('profile-dropdown').classList.remove('open');
+    });
+  });
+}
+
+function goTo(view){
+  currentView = view;
+  if(view==='painel') panelQuadrantId = null;
+  document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  const [,label] = NAV_LABELS[view];
+  const badgeType = BADGE[view];
+  document.getElementById('topbar-title').innerHTML = label + (badgeType? ` <span class="badge-${badgeType}">${BADGE_TEXT[badgeType]}</span>`:'');
+  renderCurrentView();
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+  window.scrollTo(0,0);
+}
+
+function renderCurrentView(){
+  const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, agenda:renderAgenda,
+               materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
+               sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral};
+  const NEEDS_STUDENT = ['inicio','aulas','comunidade','dashboard','painel','sessoes','metas','interno'];
+  if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
+    document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
+    return;
+  }
+  map[currentView]();
+}
+
+/* ================= HELPERS: DOWNLOAD & CALENDAR ================= */
+function downloadPlaceholder(filename, label){
+  const content = `${label}\n\nEste é um arquivo de demonstração gerado pelo protótipo "Área do Aluno".\nEm produção, este botão baixaria o material real hospedado na plataforma.\n\nAscentria · Método Essência`;
+  const blob = new Blob([content], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ================= VIEW: INÍCIO ================= */
+function renderInicio(){
+  const s = getStudent(currentStudentId);
+  const overall = overallProgress(s);
+  const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+  const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming');
+  const inProgress = COURSES.filter(c=>s.courseProgress[c.id]>0 && s.courseProgress[c.id]<100);
+  const continueList = inProgress.length? inProgress : COURSES.filter(c=>s.courseProgress[c.id]===0).slice(0,3);
+
+  document.getElementById('view-inicio').innerHTML = `
+    <div class="hero">
+      <div>
+        <h1>Olá, ${s.name.split(' ')[0]}</h1>
+        <p>Bem-vindo(a) de volta à sua área do Método Essência.</p>
+      </div>
+      ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
+    </div>
+    <div class="stat-row">
+      <div class="stat-card clickable" data-goto="dashboard"><div class="label">Progresso geral</div><div class="value shared">${overall}%</div></div>
+      <div class="stat-card clickable" data-goto="metas"><div class="label">Próxima meta</div><div class="value" style="font-size:14px">${nextTask? nextTask.tarefa : 'Tudo em dia'}</div></div>
+      <div class="stat-card"><div class="label">Próximo encontro ao vivo</div><div class="value accent" style="font-size:14px">${nextLive? nextLive.date+' · '+nextLive.time.split('·')[0] : '—'}</div></div>
+      <div class="stat-card"><div class="label">Turma</div><div class="value" style="font-size:14px">${s.turma}</div></div>
+    </div>
+
+    <h2 class="section-title">${icon('film')} Continue assistindo</h2>
+    <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
+
+    <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
+    <div>${COMMUNITY_POSTS.slice(0,2).map(p=>postHtml(p,true)).join('')}</div>
+  `;
+  bindCourseTiles();
+  document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
+}
+
+/* ================= VIEW: AULAS ================= */
+function courseTileHtml(c){
+  const s = getStudent(currentStudentId);
+  const pct = s.courseProgress[c.id] || 0;
+  return `
+    <button class="course-tile" data-id="${c.id}">
+      <div class="course-thumb" style="--tint1:${c.tint[0]};--tint2:${c.tint[1]}">
+        ${fillIcon('play','play-fill')}
+        ${pct===100? `<div class="done-badge">${icon('check')}</div>`:''}
+        <div class="progress-mini"><div class="fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="course-info">
+        <div class="cat">${c.cat}</div>
+        <div class="title">${c.title}</div>
+        <div class="meta">${c.duration}</div>
+      </div>
+    </button>`;
+}
+function bindCourseTiles(){
+  document.querySelectorAll('.course-tile').forEach(el=>{
+    el.addEventListener('click',()=>openCourseModal(el.dataset.id));
+  });
+}
+function renderAulas(){
+  const cats = [...new Set(COURSES.map(c=>c.cat))];
+  document.getElementById('view-aulas').innerHTML = `
+    <p class="section-sub">Biblioteca de aulas do Método Essência, organizada pelos mesmos módulos do seu Dashboard — assista no seu ritmo.</p>
+    ${cats.map(cat=>`
+      <div class="category-block">
+        <h2 class="section-title">${cat}</h2>
+        <div class="row-scroll">${COURSES.filter(c=>c.cat===cat).map(c=>courseTileHtml(c)).join('')}</div>
+      </div>
+    `).join('')}
+  `;
+  bindCourseTiles();
+}
+function openCourseModal(id){
+  const c = getCourse(id);
+  const s = getStudent(currentStudentId);
+  const pct = s.courseProgress[id]||0;
+  const done = pct===100;
+  const yt = youtubeId(c.videoLink);
+  const materiais = c.materiais || [];
+  document.getElementById('modal').innerHTML = `
+    ${yt
+      ? `<div class="modal-yt"><button class="modal-close" id="modal-close">${icon('x')}</button><iframe src="https://www.youtube.com/embed/${yt}" title="${c.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      : `<div class="modal-player" style="--tint1:${c.tint[0]};--tint2:${c.tint[1]}">
+          <button class="modal-close" id="modal-close">${icon('x')}</button>
+          ${fillIcon('play','play-fill')}
+        </div>`}
+    <div class="modal-body">
+      <div class="cat">${c.cat}</div>
+      <h3>${c.title}</h3>
+      <p class="desc">${c.desc} <br><br>${c.duration}.</p>
+      <div class="modal-actions">
+        <button class="btn-accent ${done?'done':''}" id="modal-toggle-done">${done? icon('check')+' Concluída' : 'Marcar como assistida'}</button>
+        ${(c.videoLink && !yt)? `<a class="btn-outline" href="${c.videoLink}" target="_blank" rel="noopener">${icon('video')} Assistir no link</a>` : ''}
+        <button class="btn-outline" id="modal-close-2">Fechar</button>
+      </div>
+      ${materiais.length? `
+        <div class="course-materials">
+          <div class="ps-h">Materiais desta aula</div>
+          ${materiais.map(m=>`
+            <div class="material-link-row">
+              <span class="title">${m.title}</span>
+              <a class="btn-mini" href="${m.link}" target="_blank" rel="noopener">${icon('download')} Abrir</a>
+            </div>
+          `).join('')}
+        </div>` : ''}
+    </div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('modal-close').addEventListener('click',closeModal);
+  document.getElementById('modal-close-2').addEventListener('click',closeModal);
+  document.getElementById('modal-toggle-done').addEventListener('click',()=>{
+    s.courseProgress[id] = s.courseProgress[id]===100? 60 : 100;
+    syncCourseProgress(s.id, id, s.courseProgress[id]);
+    closeModal();
+    renderCurrentView();
+  });
+}
+function closeModal(){ document.getElementById('modal-backdrop').classList.remove('open'); }
+document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.target.id==='modal-backdrop') closeModal(); });
+
+/* ================= MODAL: MEUS DADOS CADASTRAIS ================= */
+/* ---- Foto de perfil (aluno e equipe interna) — Supabase Storage, bucket "avatars" ---- */
+function avatarUploadHtml(person, idPrefix){
+  return `
+    <div class="avatar-upload-row" style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      ${initialsAvatar(person.initials, person.color, 64, person.avatarUrl)}
+      <div>
+        <input type="file" accept="image/*" id="${idPrefix}-file" style="display:none">
+        <button class="btn-outline" id="${idPrefix}-upload-btn" type="button">${icon('upload')} ${person.avatarUrl? 'Trocar foto' : 'Adicionar foto'}</button>
+        <p class="field-error" id="${idPrefix}-error" style="display:none;margin-top:6px"></p>
+      </div>
+    </div>`;
+}
+async function uploadAvatarFile(file, personId){
+  if(file.size > 5*1024*1024) throw new Error('Arquivo muito grande (máx. 5MB).');
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+  const path = `${personId}/${Date.now()}.${ext}`;
+  const { error: upErr } = await sb.storage.from('avatars').upload(path, file, {upsert:true});
+  if(upErr) throw upErr;
+  const { data } = sb.storage.from('avatars').getPublicUrl(path);
+  const url = data.publicUrl;
+  const { error: updErr } = await sb.from('profiles').update({avatar_url:url}).eq('id', personId);
+  if(updErr) throw updErr;
+  return url;
+}
+function wireAvatarUpload(idPrefix, person, onUpdated){
+  document.getElementById(idPrefix+'-upload-btn').addEventListener('click', ()=>{
+    document.getElementById(idPrefix+'-file').click();
+  });
+  document.getElementById(idPrefix+'-file').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const errEl = document.getElementById(idPrefix+'-error');
+    errEl.style.display='none';
+    const btn = document.getElementById(idPrefix+'-upload-btn');
+    btn.disabled = true;
+    try{
+      const url = await uploadAvatarFile(file, person.id);
+      person.avatarUrl = url;
+      if(currentUserProfile && currentUserProfile.id===person.id) currentUserProfile.avatarUrl = url;
+      renderProfile();
+      onUpdated();
+    }catch(err){
+      console.error(err);
+      errEl.textContent = 'Não foi possível enviar a foto. Tente uma imagem menor (até 5MB).';
+      errEl.style.display='block';
+      btn.disabled = false;
+    }
+  });
+}
+/* ---- Meus Dados (Equipe Interna) ---- */
+async function openStaffInfoModal(){
+  const person = currentUserProfile;
+  if(!person) return;
+  document.getElementById('modal').innerHTML = `<div class="modal-body form-modal"><p class="desc">Carregando...</p></div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  const { data: info } = await sb.from('staff_info').select('*').eq('user_id', person.id).maybeSingle();
+  const telefone = (info && info.telefone) || '';
+  const cargo = (info && info.cargo) || '';
+  const bio = (info && info.bio) || '';
+  function renderModal(){
+    document.getElementById('modal').innerHTML = `
+      <div class="modal-body form-modal">
+        <div class="cat">Equipe Interna</div>
+        <h3>Meus Dados</h3>
+        <p class="desc">Suas informações pessoais como membro da equipe interna da Ascentria.</p>
+        ${avatarUploadHtml(person, 'si')}
+        <div class="diag-grid">
+          <div class="diag-item"><div class="label">Nome</div><div class="value">${person.name}</div></div>
+          <div class="diag-item"><div class="label">E-mail</div><div class="value">${currentUser.email}</div></div>
+        </div>
+        <div class="ps-section">
+          <label class="ps-label">Telefone</label>
+          <input class="ps-input" type="text" id="si-telefone" value="${escapeAttr(telefone)}" placeholder="(11) 99999-9999">
+          <label class="ps-label">Função na equipe</label>
+          <input class="ps-input" type="text" id="si-cargo" value="${escapeAttr(cargo)}" placeholder="Ex.: Mentora, Suporte, Financeiro">
+          <label class="ps-label">Sobre</label>
+          <textarea class="ps-input" id="si-bio" placeholder="Uma breve descrição sobre você...">${escapeAttr(bio)}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-accent" id="si-save">Salvar meus dados</button>
+          <button class="btn-outline" id="modal-close-2">Fechar</button>
+        </div>
+      </div>`;
+    document.getElementById('modal-close-2').addEventListener('click', closeModal);
+    wireAvatarUpload('si', person, renderModal);
+    document.getElementById('si-save').addEventListener('click', async ()=>{
+      const btn = document.getElementById('si-save');
+      btn.disabled = true;
+      try{
+        const { error } = await sb.from('staff_info').upsert({
+          user_id: person.id,
+          telefone: document.getElementById('si-telefone').value.trim(),
+          cargo: document.getElementById('si-cargo').value.trim(),
+          bio: document.getElementById('si-bio').value.trim(),
+        });
+        if(error) throw error;
+        closeModal();
+      }catch(e){ console.error(e); btn.disabled = false; }
+    });
+  }
+  renderModal();
+}
+function openCadastroModal(){
+  const s = getStudent(currentStudentId);
+  const c = s.cadastro;
+  const dias = diasRestantes(s);
+  const fimStr = formatDateObjBR(addMonths(c.dataMatricula, c.duracaoMeses));
+  const overdue = dias < 0;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Minha Área</div>
+      <h3>Meus Dados Cadastrais</h3>
+      <p class="desc">Dados do seu registro no momento da matrícula na mentoria.</p>
+      ${avatarUploadHtml(s, 'ca')}
+      <div class="diag-grid">
+        <div class="diag-item"><div class="label">Nome completo</div><div class="value">${c.nomeCompleto}</div></div>
+        <div class="diag-item"><div class="label">E-mail</div><div class="value">${c.email}</div></div>
+        <div class="diag-item"><div class="label">Telefone</div><div class="value">${c.telefone}</div></div>
+        <div class="diag-item"><div class="label">CPF</div><div class="value">${c.cpf}</div></div>
+        <div class="diag-item"><div class="label">Cidade</div><div class="value">${c.cidade}</div></div>
+        <div class="diag-item"><div class="label">Turma</div><div class="value">${s.turma}</div></div>
+        <div class="diag-item"><div class="label">Plano</div><div class="value">${c.plano}</div></div>
+        <div class="diag-item"><div class="label">Nicho</div><div class="value">${s.diagnostico.nicho} — ${s.diagnostico.subnicho}</div></div>
+      </div>
+      <div class="dias-card ${overdue?'overdue':''}">
+        <div class="dc-col">
+          <div class="dc-label">Data de matrícula</div>
+          <div class="dc-value">${formatDateBR(c.dataMatricula)}</div>
+        </div>
+        <div class="dc-col">
+          <div class="dc-label">Previsão de encerramento</div>
+          <div class="dc-value">${fimStr}</div>
+        </div>
+        <div class="dc-col dc-highlight">
+          <div class="dc-label">${overdue? 'Mentoria encerrada há' : 'Dias restantes'}</div>
+          <div class="dc-value big">${Math.abs(dias)}</div>
+        </div>
+      </div>
+      <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
+    </div>`;
+  document.getElementById('modal-close-2').addEventListener('click',closeModal);
+  wireAvatarUpload('ca', s, ()=>openCadastroModal());
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+/* ================= VIEW: COMUNIDADE ================= */
+function postHtml(p,compact){
+  const author = getStudent(p.authorId);
+  const t = POST_TYPES[p.type] || POST_TYPES.interacao;
+  return `
+    <div class="post post-border-${t.css}">
+      <div class="post-head">
+        ${initialsAvatar(author.initials,author.color,undefined,author.avatarUrl)}
+        <div class="who"><div class="name">${author.name}</div><div class="time">${p.time}</div></div>
+        <span class="post-type-badge tag-${t.css}">${icon(t.icon,'tiny')}${t.label}</span>
+      </div>
+      <div class="post-text">${p.text}</div>
+      ${p.type==='duvida'? `<div class="staff-note">${icon('bell','tiny')} Equipe interna notificada — vamos responder em breve.</div>` : ''}
+      <div class="post-actions">
+        <button class="post-action ${p.liked?'liked':''}" data-like="${p.id}">${p.liked?fillIcon('heart'):icon('heart')} <span>${p.likes}</span></button>
+        <button class="post-action">${icon('comment')} <span>${p.comments.length}</span></button>
+      </div>
+      ${!compact? `
+        <div class="comments">
+          ${p.comments.map(c=>`<div class="comment">${initialsAvatar(getStudent(c.authorId).initials,getStudent(c.authorId).color,22,getStudent(c.authorId).avatarUrl)}<div><b>${getStudent(c.authorId).name}</b>${c.text}</div></div>`).join('')}
+          <div class="comment-composer">
+            ${initialsAvatar(getStudent(currentStudentId).initials,getStudent(currentStudentId).color,22,getStudent(currentStudentId).avatarUrl)}
+            <input type="text" placeholder="Escreva um comentário..." data-comment-input="${p.id}">
+            <button class="btn-mini" data-comment-send="${p.id}">Enviar</button>
+          </div>
+        </div>`:''}
+    </div>`;
+}
+function renderComunidade(){
+  const s = getStudent(currentStudentId);
+  const filters = [
+    {id:'todas', label:'Todas'},
+    {id:'duvida', label:'Dúvidas'},
+    {id:'interacao', label:'Interações'},
+    {id:'conquista', label:'Conquistas'},
+  ];
+  const visible = communityFilter==='todas' ? COMMUNITY_POSTS : COMMUNITY_POSTS.filter(p=>p.type===communityFilter);
+  document.getElementById('view-comunidade').innerHTML = `
+    <p class="section-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
+    <div class="composer">
+      ${initialsAvatar(s.initials,s.color,undefined,s.avatarUrl)}
+      <div style="flex:1">
+        <textarea id="new-post" placeholder="Compartilhe algo com a turma..."></textarea>
+        <div class="type-select" id="type-select">
+          ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+        </div>
+      </div>
+      <div class="send-wrap"><button class="btn-accent" id="post-btn">Publicar</button></div>
+    </div>
+    <div class="community-filters" id="community-filters">
+      ${filters.map(f=>`<button class="filter-tab ${communityFilter===f.id?'active':''}" data-filter="${f.id}">${f.label}</button>`).join('')}
+    </div>
+    <div id="posts-list">${visible.map(p=>postHtml(p,false)).join('') || '<p class="section-sub">Nenhuma publicação nesse filtro ainda.</p>'}</div>
+  `;
+  document.querySelectorAll('#type-select [data-type]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ selectedPostType = btn.dataset.type; renderComunidade(); });
+  });
+  document.querySelectorAll('#community-filters [data-filter]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ communityFilter = btn.dataset.filter; renderComunidade(); });
+  });
+  document.getElementById('post-btn').addEventListener('click', async ()=>{
+    const ta = document.getElementById('new-post');
+    if(!ta.value.trim()) return;
+    const btn = document.getElementById('post-btn');
+    btn.disabled = true;
+    try{
+      const post = await createCommunityPost(currentStudentId, selectedPostType, ta.value.trim());
+      COMMUNITY_POSTS.unshift(post);
+      updateNotifBadge();
+      renderComunidade();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-like]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.like);
+      p.liked = !p.liked;
+      p.likes += p.liked? 1 : -1;
+      syncCommunityLike(p.id, currentStudentId, p.liked);
+      renderComunidade();
+    });
+  });
+  document.querySelectorAll('[data-comment-send]').forEach(btn=>{
+    const send = ()=>{
+      const pid = btn.dataset.commentSend;
+      const input = document.querySelector(`[data-comment-input="${pid}"]`);
+      if(!input.value.trim()) return;
+      const p = COMMUNITY_POSTS.find(x=>x.id==pid);
+      p.comments.push({authorId:currentStudentId, text:input.value.trim()});
+      syncCommunityComment(p.id, currentStudentId, input.value.trim());
+      renderComunidade();
+    };
+    btn.addEventListener('click',send);
+    const input = document.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+  });
+}
+
+/* ================= VIEW: AGENDA ================= */
+function gcalUrl(title){
+  return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent('Encontro da Ascentria · Método Essência')}`;
+}
+function renderAgenda(){
+  const upcoming = LIVE_SESSIONS.filter(l=>l.type==='upcoming');
+  const past = LIVE_SESSIONS.filter(l=>l.type==='past');
+  const card = (l)=>`
+    <div class="agenda-card ${l.type==='past'?'past':''}">
+      <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
+      <div class="agenda-info">
+        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}</div>
+        <div class="meta">${l.time} — ${l.desc}</div>
+      </div>
+      ${l.type==='upcoming'
+        ? `<a class="btn-outline" href="${gcalUrl(l.title)}" target="_blank" rel="noopener">Adicionar à agenda</a>`
+        : `<button class="btn-outline" data-replay="${l.id}">Assistir</button>`}
+    </div>`;
+  document.getElementById('view-agenda').innerHTML = `
+    <p class="section-sub">Encontros coletivos com a mentora e a turma.</p>
+    <h2 class="section-title">${icon('calendar')} Próximos encontros</h2>
+    <div class="agenda-list">${upcoming.map(card).join('')}</div>
+    <h2 class="section-title">${icon('video')} Gravações anteriores</h2>
+    <div class="agenda-list">${past.map(card).join('')}</div>
+  `;
+  document.querySelectorAll('[data-replay]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const l = LIVE_SESSIONS.find(x=>x.id==btn.dataset.replay);
+      document.getElementById('modal').innerHTML = `
+        <div class="modal-player" style="--tint1:#8d916f;--tint2:#bec6b1">
+          <button class="modal-close" id="modal-close">${icon('x')}</button>
+          ${fillIcon('play','play-fill')}
+        </div>
+        <div class="modal-body">
+          <h3>${l.title}</h3>
+          <p class="desc">${l.desc}</p>
+          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
+        </div>`;
+      document.getElementById('modal-backdrop').classList.add('open');
+      document.getElementById('modal-close').addEventListener('click',closeModal);
+      document.getElementById('modal-close-2').addEventListener('click',closeModal);
+    });
+  });
+}
+
+/* ================= VIEW: MATERIAIS ================= */
+function renderMateriais(){
+  document.getElementById('view-materiais').innerHTML = `
+    <p class="section-sub">Materiais de apoio disponíveis para toda a turma.</p>
+    <div class="materials-grid">
+      ${MATERIALS.map(m=>`
+        <div class="material-card">
+          <div class="material-icon">${icon('folder')}</div>
+          <div class="mi">
+            <div class="title">${m.title}</div>
+            <div class="meta">${m.type}${m.size? ' · '+m.size:''}</div>
+            ${m.link
+              ? `<a class="btn-mini" href="${m.link}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`
+              : `<button class="btn-mini" data-dl="${m.id}">${icon('download')} Baixar</button>`}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.querySelectorAll('[data-dl]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const m = MATERIALS.find(x=>x.id==btn.dataset.dl);
+      downloadPlaceholder(m.title.replace(/\s+/g,'_')+'.txt', m.title);
+    });
+  });
+}
+
+/* ================= VIEW: DASHBOARD (compartilhado aluno + equipe) ================= */
+function renderDashboard(){
+  const s = getStudent(currentStudentId);
+  const overall = overallProgress(s);
+  document.getElementById('view-dashboard').innerHTML = `
+    <p class="section-sub">Visão geral do progresso no Método Essência — o mesmo painel que você e a equipe interna acompanham.</p>
+    <div class="progress-hero">
+      <div class="ring" style="background:conic-gradient(var(--shared) ${overall*3.6}deg, var(--bg-card) 0deg)">
+        <div class="ring-inner"><div class="pct">${overall}%</div><div class="lbl">concluído</div></div>
+      </div>
+      <div>
+        <h2 style="font-size:18px;margin-bottom:6px;">Progresso no Método Essência</h2>
+        <p style="color:var(--text-dim);font-size:13.5px;max-width:380px;">Calculado a partir de ${TOTAL_ITEMS} itens de checklist (aulas assistidas, resumos e tarefas) distribuídos nos 5 módulos do método.</p>
+      </div>
+    </div>
+
+    <h2 class="section-title">Progresso por módulo</h2>
+    <p class="section-sub" style="margin-top:-6px;">Clique em um módulo para abrir o checklist item a item — igual à aba "Método Essência" do Dashboard.</p>
+    <div class="module-bars">
+      ${MODULES.map(m=>{
+        const done = s.moduleProgress[m.id];
+        const pct = Math.round(done/m.total*100);
+        return `<div class="module-bar-row clickable" data-mod="${m.id}">
+          <div class="top"><span class="name">${m.name}</span><span class="frac">${done}/${m.total} itens</span><span class="pct">${pct}%</span></div>
+          <div class="module-bar"><div class="fill" style="width:${pct}%"></div></div>
+          <div class="module-bar-cta">${icon('tick','tiny')} Ver checklist do módulo</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <h2 class="section-title">Indicadores do consultório</h2>
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Leads no mês</div><div class="value">${s.diagnostico.leadsMes}</div></div>
+      <div class="kpi-tile"><div class="label">Conversão diagnóstico → protocolo</div><div class="value">${s.diagnostico.taxaConversao}</div></div>
+      <div class="kpi-tile"><div class="label">Pacientes ativos</div><div class="value">${s.diagnostico.pacientesAtivos}</div></div>
+      <div class="kpi-tile"><div class="label">Faturamento médio</div><div class="value" style="font-size:16px">${s.diagnostico.faturamentoMedio}</div></div>
+    </div>
+    <p class="kpi-note">Indicadores autorrelatados no diagnóstico — em produção, este painel sincronizaria automaticamente com a planilha "Dashboard" da equipe interna.</p>
+
+    <h2 class="section-title">${icon('compass')} Continue no Painel do Método</h2>
+    <button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>
+  `;
+  document.getElementById('goto-painel').addEventListener('click',()=>goTo('painel'));
+  document.querySelectorAll('.module-bar-row[data-mod]').forEach(el=>{
+    el.addEventListener('click',()=>openModuleChecklist(el.dataset.mod));
+  });
+}
+
+/* ================= MODAL: CHECKLIST DO MÓDULO (Dashboard) ================= */
+function openModuleChecklist(modId){
+  const s = getStudent(currentStudentId);
+  const mod = getModule(modId);
+  const items = MODULE_CHECKLIST[modId];
+  function renderModalBody(){
+    const modalEl = document.getElementById('modal');
+    const prevListEl = modalEl.querySelector('.mod-check-list');
+    const prevScroll = prevListEl ? prevListEl.scrollTop : 0;
+    const state = getModuleChecklistState(s.id, modId);
+    const done = state.filter(Boolean).length;
+    const pct = Math.round(done/items.length*100);
+    modalEl.innerHTML = `
+      <div class="modal-body form-modal">
+        <div class="cat">Dashboard · Progresso no Método Essência</div>
+        <h3>Checklist — Módulo ${mod.name}</h3>
+        <p class="desc">${done}/${items.length} itens marcados (${pct}%). Clique em cada item para marcar aula assistida, resumo feito ou tarefa concluída.</p>
+        <div class="mod-check-list">
+          ${items.map((label,idx)=>`
+            <div class="mod-check-item ${state[idx]?'done':''}" data-idx="${idx}">
+              <span class="box">${state[idx]? icon('tick') : ''}</span>
+              <span class="txt">${label}</span>
+            </div>`).join('')}
+        </div>
+        <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
+      </div>`;
+    document.getElementById('modal-close-2').addEventListener('click',closeModal);
+    document.querySelectorAll('.mod-check-item').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const idx = +el.dataset.idx;
+        state[idx] = !state[idx];
+        s.moduleProgress[modId] = state.filter(Boolean).length;
+        syncModuleChecklist(s.id, modId, idx, state[idx]);
+        syncModuleProgress(s.id, modId, s.moduleProgress[modId]);
+        renderModalBody();
+        renderDashboard();
+      });
+    });
+    modalEl.querySelector('.mod-check-list').scrollTop = prevScroll;
+  }
+  renderModalBody();
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+/* ================= VIEW: PAINEL DO MÉTODO (compartilhado aluno + equipe) ================= */
+function topicFilled(quadrant, topic, idx, s){
+  const key = s.id+':'+topic.id;
+  if(key in PANEL_OVERRIDES) return PANEL_OVERRIDES[key];
+  const mod = getModule(quadrant.moduleId);
+  const done = s.moduleProgress[quadrant.moduleId];
+  const threshold = Math.round((done/mod.total)*quadrant.topics.length);
+  return idx < threshold;
+}
+function quadrantFilledCount(q,s){
+  return q.topics.filter((t,i)=>topicFilled(q,t,i,s)).length;
+}
+function renderPainel(){
+  const s = getStudent(currentStudentId);
+  const el = document.getElementById('view-painel');
+  if(!panelQuadrantId){
+    el.innerHTML = `
+      <p class="section-sub">Espaço de trabalho do Método Essência, organizado nos 4 pilares do negócio — visível para você e para a equipe interna.</p>
+      <div class="quadrant-grid">
+        ${QUADRANTS.map(q=>{
+          const filled = quadrantFilledCount(q,s);
+          const pct = Math.round(filled/q.topics.length*100);
+          return `<button class="quadrant-card" data-quadrant="${q.id}">
+            <div class="qi">${icon(q.icon)}</div>
+            <div class="title">${q.title}</div>
+            <div class="meta">${q.meta}</div>
+            <div class="module-bar"><div class="fill" style="width:${pct}%"></div></div>
+            <div class="frac" style="font-size:11px;color:var(--text-mute);margin-top:6px;">${filled}/${q.topics.length} seções preenchidas</div>
+          </button>`;
+        }).join('')}
+      </div>
+    `;
+    document.querySelectorAll('[data-quadrant]').forEach(elx=>elx.addEventListener('click',()=>{
+      panelQuadrantId = elx.dataset.quadrant; renderPainel();
+    }));
+  } else {
+    const q = QUADRANTS.find(x=>x.id===panelQuadrantId);
+    const filled = quadrantFilledCount(q,s);
+    el.innerHTML = `
+      <div class="back-row"><button class="back-btn" id="panel-back">${icon('back')} Voltar ao Painel do Método</button></div>
+      <h2 class="section-title">${icon(q.icon)} ${q.title}</h2>
+      <p class="section-sub">${filled}/${q.topics.length} seções preenchidas · módulo "${getModule(q.moduleId).name}" no Dashboard.</p>
+      ${q.topics.map((t,i)=>{
+        const f = topicFilled(q,t,i,s);
+        return `<button class="topic-row" data-topic="${t.id}">
+          <span class="topic-status ${f?'filled':'pending'}"></span>
+          <div class="ti"><div class="title">${t.title}</div><div class="desc">${t.desc}</div></div>
+          <span class="tag ${f?'filled':'pending'}">${f?'Preenchido':'Pendente'}</span>
+        </button>`;
+      }).join('')}
+    `;
+    document.getElementById('panel-back').addEventListener('click',()=>{panelQuadrantId=null; renderPainel();});
+    document.querySelectorAll('[data-topic]').forEach(elx=>elx.addEventListener('click',()=>openTopicModal(q, elx.dataset.topic)));
+  }
+}
+/* ---- Painel do Método: dados estruturados por seção (fields / list / table / swatches / checklist) ---- */
+function escapeAttr(v){ return String(v==null? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function getTopicData(sid, topicId){
+  const key = sid+':'+topicId;
+  if(!(key in PANEL_DATA)){
+    const seed = PANEL_SEED[sid] && PANEL_SEED[sid][topicId];
+    PANEL_DATA[key] = seed? JSON.parse(JSON.stringify(seed)) : {};
+  }
+  return PANEL_DATA[key];
+}
+function sectionValue(data, section){
+  if(section.type==='fields'){ if(!data[section.key]) data[section.key] = {}; return data[section.key]; }
+  if(section.type==='list'){ if(!data[section.key]) data[section.key] = []; return data[section.key]; }
+  if(section.type==='table'){
+    if(!data[section.key]){
+      data[section.key] = section.fixedRows? section.fixedRows.map(label=>({__label:label})) : [];
+    }
+    return data[section.key];
+  }
+  if(section.type==='swatches'){ if(!data[section.key]) data[section.key] = new Array(section.count).fill(''); return data[section.key]; }
+  if(section.type==='checklist'){ if(!data[section.key]) data[section.key] = []; return data[section.key]; }
+}
+function renderSectionHTML(section, data){
+  const val = sectionValue(data, section);
+  if(section.type==='fields'){
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      ${section.fields.map(f=>`
+        <label class="ps-label">${f.label}</label>
+        ${f.gabarito? `<div class="gabarito">${f.gabarito}</div>`:''}
+        <textarea class="ps-input" rows="1" data-fkind="fields" data-skey="${section.key}" data-fkey="${f.key}">${escapeAttr(val[f.key]||'')}</textarea>
+      `).join('')}
+    </div>`;
+  }
+  if(section.type==='list'){
+    const items = val.length? val : [''];
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      <div class="ps-list" data-skey="${section.key}">
+        ${items.map((v,i)=>`<div class="ps-row">
+          <input class="ps-input" data-fkind="list" data-skey="${section.key}" data-idx="${i}" value="${escapeAttr(v)}" placeholder="${escapeAttr(section.placeholder||'')}">
+          <button class="ps-remove" data-remove="list" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button>
+        </div>`).join('')}
+      </div>
+      <button class="btn-mini ps-add" data-add="list" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar</button>
+    </div>`;
+  }
+  if(section.type==='checklist'){
+    const items = val;
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      ${items.map((it,i)=>`<div class="ps-row">
+        <button class="goal-check ${it.done?'checked':''}" style="width:20px;height:20px;flex-shrink:0" data-toggle="checklist" data-skey="${section.key}" data-idx="${i}">${icon('check')}</button>
+        <input class="ps-input" data-fkind="checklist" data-skey="${section.key}" data-idx="${i}" value="${escapeAttr(it.text||'')}" placeholder="${escapeAttr(section.placeholder||'')}">
+        <button class="ps-remove" data-remove="checklist" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button>
+      </div>`).join('')}
+      <button class="btn-mini ps-add" data-add="checklist" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar ação</button>
+    </div>`;
+  }
+  if(section.type==='swatches'){
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      <div class="ps-swatches">
+        ${val.map((v,i)=>{
+          const hex = /^#([0-9a-f]{3}){1,2}$/i.test(v)? v : '#1c1e19';
+          return `<div class="ps-swatch">
+            <span class="ps-swatch-dot" style="background:${hex}"></span>
+            <input class="ps-input" data-fkind="swatches" data-skey="${section.key}" data-idx="${i}" value="${escapeAttr(v)}" placeholder="#xxxxxx">
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  if(section.type==='table'){
+    const cols = section.columns;
+    const rows = val;
+    const canAddMore = !section.fixedRows && (!section.maxRows || rows.length < section.maxRows);
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      <div class="table-wrap"><table class="ps-table">
+        <thead><tr>${section.fixedRows?'<th></th>':''}${cols.map(c=>`<th>${c.label}</th>`).join('')}${section.fixedRows?'':'<th></th>'}</tr></thead>
+        <tbody>
+          ${rows.map((row,i)=>`<tr>
+            ${section.fixedRows? `<td class="ps-rowlabel">${row.__label}</td>` : ''}
+            ${cols.map(c=>`<td><input class="ps-input ps-cell" data-fkind="table" data-skey="${section.key}" data-idx="${i}" data-col="${c.key}" value="${escapeAttr(row[c.key]||'')}"></td>`).join('')}
+            ${section.fixedRows? '' : `<td><button class="ps-remove" data-remove="table" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></td>`}
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      ${canAddMore? `<button class="btn-mini ps-add" data-add="table" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar linha</button>` : ''}
+    </div>`;
+  }
+  return '';
+}
+function bindSectionEvents(sections, data, rerender, saveKey){
+  const modalEl = document.getElementById('modal');
+  const persist = ()=>{ if(saveKey) syncPanelData(saveKey.sid, saveKey.topicId, data); };
+  modalEl.querySelectorAll('[data-fkind]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const kind = inp.dataset.fkind, skey = inp.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      if(kind==='fields') val[inp.dataset.fkey] = inp.value;
+      else if(kind==='list') val[+inp.dataset.idx] = inp.value;
+      else if(kind==='checklist') val[+inp.dataset.idx].text = inp.value;
+      else if(kind==='swatches') val[+inp.dataset.idx] = inp.value;
+      else if(kind==='table') val[+inp.dataset.idx][inp.dataset.col] = inp.value;
+      if(kind==='swatches'){
+        const hex = /^#([0-9a-f]{3}){1,2}$/i.test(inp.value)? inp.value : '#1c1e19';
+        inp.previousElementSibling.style.background = hex;
+      }
+      persist();
+    });
+  });
+  modalEl.querySelectorAll('[data-add]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      if(btn.dataset.add==='list') val.push('');
+      else if(btn.dataset.add==='checklist') val.push({text:'',done:false});
+      else if(btn.dataset.add==='table'){ const row={}; section.columns.forEach(c=>row[c.key]=''); val.push(row); }
+      persist();
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val.splice(+btn.dataset.idx,1);
+      persist();
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-toggle="checklist"]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val[+btn.dataset.idx].done = !val[+btn.dataset.idx].done;
+      persist();
+      rerender();
+    });
+  });
+}
+function openTopicModal(quadrant, topicId){
+  const s = getStudent(currentStudentId);
+  const topic = quadrant.topics.find(t=>t.id===topicId);
+  const idx = quadrant.topics.indexOf(topic);
+  const data = getTopicData(s.id, topic.id);
+  function renderModal(){
+    const filled = topicFilled(quadrant, topic, idx, s);
+    document.getElementById('modal').innerHTML = `
+      <div class="modal-body form-modal">
+        <div class="cat">${quadrant.title}</div>
+        <h3>${topic.title}</h3>
+        <p class="desc">${topic.desc}</p>
+        ${(topic.sections||[]).map(sec=>renderSectionHTML(sec, data)).join('')}
+        <div class="modal-actions">
+          <button class="btn-accent ${filled?'done':''}" id="topic-toggle">${filled? icon('check')+' Preenchido' : 'Marcar como preenchido'}</button>
+          <button class="btn-outline" id="modal-close-2">Fechar</button>
+        </div>
+      </div>`;
+    document.getElementById('modal-close-2').addEventListener('click',closeModal);
+    document.getElementById('topic-toggle').addEventListener('click',()=>{
+      PANEL_OVERRIDES[s.id+':'+topic.id] = !filled;
+      syncPanelOverride(s.id, topic.id, PANEL_OVERRIDES[s.id+':'+topic.id]);
+      closeModal();
+      renderPainel();
+    });
+    bindSectionEvents(topic.sections||[], data, renderModal, {sid:s.id, topicId:topic.id});
+  }
+  renderModal();
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+/* ================= VIEW: SESSÕES (individual) ================= */
+function renderSessoes(){
+  const s = getStudent(currentStudentId);
+  document.getElementById('view-sessoes').innerHTML = `
+    <p class="section-sub">Histórico de sessões individuais com a sua mentora — visível somente para você (e para a equipe interna).</p>
+    ${s.sessions.length? s.sessions.map(sess=>`
+      <div class="session-card">
+        <div class="top">
+          <div class="title">${sess.title}</div>
+          <div class="date">${sess.date}</div>
+        </div>
+        <div class="notes"><strong>Anotações da mentora:</strong><br>${sess.notes}</div>
+        <div class="foot">
+          <button class="btn-outline" data-replay-session="${sess.id}">${icon('video')} Ver gravação</button>
+          ${sess.hasFile? `<button class="btn-outline" data-dl-session="${sess.id}">${icon('download')} Baixar material da sessão</button>`:''}
+        </div>
+      </div>
+    `).join('') : `<div class="empty-state">Nenhuma sessão individual registrada ainda.</div>`}
+  `;
+  document.querySelectorAll('[data-replay-session]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const sess = s.sessions.find(x=>x.id==btn.dataset.replaySession);
+      document.getElementById('modal').innerHTML = `
+        <div class="modal-player" style="--tint1:#ab6f30;--tint2:#c6aa83">
+          <button class="modal-close" id="modal-close">${icon('x')}</button>
+          ${fillIcon('play','play-fill')}
+        </div>
+        <div class="modal-body">
+          <h3>${sess.title}</h3>
+          <p class="desc">${sess.notes}</p>
+          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
+        </div>`;
+      document.getElementById('modal-backdrop').classList.add('open');
+      document.getElementById('modal-close').addEventListener('click',closeModal);
+      document.getElementById('modal-close-2').addEventListener('click',closeModal);
+    });
+  });
+  document.querySelectorAll('[data-dl-session]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const sess = s.sessions.find(x=>x.id==btn.dataset.dlSession);
+      downloadPlaceholder('material_'+sess.title.replace(/\s+/g,'_')+'.txt', sess.title);
+    });
+  });
+}
+
+/* ================= VIEW: METAS (individual, fruto do acompanhamento interno) ================= */
+function renderMetas(){
+  const s = getStudent(currentStudentId);
+  const minhas = s.checklist.filter(t=>t.responsavel==='Mentorado');
+  const done = minhas.filter(t=>t.status==='Concluída').length;
+  document.getElementById('view-metas').innerHTML = `
+    <p class="section-sub">Tarefas definidas pela equipe interna a partir do seu acompanhamento — ${done}/${minhas.length} concluídas.</p>
+    ${minhas.map(t=>`
+      <div class="goal-card">
+        <button class="goal-check ${t.status==='Concluída'?'checked':''}" data-goal="${t.id}">${icon('check')}</button>
+        <div class="goal-body">
+          <div class="title ${t.status==='Concluída'?'done':''}">${t.tarefa}</div>
+          <div class="due">Prazo: ${t.prazo} ${t.status==='Atrasada'?'<span class="status-pill status-Atrasada" style="margin-left:6px">Atrasada</span>':''}</div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+  document.querySelectorAll('[data-goal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t = s.checklist.find(x=>x.id==btn.dataset.goal);
+      t.status = t.status==='Concluída' ? 'Pendente' : 'Concluída';
+      syncChecklistItemStatus(t.id, t.status);
+      renderMetas();
+    });
+  });
+}
+
+/* ================= VIEW: ACOMPANHAMENTO INTERNO (somente equipe interna) ================= */
+function statusClass(status){ return 'status-'+status.replace('í','i').replace('á','a'); }
+function diagPanelHtml(groups, answers, editing){
+  let idx = 0;
+  return groups.map(g=>{
+    const rows = g.perguntas.map(q=>{
+      const i = idx++;
+      const val = answers[i];
+      if(editing[i]){
+        return `
+          <div class="diag-qa">
+            <label class="ps-label">${q}</label>
+            <textarea class="ps-input" id="diag-input-${i}" placeholder="Resposta ainda não registrada...">${escapeAttr(val)}</textarea>
+            <div class="diag-qa-actions">
+              <button class="btn-mini" data-diag-save="${i}">${icon('tick')} Salvar</button>
+              ${val? `<button class="btn-mini" data-diag-cancel="${i}">Cancelar</button>` : ''}
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="diag-qa">
+          <label class="ps-label">${q}</label>
+          <div class="diag-answer">${val}</div>
+          <div class="diag-qa-actions">
+            <button class="btn-mini" data-diag-edit="${i}">${icon('idcard')} Editar</button>
+            <button class="btn-mini danger" data-diag-delete="${i}">${icon('trash')} Excluir</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `<div class="ps-section"><div class="ps-h">${g.cat}</div>${rows}</div>`;
+  }).join('');
+}
+/* ---- Editar Dados do Aluno (equipe interna) — necessário para matricular alunos reais ---- */
+function openEditAlunoModal(s){
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Acompanhamento Interno</div>
+      <h3>Editar Dados do Aluno</h3>
+      <p class="desc">Esses dados definem a matrícula, o cálculo de dias restantes e o estágio do aluno na mentoria.</p>
+      <div class="ps-section">
+        <label class="ps-label">Nome completo</label>
+        <input class="ps-input" type="text" id="ea-nome" value="${escapeAttr(s.cadastro.nomeCompleto)}">
+        <label class="ps-label">E-mail</label>
+        <input class="ps-input" type="email" id="ea-email" value="${escapeAttr(s.cadastro.email)}">
+        <label class="ps-label">Telefone</label>
+        <input class="ps-input" type="text" id="ea-telefone" value="${escapeAttr(s.cadastro.telefone)}">
+        <label class="ps-label">CPF</label>
+        <input class="ps-input" type="text" id="ea-cpf" value="${escapeAttr(s.cadastro.cpf)}">
+        <label class="ps-label">Cidade</label>
+        <input class="ps-input" type="text" id="ea-cidade" value="${escapeAttr(s.cadastro.cidade)}">
+        <label class="ps-label">Turma</label>
+        <input class="ps-input" type="text" id="ea-turma" value="${escapeAttr(s.turma==='—'?'':s.turma)}" placeholder="Ex.: Turma 2026.1">
+        <label class="ps-label">Nicho</label>
+        <input class="ps-input" type="text" id="ea-nicho" value="${escapeAttr(s.diagnostico.nicho==='—'?'':s.diagnostico.nicho)}">
+        <label class="ps-label">Subnicho</label>
+        <input class="ps-input" type="text" id="ea-subnicho" value="${escapeAttr(s.diagnostico.subnicho==='—'?'':s.diagnostico.subnicho)}">
+        <label class="ps-label">Data de matrícula</label>
+        <input class="ps-input" type="date" id="ea-datamatricula" value="${escapeAttr(s.cadastro.dataMatricula)}">
+        <label class="ps-label">Duração (meses)</label>
+        <input class="ps-input" type="number" id="ea-duracao" value="${escapeAttr(s.cadastro.duracaoMeses)}">
+        <label class="ps-label">Plano</label>
+        <input class="ps-input" type="text" id="ea-plano" value="${escapeAttr(s.cadastro.plano==='—'?'':s.cadastro.plano)}" placeholder="Ex.: Mentoria Método Essência — Plano Anual">
+        <label class="ps-label">Progresso do mentorado (%)</label>
+        <input class="ps-input" type="number" min="0" max="100" id="ea-progmentorado" value="${escapeAttr(s.progressoMentorado)}">
+        <label class="ps-label">Progresso do mentor (%)</label>
+        <input class="ps-input" type="number" min="0" max="100" id="ea-progmentor" value="${escapeAttr(s.progressoMentor)}">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-accent" id="ea-save">Salvar dados do aluno</button>
+        <button class="btn-outline" id="modal-close-2">Fechar</button>
+      </div>
+    </div>`;
+  document.getElementById('modal-close-2').addEventListener('click',closeModal);
+  document.getElementById('ea-save').addEventListener('click', async ()=>{
+    const btn = document.getElementById('ea-save');
+    btn.disabled = true;
+    const vals = {
+      nomeCompleto: document.getElementById('ea-nome').value.trim(),
+      email: document.getElementById('ea-email').value.trim(),
+      telefone: document.getElementById('ea-telefone').value.trim(),
+      cpf: document.getElementById('ea-cpf').value.trim(),
+      cidade: document.getElementById('ea-cidade').value.trim(),
+      turma: document.getElementById('ea-turma').value.trim(),
+      nicho: document.getElementById('ea-nicho').value.trim(),
+      subnicho: document.getElementById('ea-subnicho').value.trim(),
+      dataMatricula: document.getElementById('ea-datamatricula').value,
+      duracaoMeses: +document.getElementById('ea-duracao').value || 12,
+      plano: document.getElementById('ea-plano').value.trim(),
+      progressoMentorado: Math.max(0,Math.min(100, +document.getElementById('ea-progmentorado').value || 0)),
+      progressoMentor: Math.max(0,Math.min(100, +document.getElementById('ea-progmentor').value || 0)),
+    };
+    try{
+      const [r1,r2,r3] = await Promise.all([
+        sb.from('profiles').update({turma: vals.turma}).eq('id', s.id),
+        sb.from('student_cadastro').update({
+          nome_completo: vals.nomeCompleto, email: vals.email, telefone: vals.telefone, cpf: vals.cpf,
+          cidade: vals.cidade, data_matricula: vals.dataMatricula || null, duracao_meses: vals.duracaoMeses, plano: vals.plano,
+        }).eq('student_id', s.id),
+        sb.from('diagnostico').update({
+          nicho: vals.nicho, subnicho: vals.subnicho,
+          progresso_mentorado: vals.progressoMentorado, progresso_mentor: vals.progressoMentor,
+        }).eq('student_id', s.id),
+      ]);
+      if(r1.error) throw r1.error; if(r2.error) throw r2.error; if(r3.error) throw r3.error;
+      s.turma = vals.turma || '—';
+      s.cadastro.nomeCompleto = vals.nomeCompleto; s.cadastro.email = vals.email; s.cadastro.telefone = vals.telefone;
+      s.cadastro.cpf = vals.cpf; s.cadastro.cidade = vals.cidade;
+      s.cadastro.dataMatricula = vals.dataMatricula || s.cadastro.dataMatricula;
+      s.cadastro.duracaoMeses = vals.duracaoMeses; s.cadastro.plano = vals.plano || '—';
+      s.diagnostico.nicho = vals.nicho || '—'; s.diagnostico.subnicho = vals.subnicho || '—';
+      s.progressoMentorado = vals.progressoMentorado; s.progressoMentor = vals.progressoMentor;
+      closeModal();
+      renderCurrentView();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+function renderInterno(){
+  const s = getStudent(currentStudentId);
+  const d = s.diagnostico;
+  const groups = internoDiagTab==='wispform' ? WISPFORM_QUESTIONS : DIAGNOSTICO_ABERTURA_QUESTIONS;
+  const answers = getInternalAnswers(s.id, internoDiagTab);
+  const editing = getInternalEditing(s.id, internoDiagTab);
+  document.getElementById('view-interno').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Dados vindos da planilha "Acompanhamento de Mentorados — Método Essência".</div>
+    <div class="actions" style="margin:-8px 0 16px"><button class="btn-outline" id="edit-aluno-btn">${icon('idcard')} Editar Dados do Aluno</button></div>
+
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Progresso do mentorado</div><div class="value individual">${s.progressoMentorado}%</div></div>
+      <div class="stat-card"><div class="label">Progresso do mentor</div><div class="value shared">${s.progressoMentor}%</div></div>
+      <div class="stat-card"><div class="label">Nicho / Subnicho</div><div class="value" style="font-size:13.5px">${d.nicho} — ${d.subnicho}</div></div>
+      <div class="stat-card"><div class="label">Tempo de consultório</div><div class="value" style="font-size:14px">${d.tempoConsultorio}</div></div>
+    </div>
+
+    <h2 class="section-title">Diagnóstico e Acompanhamento</h2>
+    <p class="section-sub" style="margin-top:-6px">Reflete as abas "Respostas Wispform" e "Diagnóstico Abertura" da planilha interna, pergunta a pergunta.</p>
+    <div class="community-filters" id="diag-tabs">
+      <button class="filter-tab ${internoDiagTab==='wispform'?'active':''}" data-diagtab="wispform">Respostas Wispform</button>
+      <button class="filter-tab ${internoDiagTab==='abertura'?'active':''}" data-diagtab="abertura">Diagnóstico Abertura</button>
+    </div>
+    <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
+
+    <h2 class="section-title">Checklist de acompanhamento</h2>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Nº</th><th>Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th></tr></thead>
+        <tbody>
+          ${s.checklist.map(t=>`
+            <tr>
+              <td>${t.id}</td>
+              <td style="min-width:220px">${t.tarefa}</td>
+              <td><span class="resp-pill">${t.responsavel}</span></td>
+              <td>${t.prazo}</td>
+              <td><button class="status-pill ${statusClass(t.status)}" data-check="${t.id}">${t.status}</button></td>
+              <td style="min-width:160px">${t.obs||'—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="add-form">
+      <div class="field full"><label>Nova tarefa</label><textarea class="ps-input" id="new-task-tarefa" rows="1" placeholder="Descreva a tarefa..."></textarea></div>
+      <div class="field"><label>Responsável</label>
+        <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
+      </div>
+      <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="new-task-prazo" placeholder="Ex.: 30 ago"></div>
+      <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
+    </div>
+
+    <h2 class="section-title">Encontros gravados</h2>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Encontro</th><th>Data</th><th>Gravação</th><th>Transcrição</th></tr></thead>
+        <tbody>
+          ${s.sessions.map(sess=>`
+            <tr>
+              <td style="min-width:200px">${sess.title}</td>
+              <td>${sess.date}</td>
+              <td><button class="btn-mini" data-replay-internal="${sess.id}">${icon('video')} Assistir</button></td>
+              <td>${sess.transcricao? `<button class="btn-mini" data-transcript="${sess.id}">${icon('folder')} Ver transcrição</button>` : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="kpi-note">Em produção, esta tela sincronizaria automaticamente com a planilha interna da equipe (Google Sheets).</p>
+
+    <h2 class="section-title">Registro de Contatos (Reunião ou WhatsApp)</h2>
+    <p class="section-sub" style="margin-top:-6px">Qualquer pessoa da equipe que teve contato com o mentorado — em reunião ou orientação por WhatsApp — pode registrar aqui.</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Data da Reunião</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th></tr></thead>
+        <tbody id="contatos-tbody">
+          ${s.contatos.map(c=>`
+            <tr>
+              <td style="white-space:nowrap">${c.data}</td>
+              <td><span class="resp-pill">${c.responsavel}</span></td>
+              <td style="min-width:260px">${c.resumo}</td>
+              <td>${c.linkGravacao? `<a class="btn-mini" href="${c.linkGravacao}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
+              <td>${c.linkTranscricao? `<a class="btn-mini" href="${c.linkTranscricao}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
+              <td style="white-space:nowrap">${c.syncedToSessions
+                ? `<span class="sync-ok">${icon('tick')} Em Minhas Sessões</span>`
+                : `<button class="btn-mini" data-sync-session="${c.id}">${icon('upload')} Adicionar às Sessões</button>`}</td>
+            </tr>
+          `).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <p class="kpi-note" style="margin-top:6px">Automatize: ao adicionar um registro aqui, use "Adicionar às Sessões" para que ele apareça também em Minhas Sessões 1:1 do aluno.</p>
+    <div class="add-form">
+      <div class="field"><label>Data da reunião</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
+      <div class="field"><label>Responsável</label><input class="ps-input" type="text" id="new-contato-resp" placeholder="Seu nome"></div>
+      <div class="field full"><label>Resumo</label><textarea class="ps-input" id="new-contato-resumo" placeholder="O que foi tratado no contato..."></textarea></div>
+      <div class="field"><label>Link da gravação</label><input class="ps-input" type="text" id="new-contato-grav" placeholder="https://..."></div>
+      <div class="field"><label>Link da transcrição</label><input class="ps-input" type="text" id="new-contato-transc" placeholder="https://..."></div>
+      <div class="actions"><button class="btn-accent" id="add-contato-btn">${icon('plus')} Adicionar registro</button></div>
+    </div>
+  `;
+  document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
+  document.querySelectorAll('#diag-tabs [data-diagtab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ internoDiagTab = btn.dataset.diagtab; renderInterno(); });
+  });
+  document.querySelectorAll('#diag-panel [data-diag-save]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i = +btn.dataset.diagSave;
+      const ta = document.getElementById('diag-input-'+i);
+      answers[i] = ta.value.trim();
+      editing[i] = false;
+      syncInternalDiagAnswer(s.id, internoDiagTab, i, answers[i]);
+      renderInterno();
+    });
+  });
+  document.querySelectorAll('#diag-panel [data-diag-cancel]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      editing[+btn.dataset.diagCancel] = false;
+      renderInterno();
+    });
+  });
+  document.querySelectorAll('#diag-panel [data-diag-edit]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      editing[+btn.dataset.diagEdit] = true;
+      renderInterno();
+    });
+  });
+  document.querySelectorAll('#diag-panel [data-diag-delete]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i = +btn.dataset.diagDelete;
+      answers[i] = '';
+      editing[i] = true;
+      syncInternalDiagAnswer(s.id, internoDiagTab, i, '');
+      renderInterno();
+    });
+  });
+  const STATUS_CYCLE = ['Pendente','Concluída','Atrasada'];
+  document.querySelectorAll('[data-check]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t = s.checklist.find(x=>x.id==btn.dataset.check);
+      const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(t.status)+1)%STATUS_CYCLE.length];
+      t.status = next;
+      syncChecklistItemStatus(t.id, t.status);
+      renderInterno();
+    });
+  });
+  document.getElementById('add-task-btn').addEventListener('click', async ()=>{
+    const tarefa = document.getElementById('new-task-tarefa').value.trim();
+    if(!tarefa) return;
+    const responsavel = document.getElementById('new-task-resp').value;
+    const prazo = document.getElementById('new-task-prazo').value.trim() || '—';
+    const btn = document.getElementById('add-task-btn');
+    btn.disabled = true;
+    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:''};
+    try{
+      item.id = await syncChecklistItemInsert(s.id, item);
+      s.checklist.push(item);
+      renderInterno();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-replay-internal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const sess = s.sessions.find(x=>x.id==btn.dataset.replayInternal);
+      document.getElementById('modal').innerHTML = `
+        <div class="modal-player" style="--tint1:#f43f5e;--tint2:#fb7185">
+          <button class="modal-close" id="modal-close">${icon('x')}</button>
+          ${fillIcon('play','play-fill')}
+        </div>
+        <div class="modal-body">
+          <h3>${sess.title}</h3>
+          <p class="desc">${sess.notes}</p>
+          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
+        </div>`;
+      document.getElementById('modal-backdrop').classList.add('open');
+      document.getElementById('modal-close').addEventListener('click',closeModal);
+      document.getElementById('modal-close-2').addEventListener('click',closeModal);
+    });
+  });
+  document.querySelectorAll('[data-transcript]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const sess = s.sessions.find(x=>x.id==btn.dataset.transcript);
+      document.getElementById('modal').innerHTML = `
+        <div class="modal-body">
+          <div class="cat">Transcrição</div>
+          <h3>${sess.title}</h3>
+          <p class="desc">Transcrição completa disponível no documento de origem vinculado a este encontro na planilha interna. (Conteúdo ilustrativo do protótipo.)</p>
+          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
+        </div>`;
+      document.getElementById('modal-backdrop').classList.add('open');
+      document.getElementById('modal-close-2').addEventListener('click',closeModal);
+    });
+  });
+  document.getElementById('add-contato-btn').addEventListener('click', async ()=>{
+    const data = document.getElementById('new-contato-data').value.trim();
+    const responsavel = document.getElementById('new-contato-resp').value.trim();
+    const resumo = document.getElementById('new-contato-resumo').value.trim();
+    if(!data || !responsavel || !resumo) return;
+    const linkGravacao = document.getElementById('new-contato-grav').value.trim();
+    const linkTranscricao = document.getElementById('new-contato-transc').value.trim();
+    const btn = document.getElementById('add-contato-btn');
+    btn.disabled = true;
+    const c = {data, responsavel, resumo, linkGravacao, linkTranscricao, syncedToSessions:false};
+    try{
+      c.id = await syncContatoInsert(s.id, c);
+      s.contatos.push(c);
+      renderInterno();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-sync-session]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const c = s.contatos.find(x=>x.id==btn.dataset.syncSession);
+      if(!c) return;
+      btn.disabled = true;
+      const sess = {
+        title:'Encontro registrado — '+c.data,
+        date:c.data,
+        notes:c.resumo,
+        hasFile:!!c.linkGravacao,
+        transcricao:!!c.linkTranscricao,
+      };
+      try{
+        sess.id = await syncContatoSyncSession(c.id, s.id, sess);
+        s.sessions.push(sess);
+        c.syncedToSessions = true;
+        renderInterno();
+      }catch(e){ console.error(e); btn.disabled = false; }
+    });
+  });
+}
+
+/* ================= VIEW: GERENCIAR CONTEÚDO (somente equipe interna) ================= */
+const TINT_BY_MODULE = {
+  introducao:['#9ba4ba','#c5c9d1'], ser:['#828966','#a6a88b'], conectar:['#7c89a5','#9ba4ba'],
+  transformar:['#ab6f30','#c6aa83'], gerenciar:['#5c5d46','#89886d'],
+};
+function moveCourseInModule(courseId, dir){
+  const idx = COURSES.findIndex(c=>c.id===courseId);
+  if(idx<0) return;
+  const modId = COURSES[idx].modId;
+  let j = idx + dir;
+  while(j>=0 && j<COURSES.length && COURSES[j].modId!==modId) j += dir;
+  if(j<0 || j>=COURSES.length) return;
+  [COURSES[idx], COURSES[j]] = [COURSES[j], COURSES[idx]];
+}
+let draggedCourseId = null;
+function courseRowHtml(c, isFirst, isLast){
+  return `
+    <div class="course-row" draggable="true" data-course-row="${c.id}">
+      <span class="drag-handle" title="Arraste para reordenar">${icon('drag')}</span>
+      <div class="ct-title">${c.title}<span class="dur">${c.duration}${c.materiais&&c.materiais.length? ' · '+c.materiais.length+' material(is)':''}</span></div>
+      <div class="ct-actions">
+        <button class="reorder-btn" data-move-up="${c.id}" ${isFirst?'disabled':''} title="Mover para cima">${icon('up')}</button>
+        <button class="reorder-btn" data-move-down="${c.id}" ${isLast?'disabled':''} title="Mover para baixo">${icon('down')}</button>
+        <button class="btn-mini" data-edit-course="${c.id}">${icon('edit')} Editar</button>
+        <button class="btn-mini danger" data-del-course="${c.id}">${icon('trash')} Remover</button>
+      </div>
+    </div>`;
+}
+function bindConteudoCourseEvents(){
+  document.querySelectorAll('[data-move-up]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ moveCourseInModule(btn.dataset.moveUp, -1); syncCourseOrder(COURSES); renderConteudo(); });
+  });
+  document.querySelectorAll('[data-move-down]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ moveCourseInModule(btn.dataset.moveDown, 1); syncCourseOrder(COURSES); renderConteudo(); });
+  });
+  document.querySelectorAll('[data-edit-course]').forEach(btn=>{
+    btn.addEventListener('click',()=>openEditCourseModal(btn.dataset.editCourse));
+  });
+  document.querySelectorAll('[data-del-course]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const idx = COURSES.findIndex(c=>c.id===btn.dataset.delCourse);
+      if(idx>-1){ syncCourseDelete(COURSES[idx].id); COURSES.splice(idx,1); }
+      renderConteudo();
+    });
+  });
+  document.querySelectorAll('[data-course-row]').forEach(row=>{
+    row.addEventListener('dragstart',()=>{ draggedCourseId = row.dataset.courseRow; row.classList.add('dragging'); });
+    row.addEventListener('dragend',()=>{ row.classList.remove('dragging'); });
+    row.addEventListener('dragover',(e)=>{ e.preventDefault(); });
+    row.addEventListener('drop',(e)=>{
+      e.preventDefault();
+      const targetId = row.dataset.courseRow;
+      if(!draggedCourseId || draggedCourseId===targetId) return;
+      const fromIdx = COURSES.findIndex(c=>c.id===draggedCourseId);
+      const toIdx = COURSES.findIndex(c=>c.id===targetId);
+      if(fromIdx<0 || toIdx<0) return;
+      if(COURSES[fromIdx].modId !== COURSES[toIdx].modId) return; // só reordena dentro do mesmo módulo
+      const [moved] = COURSES.splice(fromIdx,1);
+      const newToIdx = COURSES.findIndex(c=>c.id===targetId);
+      COURSES.splice(newToIdx, 0, moved);
+      draggedCourseId = null;
+      syncCourseOrder(COURSES);
+      renderConteudo();
+    });
+  });
+}
+function openEditCourseModal(courseId){
+  const c = COURSES.find(x=>x.id===courseId);
+  if(!c) return;
+  if(!c.materiais) c.materiais = [];
+  function renderModal(){
+    document.getElementById('modal').innerHTML = `
+      <div class="modal-body form-modal">
+        <div class="cat">Gerenciar Conteúdo</div>
+        <h3>Editar Aula</h3>
+        <p class="desc">Alterações aparecem na hora para todos os alunos.</p>
+        <div class="ps-section">
+          <label class="ps-label">Título da aula</label>
+          <input class="ps-input" type="text" id="edit-course-title" value="${escapeAttr(c.title)}">
+          <label class="ps-label">Módulo</label>
+          <select class="ps-input" id="edit-course-mod">${MODULES.map(m=>`<option value="${m.id}" ${m.id===c.modId?'selected':''}>${m.name}</option>`).join('')}</select>
+          <label class="ps-label">Duração</label>
+          <input class="ps-input" type="text" id="edit-course-duration" value="${escapeAttr(c.duration)}">
+          <label class="ps-label">Descrição</label>
+          <textarea class="ps-input" id="edit-course-desc">${escapeAttr(c.desc)}</textarea>
+          <label class="ps-label">Link do vídeo (YouTube)</label>
+          <input class="ps-input" type="text" id="edit-course-link" value="${escapeAttr(c.videoLink||'')}" placeholder="https://www.youtube.com/watch?v=...">
+          <div class="field-error" id="edit-course-link-error" style="display:none">Informe um link válido de vídeo do YouTube.</div>
+        </div>
+        <div class="ps-section">
+          <div class="ps-h">Materiais desta aula (links do Google Drive)</div>
+          ${c.materiais.map((m,i)=>`
+            <div class="ps-row">
+              <input class="ps-input" data-mat-title="${i}" value="${escapeAttr(m.title)}" placeholder="Título do material">
+              <input class="ps-input" data-mat-link="${i}" value="${escapeAttr(m.link)}" placeholder="Link do Google Drive">
+              <button class="ps-remove" data-mat-remove="${i}">${icon('x')}</button>
+            </div>
+          `).join('')}
+          <button class="btn-mini ps-add" id="edit-course-mat-add">${icon('plus','ps-plus')} Adicionar material</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-accent" id="edit-course-save">Salvar alterações</button>
+          <button class="btn-outline" id="modal-close-2">Fechar</button>
+        </div>
+      </div>`;
+    document.getElementById('modal-close-2').addEventListener('click', closeModal);
+    // Campos principais: salvam em `c` a cada alteração, para que reabrir a lista de
+    // materiais (que exige um re-render do modal) nunca perca o que já foi digitado.
+    document.getElementById('edit-course-title').addEventListener('input', e=>{ c.title = e.target.value; });
+    document.getElementById('edit-course-mod').addEventListener('change', e=>{ c.modId = e.target.value; c.cat = getModule(c.modId).name; });
+    document.getElementById('edit-course-duration').addEventListener('input', e=>{ c.duration = e.target.value; });
+    document.getElementById('edit-course-desc').addEventListener('input', e=>{ c.desc = e.target.value; });
+    document.getElementById('edit-course-link').addEventListener('input', e=>{
+      c.videoLink = e.target.value;
+      document.getElementById('edit-course-link-error').style.display = 'none';
+    });
+    document.getElementById('edit-course-mat-add').addEventListener('click', ()=>{
+      c.materiais.push({title:'', link:''});
+      renderModal();
+    });
+    document.querySelectorAll('[data-mat-remove]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ c.materiais.splice(+btn.dataset.matRemove, 1); renderModal(); });
+    });
+    document.querySelectorAll('[data-mat-title]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{ c.materiais[+inp.dataset.matTitle].title = inp.value; });
+    });
+    document.querySelectorAll('[data-mat-link]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{ c.materiais[+inp.dataset.matLink].link = inp.value; });
+    });
+    document.getElementById('edit-course-save').addEventListener('click', async ()=>{
+      const title = (c.title||'').trim();
+      const videoLink = (c.videoLink||'').trim();
+      if(!title || !youtubeId(videoLink)){
+        document.getElementById('edit-course-link-error').style.display = youtubeId(videoLink) ? 'none' : 'block';
+        return;
+      }
+      c.title = title; c.videoLink = videoLink;
+      c.duration = (c.duration||'').trim() || '—';
+      c.desc = (c.desc||'').trim();
+      c.materiais = c.materiais.filter(m=>m.title.trim() && m.link.trim());
+      const btn = document.getElementById('edit-course-save');
+      btn.disabled = true;
+      try{
+        await syncCourseUpdate(c);
+        closeModal();
+        renderConteudo();
+      }catch(e){ console.error(e); btn.disabled = false; }
+    });
+  }
+  renderModal();
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+function renderConteudo(){
+  document.getElementById('view-conteudo').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. O que for publicado aqui aparece na hora em Aulas e Materiais, para todos os alunos.</div>
+
+    <h2 class="section-title">${icon('film')} Aulas</h2>
+    <p class="section-sub" style="margin-top:-6px">Arraste pelo ícone ⠿ ou use as setas para reordenar as aulas dentro de cada módulo.</p>
+    ${MODULES.map(mod=>{
+      const modCourses = COURSES.filter(c=>c.modId===mod.id);
+      if(!modCourses.length) return '';
+      return `<div class="module-block">
+        <div class="module-block-h">${mod.name}</div>
+        ${modCourses.map((c,i)=>courseRowHtml(c, i===0, i===modCourses.length-1)).join('')}
+      </div>`;
+    }).join('')}
+    <div class="add-form">
+      <div class="field full"><label>Título da aula</label><input class="ps-input" type="text" id="new-course-title" placeholder="Ex.: Como precificar protocolos"></div>
+      <div class="field"><label>Módulo</label>
+        <select class="ps-input" id="new-course-mod">${MODULES.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Duração</label><input class="ps-input" type="text" id="new-course-duration" placeholder="Ex.: 40min · 3 aulas"></div>
+      <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-course-desc" placeholder="Do que trata esta aula..."></textarea></div>
+      <div class="field full">
+        <label>Link do vídeo (YouTube)</label>
+        <input class="ps-input" type="text" id="new-course-link" placeholder="https://www.youtube.com/watch?v=...">
+        <div class="field-error" id="new-course-link-error" style="display:none">Informe um link válido de vídeo do YouTube.</div>
+      </div>
+      <div class="actions"><button class="btn-accent" id="add-course-btn">${icon('upload')} Publicar aula</button></div>
+    </div>
+
+    <h2 class="section-title">${icon('folder')} Materiais</h2>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Título</th><th>Tipo</th><th>Link</th><th></th></tr></thead>
+        <tbody>
+          ${MATERIALS.map(m=>`
+            <tr>
+              <td style="min-width:220px">${m.title}</td>
+              <td><span class="resp-pill">${m.type}</span></td>
+              <td>${m.link? `<a class="btn-mini" href="${m.link}" target="_blank" rel="noopener">${icon('download')} Abrir</a>` : (m.size||'—')}</td>
+              <td><button class="btn-mini danger" data-del-material="${m.id}">${icon('trash')} Remover</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="add-form">
+      <div class="field full"><label>Título do material</label><input class="ps-input" type="text" id="new-material-title" placeholder="Ex.: Guia de Precificação"></div>
+      <div class="field"><label>Tipo</label>
+        <select class="ps-input" id="new-material-type">
+          <option value="PDF">PDF</option><option value="XLSX">XLSX</option><option value="DOCX">DOCX</option><option value="Link">Link</option>
+        </select>
+      </div>
+      <div class="field full"><label>Link (PDF, planilha, página, etc.)</label><input class="ps-input" type="text" id="new-material-link" placeholder="https://..."></div>
+      <div class="actions"><button class="btn-accent" id="add-material-btn">${icon('upload')} Publicar material</button></div>
+    </div>
+
+    <h2 class="section-title">${icon('calendar')} Eventos / Aulas ao Vivo</h2>
+    <p class="section-sub" style="margin-top:-6px">Aparecem na Agenda ao Vivo de todos os alunos — como próximos encontros (se a data for futura) ou gravações (se já passou).</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Situação</th><th></th></tr></thead>
+        <tbody>
+          ${LIVE_SESSIONS.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
+            <tr>
+              <td style="min-width:220px">${l.title}</td>
+              <td style="white-space:nowrap">${l.date}</td>
+              <td style="min-width:180px">${l.time||'—'}</td>
+              <td>${l.type==='upcoming'? '<span class="pill live">Próximo</span>' : '<span class="pill replay">Passado</span>'}</td>
+              <td><button class="btn-mini danger" data-del-live="${l.id}">${icon('trash')} Remover</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="add-form">
+      <div class="field full"><label>Título do evento</label><input class="ps-input" type="text" id="new-live-title" placeholder="Ex.: Encontro em grupo — Planejamento de Q4"></div>
+      <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-live-date"></div>
+      <div class="field"><label>Horário / detalhes</label><input class="ps-input" type="text" id="new-live-time" placeholder="Ex.: 19h00 · Turma 2026.1"></div>
+      <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-live-desc" placeholder="Do que trata este encontro..."></textarea></div>
+      <div class="actions"><button class="btn-accent" id="add-live-btn">${icon('upload')} Publicar evento</button></div>
+    </div>
+  `;
+  bindConteudoCourseEvents();
+  document.getElementById('add-course-btn').addEventListener('click',()=>{
+    const title = document.getElementById('new-course-title').value.trim();
+    const modId = document.getElementById('new-course-mod').value;
+    const mod = getModule(modId);
+    const duration = document.getElementById('new-course-duration').value.trim() || '—';
+    const desc = document.getElementById('new-course-desc').value.trim();
+    const videoLink = document.getElementById('new-course-link').value.trim();
+    const errEl = document.getElementById('new-course-link-error');
+    if(!title || !youtubeId(videoLink)){
+      errEl.style.display = youtubeId(videoLink) ? 'none' : 'block';
+      return;
+    }
+    const course = {
+      id:'c'+Date.now(), modId, cat:mod.name, title, duration,
+      tint: TINT_BY_MODULE[modId] || ['#8d916f','#bec6b1'],
+      desc: desc || 'Aula publicada pela equipe interna.',
+      videoLink,
+      materiais: [],
+      _orderIndex: COURSES.length,
+    };
+    COURSES.push(course);
+    syncCourseInsert(course);
+    renderConteudo();
+  });
+  document.querySelectorAll('[data-del-material]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const idx = MATERIALS.findIndex(m=>m.id==btn.dataset.delMaterial);
+      if(idx>-1){ syncMaterialDelete(MATERIALS[idx].id); MATERIALS.splice(idx,1); }
+      renderConteudo();
+    });
+  });
+  document.getElementById('add-material-btn').addEventListener('click', async ()=>{
+    const title = document.getElementById('new-material-title').value.trim();
+    const link = document.getElementById('new-material-link').value.trim();
+    if(!title || !link) return;
+    const type = document.getElementById('new-material-type').value;
+    const btn = document.getElementById('add-material-btn');
+    btn.disabled = true;
+    const m = {title, type, link};
+    try{
+      m.id = await syncMaterialInsert(m);
+      MATERIALS.push(m);
+      renderConteudo();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-del-live]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const idx = LIVE_SESSIONS.findIndex(l=>l.id==btn.dataset.delLive);
+      if(idx>-1){ syncLiveSessionDelete(LIVE_SESSIONS[idx].id); LIVE_SESSIONS.splice(idx,1); }
+      renderConteudo();
+    });
+  });
+  document.getElementById('add-live-btn').addEventListener('click', async ()=>{
+    const title = document.getElementById('new-live-title').value.trim();
+    const eventDate = document.getElementById('new-live-date').value;
+    const eventTime = document.getElementById('new-live-time').value.trim();
+    const description = document.getElementById('new-live-desc').value.trim();
+    if(!title || !eventDate) return;
+    const btn = document.getElementById('add-live-btn');
+    btn.disabled = true;
+    try{
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, description});
+      LIVE_SESSIONS.push(mapLiveSessionRow(row));
+      renderConteudo();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+}
+
+/* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
+function renderVisaoGeral(){
+  const totalMentorados = STUDENTS.length;
+  const avgProgress = totalMentorados ? Math.round(STUDENTS.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
+  const atrasadasTotal = STUDENTS.reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
+  const duvidas = COMMUNITY_POSTS.filter(p=>p.type==='duvida').length;
+
+  document.getElementById('view-visaogeral').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Visão consolidada de todos os mentorados do Método Essência.</div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Mentorados ativos</div><div class="value">${totalMentorados}</div></div>
+      <div class="kpi-tile"><div class="label">Progresso médio no método</div><div class="value">${avgProgress}%</div></div>
+      <div class="kpi-tile"><div class="label">Tarefas atrasadas</div><div class="value">${atrasadasTotal}</div></div>
+      <div class="kpi-tile"><div class="label">Dúvidas pendentes na comunidade</div><div class="value">${duvidas}</div></div>
+    </div>
+
+    <h2 class="section-title">${icon('users')} Mentorados</h2>
+    <p class="section-sub" style="margin-top:-6px">Clique em "Abrir" para acessar o Acompanhamento Interno de um mentorado específico.</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Próxima meta pendente</th><th>Atrasadas</th><th>Dias restantes</th><th>Estágio</th><th></th></tr></thead>
+        <tbody>
+          ${STUDENTS.map(s=>{
+            const pct = overallProgress(s);
+            const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+            const atrasadas = s.checklist.filter(t=>t.status==='Atrasada').length;
+            const dias = diasRestantes(s);
+            const estagio = estagioMentoria(mesPrograma(s));
+            return `
+              <tr>
+                <td style="white-space:nowrap">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
+                    <span style="font-weight:600">${s.name}</span>
+                  </div>
+                </td>
+                <td>${s.turma}<br><span style="color:var(--text-mute);font-size:11.5px">${s.diagnostico.nicho}</span></td>
+                <td style="min-width:140px">
+                  <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
+                  <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
+                </td>
+                <td style="min-width:220px">${nextTask? nextTask.tarefa : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
+                <td>${atrasadas>0? `<span class="status-pill status-Atrasada">${atrasadas}</span>` : '—'}</td>
+                <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
+                <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
+                <td><button class="btn-mini" data-open-staff="${s.id}">${icon('idcard')} Abrir</button></td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.querySelectorAll('[data-open-staff]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      currentStudentId = btn.dataset.openStaff;
+      panelQuadrantId = null;
+      renderProfile();
+      goTo('interno');
+    });
+  });
+}
+
+/* ================= INIT ================= */
+renderLogin();
+</script>
+</body>
+</html>
