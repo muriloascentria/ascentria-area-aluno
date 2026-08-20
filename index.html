@@ -1267,8 +1267,12 @@ function youtubeId(url){
   return m ? m[1] : null;
 }
 function getModule(id){ return MODULES.find(m=>m.id===id); }
-function initialsAvatar(initials,color,size){
-  return `<div class="avatar" style="background:${color};${size?`width:${size}px;height:${size}px;font-size:${size*0.34}px`:''}">${initials}</div>`;
+function initialsAvatar(initials,color,size,avatarUrl){
+  const sizeStyle = size?`width:${size}px;height:${size}px;font-size:${size*0.34}px`:'';
+  if(avatarUrl){
+    return `<div class="avatar" style="background:${color};${sizeStyle};background-image:url('${escapeAttr(avatarUrl)}');background-size:cover;background-position:center;color:transparent"></div>`;
+  }
+  return `<div class="avatar" style="background:${color};${sizeStyle}">${initials}</div>`;
 }
 function overallProgress(s){
   let done=0;
@@ -1369,7 +1373,7 @@ function mapProfileRow(p){
   const courseProgress = {};
   (p.course_progress||[]).forEach(cp=>{ courseProgress[cp.course_id] = cp.pct; });
   return {
-    id: p.id, name: p.name, initials: p.initials, color: p.color, turma: p.turma || '—',
+    id: p.id, name: p.name, initials: p.initials, color: p.color, turma: p.turma || '—', avatarUrl: p.avatar_url || null,
     cadastro:{
       nomeCompleto: sc.nome_completo || p.name || '',
       email: sc.email || '',
@@ -1404,7 +1408,7 @@ async function bootstrapData(){
 
   const me = profiles.find(p=>p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
-  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color} : null;
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null} : null;
 
   STUDENTS.length = 0;
   profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
@@ -1677,11 +1681,14 @@ function setupNav(){
   document.querySelectorAll('#role-toggle [data-role]').forEach(btn=>{
     btn.addEventListener('click',()=>setRole(btn.dataset.role));
   });
-  document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados Cadastrais</span>`;
+  document.getElementById('open-cadastro').innerHTML = currentUserRole==='staff'
+    ? `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`
+    : `${icon('idcard')}<span>Meus Dados Cadastrais</span>`;
   document.getElementById('open-cadastro').addEventListener('click',(e)=>{
     e.stopPropagation();
     document.getElementById('profile-dropdown').classList.remove('open');
-    openCadastroModal();
+    if(currentUserRole==='staff') openStaffInfoModal();
+    else openCadastroModal();
   });
   document.getElementById('notif-btn').addEventListener('click',()=>{
     communityFilter = currentRole==='staff' ? 'duvida' : 'todas';
@@ -1741,13 +1748,19 @@ function renderProfile(){
     document.getElementById('profile-options').innerHTML = '<div class="label" style="padding:8px 10px">Nenhum mentorado cadastrado ainda.</div>';
     return;
   }
-  document.getElementById('profile-avatar').style.background = s.color;
-  document.getElementById('profile-avatar').textContent = s.initials;
+  const pa = document.getElementById('profile-avatar');
+  pa.style.background = s.color;
+  if(s.avatarUrl){
+    pa.style.backgroundImage = `url('${s.avatarUrl}')`; pa.style.backgroundSize='cover'; pa.style.backgroundPosition='center';
+    pa.textContent = '';
+  } else {
+    pa.style.backgroundImage = ''; pa.textContent = s.initials;
+  }
   document.getElementById('profile-name').textContent = s.name.split(' ')[0];
   const opts = document.getElementById('profile-options');
   opts.innerHTML = STUDENTS.map(st=>`
     <button class="opt" data-id="${st.id}">
-      ${initialsAvatar(st.initials,st.color,24)}
+      ${initialsAvatar(st.initials,st.color,24,st.avatarUrl)}
       <span>${st.name}</span>
     </button>
   `).join('');
@@ -1815,7 +1828,7 @@ function renderInicio(){
         <h1>Olá, ${s.name.split(' ')[0]}</h1>
         <p>Bem-vindo(a) de volta à sua área do Método Essência.</p>
       </div>
-      ${initialsAvatar(s.initials,s.color,56)}
+      ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
     </div>
     <div class="stat-row">
       <div class="stat-card clickable" data-goto="dashboard"><div class="label">Progresso geral</div><div class="value shared">${overall}%</div></div>
@@ -1918,6 +1931,108 @@ function closeModal(){ document.getElementById('modal-backdrop').classList.remov
 document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.target.id==='modal-backdrop') closeModal(); });
 
 /* ================= MODAL: MEUS DADOS CADASTRAIS ================= */
+/* ---- Foto de perfil (aluno e equipe interna) — Supabase Storage, bucket "avatars" ---- */
+function avatarUploadHtml(person, idPrefix){
+  return `
+    <div class="avatar-upload-row" style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      ${initialsAvatar(person.initials, person.color, 64, person.avatarUrl)}
+      <div>
+        <input type="file" accept="image/*" id="${idPrefix}-file" style="display:none">
+        <button class="btn-outline" id="${idPrefix}-upload-btn" type="button">${icon('upload')} ${person.avatarUrl? 'Trocar foto' : 'Adicionar foto'}</button>
+        <p class="field-error" id="${idPrefix}-error" style="display:none;margin-top:6px"></p>
+      </div>
+    </div>`;
+}
+async function uploadAvatarFile(file, personId){
+  if(file.size > 5*1024*1024) throw new Error('Arquivo muito grande (máx. 5MB).');
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+  const path = `${personId}/${Date.now()}.${ext}`;
+  const { error: upErr } = await sb.storage.from('avatars').upload(path, file, {upsert:true});
+  if(upErr) throw upErr;
+  const { data } = sb.storage.from('avatars').getPublicUrl(path);
+  const url = data.publicUrl;
+  const { error: updErr } = await sb.from('profiles').update({avatar_url:url}).eq('id', personId);
+  if(updErr) throw updErr;
+  return url;
+}
+function wireAvatarUpload(idPrefix, person, onUpdated){
+  document.getElementById(idPrefix+'-upload-btn').addEventListener('click', ()=>{
+    document.getElementById(idPrefix+'-file').click();
+  });
+  document.getElementById(idPrefix+'-file').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const errEl = document.getElementById(idPrefix+'-error');
+    errEl.style.display='none';
+    const btn = document.getElementById(idPrefix+'-upload-btn');
+    btn.disabled = true;
+    try{
+      const url = await uploadAvatarFile(file, person.id);
+      person.avatarUrl = url;
+      if(currentUserProfile && currentUserProfile.id===person.id) currentUserProfile.avatarUrl = url;
+      renderProfile();
+      onUpdated();
+    }catch(err){
+      console.error(err);
+      errEl.textContent = 'Não foi possível enviar a foto. Tente uma imagem menor (até 5MB).';
+      errEl.style.display='block';
+      btn.disabled = false;
+    }
+  });
+}
+/* ---- Meus Dados (Equipe Interna) ---- */
+async function openStaffInfoModal(){
+  const person = currentUserProfile;
+  if(!person) return;
+  document.getElementById('modal').innerHTML = `<div class="modal-body form-modal"><p class="desc">Carregando...</p></div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  const { data: info } = await sb.from('staff_info').select('*').eq('user_id', person.id).maybeSingle();
+  const telefone = (info && info.telefone) || '';
+  const cargo = (info && info.cargo) || '';
+  const bio = (info && info.bio) || '';
+  function renderModal(){
+    document.getElementById('modal').innerHTML = `
+      <div class="modal-body form-modal">
+        <div class="cat">Equipe Interna</div>
+        <h3>Meus Dados</h3>
+        <p class="desc">Suas informações pessoais como membro da equipe interna da Ascentria.</p>
+        ${avatarUploadHtml(person, 'si')}
+        <div class="diag-grid">
+          <div class="diag-item"><div class="label">Nome</div><div class="value">${person.name}</div></div>
+          <div class="diag-item"><div class="label">E-mail</div><div class="value">${currentUser.email}</div></div>
+        </div>
+        <div class="ps-section">
+          <label class="ps-label">Telefone</label>
+          <input class="ps-input" type="text" id="si-telefone" value="${escapeAttr(telefone)}" placeholder="(11) 99999-9999">
+          <label class="ps-label">Função na equipe</label>
+          <input class="ps-input" type="text" id="si-cargo" value="${escapeAttr(cargo)}" placeholder="Ex.: Mentora, Suporte, Financeiro">
+          <label class="ps-label">Sobre</label>
+          <textarea class="ps-input" id="si-bio" placeholder="Uma breve descrição sobre você...">${escapeAttr(bio)}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-accent" id="si-save">Salvar meus dados</button>
+          <button class="btn-outline" id="modal-close-2">Fechar</button>
+        </div>
+      </div>`;
+    document.getElementById('modal-close-2').addEventListener('click', closeModal);
+    wireAvatarUpload('si', person, renderModal);
+    document.getElementById('si-save').addEventListener('click', async ()=>{
+      const btn = document.getElementById('si-save');
+      btn.disabled = true;
+      try{
+        const { error } = await sb.from('staff_info').upsert({
+          user_id: person.id,
+          telefone: document.getElementById('si-telefone').value.trim(),
+          cargo: document.getElementById('si-cargo').value.trim(),
+          bio: document.getElementById('si-bio').value.trim(),
+        });
+        if(error) throw error;
+        closeModal();
+      }catch(e){ console.error(e); btn.disabled = false; }
+    });
+  }
+  renderModal();
+}
 function openCadastroModal(){
   const s = getStudent(currentStudentId);
   const c = s.cadastro;
@@ -1929,6 +2044,7 @@ function openCadastroModal(){
       <div class="cat">Minha Área</div>
       <h3>Meus Dados Cadastrais</h3>
       <p class="desc">Dados do seu registro no momento da matrícula na mentoria.</p>
+      ${avatarUploadHtml(s, 'ca')}
       <div class="diag-grid">
         <div class="diag-item"><div class="label">Nome completo</div><div class="value">${c.nomeCompleto}</div></div>
         <div class="diag-item"><div class="label">E-mail</div><div class="value">${c.email}</div></div>
@@ -1956,6 +2072,7 @@ function openCadastroModal(){
       <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
     </div>`;
   document.getElementById('modal-close-2').addEventListener('click',closeModal);
+  wireAvatarUpload('ca', s, ()=>openCadastroModal());
   document.getElementById('modal-backdrop').classList.add('open');
 }
 
@@ -1966,7 +2083,7 @@ function postHtml(p,compact){
   return `
     <div class="post post-border-${t.css}">
       <div class="post-head">
-        ${initialsAvatar(author.initials,author.color)}
+        ${initialsAvatar(author.initials,author.color,undefined,author.avatarUrl)}
         <div class="who"><div class="name">${author.name}</div><div class="time">${p.time}</div></div>
         <span class="post-type-badge tag-${t.css}">${icon(t.icon,'tiny')}${t.label}</span>
       </div>
@@ -1978,9 +2095,9 @@ function postHtml(p,compact){
       </div>
       ${!compact? `
         <div class="comments">
-          ${p.comments.map(c=>`<div class="comment">${initialsAvatar(getStudent(c.authorId).initials,getStudent(c.authorId).color,22)}<div><b>${getStudent(c.authorId).name}</b>${c.text}</div></div>`).join('')}
+          ${p.comments.map(c=>`<div class="comment">${initialsAvatar(getStudent(c.authorId).initials,getStudent(c.authorId).color,22,getStudent(c.authorId).avatarUrl)}<div><b>${getStudent(c.authorId).name}</b>${c.text}</div></div>`).join('')}
           <div class="comment-composer">
-            ${initialsAvatar(getStudent(currentStudentId).initials,getStudent(currentStudentId).color,22)}
+            ${initialsAvatar(getStudent(currentStudentId).initials,getStudent(currentStudentId).color,22,getStudent(currentStudentId).avatarUrl)}
             <input type="text" placeholder="Escreva um comentário..." data-comment-input="${p.id}">
             <button class="btn-mini" data-comment-send="${p.id}">Enviar</button>
           </div>
@@ -1999,7 +2116,7 @@ function renderComunidade(){
   document.getElementById('view-comunidade').innerHTML = `
     <p class="section-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
     <div class="composer">
-      ${initialsAvatar(s.initials,s.color)}
+      ${initialsAvatar(s.initials,s.color,undefined,s.avatarUrl)}
       <div style="flex:1">
         <textarea id="new-post" placeholder="Compartilhe algo com a turma..."></textarea>
         <div class="type-select" id="type-select">
@@ -3208,7 +3325,7 @@ function renderVisaoGeral(){
               <tr>
                 <td style="white-space:nowrap">
                   <div style="display:flex;align-items:center;gap:8px">
-                    ${initialsAvatar(s.initials,s.color,26)}
+                    ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
                     <span style="font-weight:600">${s.name}</span>
                   </div>
                 </td>
