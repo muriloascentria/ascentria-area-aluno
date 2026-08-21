@@ -354,9 +354,13 @@
   .post-action.liked .icon{fill:var(--individual);stroke:var(--individual);}
   .post-action .icon{width:15px;height:15px;}
   .comments{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
-  .comment{display:flex;gap:8px;font-size:12.5px;}
+  .comment{display:flex;gap:8px;font-size:12.5px;align-items:flex-start;}
   .comment b{font-weight:700;margin-right:4px;}
   .comment .avatar{width:22px;height:22px;font-size:9px;flex-shrink:0;}
+  .comment .comment-body{flex:1;min-width:0;}
+  .post-del-btn,.comment-del-btn{background:none;border:none;padding:4px;flex-shrink:0;color:var(--text-mute);cursor:pointer;border-radius:6px;display:flex;align-items:center;}
+  .post-del-btn:hover,.comment-del-btn:hover{color:var(--danger);background:var(--danger-soft);}
+  .post-del-btn .icon,.comment-del-btn .icon{width:13px;height:13px;}
   .comment-composer{display:flex;align-items:center;gap:8px;margin-top:4px;}
   .comment-composer .avatar{width:22px;height:22px;font-size:9px;flex-shrink:0;}
   .comment-composer input{flex:1;background:var(--bg-elev);border:1px solid var(--border);border-radius:20px;color:var(--text);padding:7px 12px;font-size:12.5px;font-family:inherit;}
@@ -1504,7 +1508,7 @@ async function bootstrapData(){
       courseId:p.course_id||null, notifyAuthor:!!p.notify_author,
       likes:(p.community_likes||[]).length,
       liked:(p.community_likes||[]).some(l=>l.student_id===currentUser.id),
-      comments:(p.community_comments||[]).map(c=>({authorId:c.author_id, text:c.text})),
+      comments:(p.community_comments||[]).map(c=>({id:c.id, authorId:c.author_id, text:c.text})),
     });
   });
 
@@ -1585,8 +1589,16 @@ function syncCommunityLike(postId, sid, liked){
   if(liked) syncNow(sb.from('community_likes').upsert({post_id:postId, student_id:sid}));
   else syncNow(sb.from('community_likes').delete().eq('post_id',postId).eq('student_id',sid));
 }
-function syncCommunityComment(postId, authorId, text){
-  syncNow(sb.from('community_comments').insert({post_id:postId, author_id:authorId, text}));
+async function syncCommunityComment(postId, authorId, text){
+  const { data, error } = await sb.from('community_comments').insert({post_id:postId, author_id:authorId, text}).select().single();
+  if(error) throw error;
+  return data.id;
+}
+function syncCommunityPostDelete(postId){
+  syncNow(sb.from('community_posts').delete().eq('id', postId));
+}
+function syncCommunityCommentDelete(commentId){
+  syncNow(sb.from('community_comments').delete().eq('id', commentId));
 }
 function syncChecklistItemStatus(id, status){
   syncNow(sb.from('checklist_items').update({status}).eq('id', id));
@@ -2065,21 +2077,47 @@ function bindCourseComments(c){
     });
   });
   modalEl.querySelectorAll('[data-comment-send]').forEach(btn=>{
-    const send = ()=>{
+    const send = async ()=>{
       if(!me) return;
       const pid = btn.dataset.commentSend;
       const input = modalEl.querySelector(`[data-comment-input="${pid}"]`);
       if(!input.value.trim()) return;
+      const text = input.value.trim();
       const p = COMMUNITY_POSTS.find(x=>x.id==pid);
-      p.comments.push({authorId:actingAuthorId(), text:input.value.trim()});
-      syncCommunityComment(p.id, actingAuthorId(), input.value.trim());
-      maybeNotifyPostAuthor(p);
-      updateNotifBadge();
-      openCourseModal(c.id);
+      btn.disabled = true;
+      try{
+        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text);
+        p.comments.push({id:commentId, authorId:actingAuthorId(), text});
+        maybeNotifyPostAuthor(p);
+        updateNotifBadge();
+        openCourseModal(c.id);
+      }catch(e){ console.error(e); btn.disabled = false; }
     };
     btn.addEventListener('click',send);
     const input = modalEl.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
     input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+  });
+  modalEl.querySelectorAll('[data-del-post]').forEach(btn=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const pid = btn.dataset.delPost;
+      const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
+      if(idx>-1){ syncCommunityPostDelete(COMMUNITY_POSTS[idx].id); COMMUNITY_POSTS.splice(idx,1); }
+      updateNotifBadge();
+      openCourseModal(c.id);
+    });
+  });
+  modalEl.querySelectorAll('[data-del-comment]').forEach(btn=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const cid = btn.dataset.delComment;
+      const p = COMMUNITY_POSTS.find(x=>x.comments.some(cm=>cm.id==cid));
+      if(p){
+        const idx = p.comments.findIndex(cm=>cm.id==cid);
+        if(idx>-1){ syncCommunityCommentDelete(p.comments[idx].id); p.comments.splice(idx,1); }
+      }
+      openCourseModal(c.id);
+    });
   });
 }
 function closeModal(){ document.getElementById('modal-backdrop').classList.remove('open'); }
@@ -2265,13 +2303,16 @@ function postHtml(p,compact,showCourseTag){
   const replyAuthor = getPerson(actingAuthorId());
   const answered = isAnswered(p);
   const nameTag = (person)=> person.role==='staff' ? ` <span class="staff-tag">Equipe interna</span>` : '';
+  const iAmStaff = getPerson(actingAuthorId())?.role==='staff';
   const isMine = p.authorId===actingAuthorId();
+  const canDeletePost = isMine || iAmStaff;
   return `
     <div class="post post-border-${t.css}${(isMine && p.notifyAuthor)?' post-unseen':''}">
       <div class="post-head">
         ${initialsAvatar(author.initials,author.color,undefined,author.avatarUrl)}
         <div class="who"><div class="name">${author.name}${nameTag(author)}</div><div class="time">${p.time}</div></div>
         <span class="post-type-badge tag-${t.css}">${icon(t.icon,'tiny')}${t.label}</span>
+        ${canDeletePost? `<button type="button" class="post-del-btn" data-del-post="${p.id}" title="Excluir publicação">${icon('trash','tiny')}</button>` : ''}
       </div>
       ${course? `<button type="button" class="post-course-tag" data-open-course="${course.id}">${icon('film','tiny')} Sobre a aula: <b>${course.title}</b> — abrir aula</button>` : ''}
       ${(isMine && p.notifyAuthor)? `<div class="staff-note new-reply">${icon('bell','tiny')} Nova resposta da equipe interna!</div>` : ''}
@@ -2285,7 +2326,11 @@ function postHtml(p,compact,showCourseTag){
       </div>
       ${!compact? `
         <div class="comments">
-          ${p.comments.map(c=>{ const a=getPerson(c.authorId); return a? `<div class="comment">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div><b>${a.name}${nameTag(a)}</b>${c.text}</div></div>` : ''; }).join('')}
+          ${p.comments.map(c=>{
+            const a=getPerson(c.authorId); if(!a) return '';
+            const canDeleteComment = c.authorId===actingAuthorId() || iAmStaff;
+            return `<div class="comment">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div class="comment-body"><b>${a.name}${nameTag(a)}</b>${c.text}</div>${canDeleteComment? `<button type="button" class="comment-del-btn" data-del-comment="${c.id}" title="Excluir comentário">${icon('trash','tiny')}</button>` : ''}</div>`;
+          }).join('')}
           ${replyAuthor? `
           <div class="comment-composer">
             ${initialsAvatar(replyAuthor.initials,replyAuthor.color,22,replyAuthor.avatarUrl)}
@@ -2358,21 +2403,47 @@ function renderComunidade(){
     });
   });
   root.querySelectorAll('[data-comment-send]').forEach(btn=>{
-    const send = ()=>{
+    const send = async ()=>{
       if(!me) return;
       const pid = btn.dataset.commentSend;
       const input = root.querySelector(`[data-comment-input="${pid}"]`);
       if(!input.value.trim()) return;
+      const text = input.value.trim();
       const p = COMMUNITY_POSTS.find(x=>x.id==pid);
-      p.comments.push({authorId:actingAuthorId(), text:input.value.trim()});
-      syncCommunityComment(p.id, actingAuthorId(), input.value.trim());
-      maybeNotifyPostAuthor(p);
-      updateNotifBadge();
-      renderComunidade();
+      btn.disabled = true;
+      try{
+        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text);
+        p.comments.push({id:commentId, authorId:actingAuthorId(), text});
+        maybeNotifyPostAuthor(p);
+        updateNotifBadge();
+        renderComunidade();
+      }catch(e){ console.error(e); btn.disabled = false; }
     };
     btn.addEventListener('click',send);
     const input = root.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
     input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+  });
+  root.querySelectorAll('[data-del-post]').forEach(btn=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const pid = btn.dataset.delPost;
+      const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
+      if(idx>-1){ syncCommunityPostDelete(COMMUNITY_POSTS[idx].id); COMMUNITY_POSTS.splice(idx,1); }
+      updateNotifBadge();
+      renderComunidade();
+    });
+  });
+  root.querySelectorAll('[data-del-comment]').forEach(btn=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const cid = btn.dataset.delComment;
+      const p = COMMUNITY_POSTS.find(x=>x.comments.some(c=>c.id==cid));
+      if(p){
+        const idx = p.comments.findIndex(c=>c.id==cid);
+        if(idx>-1){ syncCommunityCommentDelete(p.comments[idx].id); p.comments.splice(idx,1); }
+      }
+      renderComunidade();
+    });
   });
 }
 
