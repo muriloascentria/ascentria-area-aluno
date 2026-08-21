@@ -1466,8 +1466,9 @@ function mapProfileRow(p){
       wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
     checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||''})),
-    sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,hasFile:x.has_file,transcricao:x.transcricao})),
-    contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions})),
+    sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||''})),
+    contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
+    registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
   };
 }
 
@@ -1551,6 +1552,16 @@ async function bootstrapData(){
       comments:(p.community_comments||[]).map(c=>({id:c.id, authorId:c.author_id, text:c.text})),
     });
   });
+
+  // Registros Internos: buscado à parte, e só quando é equipe interna — o aluno nunca faz essa
+  // consulta, então esse conteúdo jamais chega ao navegador dele (nem via RLS, nem por não pedir).
+  if(currentUserRole==='staff'){
+    const { data: irRows } = await sb.from('internal_records').select('*').order('created_at',{ascending:false});
+    (irRows||[]).forEach(r=>{
+      const st = getStudent(r.student_id);
+      if(st) st.registrosInternos.push({id:r.id, data:r.data||'', autorNome:(PEOPLE[r.autor_id]&&PEOPLE[r.autor_id].name)||'—', texto:r.texto});
+    });
+  }
 
   currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
 }
@@ -1648,18 +1659,35 @@ async function syncChecklistItemInsert(sid, item){
   if(error) throw error;
   return data.id;
 }
+function syncChecklistItemDelete(id){
+  syncNow(sb.from('checklist_items').delete().eq('id', id));
+}
 function syncInternalDiagAnswer(sid, diagType, idx, answer){
   syncNow(sb.from('internal_diag_answers').upsert({student_id:sid, diag_type:diagType, idx, answer}));
+}
+async function syncInternalRecordInsert(sid, r){
+  const { data, error } = await sb.from('internal_records').insert({student_id:sid, autor_id:actingAuthorId(), data:r.data, texto:r.texto}).select().single();
+  if(error) throw error;
+  return data.id;
+}
+function syncInternalRecordDelete(id){
+  syncNow(sb.from('internal_records').delete().eq('id', id));
 }
 async function syncContatoInsert(sid, c){
   const { data, error } = await sb.from('contatos').insert({student_id:sid, data:c.data, responsavel:c.responsavel, resumo:c.resumo, link_gravacao:c.linkGravacao, link_transcricao:c.linkTranscricao, synced_to_sessions:false}).select().single();
   if(error) throw error;
   return data.id;
 }
+function syncSessionDelete(id){
+  syncNow(sb.from('sessions').delete().eq('id', id));
+}
+function syncContatoUnsync(contatoId){
+  syncNow(sb.from('contatos').update({synced_to_sessions:false, session_id:null}).eq('id', contatoId));
+}
 async function syncContatoSyncSession(contatoId, sid, sess){
-  const { data, error } = await sb.from('sessions').insert({student_id:sid, title:sess.title, date:sess.date, notes:sess.notes, has_file:sess.hasFile, transcricao:sess.transcricao}).select().single();
+  const { data, error } = await sb.from('sessions').insert({student_id:sid, title:sess.title, date:sess.date, notes:sess.notes, link_gravacao:sess.linkGravacao||null, link_transcricao:sess.linkTranscricao||null}).select().single();
   if(error) throw error;
-  const { error: uerr } = await sb.from('contatos').update({synced_to_sessions:true}).eq('id', contatoId);
+  const { error: uerr } = await sb.from('contatos').update({synced_to_sessions:true, session_id:data.id}).eq('id', contatoId);
   if(uerr) throw uerr;
   return data.id;
 }
@@ -2477,7 +2505,7 @@ function postHtml(p,compact,showCourseTag){
       </div>
       ${course? `<button type="button" class="post-course-tag" data-open-course="${course.id}">${icon('film','tiny')} Sobre a aula: <b>${course.title}</b> — abrir aula</button>` : ''}
       ${(isMine && p.notifyAuthor)? `<div class="staff-note new-reply">${icon('bell','tiny')} Nova resposta da equipe interna!</div>` : ''}
-      <div class="post-text">${p.text}</div>
+      <div class="post-text">${linkify(p.text)}</div>
       ${p.type==='duvida'? (answered
         ? `<div class="staff-note answered">${icon('check','tiny')} Respondida pela equipe interna.</div>`
         : `<div class="staff-note">${icon('bell','tiny')} Equipe interna notificada — vamos responder em breve.</div>`) : ''}
@@ -2490,7 +2518,7 @@ function postHtml(p,compact,showCourseTag){
           ${p.comments.map(c=>{
             const a=getPerson(c.authorId); if(!a) return '';
             const canDeleteComment = c.authorId===actingAuthorId() || iAmStaff;
-            return `<div class="comment">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div class="comment-body"><b>${a.name}${nameTag(a)}</b>${c.text}</div>${canDeleteComment? `<button type="button" class="comment-del-btn" data-del-comment="${c.id}" title="Excluir comentário">${icon('trash','tiny')}</button>` : ''}</div>`;
+            return `<div class="comment">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div class="comment-body"><b>${a.name}${nameTag(a)}</b>${linkify(c.text)}</div>${canDeleteComment? `<button type="button" class="comment-del-btn" data-del-comment="${c.id}" title="Excluir comentário">${icon('trash','tiny')}</button>` : ''}</div>`;
           }).join('')}
           ${replyAuthor? `
           <div class="comment-composer">
@@ -2609,8 +2637,8 @@ function renderComunidade(){
 }
 
 /* ================= VIEW: AGENDA ================= */
-function gcalUrl(title){
-  return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent('Encontro da Ascentria · Método Essência')}`;
+function gcalUrl(title, details){
+  return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(details||'Encontro da Ascentria · Método Essência')}`;
 }
 function renderAgenda(){
   const upcoming = LIVE_SESSIONS.filter(l=>l.type==='upcoming');
@@ -2620,10 +2648,10 @@ function renderAgenda(){
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
       <div class="agenda-info">
         <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}</div>
-        <div class="meta">${l.time} — ${l.desc}</div>
+        <div class="meta">${l.time} — ${linkify(l.desc)}</div>
       </div>
       ${l.type==='upcoming'
-        ? `<a class="btn-outline" href="${gcalUrl(l.title)}" target="_blank" rel="noopener">Adicionar à agenda</a>`
+        ? `<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a>`
         : `<button class="btn-outline" data-replay="${l.id}">Assistir</button>`}
     </div>`;
   document.getElementById('view-agenda').innerHTML = `
@@ -2643,7 +2671,7 @@ function renderAgenda(){
         </div>
         <div class="modal-body">
           <h3>${l.title}</h3>
-          <p class="desc">${l.desc}</p>
+          <p class="desc">${linkify(l.desc)}</p>
           <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
         </div>`;
       document.getElementById('modal-backdrop').classList.add('open');
@@ -3027,38 +3055,14 @@ function renderSessoes(){
           <div class="title">${sess.title}</div>
           <div class="date">${sess.date}</div>
         </div>
-        <div class="notes"><strong>Anotações da mentora:</strong><br>${sess.notes}</div>
+        <div class="notes"><strong>Anotações da mentora:</strong><br>${linkify(sess.notes)}</div>
         <div class="foot">
-          <button class="btn-outline" data-replay-session="${sess.id}">${icon('video')} Ver gravação</button>
-          ${sess.hasFile? `<button class="btn-outline" data-dl-session="${sess.id}">${icon('download')} Baixar material da sessão</button>`:''}
+          ${sess.linkGravacao? `<a class="btn-outline" href="${escapeAttr(sess.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Ver gravação</a>`:''}
+          ${sess.linkTranscricao? `<a class="btn-outline" href="${escapeAttr(sess.linkTranscricao)}" target="_blank" rel="noopener">${icon('download')} Baixar material da sessão</a>`:''}
         </div>
       </div>
     `).join('') : `<div class="empty-state">Nenhuma sessão individual registrada ainda.</div>`}
   `;
-  document.querySelectorAll('[data-replay-session]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const sess = s.sessions.find(x=>x.id==btn.dataset.replaySession);
-      document.getElementById('modal').innerHTML = `
-        <div class="modal-player" style="--tint1:#ab6f30;--tint2:#c6aa83">
-          <button class="modal-close" id="modal-close">${icon('x')}</button>
-          ${fillIcon('play','play-fill')}
-        </div>
-        <div class="modal-body">
-          <h3>${sess.title}</h3>
-          <p class="desc">${sess.notes}</p>
-          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
-        </div>`;
-      document.getElementById('modal-backdrop').classList.add('open');
-      document.getElementById('modal-close').addEventListener('click',closeModal);
-      document.getElementById('modal-close-2').addEventListener('click',closeModal);
-    });
-  });
-  document.querySelectorAll('[data-dl-session]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const sess = s.sessions.find(x=>x.id==btn.dataset.dlSession);
-      downloadPlaceholder('material_'+sess.title.replace(/\s+/g,'_')+'.txt', sess.title);
-    });
-  });
 }
 
 /* ================= VIEW: METAS (individual, fruto do acompanhamento interno) ================= */
@@ -3233,7 +3237,7 @@ function renderInterno(){
     <h2 class="section-title">Checklist de acompanhamento</h2>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Nº</th><th>Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th></tr></thead>
+        <thead><tr><th>Nº</th><th>Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th><th></th></tr></thead>
         <tbody>
           ${s.checklist.map(t=>`
             <tr>
@@ -3242,7 +3246,8 @@ function renderInterno(){
               <td><span class="resp-pill">${t.responsavel}</span></td>
               <td>${t.prazo}</td>
               <td><button class="status-pill ${statusClass(t.status)}" data-check="${t.id}">${t.status}</button></td>
-              <td style="min-width:160px">${t.obs||'—'}</td>
+              <td style="min-width:160px">${linkify(t.obs)||'—'}</td>
+              <td><button class="btn-mini danger" data-del-task="${t.id}" title="Excluir tarefa">${icon('trash')}</button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -3266,10 +3271,10 @@ function renderInterno(){
             <tr>
               <td style="min-width:200px">${sess.title}</td>
               <td>${sess.date}</td>
-              <td><button class="btn-mini" data-replay-internal="${sess.id}">${icon('video')} Assistir</button></td>
-              <td>${sess.transcricao? `<button class="btn-mini" data-transcript="${sess.id}">${icon('folder')} Ver transcrição</button>` : '—'}</td>
+              <td>${sess.linkGravacao? `<a class="btn-mini" href="${escapeAttr(sess.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
+              <td>${sess.linkTranscricao? `<a class="btn-mini" href="${escapeAttr(sess.linkTranscricao)}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
             </tr>
-          `).join('')}
+          `).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum encontro registrado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -3285,18 +3290,18 @@ function renderInterno(){
             <tr>
               <td style="white-space:nowrap">${c.data}</td>
               <td><span class="resp-pill">${c.responsavel}</span></td>
-              <td style="min-width:260px">${c.resumo}</td>
-              <td>${c.linkGravacao? `<a class="btn-mini" href="${c.linkGravacao}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
-              <td>${c.linkTranscricao? `<a class="btn-mini" href="${c.linkTranscricao}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
+              <td style="min-width:260px">${linkify(c.resumo)}</td>
+              <td>${c.linkGravacao? `<a class="btn-mini" href="${escapeAttr(c.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
+              <td>${c.linkTranscricao? `<a class="btn-mini" href="${escapeAttr(c.linkTranscricao)}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
               <td style="white-space:nowrap">${c.syncedToSessions
-                ? `<span class="sync-ok">${icon('tick')} Em Minhas Sessões</span>`
+                ? `<span class="sync-ok">${icon('tick')} Em Minhas Sessões</span> <button class="btn-mini" data-unsync-session="${c.id}" title="Remover de Minhas Sessões 1:1">${icon('x','tiny')} Remover</button>`
                 : `<button class="btn-mini" data-sync-session="${c.id}">${icon('upload')} Adicionar às Sessões</button>`}</td>
             </tr>
           `).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
-    <p class="kpi-note" style="margin-top:6px">Automatize: ao adicionar um registro aqui, use "Adicionar às Sessões" para que ele apareça também em Minhas Sessões 1:1 do aluno.</p>
+    <p class="kpi-note" style="margin-top:6px">Automatize: ao adicionar um registro aqui, use "Adicionar às Sessões" para que ele apareça também em Minhas Sessões 1:1 do aluno. Use "Remover" para tirar de lá se necessário.</p>
     <div class="add-form">
       <div class="field"><label>Data da reunião</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
       <div class="field"><label>Responsável</label><input class="ps-input" type="text" id="new-contato-resp" placeholder="Seu nome"></div>
@@ -3304,6 +3309,31 @@ function renderInterno(){
       <div class="field"><label>Link da gravação</label><input class="ps-input" type="text" id="new-contato-grav" placeholder="https://..."></div>
       <div class="field"><label>Link da transcrição</label><input class="ps-input" type="text" id="new-contato-transc" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-contato-btn">${icon('plus')} Adicionar registro</button></div>
+    </div>
+
+    <h2 class="section-title">${icon('lock')} Registros Internos da Equipe</h2>
+    <div class="wf-warning" style="margin:-6px 0 14px">
+      ${icon('lock')} Estas anotações são 100% internas — o aluno NUNCA verá este conteúdo, em nenhuma tela da plataforma. Use para observações sensíveis, avaliações e sinais de atenção da equipe sobre o mentorado.
+    </div>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Data</th><th>Autor</th><th>Registro</th><th></th></tr></thead>
+        <tbody id="internal-records-tbody">
+          ${s.registrosInternos.map(r=>`
+            <tr>
+              <td style="white-space:nowrap">${escapeHtml(r.data||'—')}</td>
+              <td><span class="resp-pill">${escapeHtml(r.autorNome||'—')}</span></td>
+              <td style="min-width:280px">${linkify(r.texto)}</td>
+              <td><button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum registro interno ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="add-form">
+      <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-record-data" placeholder="Ex.: 25/08/2026"></div>
+      <div class="field full"><label>Registro / Análise</label><textarea class="ps-input" id="new-record-texto" placeholder="Observação interna sobre o mentorado..."></textarea></div>
+      <div class="actions"><button class="btn-accent" id="add-record-btn">${icon('plus')} Adicionar registro interno</button></div>
     </div>
   `;
   document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
@@ -3365,36 +3395,12 @@ function renderInterno(){
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
-  document.querySelectorAll('[data-replay-internal]').forEach(btn=>{
+  document.querySelectorAll('[data-del-task]').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      const sess = s.sessions.find(x=>x.id==btn.dataset.replayInternal);
-      document.getElementById('modal').innerHTML = `
-        <div class="modal-player" style="--tint1:#f43f5e;--tint2:#fb7185">
-          <button class="modal-close" id="modal-close">${icon('x')}</button>
-          ${fillIcon('play','play-fill')}
-        </div>
-        <div class="modal-body">
-          <h3>${sess.title}</h3>
-          <p class="desc">${sess.notes}</p>
-          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
-        </div>`;
-      document.getElementById('modal-backdrop').classList.add('open');
-      document.getElementById('modal-close').addEventListener('click',closeModal);
-      document.getElementById('modal-close-2').addEventListener('click',closeModal);
-    });
-  });
-  document.querySelectorAll('[data-transcript]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const sess = s.sessions.find(x=>x.id==btn.dataset.transcript);
-      document.getElementById('modal').innerHTML = `
-        <div class="modal-body">
-          <div class="cat">Transcrição</div>
-          <h3>${sess.title}</h3>
-          <p class="desc">Transcrição completa disponível no documento de origem vinculado a este encontro na planilha interna. (Conteúdo ilustrativo do protótipo.)</p>
-          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
-        </div>`;
-      document.getElementById('modal-backdrop').classList.add('open');
-      document.getElementById('modal-close-2').addEventListener('click',closeModal);
+      const id = btn.dataset.delTask;
+      syncChecklistItemDelete(id);
+      s.checklist = s.checklist.filter(t=>t.id!=id);
+      renderInterno();
     });
   });
   document.getElementById('add-contato-btn').addEventListener('click', async ()=>{
@@ -3406,7 +3412,7 @@ function renderInterno(){
     const linkTranscricao = document.getElementById('new-contato-transc').value.trim();
     const btn = document.getElementById('add-contato-btn');
     btn.disabled = true;
-    const c = {data, responsavel, resumo, linkGravacao, linkTranscricao, syncedToSessions:false};
+    const c = {data, responsavel, resumo, linkGravacao, linkTranscricao, syncedToSessions:false, sessionId:null};
     try{
       c.id = await syncContatoInsert(s.id, c);
       s.contatos.push(c);
@@ -3422,15 +3428,49 @@ function renderInterno(){
         title:'Encontro registrado — '+c.data,
         date:c.data,
         notes:c.resumo,
-        hasFile:!!c.linkGravacao,
-        transcricao:!!c.linkTranscricao,
+        linkGravacao:c.linkGravacao||'',
+        linkTranscricao:c.linkTranscricao||'',
       };
       try{
         sess.id = await syncContatoSyncSession(c.id, s.id, sess);
         s.sessions.push(sess);
         c.syncedToSessions = true;
+        c.sessionId = sess.id;
         renderInterno();
       }catch(e){ console.error(e); btn.disabled = false; }
+    });
+  });
+  document.querySelectorAll('[data-unsync-session]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const c = s.contatos.find(x=>x.id==btn.dataset.unsyncSession);
+      if(!c || !c.sessionId) return;
+      syncSessionDelete(c.sessionId);
+      syncContatoUnsync(c.id);
+      s.sessions = s.sessions.filter(x=>x.id!=c.sessionId);
+      c.syncedToSessions = false;
+      c.sessionId = null;
+      renderInterno();
+    });
+  });
+  document.getElementById('add-record-btn').addEventListener('click', async ()=>{
+    const data = document.getElementById('new-record-data').value.trim();
+    const texto = document.getElementById('new-record-texto').value.trim();
+    if(!texto) return;
+    const btn = document.getElementById('add-record-btn');
+    btn.disabled = true;
+    const r = {data, texto, autorNome:(currentUserProfile&&currentUserProfile.name)||'—'};
+    try{
+      r.id = await syncInternalRecordInsert(s.id, r);
+      s.registrosInternos.unshift(r);
+      renderInterno();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-del-record]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id = btn.dataset.delRecord;
+      syncInternalRecordDelete(id);
+      s.registrosInternos = s.registrosInternos.filter(r=>r.id!=id);
+      renderInterno();
     });
   });
 }
