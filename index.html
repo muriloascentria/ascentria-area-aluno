@@ -571,6 +571,28 @@
   .diag-qa-actions .btn-mini{font-size:11.5px;}
   .btn-mini.danger{color:var(--danger);}
   .sync-ok{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--success);}
+  /* ---- Formulário Diagnóstico Inicial (wizard uma-pergunta-por-vez) ---- */
+  .wf-shell{max-width:640px;margin:0 auto;padding:4px 0 40px;}
+  .wf-progress{height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:26px;}
+  .wf-progress-fill{height:100%;background:linear-gradient(135deg,var(--accent),var(--accent-2));transition:width .3s ease;}
+  .wf-step-label{font-size:12px;color:var(--text-mute);margin-bottom:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
+  .wf-question{font-size:22px;font-weight:700;color:var(--text);margin-bottom:26px;line-height:1.35;}
+  .wf-input textarea, .wf-input input{width:100%;box-sizing:border-box;}
+  .wf-choices{display:flex;gap:10px;flex-wrap:wrap;}
+  .wf-choice-btn{padding:13px 26px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700;font-size:14.5px;cursor:pointer;}
+  .wf-choice-btn:hover{border-color:var(--accent);}
+  .wf-choice-btn.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2);}
+  .wf-scale{display:flex;gap:7px;flex-wrap:wrap;}
+  .wf-scale-btn{width:42px;height:42px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:700;cursor:pointer;}
+  .wf-scale-btn:hover{border-color:var(--accent);}
+  .wf-scale-btn.selected{border-color:var(--accent);background:var(--accent);color:#fff;}
+  .wf-error{display:none;color:var(--danger);font-size:12.5px;font-weight:600;margin-top:10px;}
+  .wf-nav{display:flex;justify-content:space-between;align-items:center;margin-top:30px;gap:12px;}
+  .wf-warning{display:flex;align-items:center;gap:10px;background:var(--danger-soft);border:1px solid var(--danger);border-radius:var(--radius-sm);padding:14px 16px;font-size:13.5px;color:var(--text);line-height:1.5;margin:18px 0 22px;}
+  .wf-review-item{padding:14px 0;border-bottom:1px solid var(--border);}
+  .wf-review-q{font-size:12px;color:var(--text-mute);margin-bottom:5px;font-weight:600;}
+  .wf-review-a{font-size:14.5px;color:var(--text);white-space:pre-wrap;line-height:1.5;}
+  .wf-review-edit{font-size:11.5px;color:var(--accent-2);cursor:pointer;text-decoration:underline;font-weight:700;text-transform:none;letter-spacing:0;}
   .sync-ok .icon{width:13px;height:13px;stroke:var(--success);}
 
   /* Add-entry forms (checklist / registro de contatos) */
@@ -997,73 +1019,73 @@ const MODULE_CHECKLIST = {
 // interna de Acompanhamento de Mentorados — usadas na tela Acompanhamento Interno.
 const WISPFORM_QUESTIONS = [
   {cat:'1. Sobre Você e o Seu Negócio', perguntas:[
-    'Qual seu nome completo?',
-    'Há quanto tempo você tem consultório/clínica própria?',
-    'O consultório é sua única fonte de renda hoje?',
-    'Numa escala de 0 a 10, o quanto seu negócio está "redondo" hoje?',
+    {text:'Qual seu nome completo?', type:'short'},
+    {text:'Há quanto tempo você tem consultório/clínica própria?', type:'short'},
+    {text:'O consultório é sua única fonte de renda hoje?', type:'yesno'},
+    {text:'Numa escala de 0 a 10, o quanto seu negócio está "redondo" hoje?', type:'scale'},
   ]},
   {cat:'2. Ser | Marketing e Branding', perguntas:[
-    'Qual é o seu nicho e subnicho de atuação hoje?',
-    'Você já tem uma persona definida (dores, desejos, medos e crenças mapeados)?',
-    'Seus títulos de pós-graduação estão devidamente registrados no COREN?',
-    'Você tem uma frase de transformação clara e ela está presente nos seus materiais?',
+    {text:'Qual é o seu nicho e subnicho de atuação hoje?', type:'short'},
+    {text:'Você já tem uma persona definida (dores, desejos, medos e crenças mapeados)?', type:'yesno'},
+    {text:'Seus títulos de pós-graduação estão devidamente registrados no COREN?', type:'yesno'},
+    {text:'Você tem uma frase de transformação clara e ela está presente nos seus materiais?', type:'yesno'},
   ]},
   {cat:'3. Conectar | Pontos de Contato', perguntas:[
-    'Quais canais digitais você já tem ativos?',
-    'Com que frequência você posta conteúdo hoje, na prática?',
-    'Como você atrai a maior parte dos seus pacientes hoje?',
-    'Em média, quantas conversas qualificadas você gera por mês?',
+    {text:'Quais canais digitais você já tem ativos?', type:'short'},
+    {text:'Com que frequência você posta conteúdo hoje, na prática?', type:'short'},
+    {text:'Como você atrai a maior parte dos seus pacientes hoje?', type:'long'},
+    {text:'Em média, quantas conversas qualificadas você gera por mês?', type:'number'},
   ]},
   {cat:'4. Transformar | Jornada do Usuário e Vendas', perguntas:[
-    'Você já trabalha com protocolo/programa terapêutico estruturado?',
-    'Você oferece consulta de retorno como parte natural do seu fluxo?',
-    'De quem faz a primeira consulta, aproximadamente que % fecha um protocolo?',
+    {text:'Você já trabalha com protocolo/programa terapêutico estruturado?', type:'yesno'},
+    {text:'Você oferece consulta de retorno como parte natural do seu fluxo?', type:'yesno'},
+    {text:'De quem faz a primeira consulta, aproximadamente que % fecha um protocolo?', type:'short'},
   ]},
   {cat:'5. Gerenciar | Gestão e Financeiro', perguntas:[
-    'Você tem clareza dos seus custos fixos e variáveis do consultório?',
-    'Qual seu faturamento médio mensal hoje com o consultório?',
-    'Quantos pacientes ativos em acompanhamento/protocolo você tem hoje?',
-    'Você acompanha indicadores semanais do negócio?',
+    {text:'Você tem clareza dos seus custos fixos e variáveis do consultório?', type:'yesno'},
+    {text:'Qual seu faturamento médio mensal hoje com o consultório?', type:'short'},
+    {text:'Quantos pacientes ativos em acompanhamento/protocolo você tem hoje?', type:'number'},
+    {text:'Você acompanha indicadores semanais do negócio?', type:'yesno'},
   ]},
   {cat:'6. Objetivos e Compromissos', perguntas:[
-    'Qual é hoje o seu maior gargalo?',
-    'Se essa mentoria funcionar muito bem, como fica seu consultório em 12 meses?',
-    'Quantas horas por semana você consegue dedicar à execução do negócio?',
-    'Existe algo no seu contexto que eu precise saber para te ajudar de forma realista?',
+    {text:'Qual é hoje o seu maior gargalo?', type:'long'},
+    {text:'Se essa mentoria funcionar muito bem, como fica seu consultório em 12 meses?', type:'long'},
+    {text:'Quantas horas por semana você consegue dedicar à execução do negócio?', type:'number'},
+    {text:'Existe algo no seu contexto que eu precise saber para te ajudar de forma realista?', type:'long'},
   ]},
 ];
 const DIAGNOSTICO_ABERTURA_QUESTIONS = [
   {cat:'Abertura', perguntas:[
-    'Me conta sua trajetória: há quanto tempo você atua como enfermeiro(a)?',
+    {text:'Me conta sua trajetória: há quanto tempo você atua como enfermeiro(a)?', type:'long'},
   ]},
   {cat:'Módulo Ser', perguntas:[
-    'Missão, visão e valores: já existe formalizado ou está só na sua cabeça?',
-    'Como você definiria sua identidade visual hoje, consistente ou "cada canal de um jeito"?',
-    'O que te diferencia de outros enfermeiros do mesmo nicho? Você sabe articular isso com clareza?',
+    {text:'Missão, visão e valores: já existe formalizado ou está só na sua cabeça?', type:'long'},
+    {text:'Como você definiria sua identidade visual hoje, consistente ou "cada canal de um jeito"?', type:'long'},
+    {text:'O que te diferencia de outros enfermeiros do mesmo nicho? Você sabe articular isso com clareza?', type:'long'},
   ]},
   {cat:'Módulo Conectar', perguntas:[
-    'Sua conta é verificada? Sua bio comunica nicho, transformação e próximo passo?',
-    'Você sabe em que nível de consciência está a maior parte de quem te segue?',
-    'Seu conteúdo tem função clara (atrair, educar, converter) ou são posts soltos?',
-    'Já testou estratégias offline de captação? O que funcionou e o que não?',
-    'Você coleta depoimentos/prova social de forma contínua? Onde usa?',
+    {text:'Sua conta é verificada? Sua bio comunica nicho, transformação e próximo passo?', type:'long'},
+    {text:'Você sabe em que nível de consciência está a maior parte de quem te segue?', type:'long'},
+    {text:'Seu conteúdo tem função clara (atrair, educar, converter) ou são posts soltos?', type:'long'},
+    {text:'Já testou estratégias offline de captação? O que funcionou e o que não?', type:'long'},
+    {text:'Você coleta depoimentos/prova social de forma contínua? Onde usa?', type:'long'},
   ]},
   {cat:'Módulo Transformar', perguntas:[
-    'Como é sua consulta inicial hoje: estrutura fixa ou varia muito?',
-    'Quando alguém pergunta "como funciona seu atendimento?", como você responde?',
-    'Você se sente seguro(a) na venda consultiva, ou é um ponto de insegurança?',
-    'Usa algum tipo de apresentação estruturada (tipo Digital Nursing Plan) pro paciente?',
+    {text:'Como é sua consulta inicial hoje: estrutura fixa ou varia muito?', type:'long'},
+    {text:'Quando alguém pergunta "como funciona seu atendimento?", como você responde?', type:'long'},
+    {text:'Você se sente seguro(a) na venda consultiva, ou é um ponto de insegurança?', type:'long'},
+    {text:'Usa algum tipo de apresentação estruturada (tipo Digital Nursing Plan) pro paciente?', type:'long'},
   ]},
   {cat:'Módulo Gerenciar', perguntas:[
-    'Como está sua gestão de prontuários e contratos, formalizado ou informal?',
-    'Como você precifica hoje: cálculo de custos ou "o que o mercado cobra"?',
-    'Do seu faturamento, quanto é recorrente (acompanhamento) vs. pontual (avulso)?',
-    'Como está sua rotina: blocos de produtividade definidos ou "apagando incêndio"?',
-    'Quais tarefas consomem mais seu tempo, e quais você sabe que deveria fazer e não faz?',
+    {text:'Como está sua gestão de prontuários e contratos, formalizado ou informal?', type:'long'},
+    {text:'Como você precifica hoje: cálculo de custos ou "o que o mercado cobra"?', type:'long'},
+    {text:'Do seu faturamento, quanto é recorrente (acompanhamento) vs. pontual (avulso)?', type:'long'},
+    {text:'Como está sua rotina: blocos de produtividade definidos ou "apagando incêndio"?', type:'long'},
+    {text:'Quais tarefas consomem mais seu tempo, e quais você sabe que deveria fazer e não faz?', type:'long'},
   ]},
   {cat:'Objetivos e Compromissos', perguntas:[
-    'Você já tentou resolver esse gargalo antes? O que funcionou, o que não, e por quê?',
-    'O que você espera de mim como mentor, e o que acha que depende só de você?',
+    {text:'Você já tentou resolver esse gargalo antes? O que funcionou, o que não, e por quê?', type:'long'},
+    {text:'O que você espera de mim como mentor, e o que acha que depende só de você?', type:'long'},
   ]},
 ];
 // Mapeia perguntas do Wispform para os campos já existentes em s.diagnostico/s.cadastro,
@@ -1285,6 +1307,19 @@ let internoDiagTab = 'wispform';
 let INTERNAL_DIAG = {}; // in-memory, chave `${studentId}:wispform`/`:abertura` -> array de respostas (flat)
 let INTERNAL_DIAG_EDITING = {}; // mesma chave -> array de booleans (true = campo aberto para edição)
 
+/* ---- Formulário "Diagnóstico Inicial" (aluno) — uma pergunta por vez, envia tudo de uma vez só ---- */
+let wfStep = 0;
+let wfDraft = null; // array de respostas em rascunho, só vira definitivo ao enviar; null = ainda não iniciado
+let wfPhase = 'fill'; // 'fill' | 'review'
+function wispformFlatQuestions(){
+  const flat = [];
+  WISPFORM_QUESTIONS.forEach(g=>g.perguntas.forEach(q=>flat.push({...q, cat:g.cat})));
+  return flat;
+}
+function needsWispform(s){
+  return currentUserRole==='aluno' && !!s && !s.diagnostico.wispformSubmittedAt;
+}
+
 function getStudent(id){ return STUDENTS.find(s=>s.id===id); }
 function getCourse(id){ return COURSES.find(c=>c.id===id); }
 function youtubeId(url){
@@ -1321,7 +1356,7 @@ function getInternalAnswers(sid, type){
     const flat = groups.flatMap(g=>g.perguntas);
     if(type==='wispform'){
       const s = getStudent(sid);
-      INTERNAL_DIAG[key] = flat.map(q => WISPFORM_SEED_MAP[q] ? WISPFORM_SEED_MAP[q](s) : '');
+      INTERNAL_DIAG[key] = flat.map(q => WISPFORM_SEED_MAP[q.text] ? WISPFORM_SEED_MAP[q.text](s) : '');
     } else {
       INTERNAL_DIAG[key] = flat.map(()=>'');
     }
@@ -1428,6 +1463,7 @@ function mapProfileRow(p){
       indicadoresSemanais: diag.indicadores_semanais || '—', leadsMes: diag.leads_mes || 0,
       taxaConversao: diag.taxa_conversao || '—', maiorGargalo: diag.maior_gargalo || '—',
       objetivo12meses: diag.objetivo_12meses || '—', horasSemana: diag.horas_semana || '—',
+      wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
     checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||''})),
     sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,hasFile:x.has_file,transcricao:x.transcricao})),
@@ -1744,6 +1780,7 @@ function setupNav(){
   document.getElementById('logout-btn').addEventListener('click', async ()=>{
     await sb.auth.signOut();
     currentUser = null; currentUserRole = null; currentStudentId = null;
+    wfDraft = null; wfStep = 0; wfPhase = 'fill';
     document.getElementById('app').classList.remove('active');
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('li-email').value=''; document.getElementById('li-senha').value='';
@@ -1908,6 +1945,7 @@ function downloadPlaceholder(filename, label){
 /* ================= VIEW: INÍCIO ================= */
 function renderInicio(){
   const s = getStudent(currentStudentId);
+  if(needsWispform(s)){ renderWispformWizard(s); return; }
   const overall = overallProgress(s);
   const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
   const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming');
@@ -1938,6 +1976,125 @@ function renderInicio(){
   bindCourseTiles();
   document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
   bindOpenCourseTags(document.getElementById('view-inicio'));
+}
+
+/* ---- Formulário "Diagnóstico Inicial" — renderizado no lugar do Início até o aluno enviar ---- */
+function wfInputHtml(q, val){
+  if(q.type==='yesno'){
+    return `<div class="wf-choices" id="wf-field-wrap">
+      ${['Sim','Não'].map(op=>`<button type="button" class="wf-choice-btn ${val===op?'selected':''}" data-wf-choice="${op}">${op}</button>`).join('')}
+    </div>`;
+  }
+  if(q.type==='scale'){
+    const nums = Array.from({length:11},(_,i)=>i);
+    return `<div class="wf-scale" id="wf-field-wrap">
+      ${nums.map(n=>`<button type="button" class="wf-scale-btn ${String(val)===String(n)?'selected':''}" data-wf-scale="${n}">${n}</button>`).join('')}
+    </div>`;
+  }
+  if(q.type==='number'){
+    return `<input class="ps-input" type="number" min="0" id="wf-field" value="${escapeAttr(val||'')}" placeholder="Digite um número...">`;
+  }
+  if(q.type==='long'){
+    return `<textarea class="ps-input" id="wf-field" rows="4" placeholder="Escreva sua resposta...">${escapeAttr(val||'')}</textarea>`;
+  }
+  return `<input class="ps-input" type="text" id="wf-field" value="${escapeAttr(val||'')}" placeholder="Escreva sua resposta...">`;
+}
+function renderWispformWizard(s){
+  const flat = wispformFlatQuestions();
+  const total = flat.length;
+  if(wfDraft===null){
+    wfDraft = getInternalAnswers(s.id,'wispform').slice();
+    wfStep = 0; wfPhase = 'fill';
+  }
+  const root = document.getElementById('view-inicio');
+
+  if(wfPhase==='review'){
+    root.innerHTML = `
+      <div class="wf-shell">
+        <h1 style="margin-bottom:6px">Revise suas respostas</h1>
+        <p class="section-sub" style="margin-top:-4px">Confira com atenção antes de enviar.</p>
+        <div class="wf-warning">${icon('lock')} Depois de enviar, o formulário fica travado — só a equipe interna poderá editar alguma resposta depois disso.</div>
+        ${flat.map((q,i)=>`
+          <div class="wf-review-item">
+            <div class="wf-review-q">${escapeHtml(q.cat||'')} ${q.cat?'· ':''}${escapeHtml(q.text)} <span class="wf-review-edit" data-wf-edit="${i}">Editar</span></div>
+            <div class="wf-review-a">${wfDraft[i] ? escapeHtml(wfDraft[i]) : '<span style="color:var(--text-mute)">Sem resposta</span>'}</div>
+          </div>`).join('')}
+        <div class="wf-nav">
+          <button class="btn-outline" id="wf-review-back">${icon('back')} Voltar</button>
+          <button class="btn-primary" id="wf-submit" style="width:auto;padding:12px 28px">Confirmar e enviar</button>
+        </div>
+      </div>`;
+    document.getElementById('wf-review-back').addEventListener('click',()=>{ wfPhase='fill'; wfStep=total-1; renderCurrentView(); });
+    document.querySelectorAll('[data-wf-edit]').forEach(el=>{
+      el.addEventListener('click',()=>{ wfPhase='fill'; wfStep=+el.dataset.wfEdit; renderCurrentView(); });
+    });
+    document.getElementById('wf-submit').addEventListener('click', ()=>submitWispform(s, flat));
+    return;
+  }
+
+  const q = flat[wfStep];
+  const pct = Math.round(((wfStep)/total)*100);
+  root.innerHTML = `
+    <div class="wf-shell">
+      <h1 style="margin-bottom:6px">Diagnóstico Inicial</h1>
+      <p class="section-sub" style="margin-top:-4px;margin-bottom:22px">Antes de começar, preencha esse diagnóstico rápido — é assim que a equipe entende seu momento e monta seu plano dentro do Método Essência.</p>
+      <div class="wf-progress"><div class="wf-progress-fill" style="width:${pct}%"></div></div>
+      <div class="wf-step-label">Pergunta ${wfStep+1} de ${total} · ${escapeHtml(q.cat||'')}</div>
+      <div class="wf-question">${escapeHtml(q.text)}</div>
+      <div class="wf-input">${wfInputHtml(q, wfDraft[wfStep])}</div>
+      <div class="wf-error" id="wf-error" style="display:none">Responda essa pergunta para continuar.</div>
+      <div class="wf-nav">
+        <button class="btn-outline" id="wf-back" ${wfStep===0?'disabled':''}>${icon('back')} Voltar</button>
+        <button class="btn-primary" id="wf-next" style="width:auto;padding:12px 28px">${wfStep===total-1?'Revisar respostas':'Próxima'}</button>
+      </div>
+    </div>`;
+
+  if(q.type==='yesno'){
+    document.querySelectorAll('[data-wf-choice]').forEach(b=>{
+      b.addEventListener('click',()=>{ wfDraft[wfStep]=b.dataset.wfChoice; renderCurrentView(); });
+    });
+  } else if(q.type==='scale'){
+    document.querySelectorAll('[data-wf-scale]').forEach(b=>{
+      b.addEventListener('click',()=>{ wfDraft[wfStep]=b.dataset.wfScale; renderCurrentView(); });
+    });
+  }
+  const captureField = ()=>{
+    if(q.type==='short'||q.type==='long'||q.type==='number'){
+      const el = document.getElementById('wf-field');
+      if(el) wfDraft[wfStep] = el.value.trim();
+    }
+  };
+  document.getElementById('wf-back').addEventListener('click',()=>{
+    if(wfStep===0) return;
+    captureField();
+    wfStep--; renderCurrentView();
+  });
+  document.getElementById('wf-next').addEventListener('click',()=>{
+    captureField();
+    if(!wfDraft[wfStep]){ document.getElementById('wf-error').style.display='block'; return; }
+    if(wfStep < total-1){ wfStep++; renderCurrentView(); }
+    else { wfPhase='review'; renderCurrentView(); }
+  });
+}
+async function submitWispform(s, flat){
+  const btn = document.getElementById('wf-submit');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  const rows = wfDraft.map((answer,idx)=>({student_id:s.id, diag_type:'wispform', idx, answer: answer||''}));
+  try{
+    const { error: e1 } = await sb.from('internal_diag_answers').upsert(rows);
+    if(e1) throw e1;
+    const nowIso = new Date().toISOString();
+    const { error: e2 } = await sb.from('diagnostico').update({wispform_submitted_at: nowIso}).eq('student_id', s.id);
+    if(e2) throw e2;
+    INTERNAL_DIAG[s.id+':wispform'] = wfDraft.slice();
+    s.diagnostico.wispformSubmittedAt = nowIso;
+    wfDraft = null; wfStep = 0; wfPhase = 'fill';
+    renderCurrentView();
+  }catch(e){
+    console.error(e);
+    btn.disabled = false; btn.textContent = 'Confirmar e enviar';
+    alert('Não foi possível enviar agora. Verifique sua conexão e tente novamente.');
+  }
 }
 
 /* ================= VIEW: AULAS ================= */
@@ -2942,7 +3099,7 @@ function diagPanelHtml(groups, answers, editing){
       if(editing[i]){
         return `
           <div class="diag-qa">
-            <label class="ps-label">${q}</label>
+            <label class="ps-label">${q.text}</label>
             <textarea class="ps-input" id="diag-input-${i}" placeholder="Resposta ainda não registrada...">${escapeAttr(val)}</textarea>
             <div class="diag-qa-actions">
               <button class="btn-mini" data-diag-save="${i}">${icon('tick')} Salvar</button>
@@ -2952,7 +3109,7 @@ function diagPanelHtml(groups, answers, editing){
       }
       return `
         <div class="diag-qa">
-          <label class="ps-label">${q}</label>
+          <label class="ps-label">${q.text}</label>
           <div class="diag-answer">${val}</div>
           <div class="diag-qa-actions">
             <button class="btn-mini" data-diag-edit="${i}">${icon('idcard')} Editar</button>
