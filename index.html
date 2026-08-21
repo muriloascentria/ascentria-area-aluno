@@ -2198,18 +2198,22 @@ function openCadastroModal(){
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
       <div class="cat">Minha Área</div>
-      <h3>Meus Dados Cadastrais</h3>
-      <p class="desc">Dados do seu registro no momento da matrícula na mentoria.</p>
+      <h3>Meus Dados</h3>
+      <p class="desc">Sua foto e informações de contato. Nome, e-mail, CPF, turma, plano e nicho são definidos pela equipe interna no momento da matrícula.</p>
       ${avatarUploadHtml(s, 'ca')}
       <div class="diag-grid">
         <div class="diag-item"><div class="label">Nome completo</div><div class="value">${c.nomeCompleto}</div></div>
         <div class="diag-item"><div class="label">E-mail</div><div class="value">${c.email}</div></div>
-        <div class="diag-item"><div class="label">Telefone</div><div class="value">${c.telefone}</div></div>
         <div class="diag-item"><div class="label">CPF</div><div class="value">${c.cpf}</div></div>
-        <div class="diag-item"><div class="label">Cidade</div><div class="value">${c.cidade}</div></div>
         <div class="diag-item"><div class="label">Turma</div><div class="value">${s.turma}</div></div>
         <div class="diag-item"><div class="label">Plano</div><div class="value">${c.plano}</div></div>
         <div class="diag-item"><div class="label">Nicho</div><div class="value">${s.diagnostico.nicho} — ${s.diagnostico.subnicho}</div></div>
+      </div>
+      <div class="ps-section">
+        <label class="ps-label">Telefone</label>
+        <input class="ps-input" type="text" id="ca-telefone" value="${escapeAttr(c.telefone)}" placeholder="(11) 99999-9999">
+        <label class="ps-label">Cidade</label>
+        <input class="ps-input" type="text" id="ca-cidade" value="${escapeAttr(c.cidade)}" placeholder="Sua cidade">
       </div>
       <div class="dias-card ${overdue?'overdue':''}">
         <div class="dc-col">
@@ -2225,10 +2229,30 @@ function openCadastroModal(){
           <div class="dc-value big">${Math.abs(dias)}</div>
         </div>
       </div>
-      <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
+      <div class="modal-actions">
+        <button class="btn-accent" id="ca-save">Salvar meus dados</button>
+        <button class="btn-outline" id="modal-close-2">Fechar</button>
+      </div>
     </div>`;
   document.getElementById('modal-close-2').addEventListener('click',closeModal);
   wireAvatarUpload('ca', s, ()=>openCadastroModal());
+  document.getElementById('ca-save').addEventListener('click', async ()=>{
+    const btn = document.getElementById('ca-save');
+    btn.disabled = true;
+    const telefone = document.getElementById('ca-telefone').value.trim();
+    const cidade = document.getElementById('ca-cidade').value.trim();
+    try{
+      const { error } = await sb.from('student_cadastro').update({telefone, cidade}).eq('student_id', s.id);
+      if(error) throw error;
+      c.telefone = telefone; c.cidade = cidade;
+      btn.textContent = 'Salvo!';
+      setTimeout(()=>{ if(document.getElementById('ca-save')){ document.getElementById('ca-save').textContent='Salvar meus dados'; document.getElementById('ca-save').disabled=false; } }, 1400);
+    }catch(err){
+      console.error(err);
+      btn.disabled = false;
+      btn.textContent = 'Erro ao salvar — tentar de novo';
+    }
+  });
   document.getElementById('modal-backdrop').classList.add('open');
 }
 
