@@ -248,7 +248,20 @@
   .stat-card .value.shared{color:var(--shared);}
 
   /* Course rows / carousel */
+  .row-scroll-wrap{position:relative;}
   .row-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;}
+  .row-scroll-btn{
+    position:absolute;top:43px;width:32px;height:32px;border-radius:50%;z-index:2;
+    display:flex;align-items:center;justify-content:center;border:1px solid var(--border);
+    background:var(--bg-card);color:var(--text);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);
+    transition:opacity .15s, background .15s; opacity:.92;
+  }
+  .row-scroll-btn:hover{background:var(--bg-card-hover);opacity:1;}
+  .row-scroll-btn.left{left:-6px;}
+  .row-scroll-btn.right{right:-6px;}
+  .row-scroll-btn.right .icon{transform:rotate(180deg);}
+  .row-scroll-btn .icon{width:16px;height:16px;stroke:var(--text);}
+  .row-scroll-btn.is-hidden{display:none;}
   .course-tile{
     flex:0 0 220px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
     overflow:hidden;transition:transform .15s, border-color .15s;text-align:left;
@@ -2185,14 +2198,44 @@ function renderAulas(){
   const cats = [...new Set(COURSES.map(c=>c.cat))];
   document.getElementById('view-aulas').innerHTML = `
     <p class="section-sub">Biblioteca de aulas do Método Essência, organizada pelos mesmos módulos do seu Dashboard — assista no seu ritmo.</p>
-    ${cats.map(cat=>`
+    ${cats.map((cat,i)=>`
       <div class="category-block">
         <h2 class="section-title">${cat}</h2>
-        <div class="row-scroll">${COURSES.filter(c=>c.cat===cat).map(c=>courseTileHtml(c)).join('')}</div>
+        <div class="row-scroll-wrap">
+          <button type="button" class="row-scroll-btn left is-hidden" aria-label="Rolar para a esquerda">${icon('back')}</button>
+          <div class="row-scroll" id="row-scroll-${i}">${COURSES.filter(c=>c.cat===cat).map(c=>courseTileHtml(c)).join('')}</div>
+          <button type="button" class="row-scroll-btn right is-hidden" aria-label="Rolar para a direita">${icon('back')}</button>
+        </div>
       </div>
     `).join('')}
   `;
   bindCourseTiles();
+  bindRowScrollers();
+}
+/* Setas de navegação + conversão do scroll vertical do mouse em rolagem horizontal — nem todo mouse tem
+   scroll lateral, então isso permite navegar pelas fileiras de aulas sem depender só da barra de rolagem. */
+function bindRowScrollers(){
+  document.querySelectorAll('.row-scroll').forEach(row=>{
+    const wrap = row.closest('.row-scroll-wrap');
+    if(!wrap) return;
+    const btnLeft = wrap.querySelector('.row-scroll-btn.left');
+    const btnRight = wrap.querySelector('.row-scroll-btn.right');
+    const updateBtns = ()=>{
+      const canScroll = row.scrollWidth > row.clientWidth + 4;
+      btnLeft.classList.toggle('is-hidden', !canScroll || row.scrollLeft <= 4);
+      btnRight.classList.toggle('is-hidden', !canScroll || row.scrollLeft >= row.scrollWidth - row.clientWidth - 4);
+    };
+    row.addEventListener('scroll', updateBtns);
+    row.addEventListener('wheel', (e)=>{
+      if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+        row.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, {passive:false});
+    btnLeft.addEventListener('click', ()=>row.scrollBy({left:-260, behavior:'smooth'}));
+    btnRight.addEventListener('click', ()=>row.scrollBy({left:260, behavior:'smooth'}));
+    updateBtns();
+  });
 }
 function openCourseModal(id){
   const c = getCourse(id);
@@ -2958,7 +3001,8 @@ function confirmDelete(msg){
 }
 /* Converte URLs "https://..."/"http://..." dentro de um texto em links clicáveis, escapando o resto do texto com segurança. */
 function linkify(text){
-  const escaped = escapeHtml(text);
+  /* Preserva quebras de linha digitadas (enter) — sem isso, o HTML colapsa tudo numa linha só ao exibir. */
+  const escaped = escapeHtml(text).replace(/\n/g, '<br>');
   return escaped.replace(/(https?:\/\/[^\s<]+)/g, (url)=>{
     const m = url.match(/[).,;:!?]+$/);
     const trail = m ? m[0] : '';
