@@ -403,9 +403,16 @@
   .agenda-info .meta{font-size:12px;color:var(--text-dim);}
   .agenda-card.past{opacity:0.75;}
   .agenda-card.past .agenda-date{background:var(--bg-elev);color:var(--text-mute);}
+  .agenda-card.past.watched{opacity:1;border-color:var(--success);}
+  .agenda-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .btn-outline.disabled{opacity:0.5;cursor:default;pointer-events:none;}
+  .watched-check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
+  .watched-check input{width:15px;height:15px;accent-color:var(--success);cursor:pointer;}
   .pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
   .pill.live{background:var(--danger-soft);color:var(--danger);}
   .pill.replay{background:var(--bg-elev);color:var(--text-mute);}
+  .pill.watched{background:var(--success-soft);color:var(--success);display:inline-flex;align-items:center;gap:3px;}
+  .pill.watched .icon{width:10px;height:10px;stroke:var(--success);}
 
   /* Materials */
   .materials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
@@ -534,6 +541,11 @@
   .ps-table th{text-align:left;font-size:10px;text-transform:uppercase;color:var(--text-mute);padding:6px 8px;white-space:nowrap;}
   .ps-table td{padding:4px 6px;}
   .ps-table .ps-cell{min-width:110px;}
+  .ps-cell-link{display:flex;align-items:center;gap:4px;}
+  .ps-cell-link .ps-input{min-width:0;}
+  .ps-link-open{flex-shrink:0;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--accent-2);background:var(--accent-soft);}
+  .ps-link-open:hover{background:var(--accent);color:#fff;}
+  .ps-link-open .icon{width:13px;height:13px;stroke:currentColor;}
   .ps-rowlabel{font-size:12px;font-weight:700;color:var(--text-dim);white-space:nowrap;padding-right:10px;}
 
   /* Individual: sessions */
@@ -837,6 +849,7 @@ const ICONS = {
   drag:'<circle cx="9" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.1" fill="currentColor" stroke="none"/>',
   up:'<path d="M12 19V5M5 12l7-7 7 7"/>',
   down:'<path d="M12 5v14M5 12l7 7 7-7"/>',
+  externallink:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
 };
 function icon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24">${ICONS[name]}</svg>`;}
@@ -1197,10 +1210,15 @@ const QUADRANTS = [
     {id:'funil',title:'Funil de Conteúdo',desc:'Estrutura de conteúdo por etapa de consciência do paciente.',
      sections:[
        {type:'table',key:'funil',label:'Funil de Conteúdo (semana)',columns:[
-         {key:'link',label:'Link do Conteúdo'},
+         {key:'__label',label:'Dia'},
+         {key:'link',label:'Link do Conteúdo',type:'link'},
          {key:'objetivo',label:'Objetivo (etapa de consciência)'},{key:'descricao',label:'Descrição'},{key:'formato',label:'Formato'},
          {key:'status',label:'Status',type:'select',options:['Produzindo','Pronto','Publicado']},
-       ],fixedRows:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
+       ],
+       /* Começa com as 7 linhas Segunda–Domingo (seedRows), mas — diferente de fixedRows — dá pra ir
+          adicionando mais linhas depois; cada linha nova já sugere o próximo dia da semana em sequência. */
+       seedRows:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
+       cycleColumn:'__label', cycleValues:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
        /* Quando o Status vira "Publicado" e há um link preenchido, o link sobe sozinho para a lista de
           Avaliação de Conteúdo (só o link — o resto continua para preencher manualmente como já era). */
        autoPublish:{statusKey:'status', publishedValue:'Publicado', linkKey:'link', targetTopicId:'avaliacao', targetKey:'avaliacao', flagKey:'__avaliacaoLinked'}},
@@ -1208,7 +1226,7 @@ const QUADRANTS = [
     {id:'avaliacao',title:'Avaliação de Conteúdo',desc:'Indicadores de performance dos conteúdos publicados.',
      sections:[
        {type:'table',key:'avaliacao',label:'Avaliação de Conteúdo',columns:[
-         {key:'link',label:'Link'},{key:'views',label:'Views'},{key:'shared',label:'Shared'},{key:'saved',label:'Saved'},{key:'likes',label:'Likes'},
+         {key:'link',label:'Link',type:'link'},{key:'views',label:'Views'},{key:'shared',label:'Shared'},{key:'saved',label:'Saved'},{key:'likes',label:'Likes'},
          {key:'viewsSeg',label:'Views Seguidores'},{key:'viewsNaoSeg',label:'Views Não Seguidores'},{key:'insights',label:'Insights'},
        ]},
      ]},
@@ -1326,6 +1344,9 @@ const POST_TYPES = {
 let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 
 let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+/* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
+   sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
+let WATCHED_LIVE = new Set();
 const MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function mapLiveSessionRow(row){
   const [y,m,d] = row.event_date.split('-').map(Number);
@@ -1338,6 +1359,7 @@ function mapLiveSessionRow(row){
     time: row.event_time || '', desc: row.description || '',
     type: dt >= hoje ? 'upcoming' : 'past',
     _eventDate: row.event_date,
+    linkGravacao: row.link_gravacao || '',
   };
 }
 
@@ -1536,7 +1558,7 @@ async function bootstrapData(){
   PEOPLE = {};
   profiles.forEach(p=>{ PEOPLE[p.id] = {id:p.id, name:p.name, initials:p.initials, color:p.color, avatarUrl:p.avatar_url||null, role:p.role}; });
 
-  const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:postRows},{data:liveRows}] = await Promise.all([
+  const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:postRows},{data:liveRows},{data:watchedRows}] = await Promise.all([
     sb.from('module_checklist_state').select('*'),
     sb.from('panel_data').select('*'),
     sb.from('panel_overrides').select('*'),
@@ -1545,10 +1567,13 @@ async function bootstrapData(){
     sb.from('materials').select('*').order('id'),
     sb.from('community_posts').select('*, community_comments(*), community_likes(*)').order('created_at',{ascending:false}),
     sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
+    sb.from('live_session_watched').select('live_session_id').eq('student_id', currentUser.id),
   ]);
 
   LIVE_SESSIONS.length = 0;
   (liveRows||[]).forEach(row=>LIVE_SESSIONS.push(mapLiveSessionRow(row)));
+
+  WATCHED_LIVE = new Set((watchedRows||[]).map(r=>r.live_session_id));
 
   Object.keys(CHECKLIST_STATE).forEach(k=>delete CHECKLIST_STATE[k]);
   (mcs||[]).forEach(row=>{
@@ -1784,12 +1809,21 @@ function syncMaterialDelete(id){
 async function syncLiveSessionInsert(row){
   const { data, error } = await sb.from('live_sessions').insert({
     title: row.title, event_date: row.event_date, event_time: row.event_time, description: row.description,
+    link_gravacao: row.link_gravacao || null,
   }).select().single();
   if(error) throw error;
   return data;
 }
 function syncLiveSessionDelete(id){
   syncNow(sb.from('live_sessions').delete().eq('id', id));
+}
+function syncLiveSessionUpdate(id, fields){
+  syncNow(sb.from('live_sessions').update(fields).eq('id', id));
+}
+function syncLiveSessionWatched(liveId, watched){
+  const uid = currentUser.id;
+  if(watched) syncNow(sb.from('live_session_watched').upsert({student_id:uid, live_session_id:liveId}));
+  else syncNow(sb.from('live_session_watched').delete().eq('student_id',uid).eq('live_session_id',liveId));
 }
 
 /* ================= LOGIN ================= */
@@ -2215,7 +2249,11 @@ function bindCourseTiles(){
   });
 }
 function renderAulas(){
-  const cats = [...new Set(COURSES.map(c=>c.cat))];
+  /* Ordem fixa dos módulos (Introdução, Ser, Conectar, Transformar, Gerenciar) — categorias de aulas
+     que não batem com nenhum módulo (raro) aparecem depois, na ordem em que existirem. */
+  const orderedCats = MODULES.map(m=>m.name).filter(name=>COURSES.some(c=>c.cat===name));
+  const extraCats = [...new Set(COURSES.map(c=>c.cat))].filter(cat=>!orderedCats.includes(cat));
+  const cats = [...orderedCats, ...extraCats];
   document.getElementById('view-aulas').innerHTML = `
     <p class="section-sub">Biblioteca de aulas do Método Essência, organizada pelos mesmos módulos do seu Dashboard — assista no seu ritmo.</p>
     ${cats.map((cat,i)=>`
@@ -2405,7 +2443,18 @@ function bindCourseComments(c){
     });
   });
 }
-function closeModal(){ document.getElementById('modal-backdrop').classList.remove('open'); }
+/* Permite "voltar" para o pop-up anterior ao fechar um modal aberto de dentro de outro (ex.: abrir uma
+   aula a partir do checklist do módulo) — em vez de fechar tudo, closeModal() reabre o anterior uma vez. */
+let modalReturnTo = null;
+function closeModal(){
+  if(modalReturnTo){
+    const back = modalReturnTo;
+    modalReturnTo = null;
+    back();
+    return;
+  }
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
 document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.target.id==='modal-backdrop') closeModal(); });
 
 /* ================= MODAL: MEUS DADOS CADASTRAIS ================= */
@@ -2799,40 +2848,42 @@ function gcalUrl(title, details){
 function renderAgenda(){
   const upcoming = LIVE_SESSIONS.filter(l=>l.type==='upcoming');
   const past = LIVE_SESSIONS.filter(l=>l.type==='past');
-  const card = (l)=>`
-    <div class="agenda-card ${l.type==='past'?'past':''}">
+  const card = (l)=>{
+    const watched = WATCHED_LIVE.has(l.id);
+    return `
+    <div class="agenda-card ${l.type==='past'?'past':''} ${watched?'watched':''}">
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
       <div class="agenda-info">
-        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}</div>
+        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}${watched? '<span class="pill watched">'+icon('check','tiny')+' Assistido</span>' : ''}</div>
         <div class="meta">${l.time} — ${linkify(l.desc)}</div>
       </div>
       ${l.type==='upcoming'
         ? `<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a>`
-        : `<button class="btn-outline" data-replay="${l.id}">Assistir</button>`}
+        : `<div class="agenda-actions">
+            ${l.linkGravacao
+              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('play','tiny')} Assistir</a>`
+              : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
+            <label class="watched-check">
+              <input type="checkbox" data-watched="${l.id}" ${watched?'checked':''}>
+              Já assisti
+            </label>
+          </div>`}
     </div>`;
+  };
   document.getElementById('view-agenda').innerHTML = `
     <p class="section-sub">Encontros coletivos com a mentora e a turma.</p>
     <h2 class="section-title">${icon('calendar')} Próximos encontros</h2>
     <div class="agenda-list">${upcoming.map(card).join('')}</div>
     <h2 class="section-title">${icon('video')} Gravações anteriores</h2>
-    <div class="agenda-list">${past.map(card).join('')}</div>
+    <div class="agenda-list">${past.map(card).join('') || '<p class="section-sub">Nenhuma gravação anterior ainda.</p>'}</div>
   `;
-  document.querySelectorAll('[data-replay]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const l = LIVE_SESSIONS.find(x=>x.id==btn.dataset.replay);
-      document.getElementById('modal').innerHTML = `
-        <div class="modal-player" style="--tint1:#8d916f;--tint2:#bec6b1">
-          <button class="modal-close" id="modal-close">${icon('x')}</button>
-          ${fillIcon('play','play-fill')}
-        </div>
-        <div class="modal-body">
-          <h3>${l.title}</h3>
-          <p class="desc">${linkify(l.desc)}</p>
-          <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
-        </div>`;
-      document.getElementById('modal-backdrop').classList.add('open');
-      document.getElementById('modal-close').addEventListener('click',closeModal);
-      document.getElementById('modal-close-2').addEventListener('click',closeModal);
+  document.querySelectorAll('[data-watched]').forEach(chk=>{
+    chk.addEventListener('change',()=>{
+      const liveId = chk.dataset.watched;
+      const l = LIVE_SESSIONS.find(x=>x.id==liveId);
+      if(chk.checked) WATCHED_LIVE.add(l.id); else WATCHED_LIVE.delete(l.id);
+      syncLiveSessionWatched(l.id, chk.checked);
+      renderAgenda();
     });
   });
 }
@@ -2983,6 +3034,7 @@ function openModuleChecklist(modId){
     modalEl.querySelectorAll('[data-open-course-item]').forEach(btn=>{
       btn.addEventListener('click',(e)=>{
         e.stopPropagation();
+        modalReturnTo = renderModalBody;
         openCourseModal(btn.dataset.openCourseItem);
       });
     });
@@ -3090,7 +3142,8 @@ function sectionValue(data, section){
   if(section.type==='list'){ if(!data[section.key]) data[section.key] = []; return data[section.key]; }
   if(section.type==='table'){
     if(!data[section.key]){
-      data[section.key] = section.fixedRows? section.fixedRows.map(label=>({__label:label})) : [];
+      const seed = section.fixedRows || section.seedRows;
+      data[section.key] = seed? seed.map(label=>({__label:label})) : [];
     }
     return data[section.key];
   }
@@ -3168,6 +3221,14 @@ function renderSectionHTML(section, data){
                   ${opts.map(o=>`<option value="${escapeAttr(o)}" ${current===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}
                 </select></td>`;
               }
+              if(c.type==='link'){
+                const current = row[c.key]||'';
+                const isUrl = /^https?:\/\//i.test(current.trim());
+                return `<td><div class="ps-cell-link">
+                  <input class="ps-input ps-cell" data-fkind="table" data-skey="${section.key}" data-idx="${i}" data-col="${c.key}" value="${escapeAttr(current)}" placeholder="https://...">
+                  ${isUrl? `<a class="ps-link-open" href="${escapeAttr(current.trim())}" target="_blank" rel="noopener" title="Abrir link">${icon('externallink','tiny')}</a>` : ''}
+                </div></td>`;
+              }
               return `<td><input class="ps-input ps-cell" data-fkind="table" data-skey="${section.key}" data-idx="${i}" data-col="${c.key}" value="${escapeAttr(row[c.key]||'')}"></td>`;
             }).join('')}
             ${section.fixedRows? '' : `<td><button class="ps-remove" data-remove="table" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></td>`}
@@ -3195,6 +3256,23 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       else if(kind==='table'){
         const row = val[+inp.dataset.idx];
         row[inp.dataset.col] = inp.value;
+        /* Coluna do tipo "link": atualiza o botão de abrir em nova aba na hora, sem precisar
+           re-renderizar a tabela toda (o que perderia o foco de digitação). */
+        const colDef = section.columns && section.columns.find(c=>c.key===inp.dataset.col);
+        if(colDef && colDef.type==='link' && inp.parentElement && inp.parentElement.classList.contains('ps-cell-link')){
+          const wrap = inp.parentElement;
+          let a = wrap.querySelector('.ps-link-open');
+          const isUrl = /^https?:\/\//i.test(inp.value.trim());
+          if(isUrl){
+            if(!a){
+              a = document.createElement('a');
+              a.className = 'ps-link-open'; a.target = '_blank'; a.rel = 'noopener'; a.title = 'Abrir link';
+              a.innerHTML = icon('externallink','tiny');
+              wrap.appendChild(a);
+            }
+            a.href = inp.value.trim();
+          } else if(a){ a.remove(); }
+        }
         /* Publicação automática: quando o Status desta linha vira "Publicado" e há um link
            preenchido, sobe sozinho (só o link) para a tabela de destino (ex.: Avaliação de
            Conteúdo) — sem duplicar se a linha já foi enviada antes, e sem mexer no que já foi
@@ -3225,7 +3303,13 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const val = sectionValue(data, section);
       if(btn.dataset.add==='list') val.push('');
       else if(btn.dataset.add==='checklist') val.push({text:'',done:false});
-      else if(btn.dataset.add==='table'){ const row={}; section.columns.forEach(c=>row[c.key]=''); val.push(row); }
+      else if(btn.dataset.add==='table'){
+        const row={}; section.columns.forEach(c=>row[c.key]='');
+        if(section.cycleColumn && section.cycleValues){
+          row[section.cycleColumn] = section.cycleValues[val.length % section.cycleValues.length];
+        }
+        val.push(row);
+      }
       persist();
       rerender();
     });
@@ -3930,7 +4014,7 @@ function renderConteudo(){
     <p class="section-sub" style="margin-top:-6px">Aparecem na Agenda ao Vivo de todos os alunos — como próximos encontros (se a data for futura) ou gravações (se já passou).</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Situação</th><th></th></tr></thead>
+        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
         <tbody>
           ${LIVE_SESSIONS.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
             <tr>
@@ -3938,9 +4022,10 @@ function renderConteudo(){
               <td style="white-space:nowrap">${l.date}</td>
               <td style="min-width:180px">${l.time||'—'}</td>
               <td>${l.type==='upcoming'? '<span class="pill live">Próximo</span>' : '<span class="pill replay">Passado</span>'}</td>
+              <td style="min-width:200px"><input class="ps-input" data-live-link="${l.id}" value="${escapeAttr(l.linkGravacao)}" placeholder="https://..."></td>
               <td><button class="btn-mini danger" data-del-live="${l.id}">${icon('trash')} Remover</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -3949,6 +4034,7 @@ function renderConteudo(){
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-live-date"></div>
       <div class="field"><label>Horário / detalhes</label><input class="ps-input" type="text" id="new-live-time" placeholder="Ex.: 19h00 · Turma 2026.1"></div>
       <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-live-desc" placeholder="Do que trata este encontro..."></textarea></div>
+      <div class="field full"><label>Link da gravação (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-live-link" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-live-btn">${icon('upload')} Publicar evento</button></div>
     </div>
   `;
@@ -4007,16 +4093,25 @@ function renderConteudo(){
       renderConteudo();
     });
   });
+  document.querySelectorAll('[data-live-link]').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const l = LIVE_SESSIONS.find(x=>x.id==inp.dataset.liveLink);
+      if(!l) return;
+      l.linkGravacao = inp.value.trim();
+      syncLiveSessionUpdate(l.id, {link_gravacao: l.linkGravacao || null});
+    });
+  });
   document.getElementById('add-live-btn').addEventListener('click', async ()=>{
     const title = document.getElementById('new-live-title').value.trim();
     const eventDate = document.getElementById('new-live-date').value;
     const eventTime = document.getElementById('new-live-time').value.trim();
     const description = document.getElementById('new-live-desc').value.trim();
+    const linkGravacao = document.getElementById('new-live-link').value.trim();
     if(!title || !eventDate) return;
     const btn = document.getElementById('add-live-btn');
     btn.disabled = true;
     try{
-      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, description});
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, description, link_gravacao: linkGravacao || null});
       LIVE_SESSIONS.push(mapLiveSessionRow(row));
       renderConteudo();
     }catch(e){ console.error(e); btn.disabled = false; }
