@@ -2289,6 +2289,7 @@ function bindCourseComments(c){
   modalEl.querySelectorAll('[data-del-post]').forEach(btn=>{
     btn.addEventListener('click',(e)=>{
       e.stopPropagation();
+      if(!confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.')) return;
       const pid = btn.dataset.delPost;
       const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
       if(idx>-1){ syncCommunityPostDelete(COMMUNITY_POSTS[idx].id); COMMUNITY_POSTS.splice(idx,1); }
@@ -2299,6 +2300,7 @@ function bindCourseComments(c){
   modalEl.querySelectorAll('[data-del-comment]').forEach(btn=>{
     btn.addEventListener('click',(e)=>{
       e.stopPropagation();
+      if(!confirmDelete('Excluir este comentário? Essa ação não pode ser desfeita.')) return;
       const cid = btn.dataset.delComment;
       const p = COMMUNITY_POSTS.find(x=>x.comments.some(cm=>cm.id==cid));
       if(p){
@@ -2615,6 +2617,7 @@ function renderComunidade(){
   root.querySelectorAll('[data-del-post]').forEach(btn=>{
     btn.addEventListener('click',(e)=>{
       e.stopPropagation();
+      if(!confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.')) return;
       const pid = btn.dataset.delPost;
       const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
       if(idx>-1){ syncCommunityPostDelete(COMMUNITY_POSTS[idx].id); COMMUNITY_POSTS.splice(idx,1); }
@@ -2625,6 +2628,7 @@ function renderComunidade(){
   root.querySelectorAll('[data-del-comment]').forEach(btn=>{
     btn.addEventListener('click',(e)=>{
       e.stopPropagation();
+      if(!confirmDelete('Excluir este comentário? Essa ação não pode ser desfeita.')) return;
       const cid = btn.dataset.delComment;
       const p = COMMUNITY_POSTS.find(x=>x.comments.some(c=>c.id==cid));
       if(p){
@@ -2858,6 +2862,11 @@ function renderPainel(){
 /* ---- Painel do Método: dados estruturados por seção (fields / list / table / swatches / checklist) ---- */
 function escapeAttr(v){ return String(v==null? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function escapeHtml(v){ return String(v==null? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* Confirmação antes de qualquer ação destrutiva (excluir, remover, apagar) — chamado no início
+   de todo handler de exclusão da plataforma, para nunca apagar nada sem o usuário confirmar. */
+function confirmDelete(msg){
+  return window.confirm(msg || 'Tem certeza que deseja excluir? Essa ação não pode ser desfeita.');
+}
 /* Converte URLs "https://..."/"http://..." dentro de um texto em links clicáveis, escapando o resto do texto com segurança. */
 function linkify(text){
   const escaped = escapeHtml(text);
@@ -3364,6 +3373,7 @@ function renderInterno(){
   });
   document.querySelectorAll('#diag-panel [data-diag-delete]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir esta resposta do diagnóstico? Essa ação não pode ser desfeita.')) return;
       const i = +btn.dataset.diagDelete;
       answers[i] = '';
       editing[i] = true;
@@ -3397,6 +3407,7 @@ function renderInterno(){
   });
   document.querySelectorAll('[data-del-task]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir esta tarefa do checklist? Essa ação não pode ser desfeita.')) return;
       const id = btn.dataset.delTask;
       syncChecklistItemDelete(id);
       s.checklist = s.checklist.filter(t=>t.id!=id);
@@ -3444,6 +3455,7 @@ function renderInterno(){
     btn.addEventListener('click',()=>{
       const c = s.contatos.find(x=>x.id==btn.dataset.unsyncSession);
       if(!c || !c.sessionId) return;
+      if(!confirmDelete('Remover este registro de Minhas Sessões 1:1? Essa ação não pode ser desfeita.')) return;
       syncSessionDelete(c.sessionId);
       syncContatoUnsync(c.id);
       s.sessions = s.sessions.filter(x=>x.id!=c.sessionId);
@@ -3467,6 +3479,7 @@ function renderInterno(){
   });
   document.querySelectorAll('[data-del-record]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir este registro interno? Essa ação não pode ser desfeita.')) return;
       const id = btn.dataset.delRecord;
       syncInternalRecordDelete(id);
       s.registrosInternos = s.registrosInternos.filter(r=>r.id!=id);
@@ -3515,6 +3528,7 @@ function bindConteudoCourseEvents(){
   });
   document.querySelectorAll('[data-del-course]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir esta aula? Ela some da plataforma para todos os alunos e essa ação não pode ser desfeita.')) return;
       const idx = COURSES.findIndex(c=>c.id===btn.dataset.delCourse);
       if(idx>-1){ syncCourseDelete(COURSES[idx].id); COURSES.splice(idx,1); }
       renderConteudo();
@@ -3736,6 +3750,7 @@ function renderConteudo(){
   });
   document.querySelectorAll('[data-del-material]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir este material? Essa ação não pode ser desfeita.')) return;
       const idx = MATERIALS.findIndex(m=>m.id==btn.dataset.delMaterial);
       if(idx>-1){ syncMaterialDelete(MATERIALS[idx].id); MATERIALS.splice(idx,1); }
       renderConteudo();
@@ -3757,6 +3772,7 @@ function renderConteudo(){
   });
   document.querySelectorAll('[data-del-live]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir este encontro da agenda? Essa ação não pode ser desfeita.')) return;
       const idx = LIVE_SESSIONS.findIndex(l=>l.id==btn.dataset.delLive);
       if(idx>-1){ syncLiveSessionDelete(LIVE_SESSIONS[idx].id); LIVE_SESSIONS.splice(idx,1); }
       renderConteudo();
