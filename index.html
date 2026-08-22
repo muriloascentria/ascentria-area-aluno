@@ -1580,7 +1580,16 @@ async function bootstrapData(){
   STUDENT_POINTS = {};
   const { data: spRows } = await sb.from('student_points').select('*');
   (spRows||[]).forEach(r=>{
-    STUDENT_POINTS[r.student_id] = {total:r.total_points||0, posts:r.posts_count||0, conquistas:r.conquistas_count||0, comments:r.comments_count||0, likes:r.likes_count||0};
+    STUDENT_POINTS[r.student_id] = {
+      total:Number(r.total_points)||0,
+      conquistas:r.conquistas_count||0,
+      comunidade:(r.mural_posts_count||0)+(r.mural_comments_count||0),
+      comunidadeLikes:r.mural_likes_count||0,
+      aulas:(r.aula_posts_count||0)+(r.aula_comments_count||0),
+      aulasLikes:r.aula_likes_count||0,
+      dashboardChecks:r.dashboard_checks_count||0,
+      metasChecks:r.metas_checks_count||0,
+    };
   });
 
   currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
@@ -2661,14 +2670,20 @@ function renderComunidade(){
 }
 
 /* ================= VIEW: RANKING ================= */
+/* Formata pontos: inteiro sem casas decimais, fracionário com 2 casas e vírgula (padrão pt-BR). */
+function formatPts(n){
+  n = Math.round((n||0)*100)/100;
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
+}
 function renderRanking(){
   const root = document.getElementById('view-ranking');
   const meId = actingAuthorId();
+  const empty = {total:0, conquistas:0, comunidade:0, comunidadeLikes:0, aulas:0, aulasLikes:0, dashboardChecks:0, metasChecks:0};
   const rows = STUDENTS
-    .map(s=>({s, pts: STUDENT_POINTS[s.id] || {total:0,posts:0,comments:0,likes:0,conquistas:0}}))
+    .map(s=>({s, pts: STUDENT_POINTS[s.id] || empty}))
     .sort((a,b)=>b.pts.total-a.pts.total);
   root.innerHTML = `
-    <p class="section-sub">Ranking da turma do Método Essência — cada dúvida, interação ou comentário na comunidade vale <strong>+1 ponto</strong>, cada curtida vale <strong>+1 ponto</strong> e cada conquista compartilhada vale <strong>+10 pontos</strong>.</p>
+    <p class="section-sub">Ranking da turma do Método Essência — cada conquista compartilhada vale <strong>+600 pontos</strong>; comentar ou curtir na comunidade e nas aulas vale <strong>+0,01 ponto</strong> cada; marcar um item no checklist do Dashboard ou em Minhas Metas vale <strong>+10 pontos</strong> cada.</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead>
@@ -2676,9 +2691,11 @@ function renderRanking(){
             <th>#</th>
             <th>Aluno</th>
             <th>Conquistas</th>
-            <th>Dúvidas/Interações</th>
-            <th>Comentários</th>
-            <th>Curtidas</th>
+            <th>Comunidade</th>
+            <th>Curtidas comunidade</th>
+            <th>Aulas</th>
+            <th>Curtidas aulas</th>
+            <th>Checklists</th>
             <th>Pontos</th>
           </tr>
         </thead>
@@ -2696,12 +2713,14 @@ function renderRanking(){
                 </div>
               </td>
               <td>${r.pts.conquistas}</td>
-              <td>${r.pts.posts}</td>
-              <td>${r.pts.comments}</td>
-              <td>${r.pts.likes}</td>
-              <td><span class="rank-pts">${r.pts.total} pts</span></td>
+              <td>${r.pts.comunidade}</td>
+              <td>${r.pts.comunidadeLikes}</td>
+              <td>${r.pts.aulas}</td>
+              <td>${r.pts.aulasLikes}</td>
+              <td>${r.pts.dashboardChecks + r.pts.metasChecks}</td>
+              <td><span class="rank-pts">${formatPts(r.pts.total)} pts</span></td>
             </tr>`;
-          }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
+          }).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
