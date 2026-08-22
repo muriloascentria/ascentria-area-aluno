@@ -405,8 +405,11 @@
   .agenda-card.past .agenda-date{background:var(--bg-elev);color:var(--text-mute);}
   .agenda-card.past.watched{opacity:1;border-color:var(--success);}
   .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  /* Garante que o ícone fique do lado do texto (não empilhado em cima) nos botões de ação da gravação,
+     já que .icon é display:block por padrão — sem isso "Assistir" e "Assistido" ficavam com alturas diferentes. */
+  .agenda-actions .btn-outline{display:inline-flex;align-items:center;gap:5px;}
   .btn-outline.disabled{opacity:0.5;cursor:default;pointer-events:none;}
-  .watched-btn{display:inline-flex;align-items:center;gap:5px;cursor:pointer;background:none;}
+  .watched-btn{cursor:pointer;background:none;}
   .watched-btn.active{background:var(--success-soft);border-color:var(--success);color:var(--success);}
   .watched-btn .icon{width:13px;height:13px;stroke:currentColor;}
   .pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
@@ -3366,19 +3369,22 @@ function openTopicModal(quadrant, topicId){
   const topic = quadrant.topics.find(t=>t.id===topicId);
   const idx = quadrant.topics.indexOf(topic);
   const data = getTopicData(s.id, topic.id);
-  /* Fluxo Salvar/Editar: os campos já vão salvando sozinhos a cada digitação (como sempre foi), mas agora
-     "Salvar" fecha o tópico como concluído e trava os campos (só leitura) — evita edição sem querer.
-     "Editar" reabre os campos para alterar algo depois, sem perder a marcação de concluído. */
-  let editing = false;
+  /* Fluxo Salvar/Editar: os campos já vão salvando sozinhos a cada digitação (como sempre foi). Clicar em
+     "Salvar" trava os campos (só leitura) mesmo que ainda falte preencher algo — o estado inicial (aberto
+     para preencher, num tópico nunca salvo) é decidido só UMA VEZ aqui fora; se recalculássemos isso a
+     cada render, o próprio clique em "Salvar" com dados incompletos se autocancelaria na hora (o modal
+     reabriria em modo de edição de novo, e o botão pareceria "não funcionar"). "Editar" reabre os campos
+     para alterar algo depois, sem perder o que já foi salvo. A tag "Preenchido"/"Pendente" lá fora nunca
+     depende deste "editing" — só do conteúdo real das seções (topicFilled). */
+  let editing = !topicFilled(quadrant, topic, idx, s);
   function renderModal(){
     const filled = topicFilled(quadrant, topic, idx, s);
-    if(!filled) editing = true; // enquanto não foi salvo pela primeira vez, sempre começa aberto para preencher
     document.getElementById('modal').innerHTML = `
       <div class="modal-body form-modal">
         <div class="cat">${quadrant.title}</div>
         <h3>${topic.title}</h3>
         <p class="desc">${topic.desc}</p>
-        ${filled && !editing? `<div class="ps-saved-note">${icon('check','tiny')} Salvo — clique em Editar para alterar.</div>` : ''}
+        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : 'Salvo — ainda faltam campos para aparecer como concluído lá fora. Clique em Editar para continuar.'}</div>` : ''}
         <div class="${editing? '' : 'ps-locked'}">
           ${(topic.sections||[]).map(sec=>renderSectionHTML(sec, data)).join('')}
         </div>
@@ -3392,8 +3398,9 @@ function openTopicModal(quadrant, topicId){
     document.getElementById('modal-close-2').addEventListener('click',closeModal);
     if(editing){
       document.getElementById('topic-save').addEventListener('click',()=>{
-        /* "Preenchido" reflete o conteúdo real das seções (ver topicFilled) — Salvar só trava os
-           campos para leitura; se ainda faltar algo, o tópico continua "Pendente" lá fora. */
+        /* "Preenchido" reflete o conteúdo real das seções (ver topicFilled) — Salvar sempre funciona e
+           trava os campos, mesmo com dados incompletos; se ainda faltar algo, o tópico continua
+           "Pendente" lá fora, mas o que foi digitado já fica salvo. */
         editing = false;
         renderModal();
         renderPainel();
