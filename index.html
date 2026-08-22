@@ -457,6 +457,13 @@
   .mod-check-item.done .box{background:var(--success);border-color:var(--success);}
   .mod-check-item .txt{line-height:1.45;color:var(--text);}
   .mod-check-item.done .txt{color:var(--text-mute);text-decoration:line-through;}
+  .mod-check-course-link{
+    display:inline-flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto;
+    font-size:11px;font-weight:700;color:var(--accent-2);background:var(--accent-soft);
+    border:none;border-radius:999px;padding:5px 10px;cursor:pointer;white-space:nowrap;
+  }
+  .mod-check-course-link:hover{background:var(--accent);color:#fff;}
+  .mod-check-course-link .icon{width:11px;height:11px;stroke:currentColor;}
 
   /* Cadastro (dados pessoais) */
   .dias-card{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin:14px 0 4px;background:var(--bg-card);}
@@ -507,6 +514,11 @@
   }
   textarea.ps-input{min-height:38px;}
   .ps-input:focus{outline:none;border-color:var(--shared);}
+  select.ps-input{
+    appearance:none;-webkit-appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a9ba' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 8px center;background-size:14px;padding-right:26px;
+  }
   .ps-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
   .ps-row .goal-check{margin-top:0;}
   .ps-remove{width:28px;height:28px;flex-shrink:0;border-radius:var(--radius-sm);color:var(--text-mute);display:flex;align-items:center;justify-content:center;}
@@ -1185,8 +1197,13 @@ const QUADRANTS = [
     {id:'funil',title:'Funil de Conteúdo',desc:'Estrutura de conteúdo por etapa de consciência do paciente.',
      sections:[
        {type:'table',key:'funil',label:'Funil de Conteúdo (semana)',columns:[
-         {key:'objetivo',label:'Objetivo (etapa de consciência)'},{key:'descricao',label:'Descrição'},{key:'formato',label:'Formato'},{key:'status',label:'Status'},
-       ],fixedRows:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']},
+         {key:'link',label:'Link do Conteúdo'},
+         {key:'objetivo',label:'Objetivo (etapa de consciência)'},{key:'descricao',label:'Descrição'},{key:'formato',label:'Formato'},
+         {key:'status',label:'Status',type:'select',options:['Produzindo','Pronto','Publicado']},
+       ],fixedRows:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
+       /* Quando o Status vira "Publicado" e há um link preenchido, o link sobe sozinho para a lista de
+          Avaliação de Conteúdo (só o link — o resto continua para preencher manualmente como já era). */
+       autoPublish:{statusKey:'status', publishedValue:'Publicado', linkKey:'link', targetTopicId:'avaliacao', targetKey:'avaliacao', flagKey:'__avaliacaoLinked'}},
      ]},
     {id:'avaliacao',title:'Avaliação de Conteúdo',desc:'Indicadores de performance dos conteúdos publicados.',
      sections:[
@@ -1204,7 +1221,10 @@ const QUADRANTS = [
      ]},
     {id:'parceiros',title:'10 Parceiros',desc:'Mapeamento de parcerias estratégicas para indicações.',
      sections:[
-       {type:'table',key:'parceiros',label:'Parceiros',columns:[{key:'parceiro',label:'Parceiro'},{key:'nicho',label:'Nicho'},{key:'indicado',label:'Indicado'}],maxRows:10},
+       {type:'table',key:'parceiros',label:'Parceiros',columns:[
+         {key:'parceiro',label:'Parceiro'},{key:'nicho',label:'Nicho'},
+         {key:'indicado',label:'Indicado',type:'select',options:['Fez contraindicação','Não fez contraindicação']},
+       ],maxRows:10},
      ]},
    ]},
   {id:'jornada',title:'Jornada do Usuário',icon:'compass',moduleId:'transformar',
@@ -2892,6 +2912,43 @@ function renderDashboard(){
   });
 }
 
+/* ---- Vincula automaticamente itens "Assistir aula sobre X" do checklist do módulo com as aulas já
+   cadastradas na Biblioteca (aba Aulas) do mesmo módulo — compara o tema do item com o título da aula,
+   sem precisar de nenhum cadastro manual extra. Fica sempre atualizado conforme aulas são criadas. ---- */
+const CHECKLIST_MATCH_STOPWORDS = new Set(['o','a','os','as','um','uma','de','da','do','das','dos','e','em','no','na','nos','nas','com','que','para','sobre','ao','aos']);
+function stripAccents(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function significantWords(s){
+  return stripAccents(String(s||'').toLowerCase())
+    .replace(/[^a-z0-9\s]/g,' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w=>w.replace(/s$/,''))
+    .filter(w=>!CHECKLIST_MATCH_STOPWORDS.has(w));
+}
+function checklistLinkedCourse(label, catName){
+  if(!/^assistir\s+aula\b/i.test(label.trim())) return null;
+  let topic = label.trim().replace(/^assistir\s+aula\s*/i,'');
+  topic = topic.replace(/^sobre\s+/i,'');
+  topic = topic.replace(/^(o|a|os|as|um|uma)\s+/i,'');
+  topic = topic.replace(/[.:;,]+\s*$/,'').trim();
+  if(!topic) return null;
+  const topicWords = significantWords(topic);
+  if(!topicWords.length) return null;
+  const candidates = COURSES.filter(c=>c.cat===catName);
+  let best=null, bestScore=0;
+  candidates.forEach(c=>{
+    const titleWords = significantWords(c.title);
+    if(!titleWords.length) return;
+    const inter = titleWords.filter(w=>topicWords.includes(w)).length;
+    const isSubset = titleWords.every(w=>topicWords.includes(w));
+    const union = new Set([...topicWords,...titleWords]).size;
+    const score = union ? inter/union : 0;
+    const qualifies = isSubset || (inter>=2 && score>=0.4) || (topicWords.length===1 && inter>=1 && score>=0.3);
+    if(qualifies && score>bestScore){ bestScore=score; best=c; }
+  });
+  return best;
+}
+
 /* ================= MODAL: CHECKLIST DO MÓDULO (Dashboard) ================= */
 function openModuleChecklist(modId){
   const s = getStudent(currentStudentId);
@@ -2910,15 +2967,25 @@ function openModuleChecklist(modId){
         <h3>Checklist — Módulo ${mod.name}</h3>
         <p class="desc">${done}/${items.length} itens marcados (${pct}%). Clique em cada item para marcar aula assistida, resumo feito ou tarefa concluída.</p>
         <div class="mod-check-list">
-          ${items.map((label,idx)=>`
+          ${items.map((label,idx)=>{
+            const linkedCourse = checklistLinkedCourse(label, mod.name);
+            return `
             <div class="mod-check-item ${state[idx]?'done':''}" data-idx="${idx}">
               <span class="box">${state[idx]? icon('tick') : ''}</span>
               <span class="txt">${label}</span>
-            </div>`).join('')}
+              ${linkedCourse? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
+            </div>`;
+          }).join('')}
         </div>
         <div class="modal-actions"><button class="btn-outline" id="modal-close-2">Fechar</button></div>
       </div>`;
     document.getElementById('modal-close-2').addEventListener('click',closeModal);
+    modalEl.querySelectorAll('[data-open-course-item]').forEach(btn=>{
+      btn.addEventListener('click',(e)=>{
+        e.stopPropagation();
+        openCourseModal(btn.dataset.openCourseItem);
+      });
+    });
     document.querySelectorAll('.mod-check-item').forEach(el=>{
       el.addEventListener('click',()=>{
         const idx = +el.dataset.idx;
@@ -3092,7 +3159,17 @@ function renderSectionHTML(section, data){
         <tbody>
           ${rows.map((row,i)=>`<tr>
             ${section.fixedRows? `<td class="ps-rowlabel">${row.__label}</td>` : ''}
-            ${cols.map(c=>`<td><input class="ps-input ps-cell" data-fkind="table" data-skey="${section.key}" data-idx="${i}" data-col="${c.key}" value="${escapeAttr(row[c.key]||'')}"></td>`).join('')}
+            ${cols.map(c=>{
+              if(c.type==='select'){
+                const current = row[c.key]||'';
+                const opts = (!current || c.options.includes(current))? c.options : [current, ...c.options];
+                return `<td><select class="ps-input ps-cell" data-fkind="table" data-skey="${section.key}" data-idx="${i}" data-col="${c.key}">
+                  <option value="">—</option>
+                  ${opts.map(o=>`<option value="${escapeAttr(o)}" ${current===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}
+                </select></td>`;
+              }
+              return `<td><input class="ps-input ps-cell" data-fkind="table" data-skey="${section.key}" data-idx="${i}" data-col="${c.key}" value="${escapeAttr(row[c.key]||'')}"></td>`;
+            }).join('')}
             ${section.fixedRows? '' : `<td><button class="ps-remove" data-remove="table" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></td>`}
           </tr>`).join('')}
         </tbody>
@@ -3106,7 +3183,8 @@ function bindSectionEvents(sections, data, rerender, saveKey){
   const modalEl = document.getElementById('modal');
   const persist = ()=>{ if(saveKey) syncPanelData(saveKey.sid, saveKey.topicId, data); };
   modalEl.querySelectorAll('[data-fkind]').forEach(inp=>{
-    inp.addEventListener('input',()=>{
+    const evtName = inp.tagName==='SELECT' ? 'change' : 'input';
+    inp.addEventListener(evtName,()=>{
       const kind = inp.dataset.fkind, skey = inp.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       const val = sectionValue(data, section);
@@ -3114,7 +3192,25 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       else if(kind==='list') val[+inp.dataset.idx] = inp.value;
       else if(kind==='checklist') val[+inp.dataset.idx].text = inp.value;
       else if(kind==='swatches') val[+inp.dataset.idx] = inp.value;
-      else if(kind==='table') val[+inp.dataset.idx][inp.dataset.col] = inp.value;
+      else if(kind==='table'){
+        const row = val[+inp.dataset.idx];
+        row[inp.dataset.col] = inp.value;
+        /* Publicação automática: quando o Status desta linha vira "Publicado" e há um link
+           preenchido, sobe sozinho (só o link) para a tabela de destino (ex.: Avaliação de
+           Conteúdo) — sem duplicar se a linha já foi enviada antes, e sem mexer no que já foi
+           inserido manualmente lá. */
+        const ap = section.autoPublish;
+        if(ap && saveKey && inp.dataset.col===ap.statusKey && inp.value===ap.publishedValue){
+          const link = (row[ap.linkKey]||'').trim();
+          if(link && !row[ap.flagKey]){
+            const targetData = getTopicData(saveKey.sid, ap.targetTopicId);
+            if(!targetData[ap.targetKey]) targetData[ap.targetKey] = [];
+            targetData[ap.targetKey].push({[ap.linkKey]: link});
+            row[ap.flagKey] = true;
+            syncPanelData(saveKey.sid, ap.targetTopicId, targetData);
+          }
+        }
+      }
       if(kind==='swatches'){
         const hex = /^#([0-9a-f]{3}){1,2}$/i.test(inp.value)? inp.value : '#1c1e19';
         inp.previousElementSibling.style.background = hex;
