@@ -3065,13 +3065,21 @@ function openModuleChecklist(modId){
 }
 
 /* ================= VIEW: PAINEL DO MÉTODO (compartilhado aluno + equipe) ================= */
+/* Um tópico só conta como "Preenchido" quando TODAS as suas seções têm conteúdo real —
+   não basta clicar em Salvar. Cada tipo de seção define "ter conteúdo" à sua maneira. */
+function sectionFilled(section, data){
+  const val = sectionValue(data, section);
+  if(section.type==='fields') return section.fields.every(f=>(val[f.key]||'').trim()!=='');
+  if(section.type==='list') return val.some(v=>(v||'').trim()!=='');
+  if(section.type==='checklist') return val.length>0 && val.every(it=>(it.text||'').trim()!=='');
+  if(section.type==='swatches') return val.every(v=>/^#([0-9a-f]{3}){1,2}$/i.test(v||''));
+  if(section.type==='table') return val.length>0 && val.some(row=>section.columns.some(c=>(row[c.key]||'').trim()!==''));
+  return true;
+}
 function topicFilled(quadrant, topic, idx, s){
-  const key = s.id+':'+topic.id;
-  if(key in PANEL_OVERRIDES) return PANEL_OVERRIDES[key];
-  const mod = getModule(quadrant.moduleId);
-  const done = s.moduleProgress[quadrant.moduleId];
-  const threshold = Math.round((done/mod.total)*quadrant.topics.length);
-  return idx < threshold;
+  const data = getTopicData(s.id, topic.id);
+  const sections = topic.sections||[];
+  return sections.length>0 && sections.every(sec=>sectionFilled(sec, data));
 }
 function quadrantFilledCount(q,s){
   return q.topics.filter((t,i)=>topicFilled(q,t,i,s)).length;
@@ -3384,10 +3392,8 @@ function openTopicModal(quadrant, topicId){
     document.getElementById('modal-close-2').addEventListener('click',closeModal);
     if(editing){
       document.getElementById('topic-save').addEventListener('click',()=>{
-        if(!filled){
-          PANEL_OVERRIDES[s.id+':'+topic.id] = true;
-          syncPanelOverride(s.id, topic.id, true);
-        }
+        /* "Preenchido" reflete o conteúdo real das seções (ver topicFilled) — Salvar só trava os
+           campos para leitura; se ainda faltar algo, o tópico continua "Pendente" lá fora. */
         editing = false;
         renderModal();
         renderPainel();
