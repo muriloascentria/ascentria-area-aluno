@@ -608,6 +608,12 @@
   .check-table th{text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--text-mute);padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg-elev);white-space:nowrap;}
   .check-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
   .check-table tr:last-child td{border-bottom:none;}
+  .rank-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-weight:800;font-size:12px;background:var(--bg-elev);color:var(--text-dim);}
+  .rank-num.rank-top.rank-1{background:rgba(234,179,8,0.18);color:#eab308;}
+  .rank-num.rank-top.rank-2{background:rgba(203,213,225,0.18);color:#cbd5e1;}
+  .rank-num.rank-top.rank-3{background:var(--individual-soft);color:var(--individual);}
+  tr.rank-me td{background:var(--accent-2, rgba(190,198,177,0.08));background:rgba(190,198,177,0.08);}
+  .rank-pts{font-weight:800;color:var(--accent-2);}
   .status-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
   .status-pill.status-Concluida{background:var(--success-soft);color:var(--success);}
   .status-pill.status-Pendente{background:var(--individual-soft);color:var(--individual);}
@@ -684,6 +690,7 @@
     <div class="nav-group-label">Área Coletiva</div>
     <button class="nav-item" data-view="aulas"></button>
     <button class="nav-item" data-view="comunidade"></button>
+    <button class="nav-item" data-view="ranking"></button>
     <button class="nav-item" data-view="agenda"></button>
     <button class="nav-item" data-view="materiais"></button>
 
@@ -747,6 +754,7 @@
       <div class="view" id="view-inicio"></div>
       <div class="view" id="view-aulas"></div>
       <div class="view" id="view-comunidade"></div>
+      <div class="view" id="view-ranking"></div>
       <div class="view" id="view-agenda"></div>
       <div class="view" id="view-materiais"></div>
       <div class="view" id="view-dashboard"></div>
@@ -810,6 +818,7 @@ function fillIcon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24
 /* ================= DATA: NAV ================= */
 const NAV_LABELS = {
   inicio:['home','Início'], aulas:['film','Aulas'], comunidade:['users','Comunidade'],
+  ranking:['award','Ranking'],
   agenda:['calendar','Agenda ao Vivo'], materiais:['folder','Materiais'],
   dashboard:['chart','Dashboard'], painel:['compass','Painel do Método'],
   sessoes:['video','Minhas Sessões 1:1'], metas:['target','Minhas Metas'],
@@ -1261,6 +1270,11 @@ const PANEL_SEED = {
 /* ================= DATA: ALUNOS ================= */
 const STUDENTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 
+/* Pontuação do ranking, calculada ao vivo pela view "student_points" (Supabase) a partir das
+   próprias publicações/comentários/curtidas — nunca fica desatualizada e some sozinha se algo for
+   excluído. +1 ponto por dúvida, interação, comentário ou curtida · +10 por conquista. */
+let STUDENT_POINTS = {}; // chave: student id -> {total, posts, conquistas, comments, likes}
+
 /* Mapa com TODAS as pessoas (alunos + equipe interna), usado para resolver autoria de posts/comentários
    da Comunidade — diferente de STUDENTS, que contém só quem é mentorado(a). */
 let PEOPLE = {}; // populado em runtime a partir do Supabase (ver bootstrapData)
@@ -1562,6 +1576,12 @@ async function bootstrapData(){
       if(st) st.registrosInternos.push({id:r.id, data:r.data||'', autorNome:(PEOPLE[r.autor_id]&&PEOPLE[r.autor_id].name)||'—', texto:r.texto});
     });
   }
+
+  STUDENT_POINTS = {};
+  const { data: spRows } = await sb.from('student_points').select('*');
+  (spRows||[]).forEach(r=>{
+    STUDENT_POINTS[r.student_id] = {total:r.total_points||0, posts:r.posts_count||0, conquistas:r.conquistas_count||0, comments:r.comments_count||0, likes:r.likes_count||0};
+  });
 
   currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
 }
@@ -1948,7 +1968,7 @@ function goTo(view){
 }
 
 function renderCurrentView(){
-  const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, agenda:renderAgenda,
+  const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
@@ -2638,6 +2658,54 @@ function renderComunidade(){
       renderComunidade();
     });
   });
+}
+
+/* ================= VIEW: RANKING ================= */
+function renderRanking(){
+  const root = document.getElementById('view-ranking');
+  const meId = actingAuthorId();
+  const rows = STUDENTS
+    .map(s=>({s, pts: STUDENT_POINTS[s.id] || {total:0,posts:0,comments:0,likes:0,conquistas:0}}))
+    .sort((a,b)=>b.pts.total-a.pts.total);
+  root.innerHTML = `
+    <p class="section-sub">Ranking da turma do Método Essência — cada dúvida, interação ou comentário na comunidade vale <strong>+1 ponto</strong>, cada curtida vale <strong>+1 ponto</strong> e cada conquista compartilhada vale <strong>+10 pontos</strong>.</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Aluno</th>
+            <th>Conquistas</th>
+            <th>Dúvidas/Interações</th>
+            <th>Comentários</th>
+            <th>Curtidas</th>
+            <th>Pontos</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,i)=>{
+            const rank = i+1;
+            const isMe = r.s.id===meId;
+            const rankCls = rank<=3 ? ` rank-top rank-${rank}` : '';
+            return `<tr class="${isMe?'rank-me':''}">
+              <td><span class="rank-num${rankCls}">${rank}</span></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:9px">
+                  ${initialsAvatar(r.s.initials, r.s.color, 26, r.s.avatarUrl)}
+                  <span>${escapeHtml(r.s.name)}${isMe? ` <span class="section-sub" style="margin:0;display:inline">(você)</span>`:''}</span>
+                </div>
+              </td>
+              <td>${r.pts.conquistas}</td>
+              <td>${r.pts.posts}</td>
+              <td>${r.pts.comments}</td>
+              <td>${r.pts.likes}</td>
+              <td><span class="rank-pts">${r.pts.total} pts</span></td>
+            </tr>`;
+          }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 /* ================= VIEW: AGENDA ================= */
