@@ -295,6 +295,13 @@
     align-items:center;justify-content:center;z-index:100;padding:20px;overflow-y:auto;
   }
   .modal-backdrop.open{display:flex;}
+  /* Confirmação própria do app (showAppConfirm) — visual da plataforma, por cima de qualquer modal já
+     aberto (ex.: o do CRM), em vez do confirm() nativo do navegador. */
+  .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
+  .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
+  .app-confirm-card h4{font-size:15.5px;margin:0 0 8px;}
+  .app-confirm-card p{font-size:13px;color:var(--text-dim);line-height:1.5;margin:0 0 18px;}
+  .app-confirm-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
   .modal{
     width:100%;max-width:560px;background:var(--bg-elev);border:1px solid var(--border);
     border-radius:var(--radius);overflow:hidden;margin:auto;max-height:90vh;overflow-y:auto;
@@ -344,6 +351,8 @@
   .type-pill.tag-duvida.active{background:var(--danger-soft);color:var(--danger);border-color:transparent;}
   .type-pill.tag-interacao.active{background:var(--accent-soft);color:var(--accent-2);border-color:transparent;}
   .type-pill.tag-conquista.active{background:var(--success-soft);color:var(--success);border-color:transparent;}
+  .type-pill.tag-apresentacao.active{background:var(--shared-soft);color:var(--shared);border-color:transparent;}
+  .type-pill[disabled]{opacity:0.45;cursor:not-allowed;}
   .community-filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
   .filter-tab{font-size:12px;font-weight:700;padding:6px 13px;border-radius:20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);}
   .filter-tab.active{background:var(--accent);color:#fff;border-color:transparent;}
@@ -354,6 +363,7 @@
   .post.post-border-duvida{border-left-color:var(--danger);}
   .post.post-border-interacao{border-left-color:var(--accent);}
   .post.post-border-conquista{border-left-color:var(--success);}
+  .post.post-border-apresentacao{border-left-color:var(--shared);}
   .post-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
   .post-head .avatar{width:34px;height:34px;font-size:12px;}
   .post-head .who{flex:1;min-width:0;}
@@ -363,6 +373,7 @@
   .post-type-badge.tag-duvida{background:var(--danger-soft);color:var(--danger);}
   .post-type-badge.tag-interacao{background:var(--accent-soft);color:var(--accent-2);}
   .post-type-badge.tag-conquista{background:var(--success-soft);color:var(--success);}
+  .post-type-badge.tag-apresentacao{background:var(--shared-soft);color:var(--shared);}
   .staff-note{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--danger);background:var(--danger-soft);padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:12px;}
   .staff-note.answered{color:var(--success);background:var(--success-soft);}
   .staff-note.new-reply{color:var(--accent-2);background:var(--accent-soft);}
@@ -1035,7 +1046,7 @@ const MODULE_CHECKLIST = {
     'Assistir aula sobre Identidade de Valor.',
     'Resumir aula sobre Identidade de Valor.',
     'TAREFA: Desenhar Identidade de Valor.',
-    'Assistir aula sobre A Transformação que Você Gera (Neste insira o link da aula correspondente).',
+    'Assistir aula sobre A Transformação que Você Gera.',
     'Resumir aula sobre A Transformação que Você Gera',
     'TAREFA: Desenhar A Transformação que Você Gera.',
     'TAREFA: Incluir tudo no painel do método.',
@@ -1588,9 +1599,10 @@ function getPerson(id){ return PEOPLE[id]; }
 // do WhatsApp do Método Essência (DÚVIDAS, INTERAÇÕES) mais CONQUISTAS.
 // Publicações do tipo "duvida" ativam a equipe interna (ver updateNotifBadge()).
 const POST_TYPES = {
-  duvida:    {label:'Dúvida',     icon:'help',    css:'duvida'},
-  interacao: {label:'Interação',  icon:'comment', css:'interacao'},
-  conquista: {label:'Conquista',  icon:'award',   css:'conquista'},
+  duvida:       {label:'Dúvida',        icon:'help',    css:'duvida'},
+  interacao:    {label:'Interação',     icon:'comment', css:'interacao'},
+  conquista:    {label:'Conquista',     icon:'award',   css:'conquista'},
+  apresentacao: {label:'Apresentação',  icon:'idcard',  css:'apresentacao'},
 };
 let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 
@@ -1611,6 +1623,10 @@ function mapLiveSessionRow(row){
     type: dt >= hoje ? 'upcoming' : 'past',
     _eventDate: row.event_date,
     linkGravacao: row.link_gravacao || '',
+    /* null = encontro coletivo, visível na Agenda ao Vivo de todos; preenchido = reunião individual
+       (agendada de dentro do Acompanhamento Interno de um mentorado específico), visível só pra esse
+       aluno e pra equipe interna. */
+    studentId: row.student_id || null,
   };
 }
 
@@ -1900,6 +1916,7 @@ async function bootstrapData(){
       aulasLikes:r.aula_likes_count||0,
       dashboardChecks:r.dashboard_checks_count||0,
       metasChecks:r.metas_checks_count||0,
+      apresentacao:r.apresentacao_count||0,
     };
   });
 
@@ -2061,6 +2078,7 @@ async function syncLiveSessionInsert(row){
   const { data, error } = await sb.from('live_sessions').insert({
     title: row.title, event_date: row.event_date, event_time: row.event_time, description: row.description,
     link_gravacao: row.link_gravacao || null,
+    student_id: row.student_id || null,
   }).select().single();
   if(error) throw error;
   return data;
@@ -2325,7 +2343,7 @@ function renderInicio(){
   if(needsWispform(s)){ renderWispformWizard(s); return; }
   const overall = overallProgress(s);
   const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
-  const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming');
+  const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming' && (l.studentId==null || l.studentId===s.id));
   const inProgress = COURSES.filter(c=>s.courseProgress[c.id]>0 && s.courseProgress[c.id]<100);
   const continueList = inProgress.length? inProgress : COURSES.filter(c=>s.courseProgress[c.id]===0).slice(0,3);
   const crmStats = computeCrmStats(s.id);
@@ -2352,7 +2370,6 @@ function renderInicio(){
       <div class="kpi-tile"><div class="label">Conversão (lead → agendado)</div><div class="value">${crmStats.conversaoPct!=null? crmStats.conversaoPct+'%' : '—'}</div></div>
       <div class="kpi-tile"><div class="label">Faturamento do mês</div><div class="value" style="font-size:16px">${formatBRL(fatStats.mesAtual)}</div></div>
       <div class="kpi-tile"><div class="label">Faturamento total desde o início</div><div class="value" style="font-size:16px">${formatBRL(fatStats.totalAcumulado)}</div></div>
-      <div class="kpi-tile"><div class="label">Faturamento médio</div><div class="value" style="font-size:16px">${s.diagnostico.faturamentoMedio}</div></div>
     </div>
     <p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>
 
@@ -2620,7 +2637,7 @@ function courseCommentsHtml(c){
           <textarea id="cm-new-post" placeholder="Deixe uma dúvida ou comentário sobre esta aula..."></textarea>
           <div class="composer-footer">
             <div class="type-select" id="cm-type-select">
-              ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedCoursePostType===k?'active':''}" data-cm-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+              ${Object.keys(POST_TYPES).filter(k=>k!=='apresentacao').map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedCoursePostType===k?'active':''}" data-cm-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
             </div>
             <button class="btn-accent" id="cm-post-btn">Publicar</button>
           </div>
@@ -2710,12 +2727,22 @@ function bindCourseComments(c){
    aula a partir do checklist do módulo) — em vez de fechar tudo, closeModal() reabre o anterior uma vez. */
 let modalReturnTo = null;
 /* Trava opcional de saída — usada pelo CRM de Leads pra perguntar se quer salvar as movimentações antes
-   de fechar. Deve retornar true (libera o fechamento) ou false (mantém o modal aberto). Fica null pra
-   qualquer outro modal, que fecha direto como sempre. */
+   de fechar. Deve devolver true (ou uma Promise que resolve true) pra liberar o fechamento, ou
+   false pra manter o modal aberto. Fica null pra qualquer outro modal, que fecha direto como sempre. */
 let modalCloseGuard = null;
 function closeModal(){
-  if(modalCloseGuard && !modalCloseGuard()) return;
-  modalCloseGuard = null;
+  if(modalCloseGuard){
+    const guard = modalCloseGuard;
+    Promise.resolve(guard()).then(ok=>{
+      if(!ok) return;
+      modalCloseGuard = null;
+      reallyCloseModal();
+    });
+    return;
+  }
+  reallyCloseModal();
+}
+function reallyCloseModal(){
   if(modalReturnTo){
     const back = modalReturnTo;
     modalReturnTo = null;
@@ -2725,6 +2752,32 @@ function closeModal(){
   document.getElementById('modal-backdrop').classList.remove('open');
 }
 document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.target.id==='modal-backdrop') closeModal(); });
+/* Confirmação própria do app (em vez do confirm() nativo do navegador, que abre uma janela com a cara
+   do sistema operacional) — mesmo visual do resto da plataforma, sobreposta a qualquer modal já aberto. */
+function showAppConfirm(message, opts){
+  const o = opts || {};
+  const confirmLabel = o.confirmLabel || 'Confirmar';
+  const cancelLabel = o.cancelLabel || 'Cancelar';
+  const title = o.title || 'Confirmar ação';
+  return new Promise(resolve=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'app-confirm-backdrop';
+    wrap.innerHTML = `
+      <div class="app-confirm-card">
+        <h4>${escapeHtml(title)}</h4>
+        <p>${escapeHtml(message)}</p>
+        <div class="app-confirm-actions">
+          <button type="button" class="btn-outline" id="app-confirm-cancel">${escapeHtml(cancelLabel)}</button>
+          <button type="button" class="btn-accent" id="app-confirm-ok">${escapeHtml(confirmLabel)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const cleanup = (result)=>{ wrap.remove(); resolve(result); };
+    wrap.querySelector('#app-confirm-ok').addEventListener('click', ()=>cleanup(true));
+    wrap.querySelector('#app-confirm-cancel').addEventListener('click', ()=>cleanup(false));
+    wrap.addEventListener('click', (e)=>{ if(e.target===wrap) cleanup(false); });
+  });
+}
 
 /* ================= MODAL: MEUS DADOS CADASTRAIS ================= */
 /* ---- Foto de perfil (aluno e equipe interna) — Supabase Storage, bucket "avatars" ---- */
@@ -2943,6 +2996,11 @@ function postHtml(p,compact,showCourseTag){
         </div>`:''}
     </div>`;
 }
+/* Apresentação vale 10 pontos no ranking, mas só uma vez por mentorado — se ele excluir a apresentação
+   anterior, o contador zera e ele pode publicar uma nova (ver view "student_points" no Supabase). */
+function hasApresentacao(authorId){
+  return COMMUNITY_POSTS.some(p=>p.type==='apresentacao' && p.authorId===authorId);
+}
 function renderComunidade(){
   const me = getPerson(actingAuthorId());
   const filters = [
@@ -2950,7 +3008,10 @@ function renderComunidade(){
     {id:'duvida', label:'Dúvidas'},
     {id:'interacao', label:'Interações'},
     {id:'conquista', label:'Conquistas'},
+    {id:'apresentacao', label:'Apresentações'},
   ];
+  const alreadyApresentou = me? hasApresentacao(me.id) : false;
+  if(alreadyApresentou && selectedPostType==='apresentacao') selectedPostType = 'interacao';
   const visible = communityFilter==='todas' ? COMMUNITY_POSTS : COMMUNITY_POSTS.filter(p=>p.type===communityFilter);
   const root = document.getElementById('view-comunidade');
   root.innerHTML = `
@@ -2962,7 +3023,10 @@ function renderComunidade(){
         <textarea id="new-post" placeholder="Compartilhe algo com a turma..."></textarea>
         <div class="composer-footer">
           <div class="type-select" id="type-select">
-            ${Object.keys(POST_TYPES).map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
+            ${Object.keys(POST_TYPES).map(k=>{
+              const disabled = k==='apresentacao' && alreadyApresentou;
+              return `<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}" ${disabled?'disabled title="Você já publicou sua apresentação — exclua a anterior pra postar uma nova."':''}>${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`;
+            }).join('')}
           </div>
           <button class="btn-accent" id="post-btn">Publicar</button>
         </div>
@@ -2976,6 +3040,7 @@ function renderComunidade(){
   markVisiblePostsSeen(visible);
   bindOpenCourseTags(root);
   root.querySelectorAll('#type-select [data-type]').forEach(btn=>{
+    if(btn.disabled) return;
     btn.addEventListener('click',()=>{ selectedPostType = btn.dataset.type; renderComunidade(); });
   });
   root.querySelectorAll('#community-filters [data-filter]').forEach(btn=>{
@@ -2986,6 +3051,11 @@ function renderComunidade(){
     postBtn.addEventListener('click', async ()=>{
       const ta = root.querySelector('#new-post');
       if(!ta.value.trim()) return;
+      if(selectedPostType==='apresentacao' && hasApresentacao(actingAuthorId())){
+        selectedPostType = 'interacao';
+        renderComunidade();
+        return;
+      }
       postBtn.disabled = true;
       try{
         const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim());
@@ -3061,12 +3131,12 @@ function formatPts(n){
 function renderRanking(){
   const root = document.getElementById('view-ranking');
   const meId = actingAuthorId();
-  const empty = {total:0, conquistas:0, comunidade:0, comunidadeLikes:0, aulas:0, aulasLikes:0, dashboardChecks:0, metasChecks:0};
+  const empty = {total:0, conquistas:0, comunidade:0, comunidadeLikes:0, aulas:0, aulasLikes:0, dashboardChecks:0, metasChecks:0, apresentacao:0};
   const rows = STUDENTS
     .map(s=>({s, pts: STUDENT_POINTS[s.id] || empty}))
     .sort((a,b)=>b.pts.total-a.pts.total);
   root.innerHTML = `
-    <p class="section-sub">Ranking da turma do Método Essência — cada conquista compartilhada vale <strong>+600 pontos</strong>; comentar ou curtir na comunidade e nas aulas vale <strong>+0,01 ponto</strong> cada; marcar um item no checklist do Dashboard ou em Minhas Metas vale <strong>+10 pontos</strong> cada.</p>
+    <p class="section-sub">Ranking da turma do Método Essência — cada conquista compartilhada vale <strong>+600 pontos</strong>; publicar sua apresentação vale <strong>+10 pontos</strong> (uma vez só — some se você excluir a publicação, e volta se publicar de novo); comentar ou curtir na comunidade e nas aulas vale <strong>+0,01 ponto</strong> cada; marcar um item no checklist do Dashboard ou em Minhas Metas vale <strong>+10 pontos</strong> cada.</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead>
@@ -3074,6 +3144,7 @@ function renderRanking(){
             <th>#</th>
             <th>Aluno</th>
             <th>Conquistas</th>
+            <th>Apresentação</th>
             <th>Comunidade</th>
             <th>Curtidas comunidade</th>
             <th>Aulas</th>
@@ -3096,6 +3167,7 @@ function renderRanking(){
                 </div>
               </td>
               <td>${r.pts.conquistas}</td>
+              <td>${r.pts.apresentacao? icon('check','tiny') : '—'}</td>
               <td>${r.pts.comunidade}</td>
               <td>${r.pts.comunidadeLikes}</td>
               <td>${r.pts.aulas}</td>
@@ -3103,7 +3175,7 @@ function renderRanking(){
               <td>${r.pts.dashboardChecks + r.pts.metasChecks}</td>
               <td><span class="rank-pts">${formatPts(r.pts.total)} pts</span></td>
             </tr>`;
-          }).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
+          }).join('') || `<tr><td colspan="10" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -3115,8 +3187,12 @@ function gcalUrl(title, details){
   return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(details||'Encontro da Ascentria · Método Essência')}`;
 }
 function renderAgenda(){
-  const upcoming = LIVE_SESSIONS.filter(l=>l.type==='upcoming');
-  const past = LIVE_SESSIONS.filter(l=>l.type==='past');
+  /* Encontros coletivos (studentId null) aparecem pra todo mundo; reuniões individuais (agendadas de
+     dentro do Acompanhamento Interno de um mentorado) só aparecem pro próprio mentorado — currentStudentId
+     é sempre o contexto do aluno em questão, seja ele mesmo logado ou a equipe interna vendo o perfil dele. */
+  const visible = LIVE_SESSIONS.filter(l=>l.studentId==null || l.studentId===currentStudentId);
+  const upcoming = visible.filter(l=>l.type==='upcoming');
+  const past = visible.filter(l=>l.type==='past');
   const card = (l)=>{
     const watched = WATCHED_LIVE.has(l.id);
     return `
@@ -4266,9 +4342,9 @@ function openTopicModal(quadrant, topicId){
   };
   let crmOpenSnapshot = isCrmTopic? crmSnapshotOf() : null;
   if(isCrmTopic){
-    modalCloseGuard = ()=>{
+    modalCloseGuard = async ()=>{
       if(crmSnapshotOf()===crmOpenSnapshot) return true;
-      const ok = window.confirm('Você fez movimentações no CRM (arrastar leads, adicionar, editar ou descartar). Deseja salvar antes de sair?');
+      const ok = await showAppConfirm('Você fez movimentações no CRM (arrastar leads, adicionar, editar ou descartar). Deseja salvar antes de sair?', {title:'Salvar alterações do CRM?', confirmLabel:'Salvar e sair', cancelLabel:'Continuar editando'});
       if(!ok) return false;
       syncPanelData(s.id, topic.id, data);
       crmOpenSnapshot = crmSnapshotOf();
@@ -4757,6 +4833,33 @@ function renderInterno(){
       <div class="actions"><button class="btn-accent" id="add-contato-btn">${icon('plus')} Adicionar registro</button></div>
     </div>
 
+    <h2 class="section-title">${icon('calendar')} Registro de Contatos Futuros (Reuniões Agendadas)</h2>
+    <p class="section-sub" style="margin-top:-6px">Agende aqui a próxima reunião com este mentorado — ao salvar, ela aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Descrição</th><th>Situação</th><th></th></tr></thead>
+        <tbody id="contatos-futuros-tbody">
+          ${LIVE_SESSIONS.filter(l=>l.studentId===s.id).slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
+            <tr>
+              <td style="min-width:200px">${escapeHtml(l.title)}</td>
+              <td style="white-space:nowrap">${l.date}</td>
+              <td style="min-width:160px">${escapeHtml(l.time||'—')}</td>
+              <td style="min-width:220px">${linkify(l.desc)}</td>
+              <td>${l.type==='upcoming'? '<span class="pill live">Próximo</span>' : '<span class="pill replay">Passado</span>'}</td>
+              <td><button class="btn-mini danger" data-del-contato-futuro="${l.id}">${icon('trash')} Remover</button></td>
+            </tr>
+          `).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhuma reunião futura agendada ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="add-form">
+      <div class="field full"><label>Título</label><input class="ps-input" type="text" id="new-contatofuturo-title" placeholder="Ex.: Sessão 1:1 — ${escapeAttr(s.name)}"></div>
+      <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-contatofuturo-data"></div>
+      <div class="field"><label>Horário / detalhes</label><input class="ps-input" type="text" id="new-contatofuturo-time" placeholder="Ex.: 15h00"></div>
+      <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-contatofuturo-desc" placeholder="Pauta da reunião..."></textarea></div>
+      <div class="actions"><button class="btn-accent" id="add-contatofuturo-btn">${icon('plus')} Agendar reunião</button></div>
+    </div>
+
     <h2 class="section-title">${icon('lock')} Registros Internos da Equipe</h2>
     <div class="wf-warning" style="margin:-6px 0 14px">
       ${icon('lock')} Estas anotações são 100% internas — o aluno NUNCA verá este conteúdo, em nenhuma tela da plataforma. Use para observações sensíveis, avaliações e sinais de atenção da equipe sobre o mentorado.
@@ -4866,6 +4969,30 @@ function renderInterno(){
       s.contatos.push(c);
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.getElementById('add-contatofuturo-btn').addEventListener('click', async ()=>{
+    const eventDate = document.getElementById('new-contatofuturo-data').value;
+    if(!eventDate) return;
+    const title = document.getElementById('new-contatofuturo-title').value.trim() || `Sessão 1:1 — ${s.name}`;
+    const eventTime = document.getElementById('new-contatofuturo-time').value.trim();
+    const description = document.getElementById('new-contatofuturo-desc').value.trim();
+    const btn = document.getElementById('add-contatofuturo-btn');
+    btn.disabled = true;
+    try{
+      /* student_id preenchido: essa reunião fica privada, só aparece na Agenda ao Vivo deste mentorado
+         (ver renderAgenda) — nunca na de outros alunos. */
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, description, student_id:s.id});
+      LIVE_SESSIONS.push(mapLiveSessionRow(row));
+      renderInterno();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-del-contato-futuro]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir esta reunião agendada? Essa ação não pode ser desfeita.')) return;
+      const idx = LIVE_SESSIONS.findIndex(l=>l.id==btn.dataset.delContatoFuturo);
+      if(idx>-1){ syncLiveSessionDelete(LIVE_SESSIONS[idx].id); LIVE_SESSIONS.splice(idx,1); }
+      renderInterno();
+    });
   });
   document.querySelectorAll('[data-sync-session]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
@@ -5135,12 +5262,12 @@ function renderConteudo(){
     </div>
 
     <h2 class="section-title">${icon('calendar')} Eventos / Aulas ao Vivo</h2>
-    <p class="section-sub" style="margin-top:-6px">Aparecem na Agenda ao Vivo de todos os alunos — como próximos encontros (se a data for futura) ou gravações (se já passou).</p>
+    <p class="section-sub" style="margin-top:-6px">Encontros coletivos — aparecem na Agenda ao Vivo de todos os alunos, como próximos encontros (se a data for futura) ou gravações (se já passou). Reuniões individuais com um mentorado específico são agendadas de dentro do Acompanhamento Interno dele (aba "Registro de Contatos Futuros"), não aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
         <tbody>
-          ${LIVE_SESSIONS.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
+          ${LIVE_SESSIONS.filter(l=>l.studentId==null).slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
             <tr>
               <td style="min-width:220px">${l.title}</td>
               <td style="white-space:nowrap">${l.date}</td>
