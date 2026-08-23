@@ -569,6 +569,26 @@
   .ps-link-edit-btn:hover{color:var(--text);background:var(--bg-card-hover);}
   .ps-link-edit-btn .icon{width:12px;height:12px;stroke:currentColor;}
   .ps-rowlabel{font-size:12px;font-weight:700;color:var(--text-dim);white-space:nowrap;padding-right:10px;}
+  /* Fluxo de Caixa (Painel do Método → Financeiro): navegação por ano/mês igual à planilha de origem
+     (aba índice com os 12 meses), tabela de lançamentos com Saldo calculado automaticamente. */
+  .cf-nav{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;margin-bottom:14px;}
+  .cf-year-wrap{max-width:100px;}
+  .cf-year-wrap .ps-label{margin-top:0;}
+  .cf-months{display:flex;flex-wrap:wrap;gap:6px;}
+  .cf-month-btn{
+    font-size:12px;font-weight:600;padding:7px 12px;border-radius:var(--radius-sm);
+    border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);
+  }
+  .cf-month-btn:hover{color:var(--text);border-color:var(--text-mute);}
+  .cf-month-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .cf-table .ps-cell{min-width:96px;}
+  .cf-table th:nth-child(3),.cf-table .ps-cell[data-col="descricao"]{min-width:150px;}
+  .cf-saldo{font-weight:700;color:var(--success);white-space:nowrap;padding:4px 8px;}
+  .cf-saldo.neg{color:var(--danger);}
+  .cf-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;}
+  .cf-total{margin-top:12px;font-size:13.5px;color:var(--text-dim);text-align:right;}
+  .cf-total strong{color:var(--success);}
+  .cf-total strong.neg{color:var(--danger);}
 
   /* Individual: sessions */
   .session-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
@@ -1348,6 +1368,7 @@ const QUADRANTS = [
      sections:[
        {type:'list',key:'custosFixos',label:'Custos Fixos',placeholder:'Ex.: Aluguel — R$ 1.200'},
        {type:'list',key:'custosVariaveis',label:'Custos Variáveis',placeholder:'Ex.: Internet — R$ 100'},
+       {type:'cashflow',key:'fluxoCaixa',label:'Fluxo de Caixa'},
      ]},
     {id:'precificacao',title:'Precificação',desc:'Cálculo do preço do protocolo a partir dos custos.',
      sections:[
@@ -3136,6 +3157,11 @@ function sectionFilled(section, data){
      Conteúdo). "__label" é o rótulo automático da linha (dia da semana, nome da ação fixa) e não
      conta como coluna real, senão uma tabela recém-semeada já apareceria com algo "preenchido". */
   if(section.type==='table') return val.length>0 && val.every(row=>section.columns.every(c=>c.key==='__label' || (row[c.key]||'').trim()!==''));
+  /* Fluxo de caixa é contínuo por natureza (sempre dá pra lançar o próximo mês) — como nas listas,
+     conta como "preenchido" a partir do primeiro lançamento REAL (com descrição ou valor), não exige
+     todos os meses do ano. Uma linha recém-adicionada mas ainda vazia (clicou em "Adicionar
+     lançamento" e não preencheu nada) não deve contar, senão o tópico já apareceria concluído. */
+  if(section.type==='cashflow') return Object.values(val.months||{}).some(rows=>rows.some(r=>(r.descricao||'').trim()!=='' || (parseFloat(r.valor)||0)!==0));
   return true;
 }
 function topicFilled(quadrant, topic, idx, s){
@@ -3192,6 +3218,10 @@ function renderPainel(){
 /* ---- Painel do Método: dados estruturados por seção (fields / list / table / swatches / checklist) ---- */
 function escapeAttr(v){ return String(v==null? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function escapeHtml(v){ return String(v==null? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatBRL(n){
+  const v = typeof n==='number'? n : (parseFloat(n)||0);
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
 /* Confirmação antes de qualquer ação destrutiva (excluir, remover, apagar) — chamado no início
    de todo handler de exclusão da plataforma, para nunca apagar nada sem o usuário confirmar. */
 function confirmDelete(msg){
@@ -3241,6 +3271,10 @@ function sectionValue(data, section){
   }
   if(section.type==='swatches'){ if(!data[section.key]) data[section.key] = new Array(section.count).fill(''); return data[section.key]; }
   if(section.type==='checklist'){ if(!data[section.key]) data[section.key] = []; return data[section.key]; }
+  if(section.type==='cashflow'){
+    if(!data[section.key]) data[section.key] = { view:{year:new Date().getFullYear(), month:new Date().getMonth()}, months:{} };
+    return data[section.key];
+  }
 }
 function renderSectionHTML(section, data){
   const val = sectionValue(data, section);
@@ -3333,6 +3367,53 @@ function renderSectionHTML(section, data){
       ${canAddMore? `<button class="btn-mini ps-add" data-add="table" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar linha</button>` : ''}
     </div>`;
   }
+  if(section.type==='cashflow'){
+    const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const monthKey = `${val.view.year}-${val.view.month}`;
+    const rows = val.months[monthKey] || [];
+    let saldo = 0;
+    const rowsWithSaldo = rows.map(row=>{
+      const v = parseFloat(row.valor)||0;
+      saldo += (row.tipo==='Saída'? -v : v);
+      return {row, saldo};
+    });
+    const saldoFinal = saldo;
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      <div class="cf-nav">
+        <div class="cf-year-wrap">
+          <label class="ps-label">Ano</label>
+          <input type="number" class="ps-input cf-year" data-fkind="cf-year" data-skey="${section.key}" value="${val.view.year}">
+        </div>
+        <div class="cf-months">
+          ${MESES.map((m,i)=>`<button type="button" class="cf-month-btn ${i===val.view.month?'active':''}" data-cfmonth="${i}" data-skey="${section.key}">${m.slice(0,3)}</button>`).join('')}
+        </div>
+      </div>
+      <div class="table-wrap"><table class="ps-table cf-table">
+        <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Forma de Pagamento</th><th>Valor</th><th>Saldo</th><th>Comprovante</th><th></th></tr></thead>
+        <tbody>
+          ${rowsWithSaldo.map(({row,saldo},i)=>`<tr>
+            <td><input type="date" class="ps-input ps-cell" data-fkind="cf-field" data-skey="${section.key}" data-idx="${i}" data-col="data" value="${escapeAttr(row.data||'')}"></td>
+            <td><select class="ps-input ps-cell cf-tipo" data-fkind="cf-field" data-skey="${section.key}" data-idx="${i}" data-col="tipo">
+              <option value="Entrada" ${row.tipo==='Entrada'?'selected':''}>Entrada</option>
+              <option value="Saída" ${row.tipo==='Saída'?'selected':''}>Saída</option>
+            </select></td>
+            <td><input class="ps-input ps-cell" data-fkind="cf-field" data-skey="${section.key}" data-idx="${i}" data-col="descricao" value="${escapeAttr(row.descricao||'')}" placeholder="Ex.: Consulta — João"></td>
+            <td><input class="ps-input ps-cell" data-fkind="cf-field" data-skey="${section.key}" data-idx="${i}" data-col="formaPagamento" value="${escapeAttr(row.formaPagamento||'')}" placeholder="Pix, cartão..."></td>
+            <td><input type="number" step="0.01" class="ps-input ps-cell cf-valor" data-fkind="cf-field" data-skey="${section.key}" data-idx="${i}" data-col="valor" value="${row.valor!=null && row.valor!==''? escapeAttr(row.valor) : ''}"></td>
+            <td class="cf-saldo ${saldo<0?'neg':''}">${formatBRL(saldo)}</td>
+            <td><input class="ps-input ps-cell" data-fkind="cf-field" data-skey="${section.key}" data-idx="${i}" data-col="comprovante" value="${escapeAttr(row.comprovante||'')}" placeholder="Link ou nº"></td>
+            <td><button class="ps-remove" data-remove="cf" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div class="cf-actions">
+        <button class="btn-mini ps-add" data-add="cf" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar lançamento</button>
+        <button class="btn-outline" data-cfpdf="1" data-skey="${section.key}">${icon('download','tiny')} Gerar PDF do mês</button>
+      </div>
+      <div class="cf-total">Saldo final de ${MESES[val.view.month]}/${val.view.year}: <strong class="${saldoFinal<0?'neg':''}">${formatBRL(saldoFinal)}</strong></div>
+    </div>`;
+  }
   return '';
 }
 function bindSectionEvents(sections, data, rerender, saveKey){
@@ -3348,6 +3429,14 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       else if(kind==='list') val[+inp.dataset.idx] = inp.value;
       else if(kind==='checklist') val[+inp.dataset.idx].text = inp.value;
       else if(kind==='swatches') val[+inp.dataset.idx] = inp.value;
+      else if(kind==='cf-year'){
+        val.view.year = parseInt(inp.value,10) || new Date().getFullYear();
+      }
+      else if(kind==='cf-field'){
+        const key = `${val.view.year}-${val.view.month}`;
+        const row = (val.months[key]||[])[+inp.dataset.idx];
+        if(row) row[inp.dataset.col] = inp.value;
+      }
       else if(kind==='table'){
         const row = val[+inp.dataset.idx];
         row[inp.dataset.col] = inp.value;
@@ -3372,6 +3461,10 @@ function bindSectionEvents(sections, data, rerender, saveKey){
         inp.previousElementSibling.style.background = hex;
       }
       persist();
+      /* O Tipo (Entrada/Saída) é um <select> — a troca já é uma ação discreta (não perde foco de
+         digitação como um input de texto), então recalculamos o Saldo na hora. Ano e Valor usam
+         "blur" (abaixo) em vez de "input", pra não re-renderizar (e perder o foco) a cada tecla. */
+      if(kind==='cf-field' && inp.dataset.col==='tipo') rerender();
     });
   });
   /* Colunas do tipo "link": o lápis abre a caixa de texto pra editar; ao sair do campo (blur), a célula
@@ -3390,6 +3483,28 @@ function bindSectionEvents(sections, data, rerender, saveKey){
   modalEl.querySelectorAll('.ps-link-input').forEach(inp=>{
     inp.addEventListener('blur',()=>{ rerender(); });
   });
+  /* Fluxo de Caixa: Ano e Valor recalculam o Saldo só ao sair do campo (blur), não a cada tecla —
+     senão o campo perderia o foco no meio da digitação. */
+  modalEl.querySelectorAll('.cf-year, .cf-valor').forEach(inp=>{
+    inp.addEventListener('blur',()=>{ rerender(); });
+  });
+  modalEl.querySelectorAll('[data-cfmonth]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val.view.month = +btn.dataset.cfmonth;
+      persist();
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-cfpdf]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      exportCashflowPDF(section, data, saveKey);
+    });
+  });
   modalEl.querySelectorAll('[data-add]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const skey = btn.dataset.skey;
@@ -3404,6 +3519,11 @@ function bindSectionEvents(sections, data, rerender, saveKey){
         }
         val.push(row);
       }
+      else if(btn.dataset.add==='cf'){
+        const key = `${val.view.year}-${val.view.month}`;
+        if(!val.months[key]) val.months[key] = [];
+        val.months[key].push({data:'',tipo:'Entrada',descricao:'',formaPagamento:'',valor:'',comprovante:''});
+      }
       persist();
       rerender();
     });
@@ -3413,7 +3533,12 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const skey = btn.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       const val = sectionValue(data, section);
-      val.splice(+btn.dataset.idx,1);
+      if(btn.dataset.remove==='cf'){
+        const key = `${val.view.year}-${val.view.month}`;
+        if(val.months[key]) val.months[key].splice(+btn.dataset.idx,1);
+      } else {
+        val.splice(+btn.dataset.idx,1);
+      }
       persist();
       rerender();
     });
@@ -3482,7 +3607,7 @@ function openTopicModal(quadrant, topicId){
         renderModal();
       });
     }
-    bindSectionEvents(topic.sections||[], data, renderModal, {sid:s.id, topicId:topic.id});
+    bindSectionEvents(topic.sections||[], data, renderModal, {sid:s.id, topicId:topic.id, quadrantTitle:quadrant.title, topicTitle:topic.title});
   }
   renderModal();
   document.getElementById('modal-backdrop').classList.add('open');
@@ -3540,6 +3665,58 @@ function exportTopicPDF(quadrant, topic, data){
         <div><div class="cat">${escapeHtml(quadrant.title)}</div><h1>${escapeHtml(topic.title)}</h1></div>
       </div>
       ${sectionsHtml}
+    </body></html>`);
+  win.document.close();
+  win.onload = ()=>{ win.focus(); win.print(); };
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
+}
+/* PDF do Fluxo de Caixa: exporta só o mês selecionado (não o ano inteiro), com o Saldo recalculado
+   linha a linha, igual ao que aparece na tela. */
+function exportCashflowPDF(section, data, saveKey){
+  const val = sectionValue(data, section);
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const key = `${val.view.year}-${val.view.month}`;
+  const rows = val.months[key] || [];
+  const win = window.open('', '_blank');
+  if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
+  let saldo = 0;
+  const rowsHtml = rows.map(row=>{
+    const v = parseFloat(row.valor)||0;
+    saldo += (row.tipo==='Saída'? -v : v);
+    return `<tr>
+      <td>${escapeHtml(row.data||'—')}</td>
+      <td>${escapeHtml(row.tipo||'—')}</td>
+      <td>${escapeHtml(row.descricao||'—')}</td>
+      <td>${escapeHtml(row.formaPagamento||'—')}</td>
+      <td>${formatBRL(v)}</td>
+      <td>${formatBRL(saldo)}</td>
+      <td>${escapeHtml(row.comprovante||'—')}</td>
+    </tr>`;
+  }).join('');
+  const quadrantTitle = (saveKey&&saveKey.quadrantTitle)||'';
+  const topicTitle = (saveKey&&saveKey.topicTitle)||'';
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Fluxo de Caixa — ${escapeHtml(MESES[val.view.month])}/${val.view.year} — Método Essência</title>
+    <style>
+      @page{ margin:24mm 16mm; }
+      body{ font-family:Arial,Helvetica,sans-serif; color:#1a1a1a; margin:0; padding:0 4mm; }
+      .pdf-header{ display:flex; align-items:center; gap:14px; border-bottom:2px solid #ab6f30; padding-bottom:14px; margin-bottom:20px; }
+      .pdf-header img{ display:block; }
+      .pdf-header .cat{ font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#666; }
+      h1{ font-size:20px; margin:0 0 4px; }
+      table{ width:100%; border-collapse:collapse; font-size:11px; }
+      th,td{ border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
+      th{ background:#f2f2f2; }
+      .total{ margin-top:16px; font-size:14px; text-align:right; }
+      .total strong{ color:#ab6f30; }
+    </style>
+    </head><body>
+      <div class="pdf-header">
+        <img src="${BRAND_LOGO_DATA_URI}" alt="Ascentria · Método Essência" style="height:30px;width:auto;background:#171813;padding:6px 10px;border-radius:6px;">
+        <div><div class="cat">${escapeHtml(quadrantTitle)}${quadrantTitle&&topicTitle?' — ':''}${escapeHtml(topicTitle)}</div><h1>Fluxo de Caixa — ${escapeHtml(MESES[val.view.month])}/${val.view.year}</h1></div>
+      </div>
+      <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Forma de Pagamento</th><th>Valor</th><th>Saldo</th><th>Comprovante</th></tr></thead>
+      <tbody>${rowsHtml || `<tr><td colspan="7" style="text-align:center;color:#999;">Nenhum lançamento neste mês.</td></tr>`}</tbody></table>
+      <div class="total">Saldo final: <strong>${formatBRL(saldo)}</strong></div>
     </body></html>`);
   win.document.close();
   win.onload = ()=>{ win.focus(); win.print(); };
