@@ -998,7 +998,7 @@ const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'A
 const MODULES = [
   {id:'introducao', name:'Introdução', total:4},
   {id:'ser', name:'Ser', total:42},
-  {id:'conectar', name:'Conectar', total:59},
+  {id:'conectar', name:'Conectar', total:60},
   {id:'transformar', name:'Transformar', total:28},
   {id:'gerenciar', name:'Gerenciar', total:32},
 ];
@@ -1035,8 +1035,8 @@ const MODULE_CHECKLIST = {
     'Assistir aula sobre Identidade de Valor.',
     'Resumir aula sobre Identidade de Valor.',
     'TAREFA: Desenhar Identidade de Valor.',
-    'A Transformação que Você Gera.',
-    'A Transformação que Você Gera.',
+    'Assistir aula sobre A Transformação que Você Gera (Neste insira o link da aula correspondente).',
+    'Resumir aula sobre A Transformação que Você Gera',
     'TAREFA: Desenhar A Transformação que Você Gera.',
     'TAREFA: Incluir tudo no painel do método.',
     'Assistir aula sobre Visual que Vende.',
@@ -1068,6 +1068,7 @@ const MODULE_CHECKLIST = {
     'TAREFA: Fazer a conta no Google Meu Negócio.',
     'TAREFA: Fazer a página do Facebook.',
     'TAREFA: Fazer a conta no LinkedIn.',
+    'TAREFA: Fazer a conta no Substack.',
     'Assistir aula sobre Aflorando a Necessidade.',
     'Resumir aula sobre Aflorando a Necessidade.',
     'Assistir aula sobre Níveis de Consciência.',
@@ -2327,6 +2328,8 @@ function renderInicio(){
   const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming');
   const inProgress = COURSES.filter(c=>s.courseProgress[c.id]>0 && s.courseProgress[c.id]<100);
   const continueList = inProgress.length? inProgress : COURSES.filter(c=>s.courseProgress[c.id]===0).slice(0,3);
+  const crmStats = computeCrmStats(s.id);
+  const fatStats = computeFaturamentoStats(s.id);
 
   document.getElementById('view-inicio').innerHTML = `
     <div class="hero">
@@ -2342,6 +2345,16 @@ function renderInicio(){
       <div class="stat-card"><div class="label">Próximo encontro ao vivo</div><div class="value accent" style="font-size:14px">${nextLive? nextLive.date+' · '+nextLive.time.split('·')[0] : '—'}</div></div>
       <div class="stat-card"><div class="label">Turma</div><div class="value" style="font-size:14px">${s.turma}</div></div>
     </div>
+
+    <h2 class="section-title">Indicadores do consultório</h2>
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Leads no mês</div><div class="value">${crmStats.leadsMesCount}</div></div>
+      <div class="kpi-tile"><div class="label">Conversão (lead → agendado)</div><div class="value">${crmStats.conversaoPct!=null? crmStats.conversaoPct+'%' : '—'}</div></div>
+      <div class="kpi-tile"><div class="label">Faturamento do mês</div><div class="value" style="font-size:16px">${formatBRL(fatStats.mesAtual)}</div></div>
+      <div class="kpi-tile"><div class="label">Faturamento total desde o início</div><div class="value" style="font-size:16px">${formatBRL(fatStats.totalAcumulado)}</div></div>
+      <div class="kpi-tile"><div class="label">Faturamento médio</div><div class="value" style="font-size:16px">${s.diagnostico.faturamentoMedio}</div></div>
+    </div>
+    <p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>
 
     <h2 class="section-title">${icon('film')} Continue assistindo</h2>
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
@@ -2696,7 +2709,13 @@ function bindCourseComments(c){
 /* Permite "voltar" para o pop-up anterior ao fechar um modal aberto de dentro de outro (ex.: abrir uma
    aula a partir do checklist do módulo) — em vez de fechar tudo, closeModal() reabre o anterior uma vez. */
 let modalReturnTo = null;
+/* Trava opcional de saída — usada pelo CRM de Leads pra perguntar se quer salvar as movimentações antes
+   de fechar. Deve retornar true (libera o fechamento) ou false (mantém o modal aberto). Fica null pra
+   qualquer outro modal, que fecha direto como sempre. */
+let modalCloseGuard = null;
 function closeModal(){
+  if(modalCloseGuard && !modalCloseGuard()) return;
+  modalCloseGuard = null;
   if(modalReturnTo){
     const back = modalReturnTo;
     modalReturnTo = null;
@@ -3192,15 +3211,6 @@ function renderDashboard(){
       }).join('')}
     </div>
 
-    <h2 class="section-title">Indicadores do consultório</h2>
-    <div class="kpi-row">
-      <div class="kpi-tile"><div class="label">Leads no mês</div><div class="value">${s.diagnostico.leadsMes}</div></div>
-      <div class="kpi-tile"><div class="label">Conversão diagnóstico → protocolo</div><div class="value">${s.diagnostico.taxaConversao}</div></div>
-      <div class="kpi-tile"><div class="label">Pacientes ativos</div><div class="value">${s.diagnostico.pacientesAtivos}</div></div>
-      <div class="kpi-tile"><div class="label">Faturamento médio</div><div class="value" style="font-size:16px">${s.diagnostico.faturamentoMedio}</div></div>
-    </div>
-    <p class="kpi-note">Indicadores autorrelatados no diagnóstico — em produção, este painel sincronizaria automaticamente com a planilha "Dashboard" da equipe interna.</p>
-
     <h2 class="section-title">${icon('compass')} Continue no Painel do Método</h2>
     <button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>
   `;
@@ -3332,10 +3342,9 @@ function sectionFilled(section, data){
     const cf = (fin && fin.fluxoCaixa) || {months:{}};
     return Object.values(cf.months||{}).some(rows=>rows.some(r=>r.tipo==='Entrada' && (parseFloat(r.valor)||0)>0 && r.formaPagamento));
   }
-  /* CRM de Leads: considera preenchido quando já existe pelo menos um lead ativo (não descartado) com
-     nome lançado no quadro — o quadro em si nunca fica "vazio de verdade" (sempre dá pra adicionar
-     mais leads), então não exige todas as etapas preenchidas. */
-  if(section.type==='crm') return val.leads.some(l=>!l.discarded && (l.nome||'').trim()!=='');
+  /* CRM de Leads: é uma ferramenta de uso contínuo (não um formulário pra "terminar de preencher"), então
+     nunca fica "Pendente" lá fora na lista de tópicos — sempre conta como preenchido. */
+  if(section.type==='crm') return true;
   return true;
 }
 function topicFilled(quadrant, topic, idx, s){
@@ -3450,6 +3459,33 @@ function computeFaturamento(sid, descontos){
     };
   });
   return {detailed, monthTotals};
+}
+/* Indicadores do consultório (página Início): leads do mês e conversão vêm direto do CRM (aba Vendas),
+   e o faturamento vem direto do Fluxo Financeiro (aba Faturamento) — nada autorrelatado aqui. */
+function computeCrmStats(sid){
+  const data = getTopicData(sid, 'diagnosticos-leads');
+  const crm = (data && data.crmLeads) || {leads:[]};
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const leadsMes = (crm.leads||[]).filter(l=>{
+    if(!l.createdAt) return false;
+    const d = new Date(l.createdAt);
+    return d.getFullYear()===y && d.getMonth()===m;
+  });
+  const agendadosMes = leadsMes.filter(l=>l.stage==='agendado');
+  return {
+    leadsMesCount: leadsMes.length,
+    conversaoPct: leadsMes.length? Math.round((agendadosMes.length/leadsMes.length)*100) : null,
+  };
+}
+function computeFaturamentoStats(sid){
+  const {monthTotals} = computeFaturamento(sid, {});
+  const now = new Date();
+  const key = `${now.getFullYear()}-${now.getMonth()}`;
+  return {
+    mesAtual: monthTotals[key] || 0,
+    totalAcumulado: Object.values(monthTotals).reduce((a,b)=>a+b,0),
+  };
 }
 /* Gráfico simples em SVG inline (sem biblioteca externa) do faturamento total mês a mês de um ano —
    pra o mentorado acompanhar a linha subindo ou descendo ao longo do ano. */
@@ -4115,7 +4151,7 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const skey = btn.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       const val = sectionValue(data, section);
-      val.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome:'', tipo:'', meio:'', whatsapp:'', stage:'novo', discarded:false, expanded:true });
+      val.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome:'', tipo:'', meio:'', whatsapp:'', stage:'novo', discarded:false, expanded:true, createdAt:Date.now() });
       persist();
       rerender();
     });
@@ -4206,6 +4242,12 @@ function openTopicModal(quadrant, topicId){
   const topic = quadrant.topics.find(t=>t.id===topicId);
   const idx = quadrant.topics.indexOf(topic);
   const data = getTopicData(s.id, topic.id);
+  /* CRM de Leads é uma ferramenta de uso contínuo (arrastar, adicionar, descartar leads o tempo todo) —
+     não faz sentido travar os campos atrás de um botão "Editar" (senão o quadro vira só-leitura assim
+     que tiver 1 lead). Fica sempre destravado, sem o par Salvar/Editar; em troca, ao fechar o modal
+     depois de qualquer movimentação, confirma se quer mesmo sair (ver modalCloseGuard mais abaixo). */
+  const crmSection = (topic.sections||[]).find(sec=>sec.type==='crm');
+  const isCrmTopic = !!crmSection;
   /* Fluxo Salvar/Editar: os campos já vão salvando sozinhos a cada digitação (como sempre foi). Clicar em
      "Salvar" trava os campos (só leitura) mesmo que ainda falte preencher algo — o estado inicial (aberto
      para preencher, num tópico nunca salvo) é decidido só UMA VEZ aqui fora; se recalculássemos isso a
@@ -4213,7 +4255,26 @@ function openTopicModal(quadrant, topicId){
      reabriria em modo de edição de novo, e o botão pareceria "não funcionar"). "Editar" reabre os campos
      para alterar algo depois, sem perder o que já foi salvo. A tag "Preenchido"/"Pendente" lá fora nunca
      depende deste "editing" — só do conteúdo real das seções (topicFilled). */
-  let editing = !topicFilled(quadrant, topic, idx, s);
+  let editing = isCrmTopic? true : !topicFilled(quadrant, topic, idx, s);
+  modalCloseGuard = null;
+  /* Só considera "movimentação" mudanças reais nos leads (nome/tipo/meio/whatsapp/etapa/descarte) e no
+     valor da consulta — não conta abrir/fechar o painel de roteiro ou trocar de aba nele, senão o aviso
+     apareceria só por ter espiado o roteiro, sem ter mexido em nenhum lead de verdade. */
+  const crmSnapshotOf = ()=>{
+    const val = sectionValue(data, crmSection);
+    return JSON.stringify({leads: val.leads, preco: val.precoConsulta});
+  };
+  let crmOpenSnapshot = isCrmTopic? crmSnapshotOf() : null;
+  if(isCrmTopic){
+    modalCloseGuard = ()=>{
+      if(crmSnapshotOf()===crmOpenSnapshot) return true;
+      const ok = window.confirm('Você fez movimentações no CRM (arrastar leads, adicionar, editar ou descartar). Deseja salvar antes de sair?');
+      if(!ok) return false;
+      syncPanelData(s.id, topic.id, data);
+      crmOpenSnapshot = crmSnapshotOf();
+      return true;
+    };
+  }
   function renderModal(){
     const filled = topicFilled(quadrant, topic, idx, s);
     document.getElementById('modal').innerHTML = `
@@ -4228,9 +4289,9 @@ function openTopicModal(quadrant, topicId){
         </div>
         ${(topic.footnote||[]).map(t=>`<div class="topic-note">${t}</div>`).join('')}
         <div class="modal-actions">
-          ${editing
+          ${isCrmTopic? '' : (editing
             ? `<button class="btn-accent" id="topic-save">${icon('check')} Salvar</button>`
-            : `<button class="btn-outline" id="topic-edit">${icon('edit','tiny')} Editar</button>`}
+            : `<button class="btn-outline" id="topic-edit">${icon('edit','tiny')} Editar</button>`)}
           ${topic.pdfExport? `<button class="btn-outline" id="topic-pdf">${icon('download','tiny')} Gerar PDF</button>` : ''}
           <button class="btn-outline" id="modal-close-2">Fechar</button>
         </div>
@@ -4239,7 +4300,7 @@ function openTopicModal(quadrant, topicId){
     if(topic.pdfExport){
       document.getElementById('topic-pdf').addEventListener('click',()=>exportTopicPDF(quadrant, topic, data));
     }
-    if(editing){
+    if(!isCrmTopic && editing){
       document.getElementById('topic-save').addEventListener('click',()=>{
         /* "Preenchido" reflete o conteúdo real das seções (ver topicFilled) — Salvar sempre funciona e
            trava os campos, mesmo com dados incompletos; se ainda faltar algo, o tópico continua
@@ -4248,7 +4309,7 @@ function openTopicModal(quadrant, topicId){
         renderModal();
         renderPainel();
       });
-    } else {
+    } else if(!isCrmTopic){
       document.getElementById('topic-edit').addEventListener('click',()=>{
         editing = true;
         renderModal();
