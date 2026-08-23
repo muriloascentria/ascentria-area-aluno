@@ -1364,10 +1364,8 @@ const QUADRANTS = [
      sections:[{type:'table',key:'documentos',label:'Documentos',columns:[
        {key:'documento',label:'Documento'},{key:'link',label:'Link',type:'link'},
      ]}]},
-    {id:'financeiro',title:'Financeiro',desc:'Custos fixos e variáveis do consultório.',
+    {id:'financeiro',title:'Fluxo Financeiro',desc:'Fluxo de caixa mensal do consultório.',
      sections:[
-       {type:'list',key:'custosFixos',label:'Custos Fixos',placeholder:'Ex.: Aluguel — R$ 1.200'},
-       {type:'list',key:'custosVariaveis',label:'Custos Variáveis',placeholder:'Ex.: Internet — R$ 100'},
        {type:'cashflow',key:'fluxoCaixa',label:'Fluxo de Caixa'},
      ]},
     {id:'precificacao',title:'Precificação',desc:'Cálculo do preço do protocolo a partir dos custos.',
