@@ -3117,10 +3117,11 @@ function sectionFilled(section, data){
   if(section.type==='list') return val.some(v=>(v||'').trim()!=='');
   if(section.type==='checklist') return val.length>0 && val.every(it=>(it.text||'').trim()!=='');
   if(section.type==='swatches') return val.every(v=>/^#([0-9a-f]{3}){1,2}$/i.test(v||''));
-  /* "__label" é o rótulo automático da linha (dia da semana, nome da ação fixa) — não conta como
-     conteúdo preenchido pelo aluno, senão uma tabela recém-semeada (ex.: Funil de Conteúdo) já
-     apareceria "Preenchida" sem ninguém ter digitado nada de fato. */
-  if(section.type==='table') return val.length>0 && val.some(row=>section.columns.some(c=>c.key!=='__label' && (row[c.key]||'').trim()!==''));
+  /* "Totalmente completo": TODAS as linhas precisam ter TODAS as colunas reais preenchidas — não
+     basta preencher uma célula em uma linha (ex.: só marcar o Status de um dia no Funil de
+     Conteúdo). "__label" é o rótulo automático da linha (dia da semana, nome da ação fixa) e não
+     conta como coluna real, senão uma tabela recém-semeada já apareceria com algo "preenchido". */
+  if(section.type==='table') return val.length>0 && val.every(row=>section.columns.every(c=>c.key==='__label' || (row[c.key]||'').trim()!==''));
   return true;
 }
 function topicFilled(quadrant, topic, idx, s){
