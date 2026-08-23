@@ -627,7 +627,10 @@
   /* CRM de Leads (Vendas & Diagnósticos): quadro com colunas arrastáveis por etapa (Novo Lead → D1..D5
      → Agendado), roteiro de mensagens de referência, e uma visão separada de descartados (arquivo,
      nunca exclusão). */
-  .crm-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .crm-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin-bottom:14px;}
+  .crm-preco-wrap{display:flex;flex-direction:column;gap:3px;}
+  .crm-preco-wrap .ps-label{margin:0;font-size:10.5px;}
+  .crm-preco-input{width:130px;padding:7px 9px;font-size:12.5px;}
   .crm-roteiro{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;}
   .crm-roteiro-item{padding:8px 0;border-top:1px solid var(--border);}
   .crm-roteiro-item:first-of-type{border-top:none;}
@@ -1285,38 +1288,63 @@ const CRM_STAGES = [
 ];
 const CRM_TIPOS = ['Cliente Procurou','Profissional Procurou'];
 const CRM_MEIOS = ['Instagram','WhatsApp','TikTok','Site','Google','Outro'];
-/* Roteiro de mensagens da planilha original, agora por ETAPA (uma entrada por coluna do quadro) —
+/* Blocos de resposta da planilha que se repetem, idênticos, em TODAS as colunas D1 a D5 (e nos dois
+   fluxos) — a planilha original tem uma dessas 5 respostas embaixo de cada mensagem do dia. Ficam
+   centralizados aqui pra não repetir o mesmo texto 10x no objeto abaixo, mas aparecem no roteiro de
+   cada etapa D1-D5 igual está na planilha. */
+const CRM_ROTEIRO_RESPOSTAS = [
+  {titulo:'Se responder com uma nova dúvida', texto:'Responda objetivamente à dúvida e, logo depois, retome a condução:\n\n"Pelo que você me contou, meu atendimento pode te ajudar. Tenho alguns horários disponíveis. Para você costuma ser melhor pela manhã, tarde ou noite?"'},
+  {titulo:'Se responder "não, era só isso" / "não tenho mais dúvidas"', texto:'"Perfeito, [nome]. Então, se fizer sentido para você, podemos dar o próximo passo e agendar sua consulta. No primeiro atendimento vou avaliar com mais profundidade o que você me relatou e definir a melhor condução para o seu caso. Para você fica melhor atendimento pela manhã ou à tarde?"'},
+  {titulo:'Se responder "vou pensar"', texto:'"Claro, sem problema. Só para eu conseguir te orientar melhor: o que você gostaria de avaliar antes de decidir? O investimento ou se ele realmente é indicado para o seu caso?"\n\nSe responder a objeção: "Entendi. [Responder especificamente à objeção.] Nesse caso, acredito que vale fazermos a primeira avaliação para entender com mais segurança o seu caso. Tenho [horário 1] ou [horário 2]. Qual fica melhor para você?"'},
+  {titulo:'Se responder "está caro" / "não consigo agora"', texto:'"Entendo, organizar o financeiro é muito importante. Mas deixa eu entender uma coisa, o financeiro é o único impedimento?"\n\nSe responder sim: "Se eu te ajudar a encontrar uma forma de encaixar o investimento na sua capacidade de pagamento, ficaria bom?"\n\nSe responder sim: "Certo, qual seria um valor de parcela que você conseguiria se comprometer sem gerar ansiedade?"'},
+  {titulo:'Se o paciente disser que quer agendar', texto:'Seguir a Jornada do Paciente no Método (aba Jornada do Usuário do Painel do Método).'},
+];
+/* Roteiro de mensagens da planilha original, completo, por ETAPA (uma entrada por coluna do quadro) —
    quando o lead é arrastado pra uma coluna, o roteiro que aparece é o dessa mesma etapa, com as duas
-   variantes da planilha lado a lado: quando foi o cliente que procurou, e quando foi você quem
-   reativou o contato com a base. Isso cobre as mensagens dos dois fluxos completos da planilha. */
+   variantes da planilha lado a lado (cliente procurou / reativação de base antiga), a mensagem do dia,
+   a instrução de não-resposta e as 5 respostas possíveis do lead — igual está na planilha de origem.
+   [nome] e [valor] são preenchidos automaticamente com o nome do lead e o valor da consulta. */
 const CRM_ROTEIRO = {
   novo: [
-    {titulo:'Se o cliente procurou você', texto:'Olá, [nome]! É um prazer compartilhar mais sobre como funciona o meu trabalho. Antes de tudo, quero entender melhor o que você está buscando, para que eu possa te orientar da melhor forma.\n\nEm seguida, apresente seu método de atendimento (personalização e benefícios) e, se já atendeu pacientes parecidos, cite resultados. Depois, apresente o preço:\n\n"O investimento para uma consulta é de [valor]. Podemos agendar o seu atendimento? Qual período fica melhor para você?"'},
-    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Tudo bem? Aqui é o [seu nome]. Estava revendo alguns acompanhamentos e lembrei de você. Posso falar com você rapidinho?\n\nSe SIM: Estava estudando seu prontuário e queria saber como você está hoje em relação a [queixa/objetivo]. Gostaria de fazer uma conversa de uns 30 minutos — podemos agendar?'},
+    {titulo:'Se o cliente procurou você', texto:'"Olá, [nome]! É um prazer compartilhar mais sobre como funciona o meu trabalho. Antes de tudo, quero entender melhor o que você está buscando, para que eu possa te orientar da melhor forma e se meu trabalho pode atender sua demanda."\n\nDepois, explique o processo com clareza e autoridade: "O meu atendimento é focado em [explicar sua abordagem]. Avalio o momento que você está vivendo e crio um plano personalizado que une diversas intervenções para alcançar os resultados que você deseja."\n\nSe já atendeu pacientes parecidos: "Já acompanhei muitas pessoas em situações parecidas com a sua e sei como pode ser desafiador dar o primeiro passo. Muitos clientes relatam mudanças significativas." Se ainda não atendeu: "As intervenções que utilizo têm resultados expressivos para essa demanda." Se tiver depoimentos ou exemplos concretos, insira aqui.\n\nPor fim, apresente o preço: "O investimento para uma consulta é de [valor]. Podemos agendar o seu atendimento? Qual período fica melhor para você?"\n\nSe responder, segue a gestão de agenda na primeira etapa da Jornada do Paciente. Se não responder, após 3 horas envie a mensagem do D1.'},
+    {titulo:'Se você está reativando o contato (base antiga)', texto:'Oi, [nome]. Posso falar com você?\n\nSe responder: "Oi, [nome]. Tudo bem? Aqui é o Enf. [seu nome]. Estava revendo alguns acompanhamentos e lembrei de você. Posso falar com você rapidinho?"\n\nSe responder SIM: "Estava estudando seu prontuário e queria saber como você está hoje em relação a [queixa/objetivo]. Gostaria de fazer uma conversa de aproximadamente 30 minutos com você. Podemos agendar?"\n\nSe responder, agendar anamnese/venda. Se não responder, enviar a mensagem do D1 no dia seguinte.'},
   ],
   d1: [
-    {titulo:'Se o cliente procurou você', texto:'Oi, [nome]. Você tem mais alguma dúvida?'},
-    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Conseguiu ver minha mensagem de ontem?'},
+    {titulo:'Mensagem do dia · Se o cliente procurou você', texto:'"Oi, [nome]. Você tem mais alguma dúvida?"\n\nNão respondeu? Enviar a mensagem do D2 no dia seguinte.'},
+    {titulo:'Mensagem do dia · Se você está reativando o contato', texto:'"Oi, [nome]. Conseguiu ver minha mensagem de ontem?"\n\nNão respondeu? Enviar a mensagem do D2 no dia seguinte.'},
+    ...CRM_ROTEIRO_RESPOSTAS,
   ],
   d2: [
-    {titulo:'Se o cliente procurou você', texto:'Poderia ouvir o áudio que eu enviei?'},
-    {titulo:'Se você reativou o contato (base antiga)', texto:'[Nome], conseguiu ouvir o áudio que te enviei?'},
+    {titulo:'Mensagem do dia · Se o cliente procurou você', texto:'"Poderia ouvir o áudio que eu enviei?"\n\nNão respondeu? Enviar a mensagem do D3 no dia seguinte.'},
+    {titulo:'Mensagem do dia · Se você está reativando o contato', texto:'"[Nome], conseguiu ouvir o áudio que te enviei?"\n\nNão respondeu? Enviar a mensagem do D3 no dia seguinte.'},
+    ...CRM_ROTEIRO_RESPOSTAS,
   ],
   d3: [
-    {titulo:'Se o cliente procurou você', texto:'Existe algum motivo para você não querer mais agendar o seu atendimento, para que eu possa encerrar o atendimento e não incomodar mais?'},
-    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Só para eu não ficar insistindo sem necessidade: hoje você não tem interesse em responder minha mensagem ou aconteceu alguma coisa que te impediu de responder?'},
+    {titulo:'Mensagem do dia · Se o cliente procurou você', texto:'"Existe algum motivo para você não querer mais agendar o seu atendimento, para que eu possa encerrar o atendimento e não incomodar mais?"\n\nNão respondeu? Enviar a mensagem do D4 no dia seguinte.'},
+    {titulo:'Mensagem do dia · Se você está reativando o contato', texto:'"Oi, [nome]. Só para eu não ficar insistindo sem necessidade: hoje você não tem interesse em responder minha mensagem ou aconteceu alguma coisa que te impediu de responder?"\n\nNão respondeu? Enviar a mensagem do D4 no dia seguinte.'},
+    ...CRM_ROTEIRO_RESPOSTAS,
   ],
   d4: [
-    {titulo:'Se o cliente procurou você', texto:'Oi! Passando porque ainda consigo liberar para você uma Avaliação Clínica Inicial Gratuita, para entender melhor suas queixas, histórico de saúde e quais cuidados podem fazer sentido para o seu caso.\n\nConseguimos conversar agora para eu te explicar como funciona e agendar sua avaliação?'},
-    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Antes de encerrar meu contato, quero te dizer que consigo liberar para você uma Avaliação Clínica Gratuita, para entender como você está hoje, revisar suas queixas e avaliar quais próximos passos podem fazer sentido para o seu caso. Quer que eu reserve um horário para você?'},
+    {titulo:'Mensagem do dia · Se o cliente procurou você', texto:'"Oi! Passando porque ainda consigo liberar para você uma Avaliação Clínica Inicial Gratuita, para entender melhor suas queixas, histórico de saúde e quais cuidados podem fazer sentido para o seu caso. Conseguimos conversar agora para eu te explicar como funciona e agendar sua avaliação?"\n\nNão respondeu? Enviar a mensagem do D5 no dia seguinte.'},
+    {titulo:'Mensagem do dia · Se você está reativando o contato', texto:'"Oi, [nome]. Antes de encerrar meu contato, quero te dizer que consigo liberar para você uma Avaliação Clínica Gratuita, para entender como você está hoje, revisar suas queixas e avaliar quais próximos passos podem fazer sentido para o seu caso. Quer que eu reserve um horário para você?"\n\nNão respondeu? Enviar a mensagem do D5 no dia seguinte.'},
+    ...CRM_ROTEIRO_RESPOSTAS,
   ],
   d5: [
-    {titulo:'Mensagem final (os dois fluxos)', texto:'Esta é minha última mensagem por aqui. Ainda deixei disponível para você uma Avaliação Clínica Inicial 100% Gratuita, para entender suas principais queixas e avaliar quais cuidados podem fazer sentido para o seu caso.\n\nResponda SIM se quiser aproveitar essa avaliação ou NÃO caso não tenha mais interesse.'},
+    {titulo:'Mensagem do dia (os dois fluxos)', texto:'"Esta é minha última mensagem por aqui. Ainda deixei disponível para você uma Avaliação Clínica Inicial 100% Gratuita, para entender suas principais queixas e avaliar quais cuidados podem fazer sentido para o seu caso. Responda SIM se quiser aproveitar essa avaliação ou NÃO caso não tenha mais interesse."\n\nNão respondeu? Descartar o lead.'},
+    ...CRM_ROTEIRO_RESPOSTAS,
   ],
   agendado: [
     {titulo:'Próximo passo', texto:'O lead confirmou que quer agendar — a partir daqui, siga pela Jornada do Usuário (aba Jornada do Usuário do Painel do Método): agendamento, registro, pagamento e orientações.'},
   ],
 };
+function crmApplyPlaceholders(texto, lead, precoConsulta){
+  let out = texto;
+  const nome = ((lead && lead.nome) || '').trim();
+  if(nome) out = out.replace(/\[nome[^\]]*\]/gi, nome);
+  const preco = parseFloat(precoConsulta);
+  if(precoConsulta!=null && String(precoConsulta).trim()!=='' && !isNaN(preco)) out = out.replace(/\[valor\]/gi, formatBRL(preco));
+  return out;
+}
 const QUADRANTS = [
   {id:'vendas',title:'Vendas & Diagnósticos',icon:'target',moduleId:'transformar',
    meta:'Diagnósticos gratuitos e leads gerados pelo consultório.',
@@ -3497,7 +3525,9 @@ function sectionValue(data, section){
     return data[section.key];
   }
   if(section.type==='crm'){
-    if(!data[section.key]) data[section.key] = { leads: [], showDiscarded: false, showRoteiro: false, roteiroStage: null };
+    if(!data[section.key]) data[section.key] = { leads: [], showDiscarded: false, showRoteiro: false, roteiroStage: null, roteiroLeadId: null, precoConsulta: '' };
+    if(data[section.key].precoConsulta===undefined) data[section.key].precoConsulta = '';
+    if(data[section.key].roteiroLeadId===undefined) data[section.key].roteiroLeadId = null;
     return data[section.key];
   }
 }
@@ -3779,19 +3809,24 @@ function renderSectionHTML(section, data){
         <div class="crm-card-meta">${escapeHtml(lead.tipo||'—')} · ${escapeHtml(lead.meio||'—')}${lead.whatsapp? ' · '+escapeHtml(lead.whatsapp) : ''}</div>
       </div>`).join('') : '<div class="empty-state">Nenhum lead descartado.</div>'}
     </div>`;
+    const roteiroLead = val.leads.find(l=>l.id===val.roteiroLeadId) || null;
     return `<div class="ps-section">
       <h4 class="ps-h">${section.label}</h4>
       <div class="crm-toolbar">
         <button type="button" class="btn-mini ps-add" data-crmadd="1" data-skey="${section.key}">${icon('plus','ps-plus')} Novo Lead</button>
         <button type="button" class="btn-outline" data-crmroteiro="1" data-skey="${section.key}">${icon('comment','tiny')} ${val.showRoteiro?'Ocultar roteiro':'Ver roteiro de mensagens'}</button>
+        <div class="crm-preco-wrap">
+          <label class="ps-label">Valor da consulta</label>
+          <input type="number" step="0.01" min="0" class="ps-input pr-recalc crm-preco-input" data-fkind="crm-preco" data-skey="${section.key}" value="${val.precoConsulta!=null && val.precoConsulta!==''? escapeAttr(val.precoConsulta) : ''}" placeholder="R$">
+        </div>
         <button type="button" class="btn-outline" data-crmdiscview="1" data-skey="${section.key}">${icon('folder','tiny')} ${val.showDiscarded?'Ver quadro':`Ver descartados (${discardedLeads.length})`}</button>
       </div>
       ${val.showRoteiro? `<div class="crm-roteiro">
-        <div class="topic-note">O roteiro muda de acordo com a etapa — arraste um lead pra uma coluna e o texto certo aparece aqui sozinho, ou clique numa etapa abaixo pra conferir antes.</div>
+        <div class="topic-note">O roteiro muda de acordo com a etapa — arraste um lead pra uma coluna e o texto certo aparece aqui sozinho, já com o nome do lead e o valor da consulta preenchidos, ou clique numa etapa abaixo pra conferir antes.${roteiroLead && roteiroLead.nome? ` Mostrando para <strong>${escapeHtml(roteiroLead.nome)}</strong>.` : ''}</div>
         <div class="crm-roteiro-tabs">
           ${CRM_STAGES.map(st=>`<button type="button" class="cf-month-btn ${st.key===roteiroStage?'active':''}" data-crmroteirostage="${st.key}" data-skey="${section.key}">${st.label}</button>`).join('')}
         </div>
-        ${(CRM_ROTEIRO[roteiroStage]||[]).map(b=>`<div class="crm-roteiro-item"><strong>${escapeHtml(b.titulo)}</strong><p>${escapeHtml(b.texto).replace(/\n/g,'<br>')}</p></div>`).join('') || '<div class="empty-state">Sem roteiro específico para esta etapa.</div>'}
+        ${(CRM_ROTEIRO[roteiroStage]||[]).map(b=>`<div class="crm-roteiro-item"><strong>${escapeHtml(b.titulo)}</strong><p>${escapeHtml(crmApplyPlaceholders(b.texto, roteiroLead, val.precoConsulta)).replace(/\n/g,'<br>')}</p></div>`).join('') || '<div class="empty-state">Sem roteiro específico para esta etapa.</div>'}
       </div>` : ''}
       ${val.showDiscarded? discardedView : board}
     </div>`;
@@ -3832,6 +3867,9 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       else if(kind==='crm-field'){
         const lead = val.leads.find(l=>l.id===inp.dataset.crmid);
         if(lead) lead[inp.dataset.col] = inp.value;
+      }
+      else if(kind==='crm-preco'){
+        val.precoConsulta = inp.value;
       }
       else if(kind==='table'){
         const row = val[+inp.dataset.idx];
@@ -3946,8 +3984,10 @@ function bindSectionEvents(sections, data, rerender, saveKey){
         lead.stage = col.dataset.crmstage;
         /* Ao soltar o lead numa coluna, o roteiro (se estiver com a aba de mensagens aberta, ou não)
            já passa a mostrar a etapa pra onde ele foi — assim o roteiro "fica de acordo com a etapa"
-           assim que você arrasta, sem precisar clicar em mais nada. */
+           assim que você arrasta, sem precisar clicar em mais nada — e já com o nome desse lead
+           preenchido em [nome] nas mensagens. */
         val.roteiroStage = col.dataset.crmstage;
+        val.roteiroLeadId = lead.id;
         val.showRoteiro = true;
         persist();
         rerender();
