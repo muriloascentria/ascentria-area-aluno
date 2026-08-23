@@ -644,16 +644,22 @@
   .crm-card.dragging{opacity:0.4;}
   .crm-card-top{display:flex;align-items:center;gap:5px;}
   .crm-drag{width:13px;height:13px;stroke:var(--text-mute);color:var(--text-mute);flex-shrink:0;}
-  .crm-card-name{flex:1;min-width:0;font-weight:700;font-size:12.5px;background:none;border:none;padding:2px 0;}
-  .crm-card-name:focus{outline:none;border-bottom:1px solid var(--shared);}
+  /* Campo Nome com cara de campo mesmo (fundo + borda visíveis) — sem isso parecia texto estático e
+     não ficava claro que dava pra clicar e digitar. */
+  .crm-card-name{flex:1;min-width:0;font-weight:700;font-size:12.5px;background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;padding:6px 8px;}
+  .crm-card-name::placeholder{color:var(--text-mute);font-weight:500;}
+  .crm-card-name:focus{outline:none;border-color:var(--shared);background:var(--bg-card);}
   .crm-card .ps-remove{width:20px;height:20px;flex-shrink:0;}
   .crm-card .ps-remove .icon{width:11px;height:11px;}
   .crm-card-select,.crm-card-input{font-size:11.5px;padding:5px 7px;}
-  .crm-card-obs{min-height:32px;resize:vertical;}
   .crm-discarded-list{display:flex;flex-direction:column;gap:8px;}
   .crm-card-discarded{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;opacity:0.85;}
   .crm-card-name-ro{font-weight:700;font-size:13px;}
   .crm-card-meta{font-size:11.5px;color:var(--text-mute);margin-top:3px;}
+  .crm-roteiro-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;}
+  /* Modal do CRM ocupa quase a tela inteira — o quadro com 7 colunas precisa de espaço horizontal
+     pra ficar visual e utilizável (nas outras abas o modal continua no tamanho padrão). */
+  .modal:has(.crm-toolbar){max-width:min(1400px,96vw);width:96vw;max-height:94vh;}
 
   /* Individual: sessions */
   .session-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
@@ -1278,20 +1284,44 @@ const CRM_STAGES = [
   {key:'d4',label:'D4'},{key:'d5',label:'D5'},{key:'agendado',label:'Agendado'},
 ];
 const CRM_TIPOS = ['Cliente Procurou','Profissional Procurou'];
-/* Roteiro de mensagens D1-D5 da planilha original (sequência de cutucadas quando o lead não responde) —
-   fica disponível como referência de copiar-e-colar dentro do CRM, sem duplicar como campo editável. */
-const CRM_ROTEIRO = [
-  {dia:'D1', texto:'Oi, nome. Você tem mais alguma dúvida?'},
-  {dia:'D2', texto:'Poderia ouvir o áudio que eu enviei?'},
-  {dia:'D3', texto:'Existe algum motivo para você não querer mais agendar o seu atendimento, para que eu possa encerrar o atendimento e não incomodar mais?'},
-  {dia:'D4', texto:'Oi! Passando porque ainda consigo liberar para você uma Avaliação Clínica Inicial Gratuita, para entender melhor suas queixas, histórico de saúde e quais cuidados podem fazer sentido para o seu caso.\n\nConseguimos conversar agora para eu te explicar como funciona e agendar sua avaliação?'},
-  {dia:'D5', texto:'Esta é minha última mensagem por aqui. Ainda deixei disponível para você uma Avaliação Clínica Inicial 100% Gratuita, para entender suas principais queixas e avaliar quais cuidados podem fazer sentido para o seu caso.\n\nResponda SIM se quiser aproveitar essa avaliação ou NÃO caso não tenha mais interesse.'},
-];
+const CRM_MEIOS = ['Instagram','WhatsApp','TikTok','Site','Google','Outro'];
+/* Roteiro de mensagens da planilha original, agora por ETAPA (uma entrada por coluna do quadro) —
+   quando o lead é arrastado pra uma coluna, o roteiro que aparece é o dessa mesma etapa, com as duas
+   variantes da planilha lado a lado: quando foi o cliente que procurou, e quando foi você quem
+   reativou o contato com a base. Isso cobre as mensagens dos dois fluxos completos da planilha. */
+const CRM_ROTEIRO = {
+  novo: [
+    {titulo:'Se o cliente procurou você', texto:'Olá, [nome]! É um prazer compartilhar mais sobre como funciona o meu trabalho. Antes de tudo, quero entender melhor o que você está buscando, para que eu possa te orientar da melhor forma.\n\nEm seguida, apresente seu método de atendimento (personalização e benefícios) e, se já atendeu pacientes parecidos, cite resultados. Depois, apresente o preço:\n\n"O investimento para uma consulta é de [valor]. Podemos agendar o seu atendimento? Qual período fica melhor para você?"'},
+    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Tudo bem? Aqui é o [seu nome]. Estava revendo alguns acompanhamentos e lembrei de você. Posso falar com você rapidinho?\n\nSe SIM: Estava estudando seu prontuário e queria saber como você está hoje em relação a [queixa/objetivo]. Gostaria de fazer uma conversa de uns 30 minutos — podemos agendar?'},
+  ],
+  d1: [
+    {titulo:'Se o cliente procurou você', texto:'Oi, [nome]. Você tem mais alguma dúvida?'},
+    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Conseguiu ver minha mensagem de ontem?'},
+  ],
+  d2: [
+    {titulo:'Se o cliente procurou você', texto:'Poderia ouvir o áudio que eu enviei?'},
+    {titulo:'Se você reativou o contato (base antiga)', texto:'[Nome], conseguiu ouvir o áudio que te enviei?'},
+  ],
+  d3: [
+    {titulo:'Se o cliente procurou você', texto:'Existe algum motivo para você não querer mais agendar o seu atendimento, para que eu possa encerrar o atendimento e não incomodar mais?'},
+    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Só para eu não ficar insistindo sem necessidade: hoje você não tem interesse em responder minha mensagem ou aconteceu alguma coisa que te impediu de responder?'},
+  ],
+  d4: [
+    {titulo:'Se o cliente procurou você', texto:'Oi! Passando porque ainda consigo liberar para você uma Avaliação Clínica Inicial Gratuita, para entender melhor suas queixas, histórico de saúde e quais cuidados podem fazer sentido para o seu caso.\n\nConseguimos conversar agora para eu te explicar como funciona e agendar sua avaliação?'},
+    {titulo:'Se você reativou o contato (base antiga)', texto:'Oi, [nome]. Antes de encerrar meu contato, quero te dizer que consigo liberar para você uma Avaliação Clínica Gratuita, para entender como você está hoje, revisar suas queixas e avaliar quais próximos passos podem fazer sentido para o seu caso. Quer que eu reserve um horário para você?'},
+  ],
+  d5: [
+    {titulo:'Mensagem final (os dois fluxos)', texto:'Esta é minha última mensagem por aqui. Ainda deixei disponível para você uma Avaliação Clínica Inicial 100% Gratuita, para entender suas principais queixas e avaliar quais cuidados podem fazer sentido para o seu caso.\n\nResponda SIM se quiser aproveitar essa avaliação ou NÃO caso não tenha mais interesse.'},
+  ],
+  agendado: [
+    {titulo:'Próximo passo', texto:'O lead confirmou que quer agendar — a partir daqui, siga pela Jornada do Usuário (aba Jornada do Usuário do Painel do Método): agendamento, registro, pagamento e orientações.'},
+  ],
+};
 const QUADRANTS = [
   {id:'vendas',title:'Vendas & Diagnósticos',icon:'target',moduleId:'transformar',
    meta:'Diagnósticos gratuitos e leads gerados pelo consultório.',
    topics:[
-    {id:'diagnosticos-leads',title:'Diagnósticos e Leads',desc:'Registro de diagnósticos gratuitos realizados e leads gerados pelo consultório.',
+    {id:'diagnosticos-leads',title:'CRM',desc:'Registro de diagnósticos gratuitos realizados e leads gerados pelo consultório.',
      sections:[
        {type:'table',key:'diagnosticos',label:'Diagnósticos',columns:[
          {key:'nome',label:'Nome'},{key:'documentos',label:'Documentos'},{key:'plataforma',label:'Link da Plataforma'},{key:'compartilhar',label:'Link para Compartilhar'},
@@ -3467,7 +3497,7 @@ function sectionValue(data, section){
     return data[section.key];
   }
   if(section.type==='crm'){
-    if(!data[section.key]) data[section.key] = { leads: [], showDiscarded: false, showRoteiro: false };
+    if(!data[section.key]) data[section.key] = { leads: [], showDiscarded: false, showRoteiro: false, roteiroStage: null };
     return data[section.key];
   }
 }
@@ -3714,19 +3744,22 @@ function renderSectionHTML(section, data){
   if(section.type==='crm'){
     const activeLeads = val.leads.filter(l=>!l.discarded);
     const discardedLeads = val.leads.filter(l=>l.discarded);
+    const roteiroStage = val.roteiroStage || 'novo';
     const renderCard = lead=>`<div class="crm-card" draggable="true" data-crmcard="${lead.id}" data-skey="${section.key}">
       <div class="crm-card-top">
         ${icon('drag','crm-drag')}
-        <input class="crm-card-name" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="nome" value="${escapeAttr(lead.nome||'')}" placeholder="Nome do lead / @">
+        <input class="ps-input crm-card-name" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="nome" value="${escapeAttr(lead.nome||'')}" placeholder="Nome do lead / @">
         <button type="button" class="ps-remove" data-crmdiscard="${lead.id}" data-skey="${section.key}" title="Descartar lead">${icon('x')}</button>
       </div>
       <select class="ps-input crm-card-select" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="tipo">
-        <option value="">Tipo —</option>
+        <option value="">Tipo</option>
         ${CRM_TIPOS.map(t=>`<option value="${escapeAttr(t)}" ${lead.tipo===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
       </select>
-      <input class="ps-input crm-card-input" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="meio" value="${escapeAttr(lead.meio||'')}" placeholder="Meio (Instagram, WhatsApp...)">
-      <input class="ps-input crm-card-input" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="contato" value="${escapeAttr(lead.contato||'')}" placeholder="WhatsApp / e-mail">
-      <textarea class="ps-input crm-card-input crm-card-obs" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="observacoes" rows="2" placeholder="Observações / próximo passo">${escapeAttr(lead.observacoes||'')}</textarea>
+      <select class="ps-input crm-card-select" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="meio">
+        <option value="">Meio</option>
+        ${CRM_MEIOS.map(m=>`<option value="${escapeAttr(m)}" ${lead.meio===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}
+      </select>
+      <input class="ps-input crm-card-input" type="tel" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="whatsapp" value="${escapeAttr(lead.whatsapp||'')}" placeholder="WhatsApp">
     </div>`;
     const board = `<div class="crm-board">
       ${CRM_STAGES.map(st=>{
@@ -3743,8 +3776,7 @@ function renderSectionHTML(section, data){
           <span class="crm-card-name-ro">${escapeHtml(lead.nome||'(sem nome)')}</span>
           <button type="button" class="btn-mini" data-crmrestore="${lead.id}" data-skey="${section.key}">${icon('back','tiny')} Restaurar</button>
         </div>
-        <div class="crm-card-meta">${escapeHtml(lead.tipo||'—')} · ${escapeHtml(lead.meio||'—')}</div>
-        ${lead.observacoes? `<div class="crm-card-meta">${escapeHtml(lead.observacoes)}</div>` : ''}
+        <div class="crm-card-meta">${escapeHtml(lead.tipo||'—')} · ${escapeHtml(lead.meio||'—')}${lead.whatsapp? ' · '+escapeHtml(lead.whatsapp) : ''}</div>
       </div>`).join('') : '<div class="empty-state">Nenhum lead descartado.</div>'}
     </div>`;
     return `<div class="ps-section">
@@ -3755,8 +3787,11 @@ function renderSectionHTML(section, data){
         <button type="button" class="btn-outline" data-crmdiscview="1" data-skey="${section.key}">${icon('folder','tiny')} ${val.showDiscarded?'Ver quadro':`Ver descartados (${discardedLeads.length})`}</button>
       </div>
       ${val.showRoteiro? `<div class="crm-roteiro">
-        <div class="topic-note">Mensagens de cutucada pra quando o lead não responde — mande a do dia correspondente à coluna onde o card está.</div>
-        ${CRM_ROTEIRO.map(r=>`<div class="crm-roteiro-item"><strong>${r.dia}</strong><p>${escapeHtml(r.texto).replace(/\n/g,'<br>')}</p></div>`).join('')}
+        <div class="topic-note">O roteiro muda de acordo com a etapa — arraste um lead pra uma coluna e o texto certo aparece aqui sozinho, ou clique numa etapa abaixo pra conferir antes.</div>
+        <div class="crm-roteiro-tabs">
+          ${CRM_STAGES.map(st=>`<button type="button" class="cf-month-btn ${st.key===roteiroStage?'active':''}" data-crmroteirostage="${st.key}" data-skey="${section.key}">${st.label}</button>`).join('')}
+        </div>
+        ${(CRM_ROTEIRO[roteiroStage]||[]).map(b=>`<div class="crm-roteiro-item"><strong>${escapeHtml(b.titulo)}</strong><p>${escapeHtml(b.texto).replace(/\n/g,'<br>')}</p></div>`).join('') || '<div class="empty-state">Sem roteiro específico para esta etapa.</div>'}
       </div>` : ''}
       ${val.showDiscarded? discardedView : board}
     </div>`;
@@ -3909,6 +3944,11 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const lead = val.leads.find(l=>l.id===leadId);
       if(lead){
         lead.stage = col.dataset.crmstage;
+        /* Ao soltar o lead numa coluna, o roteiro (se estiver com a aba de mensagens aberta, ou não)
+           já passa a mostrar a etapa pra onde ele foi — assim o roteiro "fica de acordo com a etapa"
+           assim que você arrasta, sem precisar clicar em mais nada. */
+        val.roteiroStage = col.dataset.crmstage;
+        val.showRoteiro = true;
         persist();
         rerender();
       }
@@ -3945,7 +3985,7 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const skey = btn.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       const val = sectionValue(data, section);
-      val.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome:'', tipo:'', meio:'', contato:'', observacoes:'', stage:'novo', discarded:false });
+      val.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome:'', tipo:'', meio:'', whatsapp:'', stage:'novo', discarded:false });
       persist();
       rerender();
     });
@@ -3956,6 +3996,15 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const section = sections.find(s=>s.key===skey);
       const val = sectionValue(data, section);
       val.showRoteiro = !val.showRoteiro;
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-crmroteirostage]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val.roteiroStage = btn.dataset.crmroteirostage;
       rerender();
     });
   });
