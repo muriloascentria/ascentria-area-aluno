@@ -589,6 +589,29 @@
   .cf-total{margin-top:12px;font-size:13.5px;color:var(--text-dim);text-align:right;}
   .cf-total strong{color:var(--success);}
   .cf-total strong.neg{color:var(--danger);}
+  /* Precificação de Protocolos e Consultas (Painel do Método → Gestão): duas colunas — itens de custo
+     fixo à esquerda, horas/precificação da hora/custo variável à direita — com o Preço do Protocolo
+     recalculado ao sair de qualquer campo, igual à planilha de origem. */
+  .pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+  @media (max-width:720px){ .pricing-grid{grid-template-columns:1fr;} }
+  .pricing-block-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:16px 0 8px;}
+  .pricing-col .pricing-block-title:first-child{margin-top:0;}
+  .pricing-itens .ps-cell{min-width:80px;}
+  .pricing-fields .ps-label{margin-top:8px;}
+  .pricing-fields .ps-label:first-child{margin-top:0;}
+  .pricing-fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+  .pricing-derived{font-size:12.5px;color:var(--text-dim);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;margin:8px 0;}
+  .pricing-derived strong{color:var(--text);}
+  .pricing-total-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--text-dim);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);}
+  .pricing-total-row strong{color:var(--success);font-size:14px;}
+  .pricing-total-row strong.neg{color:var(--danger);}
+  .pricing-result{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;
+    margin-top:20px;padding:14px 18px;border-radius:var(--radius-sm);
+    background:var(--accent-soft);border:1px solid var(--accent);
+  }
+  .pricing-result span{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--accent-2);}
+  .pricing-result strong{font-size:20px;color:var(--accent-2);}
 
   /* Individual: sessions */
   .session-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
@@ -1368,12 +1391,9 @@ const QUADRANTS = [
      sections:[
        {type:'cashflow',key:'fluxoCaixa',label:'Fluxo de Caixa'},
      ]},
-    {id:'precificacao',title:'Precificação',desc:'Cálculo do preço do protocolo a partir dos custos.',
+    {id:'precificacao',title:'Precificação de Protocolos e Consultas',desc:'Cálculo do preço do protocolo a partir dos custos fixos, das horas trabalhadas e dos percentuais variáveis — mesma lógica da planilha de precificação.',
      sections:[
-       {type:'list',key:'itens',label:'Itens de Custo',placeholder:'Ex.: Internet — R$ 100'},
-       {type:'fields',key:'calculo',label:'Cálculo',fields:[
-         {key:'custoHora',label:'Custo Hora Consultório'},{key:'lucro',label:'% Lucro'},{key:'precoProtocolo',label:'Preço do Protocolo'},
-       ]},
+       {type:'pricing',key:'precificacao',label:'Precificação'},
      ]},
     {id:'faturamento',title:'Faturamento',desc:'Faturamento mensal por modalidade de atendimento.',
      sections:[{type:'table',key:'faturamento',label:'Faturamento Mensal',columns:[
@@ -3160,6 +3180,9 @@ function sectionFilled(section, data){
      todos os meses do ano. Uma linha recém-adicionada mas ainda vazia (clicou em "Adicionar
      lançamento" e não preencheu nada) não deve contar, senão o tópico já apareceria concluído. */
   if(section.type==='cashflow') return Object.values(val.months||{}).some(rows=>rows.some(r=>(r.descricao||'').trim()!=='' || (parseFloat(r.valor)||0)!==0));
+  /* Precificação: considera preenchido quando já há pelo menos um item de custo com valor lançado e
+     as horas trabalhadas informadas — o suficiente pra chegar a um Preço do Protocolo de verdade. */
+  if(section.type==='pricing') return val.itens.some(it=>(parseFloat(it.valor)||0)>0) && (parseFloat(val.horasTrabalhadas)||0)>0;
   return true;
 }
 function topicFilled(quadrant, topic, idx, s){
@@ -3220,6 +3243,24 @@ function formatBRL(n){
   const v = typeof n==='number'? n : (parseFloat(n)||0);
   return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 }
+/* Mesma lógica de cálculo da planilha de Precificação do Método: soma os custos fixos, divide pelas
+   horas realmente ocupadas (horas trabalhadas × % de atendimento) pra achar o custo da hora do
+   consultório, soma eventuais custos extras pra achar o custo hora total, multiplica pelas horas do
+   protocolo e por fim "reabre" esse custo pelos percentuais variáveis (cartão, materiais, executor,
+   imposto, lucro) pra chegar no Preço do Protocolo — validado batendo com o exemplo da planilha
+   (custos fixos R$8.452, 160h × 80% = 128h ocupadas, custo hora R$66,03, 4h de protocolo, 55% de
+   percentuais variáveis => R$586,94, exatamente o valor da planilha de origem). */
+function computePricing(val){
+  const num = v=>parseFloat(v)||0;
+  const totalCustosFixos = val.itens.reduce((sum,it)=>sum+num(it.valor),0);
+  const horasOcupadas = num(val.horasTrabalhadas) * (num(val.percAtendimento)/100);
+  const custoHoraConsultorio = horasOcupadas>0? totalCustosFixos/horasOcupadas : 0;
+  const custoHoraTotal = custoHoraConsultorio + num(val.custoExtras);
+  const totalPercent = (num(val.percCartao)+num(val.percMateriais)+num(val.percExecutor)+num(val.percImposto)+num(val.percLucro))/100;
+  const custoProtocoloBase = custoHoraTotal * num(val.horasProtocolo);
+  const precoProtocolo = totalPercent<1? custoProtocoloBase/(1-totalPercent) : 0;
+  return {totalCustosFixos, horasOcupadas, custoHoraConsultorio, custoHoraTotal, totalPercent, precoProtocolo};
+}
 /* Confirmação antes de qualquer ação destrutiva (excluir, remover, apagar) — chamado no início
    de todo handler de exclusão da plataforma, para nunca apagar nada sem o usuário confirmar. */
 function confirmDelete(msg){
@@ -3271,6 +3312,20 @@ function sectionValue(data, section){
   if(section.type==='checklist'){ if(!data[section.key]) data[section.key] = []; return data[section.key]; }
   if(section.type==='cashflow'){
     if(!data[section.key]) data[section.key] = { view:{year:new Date().getFullYear(), month:new Date().getMonth()}, months:{} };
+    return data[section.key];
+  }
+  if(section.type==='pricing'){
+    if(!data[section.key]){
+      /* Mesmas categorias de Custos Fixos já usadas na planilha de precificação do Método —
+         começam sem valor, o aluno só preenche o que se aplica ao consultório dele. */
+      const categoriasPadrao = ['Aluguel','Água','Taxa de Lixo + IPTU','Secretária','Outros profissionais','Prolabore','Internet','Celular','Contabilidade','Assistência Jurídica','Conselho','Taxas municipais','Condomínio','Materiais de consumo','Material Administrativo','Marketing','Sistema','Segurança'];
+      data[section.key] = {
+        itens: categoriasPadrao.map(nome=>({nome, valor:''})),
+        horasTrabalhadas:'', percAtendimento:'',
+        custoExtras:'', horasProtocolo:'', custoExtraHora:'',
+        percCartao:'', percMateriais:'', percExecutor:'', percImposto:'', percLucro:'',
+      };
+    }
     return data[section.key];
   }
 }
@@ -3412,6 +3467,63 @@ function renderSectionHTML(section, data){
       <div class="cf-total">Saldo final de ${MESES[val.view.month]}/${val.view.year}: <strong class="${saldoFinal<0?'neg':''}">${formatBRL(saldoFinal)}</strong></div>
     </div>`;
   }
+  if(section.type==='pricing'){
+    const p = computePricing(val);
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      <div class="pricing-grid">
+        <div class="pricing-col">
+          <div class="pricing-block-title">Itens de Custo (Custos Fixos)</div>
+          <div class="table-wrap"><table class="ps-table pricing-itens">
+            <thead><tr><th>Item</th><th>Valor</th><th></th></tr></thead>
+            <tbody>
+              ${val.itens.map((it,i)=>`<tr>
+                <td><input class="ps-input ps-cell" data-fkind="pr-item" data-skey="${section.key}" data-idx="${i}" data-col="nome" value="${escapeAttr(it.nome||'')}" placeholder="Ex.: Aluguel"></td>
+                <td><input type="number" step="0.01" class="ps-input ps-cell pr-recalc" data-fkind="pr-item" data-skey="${section.key}" data-idx="${i}" data-col="valor" value="${it.valor!=null && it.valor!==''? escapeAttr(it.valor) : ''}" placeholder="R$"></td>
+                <td><button class="ps-remove" data-remove="pr-item" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table></div>
+          <button class="btn-mini ps-add" data-add="pr-item" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar item</button>
+          <div class="pricing-total-row">Total Custos Fixos <strong>${formatBRL(p.totalCustosFixos)}</strong></div>
+        </div>
+        <div class="pricing-col">
+          <div class="pricing-block-title">Horas Trabalhadas</div>
+          <div class="pricing-fields">
+            <label class="ps-label">Nº de horas trabalhadas/mês</label>
+            <input type="number" step="1" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="horasTrabalhadas" value="${escapeAttr(val.horasTrabalhadas)}">
+            <label class="ps-label">% Atendimento</label>
+            <input type="number" step="1" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="percAtendimento" value="${escapeAttr(val.percAtendimento)}">
+            <div class="pricing-derived">Horas ocupadas: <strong>${p.horasOcupadas.toLocaleString('pt-BR',{maximumFractionDigits:1})}</strong></div>
+          </div>
+          <div class="pricing-block-title">Precificação da Hora</div>
+          <div class="pricing-fields">
+            <div class="pricing-derived">Custo hora consultório: <strong>${formatBRL(p.custoHoraConsultorio)}</strong></div>
+            <label class="ps-label">Custo extras (R$)</label>
+            <input type="number" step="0.01" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="custoExtras" value="${escapeAttr(val.custoExtras)}">
+            <label class="ps-label">Horas do protocolo</label>
+            <input type="number" step="0.5" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="horasProtocolo" value="${escapeAttr(val.horasProtocolo)}">
+            <label class="ps-label">Custo extra/hora (R$)</label>
+            <input type="number" step="0.01" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="custoExtraHora" value="${escapeAttr(val.custoExtraHora)}">
+            <div class="pricing-derived">Custo hora total: <strong>${formatBRL(p.custoHoraTotal)}</strong></div>
+          </div>
+          <div class="pricing-block-title">Custo Variável</div>
+          <div class="pricing-fields pricing-fields-grid">
+            <div><label class="ps-label">% Cartão de crédito</label><input type="number" step="1" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="percCartao" value="${escapeAttr(val.percCartao)}"></div>
+            <div><label class="ps-label">% Materiais de consumo</label><input type="number" step="1" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="percMateriais" value="${escapeAttr(val.percMateriais)}"></div>
+            <div><label class="ps-label">% Executor</label><input type="number" step="1" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="percExecutor" value="${escapeAttr(val.percExecutor)}"></div>
+            <div><label class="ps-label">% Imposto de renda</label><input type="number" step="1" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="percImposto" value="${escapeAttr(val.percImposto)}"></div>
+            <div><label class="ps-label">% Lucro</label><input type="number" step="1" class="ps-input pr-recalc" data-fkind="pr-field" data-skey="${section.key}" data-col="percLucro" value="${escapeAttr(val.percLucro)}"></div>
+          </div>
+          <div class="pricing-total-row">Total % <strong class="${p.totalPercent>=1?'neg':''}">${Math.round(p.totalPercent*1000)/10}%</strong></div>
+        </div>
+      </div>
+      <div class="pricing-result">
+        <span>Preço do Protocolo</span>
+        <strong>${p.totalPercent>=1? '— revise os percentuais (o total não pode chegar a 100%)' : formatBRL(p.precoProtocolo)}</strong>
+      </div>
+    </div>`;
+  }
   return '';
 }
 function bindSectionEvents(sections, data, rerender, saveKey){
@@ -3434,6 +3546,13 @@ function bindSectionEvents(sections, data, rerender, saveKey){
         const key = `${val.view.year}-${val.view.month}`;
         const row = (val.months[key]||[])[+inp.dataset.idx];
         if(row) row[inp.dataset.col] = inp.value;
+      }
+      else if(kind==='pr-item'){
+        const item = val.itens[+inp.dataset.idx];
+        if(item) item[inp.dataset.col] = inp.value;
+      }
+      else if(kind==='pr-field'){
+        val[inp.dataset.col] = inp.value;
       }
       else if(kind==='table'){
         const row = val[+inp.dataset.idx];
@@ -3482,8 +3601,9 @@ function bindSectionEvents(sections, data, rerender, saveKey){
     inp.addEventListener('blur',()=>{ rerender(); });
   });
   /* Fluxo de Caixa: Ano e Valor recalculam o Saldo só ao sair do campo (blur), não a cada tecla —
-     senão o campo perderia o foco no meio da digitação. */
-  modalEl.querySelectorAll('.cf-year, .cf-valor').forEach(inp=>{
+     senão o campo perderia o foco no meio da digitação. Precificação: todo campo numérico usa a
+     mesma classe "pr-recalc" pra recalcular o Preço do Protocolo ao sair do campo. */
+  modalEl.querySelectorAll('.cf-year, .cf-valor, .pr-recalc').forEach(inp=>{
     inp.addEventListener('blur',()=>{ rerender(); });
   });
   modalEl.querySelectorAll('[data-cfmonth]').forEach(btn=>{
@@ -3522,6 +3642,9 @@ function bindSectionEvents(sections, data, rerender, saveKey){
         if(!val.months[key]) val.months[key] = [];
         val.months[key].push({data:'',tipo:'Entrada',descricao:'',formaPagamento:'',valor:'',comprovante:''});
       }
+      else if(btn.dataset.add==='pr-item'){
+        val.itens.push({nome:'',valor:''});
+      }
       persist();
       rerender();
     });
@@ -3534,6 +3657,8 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       if(btn.dataset.remove==='cf'){
         const key = `${val.view.year}-${val.view.month}`;
         if(val.months[key]) val.months[key].splice(+btn.dataset.idx,1);
+      } else if(btn.dataset.remove==='pr-item'){
+        val.itens.splice(+btn.dataset.idx,1);
       } else {
         val.splice(+btn.dataset.idx,1);
       }
