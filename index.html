@@ -3191,8 +3191,12 @@ function renderAgenda(){
      dentro do Acompanhamento Interno de um mentorado) só aparecem pro próprio mentorado — currentStudentId
      é sempre o contexto do aluno em questão, seja ele mesmo logado ou a equipe interna vendo o perfil dele. */
   const visible = LIVE_SESSIONS.filter(l=>l.studentId==null || l.studentId===currentStudentId);
-  const upcoming = visible.filter(l=>l.type==='upcoming');
-  const past = visible.filter(l=>l.type==='past');
+  /* Ordena sempre pela data (e horário, quando informado) — não pela ordem em que foram cadastrados —
+     assim um encontro novo aparece automaticamente na posição certa da sequência, mesmo se sua data for
+     anterior à de encontros já existentes. Próximos: o mais próximo primeiro. Gravações: a mais recente primeiro. */
+  const byDateTimeAsc = (a,b)=> a._eventDate===b._eventDate ? (a.time||'').localeCompare(b.time||'') : (a._eventDate<b._eventDate?-1:1);
+  const upcoming = visible.filter(l=>l.type==='upcoming').sort(byDateTimeAsc);
+  const past = visible.filter(l=>l.type==='past').sort((a,b)=>byDateTimeAsc(b,a));
   const card = (l)=>{
     const watched = WATCHED_LIVE.has(l.id);
     return `
@@ -3963,11 +3967,16 @@ function renderSectionHTML(section, data){
       </div>`).join('') : '<div class="empty-state">Nenhum lead descartado.</div>'}
     </div>`;
     const roteiroLead = val.leads.find(l=>l.id===val.roteiroLeadId) || null;
+    /* Com muitos leads no quadro, abrir/fechar card por card cansa — este botão recolhe (ou reabre) de
+       uma vez só todos os leads já preenchidos, deixando à mostra apenas o nome de cada um. */
+    const filledLeads = activeLeads.filter(l=>(l.nome||'').trim()!=='');
+    const anyExpanded = filledLeads.some(l=>l.expanded);
     return `<div class="ps-section">
       <h4 class="ps-h">${section.label}</h4>
       <div class="crm-toolbar">
         <button type="button" class="btn-mini ps-add" data-crmadd="1" data-skey="${section.key}">${icon('plus','ps-plus')} Novo Lead</button>
         <button type="button" class="btn-outline" data-crmroteiro="1" data-skey="${section.key}">${icon('comment','tiny')} ${val.showRoteiro?'Ocultar roteiro':'Ver roteiro de mensagens'}</button>
+        ${filledLeads.length? `<button type="button" class="btn-outline" data-crmcollapseall="1" data-skey="${section.key}">${icon(anyExpanded?'up':'down','tiny')} ${anyExpanded?'Ver só nomes':'Ver detalhes de todos'}</button>` : ''}
         <div class="crm-preco-wrap">
           <label class="ps-label">Valor da consulta</label>
           <input type="number" step="0.01" min="0" class="ps-input pr-recalc crm-preco-input" data-fkind="crm-preco" data-skey="${section.key}" value="${val.precoConsulta!=null && val.precoConsulta!==''? escapeAttr(val.precoConsulta) : ''}" placeholder="R$">
@@ -4135,13 +4144,11 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const lead = val.leads.find(l=>l.id===leadId);
       if(lead){
         lead.stage = col.dataset.crmstage;
-        /* Ao soltar o lead numa coluna, o roteiro (se estiver com a aba de mensagens aberta, ou não)
-           já passa a mostrar a etapa pra onde ele foi — assim o roteiro "fica de acordo com a etapa"
-           assim que você arrasta, sem precisar clicar em mais nada — e já com o nome desse lead
-           preenchido em [nome] nas mensagens. */
+        /* Ao soltar o lead numa coluna, guarda a etapa/lead pro roteiro — assim, QUANDO o roteiro for
+           aberto (clicando em "Ver roteiro de mensagens"), ele já mostra a etapa certa com o nome desse
+           lead preenchido. Não abre o painel sozinho — só arrastar não deve abrir nada na tela. */
         val.roteiroStage = col.dataset.crmstage;
         val.roteiroLeadId = lead.id;
-        val.showRoteiro = true;
         persist();
         rerender();
       }
@@ -4183,6 +4190,18 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const val = sectionValue(data, section);
       val.leads = val.leads.filter(l=>l.id!==btn.dataset.crmdelete);
       if(val.roteiroLeadId===btn.dataset.crmdelete) val.roteiroLeadId = null;
+      persist();
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-crmcollapseall]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      const filled = val.leads.filter(l=>!l.discarded && (l.nome||'').trim()!=='');
+      const anyExpanded = filled.some(l=>l.expanded);
+      filled.forEach(l=>{ l.expanded = !anyExpanded; });
       persist();
       rerender();
     });
@@ -4756,7 +4775,7 @@ function renderInterno(){
     </div>
     <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
 
-    <h2 class="section-title">Checklist de acompanhamento</h2>
+    <h2 class="section-title">Checklist de Acompanhamento</h2>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Nº</th><th>Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th><th></th></tr></thead>
@@ -4784,7 +4803,7 @@ function renderInterno(){
       <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
     </div>
 
-    <h2 class="section-title">Encontros gravados</h2>
+    <h2 class="section-title">Encontros Gravados</h2>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Encontro</th><th>Data</th><th>Gravação</th><th>Transcrição</th></tr></thead>
@@ -5433,7 +5452,25 @@ function renderVisaoGeral(){
 }
 
 /* ================= INIT ================= */
-renderLogin();
+/* Ao recarregar a página, tenta restaurar a sessão que o Supabase já mantém salva no navegador antes de
+   mostrar a tela de login — sem isso, todo F5 derrubava a pessoa pra tela de login mesmo com uma sessão
+   ainda válida. Se não houver sessão (ou não conseguir restaurar), cai no fluxo normal de login. */
+(async function initApp(){
+  document.getElementById('login-screen').style.display = 'none';
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    if(session && session.user){
+      currentUser = session.user;
+      await bootstrapData();
+      await enterApp();
+      return;
+    }
+  }catch(e){
+    console.error('restaurar sessão', e);
+  }
+  document.getElementById('login-screen').style.display = 'flex';
+  renderLogin();
+})();
 </script>
 </body>
 </html>
