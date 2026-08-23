@@ -1324,12 +1324,26 @@ const QUADRANTS = [
   {id:'gestao',title:'Gestão de Negócio',icon:'folder',moduleId:'gerenciar',
    meta:'Documentação, jurídico, financeiro e rotina do consultório.',
    topics:[
-    {id:'contratos',title:'Termos e Contratos',desc:'Contrato de consulta e contrato de protocolo terapêutico.',
-     sections:[{type:'fields',key:'contratos',label:'Documentos',fields:[
-       {key:'consulta',label:'Contrato de Consulta (link)'},{key:'protocolo',label:'Contrato de Protocolo Terapêutico (link)'},
+    {id:'contratos',title:'Contratos',desc:'Modelos de contrato usados no consultório.',
+     sections:[{type:'table',key:'documentos',label:'Documentos',columns:[
+       {key:'documento',label:'Documento'},{key:'link',label:'Link',type:'link'},
+     ]}]},
+    {id:'politicas',title:'Políticas Internas',desc:'Políticas internas do consultório.',
+     sections:[{type:'table',key:'documentos',label:'Documentos',columns:[
+       {key:'documento',label:'Documento'},{key:'link',label:'Link',type:'link'},
      ]}]},
     {id:'pops',title:'POPs',desc:'Procedimentos Operacionais Padrão do consultório.',
-     sections:[{type:'list',key:'pops',label:'Procedimentos',placeholder:'Ex.: Higienização da sala de atendimento'}]},
+     sections:[{type:'table',key:'documentos',label:'Documentos',columns:[
+       {key:'documento',label:'Documento'},{key:'link',label:'Link',type:'link'},
+     ]}]},
+    {id:'prescricoes',title:'Prescrições e Solicitação de Exames',desc:'Modelos de prescrição e solicitação de exames.',
+     sections:[{type:'table',key:'documentos',label:'Documentos',columns:[
+       {key:'documento',label:'Documento'},{key:'link',label:'Link',type:'link'},
+     ]}]},
+    {id:'laudos',title:'Laudos, Atestados e Declarações',desc:'Modelos de laudos, atestados e declarações.',
+     sections:[{type:'table',key:'documentos',label:'Documentos',columns:[
+       {key:'documento',label:'Documento'},{key:'link',label:'Link',type:'link'},
+     ]}]},
     {id:'financeiro',title:'Financeiro',desc:'Custos fixos e variáveis do consultório.',
      sections:[
        {type:'list',key:'custosFixos',label:'Custos Fixos',placeholder:'Ex.: Aluguel — R$ 1.200'},
