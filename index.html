@@ -237,6 +237,10 @@
   }
   .hero h1{font-size:23px;font-weight:800;margin-bottom:6px;}
   .hero p{color:var(--text-dim);font-size:14px;}
+  .hero-mini-stats{display:flex;gap:10px;}
+  .hero-mini-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;text-align:center;min-width:84px;}
+  .hero-mini-value{font-size:20px;font-weight:800;color:var(--accent);}
+  .hero-mini-label{font-size:11px;color:var(--text-dim);margin-top:2px;white-space:nowrap;}
   .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px;}
   .stat-card{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -2348,12 +2352,18 @@ function renderInicio(){
   const continueList = inProgress.length? inProgress : COURSES.filter(c=>s.courseProgress[c.id]===0).slice(0,3);
   const crmStats = computeCrmStats(s.id);
   const fatStats = computeFaturamentoStats(s.id);
+  const heroPts = STUDENT_POINTS[s.id] || {conquistas:0};
+  const heroDias = diasRestantes(s);
 
   document.getElementById('view-inicio').innerHTML = `
     <div class="hero">
       <div>
         <h1>Olá, ${s.name.split(' ')[0]}</h1>
         <p>Bem-vindo(a) de volta à sua área do Método Essência.</p>
+      </div>
+      <div class="hero-mini-stats">
+        <div class="hero-mini-stat"><div class="hero-mini-value">${heroPts.conquistas||0}</div><div class="hero-mini-label">Conquistas</div></div>
+        <div class="hero-mini-stat"><div class="hero-mini-value">${Math.max(0,heroDias)}</div><div class="hero-mini-label">${heroDias<0? 'Dias em atraso' : 'Dias faltantes'}</div></div>
       </div>
       ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
     </div>
@@ -2792,11 +2802,61 @@ function avatarUploadHtml(person, idPrefix){
       </div>
     </div>`;
 }
+// Redimensiona/comprime a imagem no navegador (canvas) para caber no limite de tamanho,
+// em vez de simplesmente recusar fotos grandes (comuns em fotos tiradas direto do celular).
+function resizeImageForUpload(file, maxBytes, maxDim){
+  return new Promise((resolve, reject)=>{
+    if(!file.type || !file.type.startsWith('image/')){ resolve(file); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=> reject(new Error('Não foi possível ler a imagem.'));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=> reject(new Error('Não foi possível processar a imagem.'));
+      img.onload = ()=>{
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+        if(width > maxDim || height > maxDim){
+          const scale = maxDim / Math.max(width, height);
+          width = Math.max(1, Math.round(width*scale));
+          height = Math.max(1, Math.round(height*scale));
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const qualities = [0.9,0.8,0.7,0.6,0.5,0.4,0.3];
+        let i = 0;
+        (function tryExport(){
+          canvas.toBlob(blob=>{
+            if(!blob){ reject(new Error('Não foi possível gerar a imagem.')); return; }
+            if(blob.size <= maxBytes || i >= qualities.length-1){
+              const baseName = (file.name||'foto').replace(/\.[^.]+$/,'') || 'foto';
+              resolve(new File([blob], baseName+'.jpg', {type:'image/jpeg'}));
+            }else{
+              i++;
+              tryExport();
+            }
+          }, 'image/jpeg', qualities[i]);
+        })();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 async function uploadAvatarFile(file, personId){
-  if(file.size > 5*1024*1024) throw new Error('Arquivo muito grande (máx. 5MB).');
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+  const MAX_BYTES = 5*1024*1024; // 5MB — tamanho máximo padrão após redimensionamento automático
+  let toUpload = file;
+  try{
+    toUpload = await resizeImageForUpload(file, MAX_BYTES, 1600);
+  }catch(e){
+    console.error('Falha ao redimensionar imagem automaticamente, tentando enviar original:', e);
+    toUpload = file;
+  }
+  if(toUpload.size > MAX_BYTES) throw new Error('Arquivo muito grande (máx. 5MB).');
+  const ext = (toUpload.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
   const path = `${personId}/${Date.now()}.${ext}`;
-  const { error: upErr } = await sb.storage.from('avatars').upload(path, file, {upsert:true});
+  const { error: upErr } = await sb.storage.from('avatars').upload(path, toUpload, {upsert:true, contentType: toUpload.type || undefined});
   if(upErr) throw upErr;
   const { data } = sb.storage.from('avatars').getPublicUrl(path);
   const url = data.publicUrl;
@@ -2820,11 +2880,14 @@ function wireAvatarUpload(idPrefix, person, onUpdated){
       const url = await uploadAvatarFile(file, person.id);
       person.avatarUrl = url;
       if(currentUserProfile && currentUserProfile.id===person.id) currentUserProfile.avatarUrl = url;
+      const st = STUDENTS.find(x=>x.id===person.id);
+      if(st) st.avatarUrl = url;
       renderProfile();
+      renderCurrentView(); // atualiza a foto em qualquer tela já renderizada por trás do modal (Início, comunidade, etc.)
       onUpdated();
     }catch(err){
       console.error(err);
-      errEl.textContent = 'Não foi possível enviar a foto. Tente uma imagem menor (até 5MB).';
+      errEl.textContent = 'Não foi possível enviar a foto. Tente novamente com outra imagem.';
       errEl.style.display='block';
       btn.disabled = false;
     }
