@@ -624,6 +624,36 @@
   .fat-chart-line{fill:none;stroke:var(--accent);stroke-width:2;}
   .fat-chart-dot{fill:var(--accent);}
   .fat-chart-label{fill:var(--text-mute);font-size:9px;}
+  /* CRM de Leads (Vendas & Diagnósticos): quadro com colunas arrastáveis por etapa (Novo Lead → D1..D5
+     → Agendado), roteiro de mensagens de referência, e uma visão separada de descartados (arquivo,
+     nunca exclusão). */
+  .crm-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .crm-roteiro{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;}
+  .crm-roteiro-item{padding:8px 0;border-top:1px solid var(--border);}
+  .crm-roteiro-item:first-of-type{border-top:none;}
+  .crm-roteiro-item strong{display:block;font-size:11px;color:var(--accent-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+  .crm-roteiro-item p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin:0;}
+  .crm-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;}
+  .crm-col{flex:0 0 220px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;display:flex;flex-direction:column;gap:8px;transition:background .12s,border-color .12s;}
+  .crm-col.drag-over{background:var(--accent-soft);border-color:var(--accent);}
+  .crm-col-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);display:flex;align-items:center;justify-content:space-between;}
+  .crm-col-count{background:var(--bg-card);border-radius:20px;padding:1px 7px;font-size:10.5px;color:var(--text-dim);}
+  .crm-col-body{display:flex;flex-direction:column;gap:8px;min-height:40px;}
+  .crm-col-empty{font-size:11px;color:var(--text-mute);text-align:center;padding:12px 4px;border:1px dashed var(--border);border-radius:var(--radius-sm);}
+  .crm-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;cursor:grab;display:flex;flex-direction:column;gap:5px;}
+  .crm-card.dragging{opacity:0.4;}
+  .crm-card-top{display:flex;align-items:center;gap:5px;}
+  .crm-drag{width:13px;height:13px;stroke:var(--text-mute);color:var(--text-mute);flex-shrink:0;}
+  .crm-card-name{flex:1;min-width:0;font-weight:700;font-size:12.5px;background:none;border:none;padding:2px 0;}
+  .crm-card-name:focus{outline:none;border-bottom:1px solid var(--shared);}
+  .crm-card .ps-remove{width:20px;height:20px;flex-shrink:0;}
+  .crm-card .ps-remove .icon{width:11px;height:11px;}
+  .crm-card-select,.crm-card-input{font-size:11.5px;padding:5px 7px;}
+  .crm-card-obs{min-height:32px;resize:vertical;}
+  .crm-discarded-list{display:flex;flex-direction:column;gap:8px;}
+  .crm-card-discarded{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;opacity:0.85;}
+  .crm-card-name-ro{font-weight:700;font-size:13px;}
+  .crm-card-meta{font-size:11.5px;color:var(--text-mute);margin-top:3px;}
 
   /* Individual: sessions */
   .session-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
@@ -1240,6 +1270,23 @@ const BRAND_LOGO_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABEwAA
    Pagamento do Fluxo Financeiro quanto no Tipo de Entrada do Faturamento, que é calculado
    automaticamente a partir dos lançamentos do Fluxo Financeiro agrupados por esses mesmos tipos. */
 const PAYMENT_TYPES = ['Pix','Dinheiro','Cartão de Crédito','Cartão de Débito','Transferência','Outras'];
+/* CRM de Leads (Vendas & Diagnósticos) — etapas do funil de nutrição por dia sem resposta, igual à
+   planilha de origem (Novo Lead → D1..D5 → Agendado). "Descartado" não é uma coluna do quadro: é uma
+   flag por lead que só aparece na visão "Descartados" (arquivado, nunca excluído de verdade). */
+const CRM_STAGES = [
+  {key:'novo',label:'Novo Lead'},{key:'d1',label:'D1'},{key:'d2',label:'D2'},{key:'d3',label:'D3'},
+  {key:'d4',label:'D4'},{key:'d5',label:'D5'},{key:'agendado',label:'Agendado'},
+];
+const CRM_TIPOS = ['Cliente Procurou','Profissional Procurou'];
+/* Roteiro de mensagens D1-D5 da planilha original (sequência de cutucadas quando o lead não responde) —
+   fica disponível como referência de copiar-e-colar dentro do CRM, sem duplicar como campo editável. */
+const CRM_ROTEIRO = [
+  {dia:'D1', texto:'Oi, nome. Você tem mais alguma dúvida?'},
+  {dia:'D2', texto:'Poderia ouvir o áudio que eu enviei?'},
+  {dia:'D3', texto:'Existe algum motivo para você não querer mais agendar o seu atendimento, para que eu possa encerrar o atendimento e não incomodar mais?'},
+  {dia:'D4', texto:'Oi! Passando porque ainda consigo liberar para você uma Avaliação Clínica Inicial Gratuita, para entender melhor suas queixas, histórico de saúde e quais cuidados podem fazer sentido para o seu caso.\n\nConseguimos conversar agora para eu te explicar como funciona e agendar sua avaliação?'},
+  {dia:'D5', texto:'Esta é minha última mensagem por aqui. Ainda deixei disponível para você uma Avaliação Clínica Inicial 100% Gratuita, para entender suas principais queixas e avaliar quais cuidados podem fazer sentido para o seu caso.\n\nResponda SIM se quiser aproveitar essa avaliação ou NÃO caso não tenha mais interesse.'},
+];
 const QUADRANTS = [
   {id:'vendas',title:'Vendas & Diagnósticos',icon:'target',moduleId:'transformar',
    meta:'Diagnósticos gratuitos e leads gerados pelo consultório.',
@@ -1249,9 +1296,7 @@ const QUADRANTS = [
        {type:'table',key:'diagnosticos',label:'Diagnósticos',columns:[
          {key:'nome',label:'Nome'},{key:'documentos',label:'Documentos'},{key:'plataforma',label:'Link da Plataforma'},{key:'compartilhar',label:'Link para Compartilhar'},
        ]},
-       {type:'table',key:'crm',label:'CRM dos Leads',columns:[
-         {key:'nome',label:'Nome'},{key:'email',label:'E-mail'},{key:'whatsapp',label:'WhatsApp'},{key:'etapa',label:'Etapa'},{key:'mensagem',label:'Mensagem'},{key:'data',label:'Data'},
-       ]},
+       {type:'crm',key:'crmLeads',label:'CRM dos Leads'},
      ]},
    ]},
   {id:'marketing',title:'Marketing e Branding',icon:'film',moduleId:'ser',
@@ -3203,6 +3248,10 @@ function sectionFilled(section, data){
     const cf = (fin && fin.fluxoCaixa) || {months:{}};
     return Object.values(cf.months||{}).some(rows=>rows.some(r=>r.tipo==='Entrada' && (parseFloat(r.valor)||0)>0 && r.formaPagamento));
   }
+  /* CRM de Leads: considera preenchido quando já existe pelo menos um lead ativo (não descartado) com
+     nome lançado no quadro — o quadro em si nunca fica "vazio de verdade" (sempre dá pra adicionar
+     mais leads), então não exige todas as etapas preenchidas. */
+  if(section.type==='crm') return val.leads.some(l=>!l.discarded && (l.nome||'').trim()!=='');
   return true;
 }
 function topicFilled(quadrant, topic, idx, s){
@@ -3415,6 +3464,10 @@ function sectionValue(data, section){
       const descontos = {}; PAYMENT_TYPES.forEach(t=>{ descontos[t] = ''; });
       data[section.key] = { descontos, chartYear: null };
     }
+    return data[section.key];
+  }
+  if(section.type==='crm'){
+    if(!data[section.key]) data[section.key] = { leads: [], showDiscarded: false, showRoteiro: false };
     return data[section.key];
   }
 }
@@ -3658,6 +3711,56 @@ function renderSectionHTML(section, data){
       ` : `<div class="empty-state">Nenhuma entrada de receita encontrada no Fluxo Financeiro ainda. Assim que você lançar entradas lá (com a forma de pagamento preenchida), o faturamento aparece aqui automaticamente, mês a mês.</div>`}
     </div>`;
   }
+  if(section.type==='crm'){
+    const activeLeads = val.leads.filter(l=>!l.discarded);
+    const discardedLeads = val.leads.filter(l=>l.discarded);
+    const renderCard = lead=>`<div class="crm-card" draggable="true" data-crmcard="${lead.id}" data-skey="${section.key}">
+      <div class="crm-card-top">
+        ${icon('drag','crm-drag')}
+        <input class="crm-card-name" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="nome" value="${escapeAttr(lead.nome||'')}" placeholder="Nome do lead / @">
+        <button type="button" class="ps-remove" data-crmdiscard="${lead.id}" data-skey="${section.key}" title="Descartar lead">${icon('x')}</button>
+      </div>
+      <select class="ps-input crm-card-select" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="tipo">
+        <option value="">Tipo —</option>
+        ${CRM_TIPOS.map(t=>`<option value="${escapeAttr(t)}" ${lead.tipo===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+      </select>
+      <input class="ps-input crm-card-input" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="meio" value="${escapeAttr(lead.meio||'')}" placeholder="Meio (Instagram, WhatsApp...)">
+      <input class="ps-input crm-card-input" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="contato" value="${escapeAttr(lead.contato||'')}" placeholder="WhatsApp / e-mail">
+      <textarea class="ps-input crm-card-input crm-card-obs" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="observacoes" rows="2" placeholder="Observações / próximo passo">${escapeAttr(lead.observacoes||'')}</textarea>
+    </div>`;
+    const board = `<div class="crm-board">
+      ${CRM_STAGES.map(st=>{
+        const cardsHtml = activeLeads.filter(l=>l.stage===st.key).map(renderCard).join('');
+        return `<div class="crm-col" data-crmstage="${st.key}" data-skey="${section.key}">
+          <div class="crm-col-head">${st.label} <span class="crm-col-count">${activeLeads.filter(l=>l.stage===st.key).length}</span></div>
+          <div class="crm-col-body">${cardsHtml || '<div class="crm-col-empty">Arraste um lead pra cá</div>'}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+    const discardedView = `<div class="crm-discarded-list">
+      ${discardedLeads.length? discardedLeads.map(lead=>`<div class="crm-card crm-card-discarded">
+        <div class="crm-card-top">
+          <span class="crm-card-name-ro">${escapeHtml(lead.nome||'(sem nome)')}</span>
+          <button type="button" class="btn-mini" data-crmrestore="${lead.id}" data-skey="${section.key}">${icon('back','tiny')} Restaurar</button>
+        </div>
+        <div class="crm-card-meta">${escapeHtml(lead.tipo||'—')} · ${escapeHtml(lead.meio||'—')}</div>
+        ${lead.observacoes? `<div class="crm-card-meta">${escapeHtml(lead.observacoes)}</div>` : ''}
+      </div>`).join('') : '<div class="empty-state">Nenhum lead descartado.</div>'}
+    </div>`;
+    return `<div class="ps-section">
+      <h4 class="ps-h">${section.label}</h4>
+      <div class="crm-toolbar">
+        <button type="button" class="btn-mini ps-add" data-crmadd="1" data-skey="${section.key}">${icon('plus','ps-plus')} Novo Lead</button>
+        <button type="button" class="btn-outline" data-crmroteiro="1" data-skey="${section.key}">${icon('comment','tiny')} ${val.showRoteiro?'Ocultar roteiro':'Ver roteiro de mensagens'}</button>
+        <button type="button" class="btn-outline" data-crmdiscview="1" data-skey="${section.key}">${icon('folder','tiny')} ${val.showDiscarded?'Ver quadro':`Ver descartados (${discardedLeads.length})`}</button>
+      </div>
+      ${val.showRoteiro? `<div class="crm-roteiro">
+        <div class="topic-note">Mensagens de cutucada pra quando o lead não responde — mande a do dia correspondente à coluna onde o card está.</div>
+        ${CRM_ROTEIRO.map(r=>`<div class="crm-roteiro-item"><strong>${r.dia}</strong><p>${escapeHtml(r.texto).replace(/\n/g,'<br>')}</p></div>`).join('')}
+      </div>` : ''}
+      ${val.showDiscarded? discardedView : board}
+    </div>`;
+  }
   return '';
 }
 function bindSectionEvents(sections, data, rerender, saveKey){
@@ -3690,6 +3793,10 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       }
       else if(kind==='fat-desconto'){
         val.descontos[inp.dataset.forma] = inp.value;
+      }
+      else if(kind==='crm-field'){
+        const lead = val.leads.find(l=>l.id===inp.dataset.crmid);
+        if(lead) lead[inp.dataset.col] = inp.value;
       }
       else if(kind==='table'){
         const row = val[+inp.dataset.idx];
@@ -3775,6 +3882,90 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const skey = btn.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       exportFaturamentoPDF(section, data, saveKey);
+    });
+  });
+  /* CRM de Leads: arrastar e soltar nativo (HTML5 DnD) entre as colunas do quadro. O card em si é
+     draggable, mas inputs/select/textarea dentro dele preservam o comportamento nativo de seleção de
+     texto — o navegador só inicia o drag a partir de uma área não-editável do card (ex.: a alcinha
+     ou o fundo do cartão), então editar um campo não briga com arrastar. */
+  modalEl.querySelectorAll('[data-crmcard]').forEach(card=>{
+    card.addEventListener('dragstart',(e)=>{
+      e.dataTransfer.setData('text/plain', card.dataset.crmcard);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend',()=>{ card.classList.remove('dragging'); });
+  });
+  modalEl.querySelectorAll('[data-crmstage]').forEach(col=>{
+    col.addEventListener('dragover',(e)=>{ e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave',()=>{ col.classList.remove('drag-over'); });
+    col.addEventListener('drop',(e)=>{
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      const leadId = e.dataTransfer.getData('text/plain');
+      const skey = col.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      const lead = val.leads.find(l=>l.id===leadId);
+      if(lead){
+        lead.stage = col.dataset.crmstage;
+        persist();
+        rerender();
+      }
+    });
+  });
+  modalEl.querySelectorAll('[data-crmdiscard]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      const lead = val.leads.find(l=>l.id===btn.dataset.crmdiscard);
+      if(lead){
+        lead.discarded = true;
+        persist();
+        rerender();
+      }
+    });
+  });
+  modalEl.querySelectorAll('[data-crmrestore]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      const lead = val.leads.find(l=>l.id===btn.dataset.crmrestore);
+      if(lead){
+        lead.discarded = false;
+        persist();
+        rerender();
+      }
+    });
+  });
+  modalEl.querySelectorAll('[data-crmadd]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome:'', tipo:'', meio:'', contato:'', observacoes:'', stage:'novo', discarded:false });
+      persist();
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-crmroteiro]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val.showRoteiro = !val.showRoteiro;
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-crmdiscview]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val.showDiscarded = !val.showDiscarded;
+      rerender();
     });
   });
   modalEl.querySelectorAll('[data-add]').forEach(btn=>{
