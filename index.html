@@ -1413,13 +1413,11 @@ const QUADRANTS = [
      ]},
     {id:'faturamento',title:'Faturamento',desc:'Faturamento mensal por tipo de entrada — calculado automaticamente a partir dos lançamentos do Fluxo Financeiro.',
      sections:[{type:'billing',key:'faturamento',label:'Faturamento Mensal'}]},
-    {id:'rotina',title:'Rotina',desc:'Planejamento da rotina semanal, dia a dia.',
+    {id:'rotina',title:'Rotina',desc:'Planejamento da rotina semanal, dia a dia.',pdfExport:true,
      sections:[
        {type:'list',key:'segunda',label:'Segunda'},{type:'list',key:'terca',label:'Terça'},{type:'list',key:'quarta',label:'Quarta'},
        {type:'list',key:'quinta',label:'Quinta'},{type:'list',key:'sexta',label:'Sexta'},{type:'list',key:'sabado',label:'Sábado'},{type:'list',key:'domingo',label:'Domingo'},
      ]},
-    {id:'checklist-gestao',title:'Checklist',desc:'Checklist geral de ações da gestão do negócio.',
-     sections:[{type:'checklist',key:'acoes',label:'Ações',placeholder:'Ex.: Revisar POPs do trimestre'}]},
    ]},
 ];
 // Overrides manuais de preenchimento definidos pelo usuário durante a sessão (demo, em memória).
