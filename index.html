@@ -655,9 +655,16 @@
   .crm-card .ps-remove{width:20px;height:20px;flex-shrink:0;}
   .crm-card .ps-remove .icon{width:11px;height:11px;}
   .crm-card-select,.crm-card-input{font-size:11.5px;padding:5px 7px;}
+  /* Card recolhido: só o nome, pra gerir o arrastar sem poluir o quadro com Tipo/Meio/WhatsApp. */
+  .crm-card-collapsed{cursor:pointer;}
+  .crm-card-name-display{flex:1;min-width:0;font-weight:700;font-size:12.5px;padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+  .crm-toggle-btn{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:5px;color:var(--text-mute);cursor:pointer;}
+  .crm-toggle-btn:hover{background:var(--bg-elev);color:var(--text-dim);}
+  .crm-toggle-btn .icon{width:12px;height:12px;}
   .crm-discarded-list{display:flex;flex-direction:column;gap:8px;}
   .crm-card-discarded{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;opacity:0.85;}
-  .crm-card-name-ro{font-weight:700;font-size:13px;}
+  .crm-card-discarded .crm-card-top{gap:8px;}
+  .crm-card-name-ro{font-weight:700;font-size:13px;flex:1;min-width:0;}
   .crm-card-meta{font-size:11.5px;color:var(--text-mute);margin-top:3px;}
   .crm-roteiro-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;}
   /* Modal do CRM ocupa quase a tela inteira — o quadro com 7 colunas precisa de espaço horizontal
@@ -1345,15 +1352,34 @@ function crmApplyPlaceholders(texto, lead, precoConsulta){
   if(precoConsulta!=null && String(precoConsulta).trim()!=='' && !isNaN(preco)) out = out.replace(/\[valor\]/gi, formatBRL(preco));
   return out;
 }
+/* Compartilhadas entre o render normal do roteiro e a atualização "leve" (refreshCrmRoteiroPanel) que
+   troca só o texto do roteiro na tela quando você seleciona outro lead, sem re-renderizar o quadro
+   inteiro (senão perderia o foco de quem estivesse digitando num campo do card). */
+function renderCrmRoteiroItems(stage, lead, precoConsulta){
+  return (CRM_ROTEIRO[stage]||[]).map(b=>`<div class="crm-roteiro-item"><strong>${escapeHtml(b.titulo)}</strong><p>${escapeHtml(crmApplyPlaceholders(b.texto, lead, precoConsulta)).replace(/\n/g,'<br>')}</p></div>`).join('') || '<div class="empty-state">Sem roteiro específico para esta etapa.</div>';
+}
+function crmRoteiroNoteText(lead){
+  return `O roteiro muda de acordo com a etapa — arraste um lead pra uma coluna, ou clique num lead do quadro, e o texto certo aparece aqui sozinho, já com o nome do lead e o valor da consulta preenchidos.${lead && (lead.nome||'').trim()? ` Mostrando para <strong>${escapeHtml(lead.nome)}</strong>.` : ''}`;
+}
+function refreshCrmRoteiroPanel(modalEl, val){
+  const panel = modalEl.querySelector('.crm-roteiro');
+  if(!panel) return;
+  const stage = val.roteiroStage || 'novo';
+  const lead = val.leads.find(l=>l.id===val.roteiroLeadId) || null;
+  const note = panel.querySelector('.topic-note');
+  if(note) note.innerHTML = crmRoteiroNoteText(lead);
+  panel.querySelectorAll('.crm-roteiro-tabs .cf-month-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.crmroteirostage===stage);
+  });
+  const itemsWrap = panel.querySelector('.crm-roteiro-items');
+  if(itemsWrap) itemsWrap.innerHTML = renderCrmRoteiroItems(stage, lead, val.precoConsulta);
+}
 const QUADRANTS = [
-  {id:'vendas',title:'Vendas & Diagnósticos',icon:'target',moduleId:'transformar',
+  {id:'vendas',title:'Vendas',icon:'target',moduleId:'transformar',
    meta:'Diagnósticos gratuitos e leads gerados pelo consultório.',
    topics:[
-    {id:'diagnosticos-leads',title:'CRM',desc:'Registro de diagnósticos gratuitos realizados e leads gerados pelo consultório.',
+    {id:'diagnosticos-leads',title:'CRM',
      sections:[
-       {type:'table',key:'diagnosticos',label:'Diagnósticos',columns:[
-         {key:'nome',label:'Nome'},{key:'documentos',label:'Documentos'},{key:'plataforma',label:'Link da Plataforma'},{key:'compartilhar',label:'Link para Compartilhar'},
-       ]},
        {type:'crm',key:'crmLeads',label:'CRM dos Leads'},
      ]},
    ]},
@@ -3354,7 +3380,7 @@ function renderPainel(){
         const f = topicFilled(q,t,i,s);
         return `<button class="topic-row" data-topic="${t.id}">
           <span class="topic-status ${f?'filled':'pending'}"></span>
-          <div class="ti"><div class="title">${t.title}</div><div class="desc">${t.desc}</div></div>
+          <div class="ti"><div class="title">${t.title}</div><div class="desc">${t.desc||''}</div></div>
           <span class="tag ${f?'filled':'pending'}">${f?'Preenchido':'Pendente'}</span>
         </button>`;
       }).join('')}
@@ -3775,13 +3801,26 @@ function renderSectionHTML(section, data){
     const activeLeads = val.leads.filter(l=>!l.discarded);
     const discardedLeads = val.leads.filter(l=>l.discarded);
     const roteiroStage = val.roteiroStage || 'novo';
-    const renderCard = lead=>`<div class="crm-card" draggable="true" data-crmcard="${lead.id}" data-skey="${section.key}">
+    const renderCard = lead=>{
+      /* Card recolhido: só o nome, pra gerir o arrastar-e-soltar sem poluir o quadro. Ao clicar no
+         nome (ou no ícone de expandir) ele abre com Tipo, Meio e WhatsApp pra edição — e continua
+         aberto até você recolher de novo. Sem nome ainda, força aberto (senão não dá pra digitar). */
+      const temNome = (lead.nome||'').trim()!=='';
+      const isExpanded = !!lead.expanded || !temNome;
+      const nameField = isExpanded
+        ? `<input class="ps-input crm-card-name" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="nome" value="${escapeAttr(lead.nome||'')}" placeholder="Nome do lead / @">`
+        : `<span class="crm-card-name-display" data-crmtoggle="${lead.id}" data-skey="${section.key}" title="Clique para ver Tipo, Meio e WhatsApp">${escapeHtml(lead.nome)}</span>`;
+      const toggleBtn = temNome
+        ? `<button type="button" class="crm-toggle-btn" data-crmtoggle="${lead.id}" data-skey="${section.key}" title="${isExpanded?'Recolher':'Expandir'}">${icon(isExpanded?'up':'down','tiny')}</button>`
+        : '';
+      return `<div class="crm-card ${isExpanded?'':'crm-card-collapsed'}" draggable="true" data-crmcard="${lead.id}" data-skey="${section.key}">
       <div class="crm-card-top">
         ${icon('drag','crm-drag')}
-        <input class="ps-input crm-card-name" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="nome" value="${escapeAttr(lead.nome||'')}" placeholder="Nome do lead / @">
+        ${nameField}
+        ${toggleBtn}
         <button type="button" class="ps-remove" data-crmdiscard="${lead.id}" data-skey="${section.key}" title="Descartar lead">${icon('x')}</button>
       </div>
-      <select class="ps-input crm-card-select" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="tipo">
+      ${isExpanded? `<select class="ps-input crm-card-select" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="tipo">
         <option value="">Tipo</option>
         ${CRM_TIPOS.map(t=>`<option value="${escapeAttr(t)}" ${lead.tipo===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
       </select>
@@ -3789,8 +3828,9 @@ function renderSectionHTML(section, data){
         <option value="">Meio</option>
         ${CRM_MEIOS.map(m=>`<option value="${escapeAttr(m)}" ${lead.meio===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}
       </select>
-      <input class="ps-input crm-card-input" type="tel" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="whatsapp" value="${escapeAttr(lead.whatsapp||'')}" placeholder="WhatsApp">
+      <input class="ps-input crm-card-input" type="tel" data-fkind="crm-field" data-skey="${section.key}" data-crmid="${lead.id}" data-col="whatsapp" value="${escapeAttr(lead.whatsapp||'')}" placeholder="WhatsApp">` : ''}
     </div>`;
+    };
     const board = `<div class="crm-board">
       ${CRM_STAGES.map(st=>{
         const cardsHtml = activeLeads.filter(l=>l.stage===st.key).map(renderCard).join('');
@@ -3805,6 +3845,7 @@ function renderSectionHTML(section, data){
         <div class="crm-card-top">
           <span class="crm-card-name-ro">${escapeHtml(lead.nome||'(sem nome)')}</span>
           <button type="button" class="btn-mini" data-crmrestore="${lead.id}" data-skey="${section.key}">${icon('back','tiny')} Restaurar</button>
+          <button type="button" class="ps-remove" data-crmdelete="${lead.id}" data-skey="${section.key}" title="Excluir definitivamente">${icon('trash')}</button>
         </div>
         <div class="crm-card-meta">${escapeHtml(lead.tipo||'—')} · ${escapeHtml(lead.meio||'—')}${lead.whatsapp? ' · '+escapeHtml(lead.whatsapp) : ''}</div>
       </div>`).join('') : '<div class="empty-state">Nenhum lead descartado.</div>'}
@@ -3822,11 +3863,11 @@ function renderSectionHTML(section, data){
         <button type="button" class="btn-outline" data-crmdiscview="1" data-skey="${section.key}">${icon('folder','tiny')} ${val.showDiscarded?'Ver quadro':`Ver descartados (${discardedLeads.length})`}</button>
       </div>
       ${val.showRoteiro? `<div class="crm-roteiro">
-        <div class="topic-note">O roteiro muda de acordo com a etapa — arraste um lead pra uma coluna e o texto certo aparece aqui sozinho, já com o nome do lead e o valor da consulta preenchidos, ou clique numa etapa abaixo pra conferir antes.${roteiroLead && roteiroLead.nome? ` Mostrando para <strong>${escapeHtml(roteiroLead.nome)}</strong>.` : ''}</div>
+        <div class="topic-note">${crmRoteiroNoteText(roteiroLead)}</div>
         <div class="crm-roteiro-tabs">
           ${CRM_STAGES.map(st=>`<button type="button" class="cf-month-btn ${st.key===roteiroStage?'active':''}" data-crmroteirostage="${st.key}" data-skey="${section.key}">${st.label}</button>`).join('')}
         </div>
-        ${(CRM_ROTEIRO[roteiroStage]||[]).map(b=>`<div class="crm-roteiro-item"><strong>${escapeHtml(b.titulo)}</strong><p>${escapeHtml(crmApplyPlaceholders(b.texto, roteiroLead, val.precoConsulta)).replace(/\n/g,'<br>')}</p></div>`).join('') || '<div class="empty-state">Sem roteiro específico para esta etapa.</div>'}
+        <div class="crm-roteiro-items">${renderCrmRoteiroItems(roteiroStage, roteiroLead, val.precoConsulta)}</div>
       </div>` : ''}
       ${val.showDiscarded? discardedView : board}
     </div>`;
@@ -4020,12 +4061,61 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       }
     });
   });
+  /* Excluir de fato só é permitido de dentro do banco de descartados — nunca do quadro ativo — pra
+     manter a garantia de que um lead só some pra sempre se você entrar lá e confirmar. */
+  modalEl.querySelectorAll('[data-crmdelete]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir este lead definitivamente? Essa ação não pode ser desfeita.')) return;
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      val.leads = val.leads.filter(l=>l.id!==btn.dataset.crmdelete);
+      if(val.roteiroLeadId===btn.dataset.crmdelete) val.roteiroLeadId = null;
+      persist();
+      rerender();
+    });
+  });
+  modalEl.querySelectorAll('[data-crmtoggle]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const skey = el.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      const lead = val.leads.find(l=>l.id===el.dataset.crmtoggle);
+      if(lead){
+        lead.expanded = !lead.expanded;
+        /* Clicar no nome de um lead também o seleciona pro roteiro de mensagens — assim o texto
+           mostrado ali passa a ser o desse lead, com o nome dele já preenchido. */
+        val.roteiroLeadId = lead.id;
+        val.roteiroStage = lead.stage;
+        persist();
+        rerender();
+      }
+    });
+  });
+  /* Seleção "leve" do lead pro roteiro: ao interagir com QUALQUER parte de um card (inclusive os
+     campos Tipo/Meio/WhatsApp já abertos), esse lead passa a ser o exibido no roteiro — mas em vez de
+     re-renderizar o quadro inteiro (o que tiraria o foco de quem estivesse digitando), só atualiza o
+     texto do roteiro já na tela, se ele estiver aberto. */
+  modalEl.querySelectorAll('.crm-card[data-crmcard]').forEach(card=>{
+    card.addEventListener('mousedown',()=>{
+      const skey = card.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      const lead = val.leads.find(l=>l.id===card.dataset.crmcard);
+      if(lead && (val.roteiroLeadId!==lead.id || val.roteiroStage!==lead.stage)){
+        val.roteiroLeadId = lead.id;
+        val.roteiroStage = lead.stage;
+        persist();
+        refreshCrmRoteiroPanel(modalEl, val);
+      }
+    });
+  });
   modalEl.querySelectorAll('[data-crmadd]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const skey = btn.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       const val = sectionValue(data, section);
-      val.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome:'', tipo:'', meio:'', whatsapp:'', stage:'novo', discarded:false });
+      val.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome:'', tipo:'', meio:'', whatsapp:'', stage:'novo', discarded:false, expanded:true });
       persist();
       rerender();
     });
@@ -4130,7 +4220,7 @@ function openTopicModal(quadrant, topicId){
       <div class="modal-body form-modal">
         <div class="cat">${quadrant.title}</div>
         <h3>${topic.title}</h3>
-        <p class="desc">${topic.desc}</p>
+        ${topic.desc? `<p class="desc">${topic.desc}</p>` : ''}
         ${(topic.intro||[]).map(t=>`<div class="topic-note">${t}</div>`).join('')}
         ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : 'Salvo — ainda faltam campos para aparecer como concluído lá fora. Clique em Editar para continuar.'}</div>` : ''}
         <div class="${editing? '' : 'ps-locked'}">
