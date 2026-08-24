@@ -799,6 +799,8 @@
   .status-pill.status-Pendente{background:var(--individual-soft);color:var(--individual);}
   .status-pill.status-Atrasada{background:var(--danger-soft);color:var(--danger);}
   .resp-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg-elev);color:var(--text-dim);white-space:nowrap;}
+  .link-btn{background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--accent);text-decoration:underline;cursor:pointer;}
+  .link-btn:hover{opacity:0.8;}
 
   .empty-state{text-align:center;padding:40px 20px;color:var(--text-mute);font-size:13px;}
 
@@ -1618,17 +1620,42 @@ let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstr
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
 let WATCHED_LIVE = new Set();
 const MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+/* Rótulos do tipo de encontro — usados na Agenda ao Vivo (pra dividir as gravações em subtópicos) e
+   no cadastro de eventos da equipe interna. "individual" nunca aparece nas gravações coletivas: sai
+   da Agenda ao Vivo e passa a aparecer em Minhas Sessões 1:1 do próprio mentorado (ver renderSessoes). */
+const TIPO_ENCONTRO_LABELS = {
+  mastermind: 'Mastermind',
+  plantao_duvidas: 'Plantão de Dúvidas',
+  consultorio_simulado: 'Consultório Simulado',
+  individual: 'Encontro 1:1',
+};
+function formatHoraBR(hhmm){
+  if(!hhmm) return '';
+  const [h,m] = hhmm.split(':');
+  return `${h}h${m}`;
+}
 function mapLiveSessionRow(row){
   const [y,m,d] = row.event_date.split('-').map(Number);
-  const dt = new Date(y, m-1, d);
-  const hoje = new Date(); hoje.setHours(0,0,0,0); dt.setHours(0,0,0,0);
+  /* Corte "próximo" -> "passado": quando há horário estruturado (event_hour), o encontro só sai de
+     "Próximos encontros" 1h depois do horário marcado. Sem horário informado (linhas antigas), mantém
+     o comportamento anterior: o dia inteiro conta como "próximo". */
+  let cutoff;
+  if(row.event_hour){
+    const [hh,mi] = row.event_hour.split(':').map(Number);
+    cutoff = new Date(y, m-1, d, hh, mi);
+    cutoff.setHours(cutoff.getHours()+1);
+  }else{
+    cutoff = new Date(y, m-1, d, 23,59,59,999);
+  }
   return {
     id: row.id, title: row.title,
     date: `${String(d).padStart(2,'0')} ${MESES_ABREV[m-1]}`,
     day: String(d).padStart(2,'0'), month: MESES_ABREV[m-1].toUpperCase(),
     time: row.event_time || '', desc: row.description || '',
-    type: dt >= hoje ? 'upcoming' : 'past',
+    type: new Date() <= cutoff ? 'upcoming' : 'past',
     _eventDate: row.event_date,
+    _eventHour: row.event_hour || '',
+    tipo: row.tipo || null,
     linkGravacao: row.link_gravacao || '',
     /* null = encontro coletivo, visível na Agenda ao Vivo de todos; preenchido = reunião individual
        (agendada de dentro do Acompanhamento Interno de um mentorado específico), visível só pra esse
@@ -2083,9 +2110,11 @@ function syncMaterialDelete(id){
 }
 async function syncLiveSessionInsert(row){
   const { data, error } = await sb.from('live_sessions').insert({
-    title: row.title, event_date: row.event_date, event_time: row.event_time, description: row.description,
+    title: row.title, event_date: row.event_date, event_time: row.event_time, event_hour: row.event_hour || null,
+    description: row.description,
     link_gravacao: row.link_gravacao || null,
     student_id: row.student_id || null,
+    tipo: row.tipo || null,
   }).select().single();
   if(error) throw error;
   return data;
@@ -3281,7 +3310,16 @@ function renderAgenda(){
      anterior à de encontros já existentes. Próximos: o mais próximo primeiro. Gravações: a mais recente primeiro. */
   const byDateTimeAsc = (a,b)=> a._eventDate===b._eventDate ? (a.time||'').localeCompare(b.time||'') : (a._eventDate<b._eventDate?-1:1);
   const upcoming = visible.filter(l=>l.type==='upcoming').sort(byDateTimeAsc);
-  const past = visible.filter(l=>l.type==='past').sort((a,b)=>byDateTimeAsc(b,a));
+  /* Gravações anteriores: só encontros coletivos. Encontros 1:1 que já passaram saem da Agenda ao Vivo
+     e passam a aparecer automaticamente em Minhas Sessões 1:1 do próprio mentorado (ver renderSessoes) —
+     por isso ficam de fora daqui, mesmo que "visible" os inclua enquanto ainda estavam próximos. */
+  const pastColetivos = visible.filter(l=>l.type==='past' && l.studentId==null).sort((a,b)=>byDateTimeAsc(b,a));
+  const TIPO_GRUPOS = [
+    {key:'mastermind', label:'Mastermind'},
+    {key:'plantao_duvidas', label:'Plantão de Dúvidas'},
+    {key:'consultorio_simulado', label:'Consultório Simulado'},
+    {key:null, label:'Outros encontros'},
+  ];
   const card = (l)=>{
     const watched = WATCHED_LIVE.has(l.id);
     return `
@@ -3301,12 +3339,17 @@ function renderAgenda(){
           </div>`}
     </div>`;
   };
+  const gravacoesHtml = TIPO_GRUPOS.map(g=>{
+    const items = pastColetivos.filter(l=>(l.tipo||null)===g.key);
+    if(!items.length) return '';
+    return `<h4 class="ps-h" style="margin-top:18px">${g.label}</h4><div class="agenda-list">${items.map(card).join('')}</div>`;
+  }).join('');
   document.getElementById('view-agenda').innerHTML = `
-    <p class="section-sub">Encontros coletivos com a mentora e a turma.</p>
+    <p class="section-sub">Encontros coletivos e individuais com os mentores.</p>
     <h2 class="section-title">${icon('calendar')} Próximos encontros</h2>
-    <div class="agenda-list">${upcoming.map(card).join('')}</div>
+    <div class="agenda-list">${upcoming.map(card).join('') || '<p class="section-sub">Nenhum encontro agendado no momento.</p>'}</div>
     <h2 class="section-title">${icon('video')} Gravações anteriores</h2>
-    <div class="agenda-list">${past.map(card).join('') || '<p class="section-sub">Nenhuma gravação anterior ainda.</p>'}</div>
+    ${gravacoesHtml || '<p class="section-sub">Nenhuma gravação anterior ainda.</p>'}
   `;
   document.querySelectorAll('[data-watched]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -4673,12 +4716,23 @@ function exportFaturamentoPDF(section, data, saveKey){
 /* ================= VIEW: SESSÕES (individual) ================= */
 function renderSessoes(){
   const s = getStudent(currentStudentId);
+  /* Encontros 1:1 agendados pela Agenda ao Vivo que já passaram (1h após o horário marcado) saem de lá
+     automaticamente e aparecem aqui — mesmo antes da equipe interna registrar anotações/gravação. */
+  const doAgenda = LIVE_SESSIONS.filter(l=>l.studentId===s.id && l.type==='past')
+    .slice().sort((a,b)=> a._eventDate===b._eventDate ? 0 : (a._eventDate<b._eventDate?1:-1))
+    .map(l=>({
+      title: l.title, date: l.date,
+      notes: l.desc || 'Encontro agendado pela equipe interna — anotações da mentora ainda não adicionadas.',
+      linkGravacao: l.linkGravacao||'', linkTranscricao:'', _fromAgenda:true,
+    }));
+  const manuais = s.sessions.map(sess=>({...sess,_fromAgenda:false}));
+  const all = [...doAgenda, ...manuais];
   document.getElementById('view-sessoes').innerHTML = `
     <p class="section-sub">Histórico de sessões individuais com a sua mentora — visível somente para você (e para a equipe interna).</p>
-    ${s.sessions.length? s.sessions.map(sess=>`
+    ${all.length? all.map(sess=>`
       <div class="session-card">
         <div class="top">
-          <div class="title">${sess.title}</div>
+          <div class="title">${sess.title}${sess._fromAgenda? ' <span class="pill replay" style="margin-left:6px">Da Agenda ao Vivo</span>':''}</div>
           <div class="date">${sess.date}</div>
         </div>
         <div class="notes"><strong>Anotações da mentora:</strong><br>${linkify(sess.notes)}</div>
@@ -4941,7 +4995,7 @@ function renderInterno(){
     <p class="section-sub" style="margin-top:-6px">Agende aqui a próxima reunião com este mentorado — ao salvar, ela aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Descrição</th><th>Situação</th><th></th></tr></thead>
+        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Descrição</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
         <tbody id="contatos-futuros-tbody">
           ${LIVE_SESSIONS.filter(l=>l.studentId===s.id).slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
             <tr>
@@ -4950,17 +5004,20 @@ function renderInterno(){
               <td style="min-width:160px">${escapeHtml(l.time||'—')}</td>
               <td style="min-width:220px">${linkify(l.desc)}</td>
               <td>${l.type==='upcoming'? '<span class="pill live">Próximo</span>' : '<span class="pill replay">Passado</span>'}</td>
+              <td style="min-width:200px"><input class="ps-input" data-live-link="${l.id}" value="${escapeAttr(l.linkGravacao)}" placeholder="https://..."></td>
               <td><button class="btn-mini danger" data-del-contato-futuro="${l.id}">${icon('trash')} Remover</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhuma reunião futura agendada ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">Nenhuma reunião futura agendada ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
     <div class="add-form">
       <div class="field full"><label>Título</label><input class="ps-input" type="text" id="new-contatofuturo-title" placeholder="Ex.: Sessão 1:1 — ${escapeAttr(s.name)}"></div>
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-contatofuturo-data"></div>
-      <div class="field"><label>Horário / detalhes</label><input class="ps-input" type="text" id="new-contatofuturo-time" placeholder="Ex.: 15h00"></div>
+      <div class="field"><label>Horário</label><input class="ps-input" type="time" id="new-contatofuturo-hour"></div>
+      <div class="field"><label>Detalhes (opcional)</label><input class="ps-input" type="text" id="new-contatofuturo-timedetail" placeholder="Ex.: Turma 2026.1"></div>
       <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-contatofuturo-desc" placeholder="Pauta da reunião..."></textarea></div>
+      <div class="field full"><label>Link da gravação (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-contatofuturo-link" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-contatofuturo-btn">${icon('plus')} Agendar reunião</button></div>
     </div>
 
@@ -5078,17 +5135,29 @@ function renderInterno(){
     const eventDate = document.getElementById('new-contatofuturo-data').value;
     if(!eventDate) return;
     const title = document.getElementById('new-contatofuturo-title').value.trim() || `Sessão 1:1 — ${s.name}`;
-    const eventTime = document.getElementById('new-contatofuturo-time').value.trim();
+    const eventHour = document.getElementById('new-contatofuturo-hour').value;
+    const timeDetail = document.getElementById('new-contatofuturo-timedetail').value.trim();
+    const eventTime = [formatHoraBR(eventHour), timeDetail].filter(Boolean).join(' · ');
     const description = document.getElementById('new-contatofuturo-desc').value.trim();
+    const linkGravacao = document.getElementById('new-contatofuturo-link').value.trim();
     const btn = document.getElementById('add-contatofuturo-btn');
     btn.disabled = true;
     try{
       /* student_id preenchido: essa reunião fica privada, só aparece na Agenda ao Vivo deste mentorado
-         (ver renderAgenda) — nunca na de outros alunos. */
-      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, description, student_id:s.id});
+         (ver renderAgenda) — nunca na de outros alunos. tipo:'individual' — 1h depois do horário
+         marcado, sai da Agenda ao Vivo e passa a aparecer em Minhas Sessões 1:1 (ver renderSessoes). */
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, event_hour: eventHour||null, description, link_gravacao: linkGravacao||null, student_id:s.id, tipo:'individual'});
       LIVE_SESSIONS.push(mapLiveSessionRow(row));
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('#contatos-futuros-tbody [data-live-link]').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const l = LIVE_SESSIONS.find(x=>x.id==inp.dataset.liveLink);
+      if(!l) return;
+      l.linkGravacao = inp.value.trim();
+      syncLiveSessionUpdate(l.id, {link_gravacao: l.linkGravacao || null});
+    });
   });
   document.querySelectorAll('[data-del-contato-futuro]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -5366,28 +5435,48 @@ function renderConteudo(){
     </div>
 
     <h2 class="section-title">${icon('calendar')} Eventos / Aulas ao Vivo</h2>
-    <p class="section-sub" style="margin-top:-6px">Encontros coletivos — aparecem na Agenda ao Vivo de todos os alunos, como próximos encontros (se a data for futura) ou gravações (se já passou). Reuniões individuais com um mentorado específico são agendadas de dentro do Acompanhamento Interno dele (aba "Registro de Contatos Futuros"), não aqui.</p>
+    <p class="section-sub" style="margin-top:-6px">Agende aqui qualquer encontro ao vivo — coletivo (Mastermind, Plantão de Dúvidas, Consultório Simulado, visível na Agenda ao Vivo de todos) ou 1:1 com um mentorado específico (visível só pra ele). 1h depois do horário marcado, o encontro sai de "Próximos encontros" automaticamente: os coletivos vão para as gravações da Agenda ao Vivo, separadas por tipo; os 1:1 vão para Minhas Sessões 1:1 do mentorado. Reuniões 1:1 também podem ser agendadas direto do Acompanhamento Interno do aluno, na aba "Registro de Contatos Futuros".</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
+        <thead><tr><th>Título</th><th>Tipo</th><th>Para</th><th>Data</th><th>Horário</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
         <tbody>
-          ${LIVE_SESSIONS.filter(l=>l.studentId==null).slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
+          ${LIVE_SESSIONS.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>{
+            const tipoLabel = TIPO_ENCONTRO_LABELS[l.tipo] || (l.studentId? 'Encontro 1:1' : 'Encontro');
+            const para = l.studentId ? escapeHtml((getStudent(l.studentId)||{}).name || 'Aluno removido') : 'Todos os alunos';
+            return `
             <tr>
-              <td style="min-width:220px">${l.title}</td>
+              <td style="min-width:200px">${escapeHtml(l.title)}</td>
+              <td><span class="resp-pill">${tipoLabel}</span></td>
+              <td style="white-space:nowrap">${para}</td>
               <td style="white-space:nowrap">${l.date}</td>
-              <td style="min-width:180px">${l.time||'—'}</td>
+              <td style="min-width:140px">${escapeHtml(l.time||'—')}</td>
               <td>${l.type==='upcoming'? '<span class="pill live">Próximo</span>' : '<span class="pill replay">Passado</span>'}</td>
               <td style="min-width:200px"><input class="ps-input" data-live-link="${l.id}" value="${escapeAttr(l.linkGravacao)}" placeholder="https://..."></td>
               <td><button class="btn-mini danger" data-del-live="${l.id}">${icon('trash')} Remover</button></td>
-            </tr>
-          `).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
+            </tr>`;
+          }).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
     <div class="add-form">
       <div class="field full"><label>Título do evento</label><input class="ps-input" type="text" id="new-live-title" placeholder="Ex.: Encontro em grupo — Planejamento de Q4"></div>
+      <div class="field"><label>Tipo de encontro</label>
+        <select class="ps-input" id="new-live-tipo">
+          <option value="mastermind">Mastermind</option>
+          <option value="plantao_duvidas">Plantão de Dúvidas</option>
+          <option value="consultorio_simulado">Consultório Simulado</option>
+          <option value="individual">Encontro 1:1</option>
+        </select>
+      </div>
+      <div class="field" id="new-live-student-wrap" style="display:none">
+        <label>Mentorado</label>
+        <select class="ps-input" id="new-live-student">
+          ${STUDENTS.map(st=>`<option value="${st.id}">${escapeAttr(st.name)}</option>`).join('')}
+        </select>
+      </div>
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-live-date"></div>
-      <div class="field"><label>Horário / detalhes</label><input class="ps-input" type="text" id="new-live-time" placeholder="Ex.: 19h00 · Turma 2026.1"></div>
+      <div class="field"><label>Horário</label><input class="ps-input" type="time" id="new-live-hour"></div>
+      <div class="field"><label>Detalhes (opcional)</label><input class="ps-input" type="text" id="new-live-timedetail" placeholder="Ex.: Turma 2026.1"></div>
       <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-live-desc" placeholder="Do que trata este encontro..."></textarea></div>
       <div class="field full"><label>Link da gravação (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-live-link" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-live-btn">${icon('upload')} Publicar evento</button></div>
@@ -5456,17 +5545,29 @@ function renderConteudo(){
       syncLiveSessionUpdate(l.id, {link_gravacao: l.linkGravacao || null});
     });
   });
+  document.getElementById('new-live-tipo').addEventListener('change', ()=>{
+    const isIndividual = document.getElementById('new-live-tipo').value === 'individual';
+    document.getElementById('new-live-student-wrap').style.display = isIndividual ? 'flex' : 'none';
+  });
   document.getElementById('add-live-btn').addEventListener('click', async ()=>{
     const title = document.getElementById('new-live-title').value.trim();
+    const tipo = document.getElementById('new-live-tipo').value;
     const eventDate = document.getElementById('new-live-date').value;
-    const eventTime = document.getElementById('new-live-time').value.trim();
+    const eventHour = document.getElementById('new-live-hour').value;
+    const timeDetail = document.getElementById('new-live-timedetail').value.trim();
+    const eventTime = [formatHoraBR(eventHour), timeDetail].filter(Boolean).join(' · ');
     const description = document.getElementById('new-live-desc').value.trim();
     const linkGravacao = document.getElementById('new-live-link').value.trim();
     if(!title || !eventDate) return;
+    let studentId = null;
+    if(tipo==='individual'){
+      studentId = document.getElementById('new-live-student').value;
+      if(!studentId) return;
+    }
     const btn = document.getElementById('add-live-btn');
     btn.disabled = true;
     try{
-      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, description, link_gravacao: linkGravacao || null});
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, event_hour: eventHour||null, description, link_gravacao: linkGravacao || null, student_id: studentId, tipo});
       LIVE_SESSIONS.push(mapLiveSessionRow(row));
       renderConteudo();
     }catch(e){ console.error(e); btn.disabled = false; }
@@ -5494,7 +5595,7 @@ function renderVisaoGeral(){
     <p class="section-sub" style="margin-top:-6px">Clique em "Abrir" para acessar o Acompanhamento Interno de um mentorado específico.</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Próxima meta pendente</th><th>Atrasadas</th><th>Dias restantes</th><th>Estágio</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Atrasadas</th><th>Dias restantes</th><th>Estágio</th><th></th></tr></thead>
         <tbody>
           ${STUDENTS.map(s=>{
             const pct = overallProgress(s);
@@ -5515,7 +5616,7 @@ function renderVisaoGeral(){
                   <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
                   <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
                 </td>
-                <td style="min-width:220px">${nextTask? nextTask.tarefa : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
+                <td style="min-width:140px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}">Meta pendente</button>` : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
                 <td>${atrasadas>0? `<span class="status-pill status-Atrasada">${atrasadas}</span>` : '—'}</td>
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
@@ -5532,6 +5633,13 @@ function renderVisaoGeral(){
       panelQuadrantId = null;
       renderProfile();
       goTo('interno');
+    });
+  });
+  document.querySelectorAll('[data-open-meta]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      currentStudentId = btn.dataset.openMeta;
+      renderProfile();
+      goTo('metas');
     });
   });
 }
