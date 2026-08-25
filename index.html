@@ -799,6 +799,17 @@
   .status-pill.status-Pendente{background:var(--individual-soft);color:var(--individual);}
   .status-pill.status-Atrasada{background:var(--danger-soft);color:var(--danger);}
   .resp-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg-elev);color:var(--text-dim);white-space:nowrap;}
+  .check-table tr.venda-vendido td{background:var(--success-soft);}
+  .vendas-alert-row{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0 22px;}
+  .vendas-alert-card{flex:1;min-width:260px;background:var(--individual-soft);border:1px solid rgba(171,111,48,0.35);border-radius:var(--radius-sm);padding:14px 16px;}
+  .vendas-alert-card .vac-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--individual);margin-bottom:10px;}
+  .vendas-alert-card .vac-title .icon{stroke:var(--individual);width:15px;height:15px;}
+  .vendas-alert-card ol{margin:0;padding-left:18px;font-size:12.5px;color:var(--text-dim);}
+  .vendas-alert-card ol li{margin-bottom:5px;}
+  .vendas-alert-card ol li b{color:var(--text);}
+  .vendas-alert-card .vac-empty{font-size:12.5px;color:var(--text-mute);}
+  .vendas-upsell-check{display:flex;align-items:center;justify-content:center;}
+  .vendas-upsell-check .icon{width:16px;height:16px;stroke:var(--success);}
   .link-btn{background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--accent);text-decoration:underline;cursor:pointer;}
   .link-btn:hover{opacity:0.8;}
 
@@ -2123,9 +2134,10 @@ function mapVendaSessaoRow(row){
     dataSessao: row.data_sessao || '',
     dataTexto: row.data_texto || (row.data_sessao ? formatDateBR(row.data_sessao) : ''),
     lead: row.lead_nome || '', vendedor: row.vendedor || '', produto: row.produto || '',
+    upsell: !!row.upsell, formato: row.formato || '',
     presenca: row.presenca || '', resultado: row.resultado || '',
     valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
-    objecoes: row.objecoes || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
+    objecoes: row.objecoes || '', objecoes2: row.objecoes2 || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
     contrato: row.contrato_texto || '',
   };
 }
@@ -2133,9 +2145,10 @@ async function syncVendaSessaoInsert(v){
   const { data, error } = await sb.from('venda_sessoes').insert({
     numero: v.numero || null, data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null,
     lead_nome: v.lead || null, vendedor: v.vendedor || null, produto: v.produto || null,
+    upsell: !!v.upsell, formato: v.formato || null,
     presenca: v.presenca || null, resultado: v.resultado || null,
     valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
-    objecoes: v.objecoes || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
+    objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
     contrato_texto: v.contrato || null,
   }).select().single();
   if(error) throw error;
@@ -5626,6 +5639,50 @@ function renderConteudo(){
 let vendasFiltroVendedor = 'todos';
 let vendasFiltroResultado = 'todos';
 let vendasBusca = '';
+const VENDAS_VENDEDOR_OPTS = ['Carmem','Carmem e Diego','Diego','Viviane'];
+const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
+const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'];
+const VENDAS_PRESENCA_OPTS = ['Show','No-show'];
+const VENDAS_RESULTADO_OPTS = ['Vendido','Não vendido','Incompleto','Desqualificado'];
+function selectOpts(opts, current){
+  return `<option value="">—</option>` + opts.map(o=>`<option value="${escapeAttr(o)}" ${current===o?'selected':''}>${escapeHtml(o)}</option>`).join('');
+}
+function splitNumbered(text){
+  if(!text) return [];
+  return String(text).split(/\d+\.\s*/).map(s=>s.trim()).filter(Boolean);
+}
+function topPhrases(items, n){
+  const counts = {};
+  items.forEach(t=>{
+    const label = (t||'').trim();
+    if(!label) return;
+    const key = label.toLowerCase();
+    if(!counts[key]) counts[key] = {label, count:0};
+    counts[key].count++;
+  });
+  return Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,n);
+}
+function vendasIndicadores(lista){
+  const objecoes = topPhrases(lista.flatMap(v=>[v.objecoes, v.objecoes2]), 5);
+  const desafios = topPhrases(lista.flatMap(v=>splitNumbered(v.problemas)), 5);
+  return {objecoes, desafios};
+}
+function renderVendasAlertCards(ind){
+  const renderList = (items)=> items.length
+    ? `<ol>${items.map(i=>`<li><b>${escapeHtml(i.label)}</b>${i.count>1?` — ${i.count}x`:''}</li>`).join('')}</ol>`
+    : `<div class="vac-empty">Sem dados suficientes ainda.</div>`;
+  return `
+    <div class="vendas-alert-row">
+      <div class="vendas-alert-card">
+        <div class="vac-title">${icon('target')} Principais objeções dos leads</div>
+        ${renderList(ind.objecoes)}
+      </div>
+      <div class="vendas-alert-card">
+        <div class="vac-title">${icon('bell')} Principais desafios nas sessões</div>
+        ${renderList(ind.desafios)}
+      </div>
+    </div>`;
+}
 function renderVendas(){
   const vendedores = Array.from(new Set(VENDA_SESSOES.map(v=>v.vendedor).filter(Boolean))).sort();
   const resultados = Array.from(new Set(VENDA_SESSOES.map(v=>v.resultado).filter(Boolean))).sort();
@@ -5636,9 +5693,10 @@ function renderVendas(){
     (!busca || v.lead.toLowerCase().includes(busca))
   ).slice().sort((a,b)=> (b.numero||0)-(a.numero||0));
 
-  const fechadas = VENDA_SESSOES.filter(v=>v.resultado==='Sim');
+  const fechadas = VENDA_SESSOES.filter(v=>v.resultado==='Vendido');
   const faturamento = fechadas.reduce((a,v)=>a+(v.valorNumerico||0),0);
   const taxaFechamento = VENDA_SESSOES.length ? Math.round(fechadas.length/VENDA_SESSOES.length*100) : 0;
+  const indicadores = vendasIndicadores(VENDA_SESSOES);
 
   document.getElementById('view-vendas').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Registro de sessões 1:1 de venda de mentoria, importado da planilha de vendas.</div>
@@ -5649,6 +5707,8 @@ function renderVendas(){
       <div class="kpi-tile"><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
       <div class="kpi-tile"><div class="label">Faturamento (vendas fechadas)</div><div class="value" style="font-size:16px">${formatBRL(faturamento)}</div></div>
     </div>
+
+    ${renderVendasAlertCards(indicadores)}
 
     <h2 class="section-title">${icon('idcard')} Registro de Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
@@ -5666,31 +5726,33 @@ function renderVendas(){
         </select>
       </div>
       <div class="field"><label>Buscar por lead</label><input class="ps-input" type="text" id="vendas-busca" value="${escapeAttr(vendasBusca)}" placeholder="Nome do lead..."></div>
+      <div class="actions"><button class="btn-outline" id="vendas-pdf-btn">${icon('download','tiny')} Gerar PDF</button></div>
     </div>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th><th>Produto</th><th>Presença</th><th>Resultado</th><th>Valor</th><th>Objeções</th><th>Problemas na sessão</th><th>Observações</th><th>Contrato</th><th></th></tr></thead>
+        <thead><tr><th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th><th>Produto</th><th>Upsell</th><th>Formato</th><th>Presença</th><th>Resultado</th><th>Valor</th><th>Objeções</th><th>Observações</th><th>Contrato</th><th></th></tr></thead>
         <tbody>
           ${filtradas.map(v=>`
-            <tr>
+            <tr class="${v.resultado==='Vendido'?'venda-vendido':''}">
               <td>${v.numero ?? '—'}</td>
               <td style="white-space:nowrap">${escapeHtml(v.dataTexto)}</td>
               <td style="min-width:160px;font-weight:600">${escapeHtml(v.lead)}</td>
               <td style="white-space:nowrap">${escapeHtml(v.vendedor)}</td>
               <td style="min-width:120px">${escapeHtml(v.produto)}</td>
-              <td style="white-space:nowrap">${escapeHtml(v.presenca)}</td>
+              <td class="vendas-upsell-check">${v.upsell? icon('check','tiny') : '—'}</td>
+              <td style="white-space:nowrap">${escapeHtml(v.formato)||'—'}</td>
+              <td style="white-space:nowrap">${escapeHtml(v.presenca)||'—'}</td>
               <td style="white-space:nowrap"><span class="resp-pill">${escapeHtml(v.resultado||'—')}</span></td>
               <td style="white-space:nowrap">${escapeHtml(v.valorTexto)}</td>
-              <td style="min-width:220px;white-space:normal">${linkify(v.objecoes)}</td>
-              <td style="min-width:220px;white-space:normal">${linkify(v.problemas)}</td>
+              <td style="min-width:200px;white-space:normal">${[v.objecoes,v.objecoes2].filter(Boolean).map(o=>linkify(o)).join('<br>') || '—'}</td>
               <td style="min-width:220px;white-space:normal">${linkify(v.observacoes)}</td>
-              <td style="white-space:nowrap">${v.contrato? escapeHtml(v.contrato) : '—'}</td>
+              <td style="white-space:nowrap">${v.contrato? (/^https?:\/\//i.test(v.contrato.trim()) ? `<a href="${escapeAttr(v.contrato.trim())}" target="_blank" rel="noopener" class="link-btn">Clique aqui</a>` : escapeHtml(v.contrato)) : '—'}</td>
               <td style="white-space:nowrap">
                 <button class="btn-mini" data-edit-venda="${v.id}">${icon('edit','tiny')} Editar</button>
                 <button class="btn-mini danger" data-del-venda="${v.id}">${icon('trash','tiny')} Excluir</button>
               </td>
             </tr>
-          `).join('') || `<tr><td colspan="13" style="color:var(--text-mute)">Nenhuma sessão encontrada com esses filtros.</td></tr>`}
+          `).join('') || `<tr><td colspan="14" style="color:var(--text-mute)">Nenhuma sessão encontrada com esses filtros.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -5699,19 +5761,25 @@ function renderVendas(){
     <div class="add-form">
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-venda-data"></div>
       <div class="field full"><label>Lead</label><input class="ps-input" type="text" id="new-venda-lead" placeholder="Nome do lead"></div>
-      <div class="field"><label>Vendedor</label><input class="ps-input" type="text" id="new-venda-vendedor" placeholder="Ex.: Diego, Carmem, Diego+Carmem"></div>
-      <div class="field"><label>Produto</label><input class="ps-input" type="text" id="new-venda-produto" placeholder="Ex.: Mentoria Essencia"></div>
-      <div class="field"><label>Presença</label>
-        <select class="ps-input" id="new-venda-presenca">
-          <option value="Show">Show</option>
-          <option value="No Show">No Show</option>
-          <option value="Reagendar">Reagendar</option>
-        </select>
+      <div class="field"><label>Vendedor</label>
+        <select class="ps-input" id="new-venda-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS,'')}</select>
       </div>
-      <div class="field"><label>Resultado</label><input class="ps-input" type="text" id="new-venda-resultado" placeholder="Ex.: Sim, Não, Cancelou..."></div>
+      <div class="field"><label>Produto</label>
+        <select class="ps-input" id="new-venda-produto">${selectOpts(VENDAS_PRODUTO_OPTS,'')}</select>
+      </div>
+      <div class="field" style="align-self:flex-end"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="new-venda-upsell"> Upsell (upgrade)</label></div>
+      <div class="field"><label>Formato</label>
+        <select class="ps-input" id="new-venda-formato">${selectOpts(VENDAS_FORMATO_OPTS,'')}</select>
+      </div>
+      <div class="field"><label>Presença</label>
+        <select class="ps-input" id="new-venda-presenca">${selectOpts(VENDAS_PRESENCA_OPTS,'')}</select>
+      </div>
+      <div class="field"><label>Resultado</label>
+        <select class="ps-input" id="new-venda-resultado">${selectOpts(VENDAS_RESULTADO_OPTS,'')}</select>
+      </div>
       <div class="field"><label>Valor</label><input class="ps-input" type="text" id="new-venda-valor" placeholder="Ex.: R$ 5.997,00"></div>
-      <div class="field full"><label>Objeções do lead</label><textarea class="ps-input" id="new-venda-objecoes"></textarea></div>
-      <div class="field full"><label>Problemas na sessão</label><textarea class="ps-input" id="new-venda-problemas"></textarea></div>
+      <div class="field full"><label>Objeção 1</label><textarea class="ps-input" id="new-venda-objecao1"></textarea></div>
+      <div class="field full"><label>Objeção 2</label><textarea class="ps-input" id="new-venda-objecao2"></textarea></div>
       <div class="field full"><label>Observações</label><textarea class="ps-input" id="new-venda-observacoes"></textarea></div>
       <div class="field full"><label>Link do contrato</label><input class="ps-input" type="text" id="new-venda-contrato" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-venda-btn">${icon('plus')} Registrar sessão</button></div>
@@ -5722,6 +5790,7 @@ function renderVendas(){
   const buscaInp = document.getElementById('vendas-busca');
   buscaInp.addEventListener('input', ()=>{ vendasBusca = buscaInp.value; });
   buscaInp.addEventListener('change', ()=>{ vendasBusca = buscaInp.value; renderVendas(); });
+  document.getElementById('vendas-pdf-btn').addEventListener('click', ()=> exportVendasPDF(filtradas, indicadores));
   document.querySelectorAll('[data-del-venda]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       if(!confirmDelete('Excluir este registro de sessão? Essa ação não pode ser desfeita.')) return;
@@ -5745,14 +5814,17 @@ function renderVendas(){
       dataSessao: dataIso || null,
       dataTexto: dataIso ? formatDateBR(dataIso) : '',
       lead,
-      vendedor: document.getElementById('new-venda-vendedor').value.trim(),
-      produto: document.getElementById('new-venda-produto').value.trim(),
+      vendedor: document.getElementById('new-venda-vendedor').value,
+      produto: document.getElementById('new-venda-produto').value,
+      upsell: document.getElementById('new-venda-upsell').checked,
+      formato: document.getElementById('new-venda-formato').value,
       presenca: document.getElementById('new-venda-presenca').value,
-      resultado: document.getElementById('new-venda-resultado').value.trim(),
+      resultado: document.getElementById('new-venda-resultado').value,
       valorTexto,
       valorNumerico: parseValorBRL(valorTexto),
-      objecoes: document.getElementById('new-venda-objecoes').value.trim(),
-      problemas: document.getElementById('new-venda-problemas').value.trim(),
+      objecoes: document.getElementById('new-venda-objecao1').value.trim(),
+      objecoes2: document.getElementById('new-venda-objecao2').value.trim(),
+      problemas: '',
       observacoes: document.getElementById('new-venda-observacoes').value.trim(),
       contrato: document.getElementById('new-venda-contrato').value.trim(),
     };
@@ -5778,23 +5850,26 @@ function openEditVendaModal(id){
         <label class="ps-label">Lead</label>
         <input class="ps-input" type="text" id="ev-lead" value="${escapeAttr(v.lead)}">
         <label class="ps-label">Vendedor</label>
-        <input class="ps-input" type="text" id="ev-vendedor" value="${escapeAttr(v.vendedor)}">
+        <select class="ps-input" id="ev-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS, v.vendedor)}</select>
         <label class="ps-label">Produto</label>
-        <input class="ps-input" type="text" id="ev-produto" value="${escapeAttr(v.produto)}">
+        <select class="ps-input" id="ev-produto">${selectOpts(VENDAS_PRODUTO_OPTS, v.produto)}</select>
+        <label class="ps-label" style="display:flex;align-items:center;gap:6px;margin-top:10px"><input type="checkbox" id="ev-upsell" ${v.upsell?'checked':''}> Upsell (upgrade)</label>
+        <label class="ps-label">Formato</label>
+        <select class="ps-input" id="ev-formato">${selectOpts(VENDAS_FORMATO_OPTS, v.formato)}</select>
         <label class="ps-label">Presença</label>
-        <input class="ps-input" type="text" id="ev-presenca" value="${escapeAttr(v.presenca)}">
+        <select class="ps-input" id="ev-presenca">${selectOpts(VENDAS_PRESENCA_OPTS, v.presenca)}</select>
         <label class="ps-label">Resultado</label>
-        <input class="ps-input" type="text" id="ev-resultado" value="${escapeAttr(v.resultado)}">
+        <select class="ps-input" id="ev-resultado">${selectOpts(VENDAS_RESULTADO_OPTS, v.resultado)}</select>
         <label class="ps-label">Valor</label>
         <input class="ps-input" type="text" id="ev-valor" value="${escapeAttr(v.valorTexto)}">
-        <label class="ps-label">Objeções do lead</label>
-        <textarea class="ps-input" id="ev-objecoes">${escapeHtml(v.objecoes)}</textarea>
-        <label class="ps-label">Problemas na sessão</label>
-        <textarea class="ps-input" id="ev-problemas">${escapeHtml(v.problemas)}</textarea>
+        <label class="ps-label">Objeção 1</label>
+        <textarea class="ps-input" id="ev-objecao1">${escapeHtml(v.objecoes)}</textarea>
+        <label class="ps-label">Objeção 2</label>
+        <textarea class="ps-input" id="ev-objecao2">${escapeHtml(v.objecoes2)}</textarea>
         <label class="ps-label">Observações</label>
         <textarea class="ps-input" id="ev-observacoes">${escapeHtml(v.observacoes)}</textarea>
         <label class="ps-label">Link do contrato</label>
-        <input class="ps-input" type="text" id="ev-contrato" value="${escapeAttr(v.contrato)}">
+        <input class="ps-input" type="text" id="ev-contrato" value="${escapeAttr(v.contrato)}" placeholder="https://...">
       </div>
       <div class="modal-actions">
         <button class="btn-accent" id="ev-save">Salvar alterações</button>
@@ -5809,26 +5884,80 @@ function openEditVendaModal(id){
     v.dataSessao = dataIso || '';
     v.dataTexto = dataIso ? formatDateBR(dataIso) : v.dataTexto;
     v.lead = document.getElementById('ev-lead').value.trim();
-    v.vendedor = document.getElementById('ev-vendedor').value.trim();
-    v.produto = document.getElementById('ev-produto').value.trim();
-    v.presenca = document.getElementById('ev-presenca').value.trim();
-    v.resultado = document.getElementById('ev-resultado').value.trim();
+    v.vendedor = document.getElementById('ev-vendedor').value;
+    v.produto = document.getElementById('ev-produto').value;
+    v.upsell = document.getElementById('ev-upsell').checked;
+    v.formato = document.getElementById('ev-formato').value;
+    v.presenca = document.getElementById('ev-presenca').value;
+    v.resultado = document.getElementById('ev-resultado').value;
     v.valorTexto = valorTexto;
     v.valorNumerico = parseValorBRL(valorTexto);
-    v.objecoes = document.getElementById('ev-objecoes').value.trim();
-    v.problemas = document.getElementById('ev-problemas').value.trim();
+    v.objecoes = document.getElementById('ev-objecao1').value.trim();
+    v.objecoes2 = document.getElementById('ev-objecao2').value.trim();
     v.observacoes = document.getElementById('ev-observacoes').value.trim();
     v.contrato = document.getElementById('ev-contrato').value.trim();
     syncVendaSessaoUpdate(v.id, {
       data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null, lead_nome: v.lead || null,
-      vendedor: v.vendedor || null, produto: v.produto || null, presenca: v.presenca || null,
+      vendedor: v.vendedor || null, produto: v.produto || null, upsell: v.upsell, formato: v.formato || null,
+      presenca: v.presenca || null,
       resultado: v.resultado || null, valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
-      objecoes: v.objecoes || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
+      objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, observacoes: v.observacoes || null,
       contrato_texto: v.contrato || null,
     });
     closeModal();
     renderVendas();
   });
+}
+function exportVendasPDF(lista, indicadores){
+  const win = window.open('', '_blank');
+  if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
+  const alertHtml = (title, items)=> `<div class="vp-card"><h3>${escapeHtml(title)}</h3>${items.length? `<ol>${items.map(i=>`<li>${escapeHtml(i.label)}${i.count>1?` — ${i.count}x`:''}</li>`).join('')}</ol>` : '<p class="vp-empty">Sem dados suficientes ainda.</p>'}</div>`;
+  const rowsHtml = lista.map(v=>`<tr>
+    <td>${v.numero ?? '—'}</td>
+    <td>${escapeHtml(v.dataTexto)}</td>
+    <td>${escapeHtml(v.lead)}</td>
+    <td>${escapeHtml(v.vendedor)}</td>
+    <td>${escapeHtml(v.produto)}${v.upsell?' (Upsell)':''}</td>
+    <td>${escapeHtml(v.formato)||'—'}</td>
+    <td>${escapeHtml(v.presenca)||'—'}</td>
+    <td>${escapeHtml(v.resultado)||'—'}</td>
+    <td>${escapeHtml(v.valorTexto)||'—'}</td>
+    <td>${[v.objecoes,v.objecoes2].filter(Boolean).map(escapeHtml).join('; ')||'—'}</td>
+    <td>${escapeHtml(v.observacoes)||'—'}</td>
+  </tr>`).join('');
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Registro de Sessões 1:1 — Método Essência</title>
+    <style>
+      @page{ margin:16mm 12mm; }
+      body{ font-family:Arial,Helvetica,sans-serif; color:#1a1a1a; margin:0; padding:0 4mm; }
+      .pdf-header{ display:flex; align-items:center; gap:14px; border-bottom:2px solid #ab6f30; padding-bottom:14px; margin-bottom:20px; }
+      .pdf-header img{ display:block; }
+      .pdf-header .cat{ font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#666; }
+      h1{ font-size:20px; margin:0 0 4px; }
+      h3{ font-size:13px; margin:0 0 8px; color:#ab6f30; }
+      .vp-alerts{ display:flex; gap:14px; margin-bottom:20px; }
+      .vp-card{ flex:1; border:1px solid #e0c9a6; background:#fbf3e8; border-radius:8px; padding:12px 14px; }
+      .vp-card ol{ margin:0; padding-left:16px; font-size:11.5px; }
+      .vp-card li{ margin-bottom:4px; }
+      .vp-empty{ font-size:11.5px; color:#888; }
+      table{ width:100%; border-collapse:collapse; font-size:9.5px; }
+      th,td{ border:1px solid #ccc; padding:5px 6px; text-align:left; vertical-align:top; }
+      th{ background:#f2f2f2; }
+    </style>
+    </head><body>
+      <div class="pdf-header">
+        <img src="${BRAND_LOGO_DATA_URI}" alt="Ascentria · Método Essência" style="height:30px;width:auto;background:#171813;padding:6px 10px;border-radius:6px;">
+        <div><div class="cat">Equipe Interna</div><h1>Registro de Sessões 1:1</h1></div>
+      </div>
+      <div class="vp-alerts">
+        ${alertHtml('Principais objeções dos leads', indicadores.objecoes)}
+        ${alertHtml('Principais desafios nas sessões', indicadores.desafios)}
+      </div>
+      <table><thead><tr><th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th><th>Produto</th><th>Formato</th><th>Presença</th><th>Resultado</th><th>Valor</th><th>Objeções</th><th>Observações</th></tr></thead>
+      <tbody>${rowsHtml || `<tr><td colspan="11" style="text-align:center;color:#999;">Nenhuma sessão encontrada.</td></tr>`}</tbody></table>
+    </body></html>`);
+  win.document.close();
+  win.onload = ()=>{ win.focus(); win.print(); };
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
 }
 
 function renderVisaoGeral(){
