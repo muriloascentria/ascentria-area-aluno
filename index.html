@@ -815,7 +815,9 @@
   .vendas-table{table-layout:fixed;width:100%;min-width:0;}
   .vendas-table td{white-space:normal;word-break:break-word;overflow-wrap:anywhere;padding:8px 7px;font-size:11.3px;}
   .vendas-table th{white-space:nowrap;padding:8px 5px;font-size:9px;letter-spacing:0.1px;}
-  .vendas-actions-cell{display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:flex-start;text-align:center;}
+  .vendas-actions-cell{text-align:center;}
+  .vendas-actions-cell .btn-mini{margin:2px;}
+  .vendas-num-cell{white-space:nowrap;text-align:center;}
   .btn-mini.icon-only{padding:4px;gap:0;}
   .btn-mini.icon-only .icon{margin:0;}
   .cell-collapse{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -4665,8 +4667,6 @@ function exportTopicPDF(quadrant, topic, data){
       li{ margin-bottom:4px; }
       p{ font-size:13px; }
       a{ color:#ab6f30; }
-      .pdf-footer{ margin-top:26px; padding-top:10px; border-top:1px solid #ddd; font-size:9.5px; color:#999; text-align:center; }
-      @media print{ .pdf-footer{ position:fixed; bottom:6mm; left:0; right:0; margin-top:0; border-top:none; } }
     </style>
     </head><body>
       <div class="pdf-header">
@@ -4674,7 +4674,6 @@ function exportTopicPDF(quadrant, topic, data){
         <div><div class="cat">${escapeHtml(quadrant.title)}</div><h1>${escapeHtml(topic.title)}</h1></div>
       </div>
       ${sectionsHtml}
-      <div class="pdf-footer">Ascentria Educação</div>
     </body></html>`);
   win.document.close();
   win.onload = ()=>{ win.focus(); win.print(); };
@@ -4718,8 +4717,6 @@ function exportCashflowPDF(section, data, saveKey){
       th{ background:#f2f2f2; }
       .total{ margin-top:16px; font-size:14px; text-align:right; }
       .total strong{ color:#ab6f30; }
-      .pdf-footer{ margin-top:26px; padding-top:10px; border-top:1px solid #ddd; font-size:9.5px; color:#999; text-align:center; }
-      @media print{ .pdf-footer{ position:fixed; bottom:6mm; left:0; right:0; margin-top:0; border-top:none; } }
     </style>
     </head><body>
       <div class="pdf-header">
@@ -4729,7 +4726,6 @@ function exportCashflowPDF(section, data, saveKey){
       <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Forma de Pagamento</th><th>Valor</th><th>Saldo</th><th>Comprovante</th></tr></thead>
       <tbody>${rowsHtml || `<tr><td colspan="7" style="text-align:center;color:#999;">Nenhum lançamento neste mês.</td></tr>`}</tbody></table>
       <div class="total">Saldo final: <strong>${formatBRL(saldo)}</strong></div>
-      <div class="pdf-footer">Ascentria Educação</div>
     </body></html>`);
   win.document.close();
   win.onload = ()=>{ win.focus(); win.print(); };
@@ -4778,8 +4774,6 @@ function exportFaturamentoPDF(section, data, saveKey){
       .fat-chart-line{ fill:none; stroke:#ab6f30; stroke-width:2; }
       .fat-chart-dot{ fill:#ab6f30; }
       .fat-chart-label{ fill:#666; font-size:9px; }
-      .pdf-footer{ margin-top:26px; padding-top:10px; border-top:1px solid #ddd; font-size:9.5px; color:#999; text-align:center; }
-      @media print{ .pdf-footer{ position:fixed; bottom:6mm; left:0; right:0; margin-top:0; border-top:none; } }
     </style>
     </head><body>
       <div class="pdf-header">
@@ -4791,7 +4785,6 @@ function exportFaturamentoPDF(section, data, saveKey){
       <tbody>${rowsHtml || `<tr><td colspan="6" style="text-align:center;color:#999;">Nenhum lançamento de receita ainda.</td></tr>`}</tbody></table>
       <div class="total">Total geral (bruto): <strong>${formatBRL(totalBruto)}</strong> &nbsp;·&nbsp; Total geral (líquido): <strong>${formatBRL(totalLiquido)}</strong></div>
       ${detailed.length? `<h2>Faturamento em ${chartYear}</h2>${renderFaturamentoChart(monthTotals, chartYear)}` : ''}
-      <div class="pdf-footer">Ascentria Educação</div>
     </body></html>`);
   win.document.close();
   win.onload = ()=>{ win.focus(); win.print(); };
@@ -5691,7 +5684,7 @@ function topPhrases(items, n){
   return Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,n);
 }
 function vendasClampCell(html, plainText, cellId){
-  if(!plainText || plainText.length<=80) return html || '—';
+  if(!plainText || plainText.length<=80) return html || '';
   return `<div class="cell-collapse" data-cc="${cellId}">${html}</div><button type="button" class="cc-toggle" data-cc-toggle="${cellId}">Ver mais</button>`;
 }
 function shortDateBR(str){
@@ -5768,10 +5761,10 @@ function renderVendas(){
     <div class="table-wrap vendas-table-wrap">
       <table class="check-table vendas-table">
         <colgroup>
-          <col style="width:2%"><col style="width:6%"><col style="width:9%"><col style="width:7%">
+          <col style="width:3%"><col style="width:6%"><col style="width:9%"><col style="width:7%">
           <col style="width:8%"><col style="width:4%"><col style="width:8%"><col style="width:6%">
           <col style="width:7%"><col style="width:6%"><col style="width:13%"><col style="width:14%">
-          <col style="width:5%"><col style="width:5%">
+          <col style="width:5%"><col style="width:4%">
         </colgroup>
         <thead><tr>
           <th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th>
@@ -5782,19 +5775,19 @@ function renderVendas(){
         <tbody>
           ${filtradas.map(v=>`
             <tr class="${v.resultado==='Vendido'?'venda-vendido':''}">
-              <td>${v.numero ?? '—'}</td>
+              <td class="vendas-num-cell">${v.numero ?? ''}</td>
               <td>${escapeHtml(shortDateBR(v.dataTexto))}</td>
               <td style="font-weight:600">${escapeHtml(v.lead)}</td>
               <td>${escapeHtml(v.vendedor)}</td>
               <td>${escapeHtml(v.produto)}</td>
               <td class="vendas-upsell-check">${v.upsell? icon('check','tiny') : icon('xcircle','tiny x-danger')}</td>
-              <td>${escapeHtml(v.formato)||'—'}</td>
-              <td>${escapeHtml(v.presenca)||'—'}</td>
-              <td><span class="resp-pill">${escapeHtml(v.resultado||'—')}</span></td>
-              <td>${escapeHtml(v.valorTexto)||'—'}</td>
+              <td>${escapeHtml(v.formato)}</td>
+              <td>${escapeHtml(v.presenca)}</td>
+              <td>${v.resultado? `<span class="resp-pill">${escapeHtml(v.resultado)}</span>` : ''}</td>
+              <td>${escapeHtml(v.valorTexto)}</td>
               <td>${vendasClampCell([v.objecoes,v.objecoes2].filter(Boolean).map(o=>linkify(o)).join('<br>'), [v.objecoes,v.objecoes2].filter(Boolean).join(' '), 'obj-'+v.id)}</td>
               <td>${vendasClampCell(linkify(v.observacoes), v.observacoes, 'obs-'+v.id)}</td>
-              <td>${v.contrato? (/^https?:\/\//i.test(v.contrato.trim()) ? `<a href="${escapeAttr(v.contrato.trim())}" target="_blank" rel="noopener" class="link-btn">Clique aqui</a>` : escapeHtml(v.contrato)) : '—'}</td>
+              <td>${v.contrato? (/^https?:\/\//i.test(v.contrato.trim()) ? `<a href="${escapeAttr(v.contrato.trim())}" target="_blank" rel="noopener" class="link-btn">Clique aqui</a>` : escapeHtml(v.contrato)) : ''}</td>
               <td class="vendas-actions-cell">
                 <button class="btn-mini icon-only" data-edit-venda="${v.id}" title="Editar">${icon('edit','tiny')}</button>
                 <button class="btn-mini icon-only danger" data-del-venda="${v.id}" title="Excluir">${icon('trash','tiny')}</button>
@@ -5970,17 +5963,17 @@ function exportVendasPDF(lista, indicadores){
   if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
   const alertHtml = (title, items)=> `<div class="vp-card"><h3>${escapeHtml(title)}</h3>${items.length? items.map((i,idx)=>`<p>${idx+1}. ${escapeHtml(i.label)} (${i.count}x).</p>`).join('') : '<p class="vp-empty">Sem dados suficientes ainda.</p>'}</div>`;
   const rowsHtml = lista.map(v=>`<tr>
-    <td>${v.numero ?? '—'}</td>
+    <td>${v.numero ?? ''}</td>
     <td>${escapeHtml(v.dataTexto)}</td>
     <td>${escapeHtml(v.lead)}</td>
     <td>${escapeHtml(v.vendedor)}</td>
     <td>${escapeHtml(v.produto)}${v.upsell?' (Upsell)':''}</td>
-    <td>${escapeHtml(v.formato)||'—'}</td>
-    <td>${escapeHtml(v.presenca)||'—'}</td>
-    <td>${escapeHtml(v.resultado)||'—'}</td>
-    <td>${escapeHtml(v.valorTexto)||'—'}</td>
-    <td>${[v.objecoes,v.objecoes2].filter(Boolean).map(escapeHtml).join('; ')||'—'}</td>
-    <td>${escapeHtml(v.observacoes)||'—'}</td>
+    <td>${escapeHtml(v.formato)}</td>
+    <td>${escapeHtml(v.presenca)}</td>
+    <td>${escapeHtml(v.resultado)}</td>
+    <td>${escapeHtml(v.valorTexto)}</td>
+    <td>${[v.objecoes,v.objecoes2].filter(Boolean).map(escapeHtml).join('; ')}</td>
+    <td>${escapeHtml(v.observacoes)}</td>
   </tr>`).join('');
   win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Registro de Sessões 1:1 — Método Essência</title>
     <style>
@@ -5998,8 +5991,6 @@ function exportVendasPDF(lista, indicadores){
       table{ width:100%; border-collapse:collapse; font-size:9.5px; }
       th,td{ border:1px solid #ccc; padding:5px 6px; text-align:left; vertical-align:top; }
       th{ background:#f2f2f2; }
-      .pdf-footer{ margin-top:26px; padding-top:10px; border-top:1px solid #ddd; font-size:9.5px; color:#999; text-align:center; }
-      @media print{ .pdf-footer{ position:fixed; bottom:6mm; left:0; right:0; margin-top:0; border-top:none; } }
     </style>
     </head><body>
       <div class="pdf-header">
@@ -6012,7 +6003,6 @@ function exportVendasPDF(lista, indicadores){
       </div>
       <table><thead><tr><th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th><th>Produto</th><th>Formato</th><th>Presença</th><th>Resultado</th><th>Valor</th><th>Objeções</th><th>Observações</th></tr></thead>
       <tbody>${rowsHtml || `<tr><td colspan="11" style="text-align:center;color:#999;">Nenhuma sessão encontrada.</td></tr>`}</tbody></table>
-      <div class="pdf-footer">Ascentria Educação</div>
     </body></html>`);
   win.document.close();
   win.onload = ()=>{ win.focus(); win.print(); };
