@@ -808,8 +808,11 @@
   .vendas-alert-card ol li{margin-bottom:5px;}
   .vendas-alert-card ol li b{color:var(--text);}
   .vendas-alert-card .vac-empty{font-size:12.5px;color:var(--text-mute);}
-  .vendas-upsell-check{display:flex;align-items:center;justify-content:center;}
-  .vendas-upsell-check .icon{width:16px;height:16px;stroke:var(--success);}
+  .vendas-upsell-check{text-align:center;}
+  .vendas-upsell-check .icon{width:14px;height:14px;stroke:var(--success);vertical-align:-2px;}
+  .cell-collapse{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .cell-collapse.expanded{display:block;-webkit-line-clamp:unset;overflow:visible;}
+  .cc-toggle{display:block;margin-top:3px;background:none;border:none;padding:0;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline;}
   .link-btn{background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--accent);text-decoration:underline;cursor:pointer;}
   .link-btn:hover{opacity:0.8;}
 
@@ -5647,6 +5650,9 @@ const VENDAS_RESULTADO_OPTS = ['Vendido','Não vendido','Incompleto','Desqualifi
 function selectOpts(opts, current){
   return `<option value="">—</option>` + opts.map(o=>`<option value="${escapeAttr(o)}" ${current===o?'selected':''}>${escapeHtml(o)}</option>`).join('');
 }
+const VENDAS_SEM_OBJECAO = 'Não foram registradas objeções.';
+const VENDAS_SEM_OBSERVACAO = 'Não foram registradas observações.';
+function defaultIfEmpty(text, fallback){ return (text && text.trim()) ? text.trim() : fallback; }
 function splitNumbered(text){
   if(!text) return [];
   return String(text).split(/\d+\.\s*/).map(s=>s.trim()).filter(Boolean);
@@ -5661,6 +5667,10 @@ function topPhrases(items, n){
     counts[key].count++;
   });
   return Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,n);
+}
+function vendasClampCell(html, plainText, cellId){
+  if(!plainText || plainText.length<=120) return html || '—';
+  return `<div class="cell-collapse" data-cc="${cellId}">${html}</div><button type="button" class="cc-toggle" data-cc-toggle="${cellId}">Ver mais</button>`;
 }
 function vendasIndicadores(lista){
   const objecoes = topPhrases(lista.flatMap(v=>[v.objecoes, v.objecoes2]), 5);
@@ -5744,8 +5754,8 @@ function renderVendas(){
               <td style="white-space:nowrap">${escapeHtml(v.presenca)||'—'}</td>
               <td style="white-space:nowrap"><span class="resp-pill">${escapeHtml(v.resultado||'—')}</span></td>
               <td style="white-space:nowrap">${escapeHtml(v.valorTexto)}</td>
-              <td style="min-width:200px;white-space:normal">${[v.objecoes,v.objecoes2].filter(Boolean).map(o=>linkify(o)).join('<br>') || '—'}</td>
-              <td style="min-width:220px;white-space:normal">${linkify(v.observacoes)}</td>
+              <td style="min-width:200px;white-space:normal">${vendasClampCell([v.objecoes,v.objecoes2].filter(Boolean).map(o=>linkify(o)).join('<br>'), [v.objecoes,v.objecoes2].filter(Boolean).join(' '), 'obj-'+v.id)}</td>
+              <td style="min-width:220px;white-space:normal">${vendasClampCell(linkify(v.observacoes), v.observacoes, 'obs-'+v.id)}</td>
               <td style="white-space:nowrap">${v.contrato? (/^https?:\/\//i.test(v.contrato.trim()) ? `<a href="${escapeAttr(v.contrato.trim())}" target="_blank" rel="noopener" class="link-btn">Clique aqui</a>` : escapeHtml(v.contrato)) : '—'}</td>
               <td style="white-space:nowrap">
                 <button class="btn-mini" data-edit-venda="${v.id}">${icon('edit','tiny')} Editar</button>
@@ -5791,6 +5801,15 @@ function renderVendas(){
   buscaInp.addEventListener('input', ()=>{ vendasBusca = buscaInp.value; });
   buscaInp.addEventListener('change', ()=>{ vendasBusca = buscaInp.value; renderVendas(); });
   document.getElementById('vendas-pdf-btn').addEventListener('click', ()=> exportVendasPDF(filtradas, indicadores));
+  document.querySelectorAll('[data-cc-toggle]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.ccToggle;
+      const el = document.querySelector(`[data-cc="${id}"]`);
+      if(!el) return;
+      const expanded = el.classList.toggle('expanded');
+      btn.textContent = expanded ? 'Ver menos' : 'Ver mais';
+    });
+  });
   document.querySelectorAll('[data-del-venda]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       if(!confirmDelete('Excluir este registro de sessão? Essa ação não pode ser desfeita.')) return;
@@ -5822,10 +5841,10 @@ function renderVendas(){
       resultado: document.getElementById('new-venda-resultado').value,
       valorTexto,
       valorNumerico: parseValorBRL(valorTexto),
-      objecoes: document.getElementById('new-venda-objecao1').value.trim(),
-      objecoes2: document.getElementById('new-venda-objecao2').value.trim(),
+      objecoes: defaultIfEmpty(document.getElementById('new-venda-objecao1').value, VENDAS_SEM_OBJECAO),
+      objecoes2: defaultIfEmpty(document.getElementById('new-venda-objecao2').value, VENDAS_SEM_OBJECAO),
       problemas: '',
-      observacoes: document.getElementById('new-venda-observacoes').value.trim(),
+      observacoes: defaultIfEmpty(document.getElementById('new-venda-observacoes').value, VENDAS_SEM_OBSERVACAO),
       contrato: document.getElementById('new-venda-contrato').value.trim(),
     };
     const btn = document.getElementById('add-venda-btn');
@@ -5892,9 +5911,9 @@ function openEditVendaModal(id){
     v.resultado = document.getElementById('ev-resultado').value;
     v.valorTexto = valorTexto;
     v.valorNumerico = parseValorBRL(valorTexto);
-    v.objecoes = document.getElementById('ev-objecao1').value.trim();
-    v.objecoes2 = document.getElementById('ev-objecao2').value.trim();
-    v.observacoes = document.getElementById('ev-observacoes').value.trim();
+    v.objecoes = defaultIfEmpty(document.getElementById('ev-objecao1').value, VENDAS_SEM_OBJECAO);
+    v.objecoes2 = defaultIfEmpty(document.getElementById('ev-objecao2').value, VENDAS_SEM_OBJECAO);
+    v.observacoes = defaultIfEmpty(document.getElementById('ev-observacoes').value, VENDAS_SEM_OBSERVACAO);
     v.contrato = document.getElementById('ev-contrato').value.trim();
     syncVendaSessaoUpdate(v.id, {
       data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null, lead_nome: v.lead || null,
