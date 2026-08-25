@@ -890,6 +890,7 @@
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
 
     <div class="sidebar-footer">
       <button class="nav-item" id="logout-btn"></button>
@@ -944,6 +945,7 @@
       <div class="view" id="view-interno"></div>
       <div class="view" id="view-conteudo"></div>
       <div class="view" id="view-visaogeral"></div>
+      <div class="view" id="view-vendas"></div>
     </div>
   </div>
 </div>
@@ -1006,9 +1008,10 @@ const NAV_LABELS = {
   interno:['lock','Acompanhamento Interno'],
   conteudo:['upload','Gerenciar Conteúdo'],
   visaogeral:['users','Visão Geral'],
+  vendas:['idcard','Registro de Sessões 1:1'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -1616,6 +1619,7 @@ const POST_TYPES = {
 let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 
 let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/visível pra equipe interna, ver bootstrapData
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
 let WATCHED_LIVE = new Set();
@@ -1936,6 +1940,10 @@ async function bootstrapData(){
       const st = getStudent(r.student_id);
       if(st) st.registrosInternos.push({id:r.id, data:r.data||'', autorNome:(PEOPLE[r.autor_id]&&PEOPLE[r.autor_id].name)||'—', texto:r.texto});
     });
+    // Registro de Sessões 1:1 (vendas) — também só buscado pra equipe interna, mesma lógica acima.
+    VENDA_SESSOES.length = 0;
+    const { data: vsRows } = await sb.from('venda_sessoes').select('*').order('numero',{ascending:true});
+    (vsRows||[]).forEach(r=>VENDA_SESSOES.push(mapVendaSessaoRow(r)));
   }
 
   STUDENT_POINTS = {};
@@ -2107,6 +2115,43 @@ async function syncMaterialInsert(m){
 }
 function syncMaterialDelete(id){
   syncNow(sb.from('materials').delete().eq('id', id));
+}
+/* ---- Registro de Sessões 1:1 (Vendas) — só equipe interna, importado da planilha de vendas ---- */
+function mapVendaSessaoRow(row){
+  return {
+    id: row.id, numero: row.numero,
+    dataSessao: row.data_sessao || '',
+    dataTexto: row.data_texto || (row.data_sessao ? formatDateBR(row.data_sessao) : ''),
+    lead: row.lead_nome || '', vendedor: row.vendedor || '', produto: row.produto || '',
+    presenca: row.presenca || '', resultado: row.resultado || '',
+    valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
+    objecoes: row.objecoes || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
+    contrato: row.contrato_texto || '',
+  };
+}
+async function syncVendaSessaoInsert(v){
+  const { data, error } = await sb.from('venda_sessoes').insert({
+    numero: v.numero || null, data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null,
+    lead_nome: v.lead || null, vendedor: v.vendedor || null, produto: v.produto || null,
+    presenca: v.presenca || null, resultado: v.resultado || null,
+    valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
+    objecoes: v.objecoes || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
+    contrato_texto: v.contrato || null,
+  }).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncVendaSessaoUpdate(id, fields){
+  syncNow(sb.from('venda_sessoes').update(fields).eq('id', id));
+}
+function syncVendaSessaoDelete(id){
+  syncNow(sb.from('venda_sessoes').delete().eq('id', id));
+}
+function parseValorBRL(str){
+  if(!str) return null;
+  const m = String(str).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3},)/g,'').replace(',', '.');
+  const n = parseFloat(m);
+  return isNaN(n) ? null : n;
 }
 async function syncLiveSessionInsert(row){
   const { data, error } = await sb.from('live_sessions').insert({
@@ -2284,6 +2329,7 @@ function setRole(role){
   document.getElementById('nav-visaogeral').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-interno').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-conteudo').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('nav-vendas').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
   document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
@@ -2353,7 +2399,8 @@ function goTo(view){
 function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
-               sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral};
+               sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
+               vendas:renderVendas};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -5575,6 +5622,215 @@ function renderConteudo(){
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
+/* ================= VIEW: VENDAS (Registro de Sessões 1:1 — equipe interna) ================= */
+let vendasFiltroVendedor = 'todos';
+let vendasFiltroResultado = 'todos';
+let vendasBusca = '';
+function renderVendas(){
+  const vendedores = Array.from(new Set(VENDA_SESSOES.map(v=>v.vendedor).filter(Boolean))).sort();
+  const resultados = Array.from(new Set(VENDA_SESSOES.map(v=>v.resultado).filter(Boolean))).sort();
+  const busca = vendasBusca.trim().toLowerCase();
+  const filtradas = VENDA_SESSOES.filter(v=>
+    (vendasFiltroVendedor==='todos' || v.vendedor===vendasFiltroVendedor) &&
+    (vendasFiltroResultado==='todos' || v.resultado===vendasFiltroResultado) &&
+    (!busca || v.lead.toLowerCase().includes(busca))
+  ).slice().sort((a,b)=> (b.numero||0)-(a.numero||0));
+
+  const fechadas = VENDA_SESSOES.filter(v=>v.resultado==='Sim');
+  const faturamento = fechadas.reduce((a,v)=>a+(v.valorNumerico||0),0);
+  const taxaFechamento = VENDA_SESSOES.length ? Math.round(fechadas.length/VENDA_SESSOES.length*100) : 0;
+
+  document.getElementById('view-vendas').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Registro de sessões 1:1 de venda de mentoria, importado da planilha de vendas.</div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Sessões registradas</div><div class="value">${VENDA_SESSOES.length}</div></div>
+      <div class="kpi-tile"><div class="label">Vendas fechadas</div><div class="value">${fechadas.length}</div></div>
+      <div class="kpi-tile"><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
+      <div class="kpi-tile"><div class="label">Faturamento (vendas fechadas)</div><div class="value" style="font-size:16px">${formatBRL(faturamento)}</div></div>
+    </div>
+
+    <h2 class="section-title">${icon('idcard')} Registro de Sessões 1:1</h2>
+    <p class="section-sub" style="margin-top:-6px">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
+    <div class="add-form" style="margin-bottom:14px">
+      <div class="field"><label>Vendedor</label>
+        <select class="ps-input" id="vendas-filtro-vendedor">
+          <option value="todos">Todos</option>
+          ${vendedores.map(v=>`<option value="${escapeAttr(v)}" ${vendasFiltroVendedor===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Resultado</label>
+        <select class="ps-input" id="vendas-filtro-resultado">
+          <option value="todos">Todos</option>
+          ${resultados.map(r=>`<option value="${escapeAttr(r)}" ${vendasFiltroResultado===r?'selected':''}>${escapeHtml(r)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Buscar por lead</label><input class="ps-input" type="text" id="vendas-busca" value="${escapeAttr(vendasBusca)}" placeholder="Nome do lead..."></div>
+    </div>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th><th>Produto</th><th>Presença</th><th>Resultado</th><th>Valor</th><th>Objeções</th><th>Problemas na sessão</th><th>Observações</th><th>Contrato</th><th></th></tr></thead>
+        <tbody>
+          ${filtradas.map(v=>`
+            <tr>
+              <td>${v.numero ?? '—'}</td>
+              <td style="white-space:nowrap">${escapeHtml(v.dataTexto)}</td>
+              <td style="min-width:160px;font-weight:600">${escapeHtml(v.lead)}</td>
+              <td style="white-space:nowrap">${escapeHtml(v.vendedor)}</td>
+              <td style="min-width:120px">${escapeHtml(v.produto)}</td>
+              <td style="white-space:nowrap">${escapeHtml(v.presenca)}</td>
+              <td style="white-space:nowrap"><span class="resp-pill">${escapeHtml(v.resultado||'—')}</span></td>
+              <td style="white-space:nowrap">${escapeHtml(v.valorTexto)}</td>
+              <td style="min-width:220px;white-space:normal">${linkify(v.objecoes)}</td>
+              <td style="min-width:220px;white-space:normal">${linkify(v.problemas)}</td>
+              <td style="min-width:220px;white-space:normal">${linkify(v.observacoes)}</td>
+              <td style="white-space:nowrap">${v.contrato? escapeHtml(v.contrato) : '—'}</td>
+              <td style="white-space:nowrap">
+                <button class="btn-mini" data-edit-venda="${v.id}">${icon('edit','tiny')} Editar</button>
+                <button class="btn-mini danger" data-del-venda="${v.id}">${icon('trash','tiny')} Excluir</button>
+              </td>
+            </tr>
+          `).join('') || `<tr><td colspan="13" style="color:var(--text-mute)">Nenhuma sessão encontrada com esses filtros.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="section-title" style="margin-top:26px">${icon('plus')} Registrar nova sessão</h2>
+    <div class="add-form">
+      <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-venda-data"></div>
+      <div class="field full"><label>Lead</label><input class="ps-input" type="text" id="new-venda-lead" placeholder="Nome do lead"></div>
+      <div class="field"><label>Vendedor</label><input class="ps-input" type="text" id="new-venda-vendedor" placeholder="Ex.: Diego, Carmem, Diego+Carmem"></div>
+      <div class="field"><label>Produto</label><input class="ps-input" type="text" id="new-venda-produto" placeholder="Ex.: Mentoria Essencia"></div>
+      <div class="field"><label>Presença</label>
+        <select class="ps-input" id="new-venda-presenca">
+          <option value="Show">Show</option>
+          <option value="No Show">No Show</option>
+          <option value="Reagendar">Reagendar</option>
+        </select>
+      </div>
+      <div class="field"><label>Resultado</label><input class="ps-input" type="text" id="new-venda-resultado" placeholder="Ex.: Sim, Não, Cancelou..."></div>
+      <div class="field"><label>Valor</label><input class="ps-input" type="text" id="new-venda-valor" placeholder="Ex.: R$ 5.997,00"></div>
+      <div class="field full"><label>Objeções do lead</label><textarea class="ps-input" id="new-venda-objecoes"></textarea></div>
+      <div class="field full"><label>Problemas na sessão</label><textarea class="ps-input" id="new-venda-problemas"></textarea></div>
+      <div class="field full"><label>Observações</label><textarea class="ps-input" id="new-venda-observacoes"></textarea></div>
+      <div class="field full"><label>Link do contrato</label><input class="ps-input" type="text" id="new-venda-contrato" placeholder="https://..."></div>
+      <div class="actions"><button class="btn-accent" id="add-venda-btn">${icon('plus')} Registrar sessão</button></div>
+    </div>
+  `;
+  document.getElementById('vendas-filtro-vendedor').addEventListener('change', e=>{ vendasFiltroVendedor = e.target.value; renderVendas(); });
+  document.getElementById('vendas-filtro-resultado').addEventListener('change', e=>{ vendasFiltroResultado = e.target.value; renderVendas(); });
+  const buscaInp = document.getElementById('vendas-busca');
+  buscaInp.addEventListener('input', ()=>{ vendasBusca = buscaInp.value; });
+  buscaInp.addEventListener('change', ()=>{ vendasBusca = buscaInp.value; renderVendas(); });
+  document.querySelectorAll('[data-del-venda]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir este registro de sessão? Essa ação não pode ser desfeita.')) return;
+      const id = btn.dataset.delVenda;
+      syncVendaSessaoDelete(id);
+      VENDA_SESSOES = VENDA_SESSOES.filter(v=>v.id!=id);
+      renderVendas();
+    });
+  });
+  document.querySelectorAll('[data-edit-venda]').forEach(btn=>{
+    btn.addEventListener('click',()=>openEditVendaModal(btn.dataset.editVenda));
+  });
+  document.getElementById('add-venda-btn').addEventListener('click', async ()=>{
+    const dataIso = document.getElementById('new-venda-data').value;
+    const lead = document.getElementById('new-venda-lead').value.trim();
+    if(!lead) return;
+    const valorTexto = document.getElementById('new-venda-valor').value.trim();
+    const proximoNumero = VENDA_SESSOES.reduce((a,v)=>Math.max(a, v.numero||0), 0) + 1;
+    const v = {
+      numero: proximoNumero,
+      dataSessao: dataIso || null,
+      dataTexto: dataIso ? formatDateBR(dataIso) : '',
+      lead,
+      vendedor: document.getElementById('new-venda-vendedor').value.trim(),
+      produto: document.getElementById('new-venda-produto').value.trim(),
+      presenca: document.getElementById('new-venda-presenca').value,
+      resultado: document.getElementById('new-venda-resultado').value.trim(),
+      valorTexto,
+      valorNumerico: parseValorBRL(valorTexto),
+      objecoes: document.getElementById('new-venda-objecoes').value.trim(),
+      problemas: document.getElementById('new-venda-problemas').value.trim(),
+      observacoes: document.getElementById('new-venda-observacoes').value.trim(),
+      contrato: document.getElementById('new-venda-contrato').value.trim(),
+    };
+    const btn = document.getElementById('add-venda-btn');
+    btn.disabled = true;
+    try{
+      const row = await syncVendaSessaoInsert(v);
+      VENDA_SESSOES.push(mapVendaSessaoRow(row));
+      renderVendas();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+}
+function openEditVendaModal(id){
+  const v = VENDA_SESSOES.find(x=>x.id==id);
+  if(!v) return;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Registro de Sessões 1:1</div>
+      <h3>Editar sessão — ${escapeHtml(v.lead)}</h3>
+      <div class="ps-section">
+        <label class="ps-label">Data</label>
+        <input class="ps-input" type="date" id="ev-data" value="${escapeAttr(v.dataSessao||'')}">
+        <label class="ps-label">Lead</label>
+        <input class="ps-input" type="text" id="ev-lead" value="${escapeAttr(v.lead)}">
+        <label class="ps-label">Vendedor</label>
+        <input class="ps-input" type="text" id="ev-vendedor" value="${escapeAttr(v.vendedor)}">
+        <label class="ps-label">Produto</label>
+        <input class="ps-input" type="text" id="ev-produto" value="${escapeAttr(v.produto)}">
+        <label class="ps-label">Presença</label>
+        <input class="ps-input" type="text" id="ev-presenca" value="${escapeAttr(v.presenca)}">
+        <label class="ps-label">Resultado</label>
+        <input class="ps-input" type="text" id="ev-resultado" value="${escapeAttr(v.resultado)}">
+        <label class="ps-label">Valor</label>
+        <input class="ps-input" type="text" id="ev-valor" value="${escapeAttr(v.valorTexto)}">
+        <label class="ps-label">Objeções do lead</label>
+        <textarea class="ps-input" id="ev-objecoes">${escapeHtml(v.objecoes)}</textarea>
+        <label class="ps-label">Problemas na sessão</label>
+        <textarea class="ps-input" id="ev-problemas">${escapeHtml(v.problemas)}</textarea>
+        <label class="ps-label">Observações</label>
+        <textarea class="ps-input" id="ev-observacoes">${escapeHtml(v.observacoes)}</textarea>
+        <label class="ps-label">Link do contrato</label>
+        <input class="ps-input" type="text" id="ev-contrato" value="${escapeAttr(v.contrato)}">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-accent" id="ev-save">Salvar alterações</button>
+        <button class="btn-outline" id="modal-close-2">Fechar</button>
+      </div>
+    </div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  document.getElementById('ev-save').addEventListener('click', ()=>{
+    const dataIso = document.getElementById('ev-data').value;
+    const valorTexto = document.getElementById('ev-valor').value.trim();
+    v.dataSessao = dataIso || '';
+    v.dataTexto = dataIso ? formatDateBR(dataIso) : v.dataTexto;
+    v.lead = document.getElementById('ev-lead').value.trim();
+    v.vendedor = document.getElementById('ev-vendedor').value.trim();
+    v.produto = document.getElementById('ev-produto').value.trim();
+    v.presenca = document.getElementById('ev-presenca').value.trim();
+    v.resultado = document.getElementById('ev-resultado').value.trim();
+    v.valorTexto = valorTexto;
+    v.valorNumerico = parseValorBRL(valorTexto);
+    v.objecoes = document.getElementById('ev-objecoes').value.trim();
+    v.problemas = document.getElementById('ev-problemas').value.trim();
+    v.observacoes = document.getElementById('ev-observacoes').value.trim();
+    v.contrato = document.getElementById('ev-contrato').value.trim();
+    syncVendaSessaoUpdate(v.id, {
+      data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null, lead_nome: v.lead || null,
+      vendedor: v.vendedor || null, produto: v.produto || null, presenca: v.presenca || null,
+      resultado: v.resultado || null, valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
+      objecoes: v.objecoes || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
+      contrato_texto: v.contrato || null,
+    });
+    closeModal();
+    renderVendas();
+  });
+}
+
 function renderVisaoGeral(){
   const totalMentorados = STUDENTS.length;
   const avgProgress = totalMentorados ? Math.round(STUDENTS.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
