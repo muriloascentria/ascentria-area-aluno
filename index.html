@@ -866,7 +866,16 @@
       <div class="field full"><label>Senha</label><input class="ps-input" type="password" id="li-senha" placeholder="Sua senha"></div>
       <p class="field-error" id="li-error" style="display:none"></p>
       <button class="btn-primary" id="login-btn">Entrar na plataforma</button>
-      <p class="login-note">Esqueceu a senha ou ainda não tem conta? Use a aba "Criar conta" para se cadastrar, ou peça para a equipe interna criar seu acesso.</p>
+      <div style="text-align:center;margin-top:10px"><button class="link-btn" id="li-forgot-link">Esqueci minha senha</button></div>
+      <div id="li-forgot-panel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <p class="sub">Informe seu e-mail de cadastro para receber um link de recuperação de senha.</p>
+        <div class="field full"><input class="ps-input" type="email" id="li-forgot-email" placeholder="voce@email.com"></div>
+        <p class="field-error" id="li-forgot-error" style="display:none"></p>
+        <p class="ps-saved-note" id="li-forgot-success" style="display:none"></p>
+        <button class="btn-outline" id="li-forgot-send">Enviar link de recuperação</button>
+        <button class="link-btn" style="margin-left:12px" id="li-forgot-cancel">Cancelar</button>
+      </div>
+      <p class="login-note">Ainda não tem conta? Use a aba "Criar conta" para se cadastrar, ou peça para a equipe interna criar seu acesso.</p>
     </div>
 
     <div id="login-panel-criar" style="display:none">
@@ -947,6 +956,7 @@
           </button>
           <div class="profile-dropdown" id="profile-dropdown">
             <button class="opt cadastro-opt" id="open-cadastro"></button>
+            <button class="opt" id="open-change-password"></button>
             <div class="dropdown-divider"></div>
             <div class="label" id="profile-dropdown-label">Visualizar como (demo)</div>
             <div id="profile-options"></div>
@@ -2218,6 +2228,37 @@ function renderLogin(){
       if(e.key==='Enter'){ e.preventDefault(); document.getElementById('login-btn').click(); }
     });
   });
+
+  document.getElementById('li-forgot-link').addEventListener('click', ()=>{
+    document.getElementById('li-forgot-email').value = document.getElementById('li-email').value.trim();
+    document.getElementById('li-forgot-error').style.display='none';
+    document.getElementById('li-forgot-success').style.display='none';
+    document.getElementById('li-forgot-panel').style.display='block';
+  });
+  document.getElementById('li-forgot-cancel').addEventListener('click', ()=>{
+    document.getElementById('li-forgot-panel').style.display='none';
+  });
+  document.getElementById('li-forgot-email').addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); document.getElementById('li-forgot-send').click(); }
+  });
+  document.getElementById('li-forgot-send').addEventListener('click', async ()=>{
+    const email = document.getElementById('li-forgot-email').value.trim();
+    const errEl = document.getElementById('li-forgot-error');
+    const okEl = document.getElementById('li-forgot-success');
+    errEl.style.display='none'; okEl.style.display='none';
+    if(!email){ errEl.textContent='Informe seu e-mail.'; errEl.style.display='block'; return; }
+    const btn = document.getElementById('li-forgot-send');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try{
+      await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+    }catch(e){
+      console.error('resetPasswordForEmail', e);
+    }
+    btn.disabled = false; btn.textContent = 'Enviar link de recuperação';
+    okEl.innerHTML = `${icon('check','tiny')} Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha.`;
+    okEl.style.display='flex';
+  });
+
   document.getElementById('login-btn').addEventListener('click', async ()=>{
     const email = document.getElementById('li-email').value.trim();
     const senha = document.getElementById('li-senha').value;
@@ -2309,6 +2350,12 @@ function setupNav(){
     document.getElementById('profile-dropdown').classList.remove('open');
     if(currentRole==='staff') openStaffInfoModal();
     else openCadastroModal();
+  });
+  document.getElementById('open-change-password').innerHTML = `${icon('lock')}<span>Trocar senha</span>`;
+  document.getElementById('open-change-password').addEventListener('click',(e)=>{
+    e.stopPropagation();
+    document.getElementById('profile-dropdown').classList.remove('open');
+    openSetNewPasswordModal('change');
   });
   document.getElementById('notif-btn').addEventListener('click',()=>{
     communityFilter = currentRole==='staff' ? 'duvida' : 'todas';
@@ -2502,7 +2549,7 @@ function renderInicio(){
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
 
     <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
-    <div>${COMMUNITY_POSTS.slice(0,2).map(p=>postHtml(p,true,true)).join('')}</div>
+    <div>${COMMUNITY_POSTS.filter(p=>!p.courseId).slice(0,2).map(p=>postHtml(p,true,true)).join('')}</div>
   `;
   bindCourseTiles();
   document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
@@ -2877,6 +2924,70 @@ function reallyCloseModal(){
   document.getElementById('modal-backdrop').classList.remove('open');
 }
 document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.target.id==='modal-backdrop') closeModal(); });
+/* Troca de senha — usada tanto pelo link "Esqueci minha senha" (mode='recovery', chamada a partir do
+   evento PASSWORD_RECOVERY do Supabase, com a sessão de recuperação já ativa) quanto pela opção "Trocar
+   senha" do menu de perfil (mode='change', usuário já autenticado normalmente). */
+function openSetNewPasswordModal(mode){
+  modalReturnTo = null;
+  modalCloseGuard = mode==='recovery' ? (()=>false) : null;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Método Essência</div>
+      <h3>${mode==='recovery' ? 'Defina sua nova senha' : 'Trocar senha'}</h3>
+      ${mode==='recovery' ? '<p class="sub">Escolha uma nova senha para acessar sua conta.</p>' : ''}
+      <div class="ps-section">
+        <label class="ps-label">Nova senha</label>
+        <input class="ps-input" type="password" id="np-senha" placeholder="Mín. 6 caracteres">
+        <label class="ps-label">Confirmar nova senha</label>
+        <input class="ps-input" type="password" id="np-senha2" placeholder="Repita a senha">
+      </div>
+      <p class="field-error" id="np-error" style="display:none"></p>
+      <div class="modal-actions">
+        <button class="btn-accent" id="np-save">Salvar nova senha</button>
+        ${mode==='recovery' ? '' : '<button class="btn-outline" id="modal-close-2">Cancelar</button>'}
+      </div>
+    </div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  if(mode!=='recovery'){
+    document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  }
+  ['np-senha','np-senha2'].forEach(id=>{
+    document.getElementById(id).addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); document.getElementById('np-save').click(); }
+    });
+  });
+  document.getElementById('np-save').addEventListener('click', async ()=>{
+    const senha = document.getElementById('np-senha').value;
+    const senha2 = document.getElementById('np-senha2').value;
+    const errEl = document.getElementById('np-error');
+    errEl.style.display='none';
+    if(!senha || senha.length<6){ errEl.textContent='A senha precisa ter ao menos 6 caracteres.'; errEl.style.display='block'; return; }
+    if(senha!==senha2){ errEl.textContent='As senhas não coincidem.'; errEl.style.display='block'; return; }
+    const btn = document.getElementById('np-save');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const { data, error } = await sb.auth.updateUser({ password: senha });
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+    if(error){
+      errEl.textContent = 'Não foi possível salvar a nova senha. Tente novamente.'; errEl.style.display='block'; return;
+    }
+    if(mode==='recovery'){
+      modalCloseGuard = null;
+      document.getElementById('modal-backdrop').classList.remove('open');
+      if(!currentUser){
+        currentUser = data.user;
+        document.getElementById('login-screen').style.display = 'none';
+        try{
+          await bootstrapData();
+          await enterApp();
+        }catch(e){
+          console.error(e);
+        }
+      }
+    }else{
+      closeModal();
+    }
+  });
+}
 /* Confirmação própria do app (em vez do confirm() nativo do navegador, que abre uma janela com a cara
    do sistema operacional) — mesmo visual do resto da plataforma, sobreposta a qualquer modal já aberto. */
 function showAppConfirm(message, opts){
@@ -3205,7 +3316,10 @@ function renderComunidade(){
   ];
   const alreadyApresentou = me? hasApresentacao(me.id) : false;
   if(alreadyApresentou && selectedPostType==='apresentacao') selectedPostType = 'interacao';
-  const visible = communityFilter==='todas' ? COMMUNITY_POSTS : COMMUNITY_POSTS.filter(p=>p.type===communityFilter);
+  // Comentários feitos dentro de uma aula (post.courseId definido) ficam restritos à própria aula — não
+  // aparecem no mural da Comunidade, que mostra só o que foi publicado ali diretamente.
+  const communityOnly = COMMUNITY_POSTS.filter(p=>!p.courseId);
+  const visible = communityFilter==='todas' ? communityOnly : communityOnly.filter(p=>p.type===communityFilter);
   const root = document.getElementById('view-comunidade');
   root.innerHTML = `
     <p class="section-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
@@ -6077,6 +6191,16 @@ function renderVisaoGeral(){
     });
   });
 }
+
+/* Quando a pessoa clica no link de recuperação de senha recebido por e-mail, o Supabase detecta o token
+   na URL e dispara este evento com uma sessão de recuperação já ativa — nesse momento, mostra o modal
+   para definir a nova senha (funciona tanto se ainda não tiver feito login quanto se já estiver logada,
+   ex.: abriu o link em outra aba). */
+sb.auth.onAuthStateChange((event, session)=>{
+  if(event === 'PASSWORD_RECOVERY'){
+    openSetNewPasswordModal('recovery');
+  }
+});
 
 /* ================= INIT ================= */
 /* Ao recarregar a página, tenta restaurar a sessão que o Supabase já mantém salva no navegador antes de
