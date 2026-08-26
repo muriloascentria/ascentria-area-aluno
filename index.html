@@ -1898,7 +1898,7 @@ function mapProfileRow(p){
       wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
     checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||''})),
-    sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||''})),
+    sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||'',responsavel:x.responsavel||''})),
     contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
     registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
   };
@@ -2156,6 +2156,9 @@ async function syncContatoInsert(sid, c){
   if(error) throw error;
   return data.id;
 }
+function syncContatoDelete(id){
+  syncNow(sb.from('contatos').delete().eq('id', id));
+}
 function syncSessionDelete(id){
   syncNow(sb.from('sessions').delete().eq('id', id));
 }
@@ -2163,7 +2166,7 @@ function syncContatoUnsync(contatoId){
   syncNow(sb.from('contatos').update({synced_to_sessions:false, session_id:null}).eq('id', contatoId));
 }
 async function syncContatoSyncSession(contatoId, sid, sess){
-  const { data, error } = await sb.from('sessions').insert({student_id:sid, title:sess.title, date:sess.date, notes:sess.notes, link_gravacao:sess.linkGravacao||null, link_transcricao:sess.linkTranscricao||null}).select().single();
+  const { data, error } = await sb.from('sessions').insert({student_id:sid, title:sess.title, date:sess.date, notes:sess.notes, link_gravacao:sess.linkGravacao||null, link_transcricao:sess.linkTranscricao||null, responsavel:sess.responsavel||null}).select().single();
   if(error) throw error;
   const { error: uerr } = await sb.from('contatos').update({synced_to_sessions:true, session_id:data.id}).eq('id', contatoId);
   if(uerr) throw uerr;
@@ -5024,7 +5027,7 @@ function renderSessoes(){
           <div class="title">${sess.title}${sess._fromAgenda? ' <span class="pill replay" style="margin-left:6px">Da Agenda ao Vivo</span>':''}</div>
           <div class="date">${sess.date}</div>
         </div>
-        <div class="notes"><strong>Anotações da mentora:</strong><br>${linkify(sess.notes)}</div>
+        <div class="notes"><strong>Anotações ${mentorLabel(sess.responsavel)}:</strong><br>${linkify(sess.notes)}</div>
         <div class="foot">
           ${sess.linkGravacao? `<a class="btn-outline" href="${escapeAttr(sess.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Ver gravação</a>`:''}
           ${sess.linkTranscricao? `<a class="btn-outline" href="${escapeAttr(sess.linkTranscricao)}" target="_blank" rel="noopener">${icon('download')} Baixar material da sessão</a>`:''}
@@ -5178,6 +5181,14 @@ function openEditAlunoModal(s){
   });
   document.getElementById('modal-backdrop').classList.add('open');
 }
+/* Lista fixa de quem da equipe interna pode registrar um contato (reunião/WhatsApp) com o mentorado —
+   evita depender de digitação livre do nome. MENTORES_MASC define quem usa "mentor" (em vez de
+   "mentora") no rótulo mostrado pro aluno em Minhas Sessões 1:1 (ver mentorLabel). */
+const RESPONSAVEL_CONTATO_OPTS = ['Murilo Pedroso','Sandra Bublitz','Carmem Goretty','Diego Eller'];
+const MENTORES_MASC = ['Murilo Pedroso','Diego Eller'];
+function mentorLabel(responsavel){
+  return MENTORES_MASC.includes(responsavel) ? 'do mentor' : 'da mentora';
+}
 function renderInterno(){
   const s = getStudent(currentStudentId);
   const d = s.diagnostico;
@@ -5253,27 +5264,28 @@ function renderInterno(){
     <p class="section-sub" style="margin-top:-6px">Qualquer pessoa da equipe que teve contato com o mentorado — em reunião ou orientação por WhatsApp — pode registrar aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Data da Reunião</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th></tr></thead>
+        <thead><tr><th>Data da Reunião</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th></th></tr></thead>
         <tbody id="contatos-tbody">
           ${s.contatos.map(c=>`
             <tr>
               <td style="white-space:nowrap">${c.data}</td>
-              <td><span class="resp-pill">${c.responsavel}</span></td>
+              <td><span class="resp-pill">${escapeHtml(c.responsavel)}</span></td>
               <td style="min-width:260px">${linkify(c.resumo)}</td>
               <td>${c.linkGravacao? `<a class="btn-mini" href="${escapeAttr(c.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
               <td>${c.linkTranscricao? `<a class="btn-mini" href="${escapeAttr(c.linkTranscricao)}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
               <td style="white-space:nowrap">${c.syncedToSessions
                 ? `<span class="sync-ok">${icon('tick')} Em Minhas Sessões</span> <button class="btn-mini" data-unsync-session="${c.id}" title="Remover de Minhas Sessões 1:1">${icon('x','tiny')} Remover</button>`
                 : `<button class="btn-mini" data-sync-session="${c.id}">${icon('upload')} Adicionar às Sessões</button>`}</td>
+              <td><button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
     <p class="kpi-note" style="margin-top:6px">Automatize: ao adicionar um registro aqui, use "Adicionar às Sessões" para que ele apareça também em Minhas Sessões 1:1 do aluno. Use "Remover" para tirar de lá se necessário.</p>
     <div class="add-form">
       <div class="field"><label>Data da reunião</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
-      <div class="field"><label>Responsável</label><input class="ps-input" type="text" id="new-contato-resp" placeholder="Seu nome"></div>
+      <div class="field"><label>Responsável</label><select class="ps-input" id="new-contato-resp">${selectOpts(RESPONSAVEL_CONTATO_OPTS, '')}</select></div>
       <div class="field full"><label>Resumo</label><textarea class="ps-input" id="new-contato-resumo" placeholder="O que foi tratado no contato..."></textarea></div>
       <div class="field"><label>Link da gravação</label><input class="ps-input" type="text" id="new-contato-grav" placeholder="https://..."></div>
       <div class="field"><label>Link da transcrição</label><input class="ps-input" type="text" id="new-contato-transc" placeholder="https://..."></div>
@@ -5467,6 +5479,7 @@ function renderInterno(){
         notes:c.resumo,
         linkGravacao:c.linkGravacao||'',
         linkTranscricao:c.linkTranscricao||'',
+        responsavel:c.responsavel||'',
       };
       try{
         sess.id = await syncContatoSyncSession(c.id, s.id, sess);
@@ -5487,6 +5500,22 @@ function renderInterno(){
       s.sessions = s.sessions.filter(x=>x.id!=c.sessionId);
       c.syncedToSessions = false;
       c.sessionId = null;
+      renderInterno();
+    });
+  });
+  document.querySelectorAll('[data-del-contato]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!confirmDelete('Excluir este registro de contato? Essa ação não pode ser desfeita.')) return;
+      const id = btn.dataset.delContato;
+      const c = s.contatos.find(x=>x.id==id);
+      // Se este contato já tinha sido adicionado a Minhas Sessões 1:1, remove a sessão vinculada junto —
+      // senão ficaria uma sessão "órfã" do lado do aluno sem o registro que a originou.
+      if(c && c.syncedToSessions && c.sessionId){
+        syncSessionDelete(c.sessionId);
+        s.sessions = s.sessions.filter(x=>x.id!=c.sessionId);
+      }
+      syncContatoDelete(id);
+      s.contatos = s.contatos.filter(x=>x.id!=id);
       renderInterno();
     });
   });
