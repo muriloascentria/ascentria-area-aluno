@@ -2406,6 +2406,14 @@ function setupNav(){
   });
   document.getElementById('notif-btn').addEventListener('click',()=>{
     if(currentRole==='staff'){
+      // Como comentários feitos dentro de uma aula não aparecem mais no mural da Comunidade, uma dúvida
+      // sem resposta registrada numa aula não aparecia lá mesmo depois de clicar no sino — a equipe
+      // interna clicava e não achava do que se tratava. Abre a aula certa direto nesse caso.
+      const pendingDuvida = COMMUNITY_POSTS.find(p=>p.type==='duvida' && !isAnswered(p));
+      if(pendingDuvida && pendingDuvida.courseId){
+        openCourseModal(pendingDuvida.courseId);
+        return;
+      }
       communityFilter = 'duvida';
       goTo('comunidade');
       return;
