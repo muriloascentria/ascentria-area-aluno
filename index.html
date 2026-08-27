@@ -636,6 +636,16 @@
   .cfx-sub{font-size:12px;color:var(--text-mute);margin:0 0 12px;line-height:1.5;}
   .cfx-table .ps-cell{min-width:96px;}
   .cfx-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;}
+  /* Financeiro interno da Ascentria (equipe interna) — Lançamentos (Contas a Receber/Pagar/Extrato) +
+     cadastros de Categoria, Conta e Forma de Pagamento, compartilhados entre a equipe. */
+  .fin-subtabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .fin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px;}
+  .fin-toggle-row{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
+  .fin-toggle-row > .ps-label{display:block;margin-bottom:8px;}
+  .fin-pagou-fields,.fin-repetir-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0 14px;margin-top:12px;}
+  .fin-modo-wrap{display:flex;gap:18px;align-items:center;grid-column:1/-1;margin-top:4px;}
+  .fin-modo-opt{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);cursor:pointer;}
+  .fin-ocorr-table{margin-top:12px;}
   /* Precificação de Protocolos e Consultas (Painel do Método → Gestão): duas colunas — itens de custo
      fixo à esquerda, horas/precificação da hora/custo variável à direita — com o Preço do Protocolo
      recalculado ao sair de qualquer campo, igual à planilha de origem. */
@@ -965,6 +975,7 @@
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
     <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
     <button class="nav-item restrict" id="nav-clientes" data-view="clientes" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
 
     <div class="sidebar-footer">
       <button class="nav-item" id="logout-btn"></button>
@@ -1022,6 +1033,7 @@
       <div class="view" id="view-visaogeral"></div>
       <div class="view" id="view-vendas"></div>
       <div class="view" id="view-clientes"></div>
+      <div class="view" id="view-financeiro"></div>
     </div>
   </div>
 </div>
@@ -1074,6 +1086,7 @@ const ICONS = {
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   reply:'<path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
   copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  money:'<circle cx="12" cy="12" r="9"/><path d="M12 6.5v11M15.5 9.3c0-1.5-1.6-2.5-3.5-2.5s-3.5 1-3.5 2.4c0 3 7 1.3 7 4.3 0 1.5-1.6 2.5-3.5 2.5s-3.5-1-3.5-2.5"/>',
 };
 function icon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24">${ICONS[name]}</svg>`;}
 function fillIcon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24" fill="currentColor" stroke="none">${ICONS[name]}</svg>`;}
@@ -1090,6 +1103,7 @@ const NAV_LABELS = {
   visaogeral:['users','Visão Geral'],
   vendas:['idcard','Registro de Sessões 1:1'],
   clientes:['idcard','Registro de Clientes'],
+  financeiro:['money','Financeiro'],
 };
 const BADGE = {
   dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict',
@@ -1703,6 +1717,13 @@ let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstr
 let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/visível pra equipe interna, ver bootstrapData
 let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
 let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/visível pra equipe interna, ver bootstrapData
+/* Financeiro interno da Ascentria (equipe interna) — controle de Contas a Receber/Pagar da empresa,
+   totalmente separado do Fluxo Financeiro que cada mentorado preenche no próprio Painel do Método.
+   Só carregado/visível pra equipe interna, ver bootstrapData e renderFinanceiro. */
+let FIN_CATEGORIAS = [], FIN_CONTAS = [], FIN_FORMAS = [], FIN_LANCAMENTOS = [];
+let finSubView = 'lancamentos'; // 'lancamentos' | 'categorias' | 'contas' | 'formas'
+let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
+let finView = { year: new Date().getFullYear(), month: new Date().getMonth() };
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
 let WATCHED_LIVE = new Set();
@@ -2063,6 +2084,19 @@ async function bootstrapData(){
     ACCESS_CODES.length = 0;
     const { data: acRows } = await sb.from('access_codes').select('*').order('created_at',{ascending:false});
     (acRows||[]).forEach(r=>ACCESS_CODES.push(mapAccessCodeRow(r)));
+    // Financeiro interno da Ascentria — igual às listas acima, só pra equipe interna.
+    FIN_CATEGORIAS.length = 0;
+    const { data: fcRows } = await sb.from('fin_categorias').select('*').order('nome');
+    (fcRows||[]).forEach(r=>FIN_CATEGORIAS.push({id:r.id, nome:r.nome, tipo:r.tipo}));
+    FIN_CONTAS.length = 0;
+    const { data: fcoRows } = await sb.from('fin_contas').select('*').order('nome');
+    (fcoRows||[]).forEach(r=>FIN_CONTAS.push({id:r.id, nome:r.nome}));
+    FIN_FORMAS.length = 0;
+    const { data: ffRows } = await sb.from('fin_formas').select('*').order('nome');
+    (ffRows||[]).forEach(r=>FIN_FORMAS.push({id:r.id, nome:r.nome}));
+    FIN_LANCAMENTOS.length = 0;
+    const { data: flRows } = await sb.from('fin_lancamentos').select('*').order('data_vencimento');
+    (flRows||[]).forEach(r=>FIN_LANCAMENTOS.push(mapFinLancamentoRow(r)));
   }
 
   STUDENT_POINTS = {};
@@ -2359,6 +2393,42 @@ async function syncAccessCodeGenerate(tier, label){
 function syncAccessCodeDelete(id){
   syncNow(sb.from('access_codes').delete().eq('id', id));
 }
+/* ---- Financeiro interno da Ascentria (equipe interna) ---- */
+function mapFinLancamentoRow(r){
+  return {
+    id: r.id, tipo: r.tipo, categoriaId: r.categoria_id || '', descricao: r.descricao || '',
+    dataVencimento: r.data_vencimento, contaId: r.conta_id || '', formaId: r.forma_id || '',
+    valor: r.valor!=null ? Number(r.valor) : 0, pagou: !!r.pagou,
+    diaPagamento: r.dia_pagamento || '', valorPago: r.valor_pago!=null ? Number(r.valor_pago) : null,
+    grupoId: r.grupo_id || null, parcelaNum: r.parcela_num || null, parcelaTotal: r.parcela_total || null,
+    repeteModo: r.repete_modo || null,
+  };
+}
+async function syncFinCategoriaInsert(nome, tipo){
+  const { data, error } = await sb.from('fin_categorias').insert({ nome, tipo }).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncFinCategoriaDelete(id){ syncNow(sb.from('fin_categorias').delete().eq('id', id)); }
+async function syncFinContaInsert(nome){
+  const { data, error } = await sb.from('fin_contas').insert({ nome }).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncFinContaDelete(id){ syncNow(sb.from('fin_contas').delete().eq('id', id)); }
+async function syncFinFormaInsert(nome){
+  const { data, error } = await sb.from('fin_formas').insert({ nome }).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncFinFormaDelete(id){ syncNow(sb.from('fin_formas').delete().eq('id', id)); }
+async function syncFinLancamentoInsertMany(rows){
+  const { data, error } = await sb.from('fin_lancamentos').insert(rows).select();
+  if(error) throw error;
+  return data;
+}
+function syncFinLancamentoUpdate(id, fields){ syncNow(sb.from('fin_lancamentos').update(fields).eq('id', id)); }
+function syncFinLancamentoDelete(id){ syncNow(sb.from('fin_lancamentos').delete().eq('id', id)); }
 /* Muda um aluno entre 'mentorado' (acesso completo) e 'curso' (curso gravado, só Aulas + comunidade
    própria) — ver Visão Geral, onde a equipe interna faz essa troca. */
 function syncStudentTierUpdate(id, tier){
@@ -2651,6 +2721,7 @@ function setRole(role){
   document.getElementById('nav-conteudo').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-vendas').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-clientes').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('nav-financeiro').style.display = role==='staff' ? 'flex' : 'none';
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
@@ -2693,7 +2764,7 @@ function setRole(role){
     : `${icon('idcard')}<span>${currentUserRole==='staff'? 'Dados do Aluno Selecionado' : 'Meus Dados Cadastrais'}</span>`;
   renderProfile();
   updateNotifBadge();
-  if(role==='aluno' && (currentView==='interno' || currentView==='conteudo' || currentView==='visaogeral')){ goTo(isCursoView? 'aulas' : 'inicio'); }
+  if(role==='aluno' && ['interno','conteudo','visaogeral','vendas','clientes','financeiro'].includes(currentView)){ goTo(isCursoView? 'aulas' : 'inicio'); }
   if(role==='aluno' && isCursoView && ['inicio','dashboard','ranking','painel','sessoes','metas'].includes(currentView)){ goTo('aulas'); }
   if(role==='staff' && ['inicio','aulas','comunidade','ranking','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('visaogeral'); }
 }
@@ -2757,7 +2828,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, clientes:renderClientes};
+               vendas:renderVendas, clientes:renderClientes, financeiro:renderFinanceiro};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -7129,6 +7200,463 @@ async function confirmClientesImport(rows){
   (data||[]).forEach(row=> CLIENTES_REGISTRO.unshift(mapClienteRow(row)));
   closeModal();
   renderClientes();
+}
+
+/* ================= VIEW: FINANCEIRO (somente equipe interna) =================
+   Controle financeiro interno da Ascentria — Contas a Receber, Contas a Pagar e Extrato da própria
+   empresa, com cadastros próprios de Categoria, Conta (bancária) e Forma de Pagamento, compartilhados
+   entre a equipe. Totalmente separado do Fluxo Financeiro que cada mentorado preenche no Painel do
+   Método (aquele é pessoal de cada aluno; este é da Ascentria). */
+function renderFinanceiro(){
+  document.getElementById('view-financeiro').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Controle financeiro da Ascentria (não é o Fluxo Financeiro dos mentorados).</div>
+    <div class="fin-subtabs">
+      <button type="button" class="cf-month-btn ${finSubView==='lancamentos'?'active':''}" data-finsub="lancamentos">Lançamentos</button>
+      <button type="button" class="cf-month-btn ${finSubView==='categorias'?'active':''}" data-finsub="categorias">Categorias</button>
+      <button type="button" class="cf-month-btn ${finSubView==='contas'?'active':''}" data-finsub="contas">Contas</button>
+      <button type="button" class="cf-month-btn ${finSubView==='formas'?'active':''}" data-finsub="formas">Formas de Pagamento</button>
+    </div>
+    <div id="fin-subview-body"></div>
+  `;
+  document.querySelectorAll('[data-finsub]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ finSubView = btn.dataset.finsub; renderFinanceiro(); });
+  });
+  const body = document.getElementById('fin-subview-body');
+  if(finSubView==='lancamentos') renderFinLancamentos(body);
+  else renderFinCadastroSimples(body, finSubView);
+}
+function renderFinLancamentos(container){
+  const inMonth = (l)=>{
+    const [y,m] = l.dataVencimento.split('-').map(Number);
+    return y===finView.year && (m-1)===finView.month;
+  };
+  const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : 0);
+  const receber = FIN_LANCAMENTOS.filter(l=>l.tipo==='receber' && inMonth(l)).sort(byVencAsc);
+  const pagar = FIN_LANCAMENTOS.filter(l=>l.tipo==='pagar' && inMonth(l)).sort(byVencAsc);
+  const extrato = FIN_LANCAMENTOS.filter(inMonth).sort(byVencAsc);
+
+  const rowHtml = (l)=>{
+    const cat = FIN_CATEGORIAS.find(c=>c.id===l.categoriaId);
+    const forma = FIN_FORMAS.find(f=>f.id===l.formaId);
+    const parcelaTxt = l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—';
+    return `<tr data-fllinha="${l.id}">
+      <td style="white-space:nowrap">${formatDateBR(l.dataVencimento)}</td>
+      <td>${escapeHtml(l.descricao||'—')}<br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(cat? cat.nome : '—')}</span></td>
+      <td>${escapeHtml(forma? forma.nome : '—')}</td>
+      <td style="text-align:center">${parcelaTxt}</td>
+      <td style="white-space:nowrap">${l.pagou? `<span class="pill live">${icon('check','tiny')} Pago</span>` : '<span class="pill replay">Pendente</span>'}</td>
+      <td style="text-align:right;font-weight:600;white-space:nowrap">${formatBRL(l.valor)}</td>
+    </tr>`;
+  };
+
+  let bodyHtml;
+  if(finTab==='receber' || finTab==='pagar'){
+    const list = finTab==='receber'? receber : pagar;
+    const total = list.reduce((s,l)=>s+l.valor,0);
+    const totalPago = list.filter(l=>l.pagou).reduce((s,l)=>s+(l.valorPago!=null?l.valorPago:l.valor),0);
+    bodyHtml = `
+      <div class="cf-actions" style="margin-bottom:14px">
+        <button type="button" class="btn-accent" data-flnew="${finTab}">${icon('plus','ps-plus')} ${finTab==='receber'?'Novo Recebimento':'Novo Pagamento'}</button>
+      </div>
+      <div class="table-wrap"><table class="ps-table">
+        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Forma</th><th>Parcela</th><th>Situação</th><th style="text-align:right">Valor</th></tr></thead>
+        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum lançamento em ${MESES_LONGO[finView.month]}/${finView.year}.</td></tr>`}</tbody>
+      </table></div>
+      <div class="cf-total">Total ${finTab==='receber'?'a receber':'a pagar'}: <strong>${formatBRL(total)}</strong> · Já ${finTab==='receber'?'recebido':'pago'}: <strong>${formatBRL(totalPago)}</strong></div>
+    `;
+  } else {
+    /* Extrato: junta Contas a Receber e Contas a Pagar do mês, e calcula o saldo corrido só com o que
+       já foi efetivamente pago/recebido — igual a um extrato bancário real, não uma previsão. */
+    let saldo = 0;
+    const rows = extrato.map(l=>{
+      const v = l.pagou? (l.valorPago!=null? l.valorPago : l.valor) : 0;
+      if(l.pagou) saldo += (l.tipo==='pagar'? -v : v);
+      return {l, saldo};
+    });
+    bodyHtml = `
+      <div class="table-wrap"><table class="ps-table">
+        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
+        <tbody>${rows.map(({l,saldo})=>`<tr>
+          <td style="white-space:nowrap">${formatDateBR(l.dataVencimento)}</td>
+          <td>${escapeHtml(l.descricao||'—')}</td>
+          <td>${l.tipo==='receber'? '<span class="pill live">Receita</span>' : '<span class="pill replay">Despesa</span>'}</td>
+          <td>${l.pagou? `<span class="pill live">${icon('check','tiny')} Pago</span>` : '<span class="pill replay">Pendente</span>'}</td>
+          <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(l.pagou? (l.valorPago!=null?l.valorPago:l.valor) : l.valor)}</td>
+          <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${l.pagou? formatBRL(saldo) : '—'}</td>
+        </tr>`).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum lançamento em ${MESES_LONGO[finView.month]}/${finView.year}.</td></tr>`}</tbody>
+      </table></div>
+      <div class="cf-total">Saldo do mês (só o que já foi pago/recebido): <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="cf-nav">
+      <div class="cf-year-wrap"><label class="ps-label">Ano</label>
+        <input type="number" class="ps-input" id="fin-year" value="${finView.year}">
+      </div>
+      <div class="cf-months">
+        ${MESES_LONGO.map((m,i)=>`<button type="button" class="cf-month-btn ${i===finView.month?'active':''}" data-finmonth="${i}">${m.slice(0,3)}</button>`).join('')}
+      </div>
+    </div>
+    <div class="community-filters">
+      <button type="button" class="cf-month-btn ${finTab==='receber'?'active':''}" data-fintab="receber">Contas a Receber</button>
+      <button type="button" class="cf-month-btn ${finTab==='pagar'?'active':''}" data-fintab="pagar">Contas a Pagar</button>
+      <button type="button" class="cf-month-btn ${finTab==='extrato'?'active':''}" data-fintab="extrato">Extrato</button>
+    </div>
+    ${bodyHtml}
+  `;
+  document.getElementById('fin-year').addEventListener('change', e=>{
+    finView.year = parseInt(e.target.value,10) || new Date().getFullYear();
+    renderFinanceiro();
+  });
+  document.querySelectorAll('[data-finmonth]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ finView.month = +btn.dataset.finmonth; renderFinanceiro(); });
+  });
+  document.querySelectorAll('[data-fintab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ finTab = btn.dataset.fintab; renderFinanceiro(); });
+  });
+  document.querySelectorAll('[data-flnew]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ openFinLancamentoModal(btn.dataset.flnew, null); });
+  });
+  document.querySelectorAll('[data-fllinha]').forEach(tr=>{
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click',()=>{ openFinLancamentoModal(FIN_LANCAMENTOS.find(l=>l.id===tr.dataset.fllinha).tipo, tr.dataset.fllinha); });
+  });
+}
+/* Cadastros compartilhados usados nos lançamentos — Categoria, Conta (bancária) e Forma de Pagamento.
+   Apagar um item não apaga os lançamentos que já usavam ele (a referência só fica em branco). */
+function renderFinCadastroSimples(container, kind){
+  const CONFIG = {
+    categorias: { title:'Categorias', list:FIN_CATEGORIAS, addLabel:'Adicionar categoria', placeholder:'Ex.: Mentoria Essência' },
+    contas: { title:'Contas', list:FIN_CONTAS, addLabel:'Adicionar conta', placeholder:'Ex.: Banco Inter' },
+    formas: { title:'Formas de Pagamento', list:FIN_FORMAS, addLabel:'Adicionar forma de pagamento', placeholder:'Ex.: Pix' },
+  };
+  const cfg = CONFIG[kind];
+  const inUseCount = (id)=>{
+    if(kind==='categorias') return FIN_LANCAMENTOS.filter(l=>l.categoriaId===id).length;
+    if(kind==='contas') return FIN_LANCAMENTOS.filter(l=>l.contaId===id).length;
+    return FIN_LANCAMENTOS.filter(l=>l.formaId===id).length;
+  };
+  const colspan = kind==='categorias'? 4 : 3;
+  container.innerHTML = `
+    <h2 class="section-title">${icon('folder')} ${cfg.title}</h2>
+    <div class="add-form">
+      <div class="field full"><label>Nome</label><input class="ps-input" type="text" id="fin-cad-nome" placeholder="${cfg.placeholder}"></div>
+      ${kind==='categorias'? `<div class="field"><label>Tipo</label>
+        <select class="ps-input" id="fin-cad-tipo">
+          <option value="ambos">Receita e Despesa</option>
+          <option value="receita">Só Receita</option>
+          <option value="despesa">Só Despesa</option>
+        </select>
+      </div>` : ''}
+      <div class="actions"><button class="btn-accent" id="fin-cad-add">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>
+    </div>
+    <div class="table-wrap"><table class="check-table">
+      <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th>':''}<th>Em uso</th><th></th></tr></thead>
+      <tbody>
+        ${cfg.list.map(item=>`<tr>
+          <td>${escapeHtml(item.nome)}</td>
+          ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td>` : ''}
+          <td>${inUseCount(item.id)}x</td>
+          <td><button class="btn-mini danger" data-fin-cad-del="${item.id}">${icon('trash')} Remover</button></td>
+        </tr>`).join('') || `<tr><td colspan="${colspan}" style="color:var(--text-mute)">Nada cadastrado ainda.</td></tr>`}
+      </tbody>
+    </table></div>
+  `;
+  document.getElementById('fin-cad-add').addEventListener('click', async ()=>{
+    const nome = document.getElementById('fin-cad-nome').value.trim();
+    if(!nome) return;
+    const btn = document.getElementById('fin-cad-add');
+    btn.disabled = true;
+    try{
+      let row;
+      if(kind==='categorias'){
+        const tipo = document.getElementById('fin-cad-tipo').value;
+        row = await syncFinCategoriaInsert(nome, tipo);
+        FIN_CATEGORIAS.push({id:row.id, nome:row.nome, tipo:row.tipo});
+      } else if(kind==='contas'){
+        row = await syncFinContaInsert(nome);
+        FIN_CONTAS.push({id:row.id, nome:row.nome});
+      } else {
+        row = await syncFinFormaInsert(nome);
+        FIN_FORMAS.push({id:row.id, nome:row.nome});
+      }
+      renderFinanceiro();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-fin-cad-del]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id = btn.dataset.finCadDel;
+      const used = inUseCount(id);
+      const msg = used>0
+        ? `Este item já foi usado em ${used} lançamento${used>1?'s':''}. Remover mesmo assim? Os lançamentos existentes não serão apagados, só deixam de mostrar esse nome.`
+        : 'Remover este item?';
+      if(!confirmDelete(msg)) return;
+      if(kind==='categorias'){ syncFinCategoriaDelete(id); const i=FIN_CATEGORIAS.findIndex(c=>c.id===id); if(i>-1) FIN_CATEGORIAS.splice(i,1); }
+      else if(kind==='contas'){ syncFinContaDelete(id); const i=FIN_CONTAS.findIndex(c=>c.id===id); if(i>-1) FIN_CONTAS.splice(i,1); }
+      else { syncFinFormaDelete(id); const i=FIN_FORMAS.findIndex(f=>f.id===id); if(i>-1) FIN_FORMAS.splice(i,1); }
+      renderFinanceiro();
+    });
+  });
+}
+/* Modal de Novo Recebimento / Novo Pagamento (ou edição de um lançamento já existente — nesse caso,
+   sem a opção de Repetir, já que cada parcela de uma série é editada isoladamente). "Repetir" gera N
+   lançamentos de uma vez (Parcelar: divide o Valor entre as ocorrências; Repetir: repete o Valor cheio
+   em cada uma), cada um com a própria data e valor, editáveis antes de salvar. */
+function openFinLancamentoModal(tipo, existingId){
+  const editing = existingId? FIN_LANCAMENTOS.find(l=>l.id===existingId) : null;
+  const today = new Date().toISOString().slice(0,10);
+  const draft = editing ? {
+    categoriaId: editing.categoriaId, descricao: editing.descricao, dataVencimento: editing.dataVencimento,
+    contaId: editing.contaId, formaId: editing.formaId, valor: editing.valor,
+    pagou: editing.pagou, diaPagamento: editing.diaPagamento || today,
+    valorPago: editing.valorPago!=null? editing.valorPago : editing.valor,
+    repetir:false, quando:'mensal', ocorrencias:1, modo:'parcelar', ocorrenciasList:[],
+  } : {
+    categoriaId:'', descricao:'', dataVencimento: today, contaId:'', formaId:'', valor:'',
+    pagou:false, diaPagamento: today, valorPago:'',
+    repetir:false, quando:'mensal', ocorrencias:1, modo:'parcelar', ocorrenciasList:[],
+  };
+
+  function addInterval(dateStr, quando){
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    if(quando==='semanal') dt.setDate(dt.getDate()+7);
+    else if(quando==='quinzenal') dt.setDate(dt.getDate()+14);
+    else if(quando==='anual') dt.setFullYear(dt.getFullYear()+1);
+    else dt.setMonth(dt.getMonth()+1); // mensal
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  }
+  function recomputeOcorrencias(){
+    const n = Math.max(1, draft.ocorrencias||1);
+    const total = parseFloat(draft.valor)||0;
+    const list = [];
+    let somaParcelas = 0;
+    for(let i=0;i<n;i++){
+      const data = i===0 ? (draft.dataVencimento||today) : addInterval(list[i-1].data, draft.quando);
+      let valor;
+      if(draft.modo==='parcelar'){
+        // última parcela fecha o total exato (absorve a sobra do arredondamento das anteriores)
+        valor = i<n-1 ? Math.round((total/n)*100)/100 : Math.round((total-somaParcelas)*100)/100;
+        if(i<n-1) somaParcelas += valor;
+      } else {
+        valor = total;
+      }
+      list.push({data, valor});
+    }
+    draft.ocorrenciasList = list;
+  }
+
+  function bodyHtml(){
+    const tipoLabel = tipo==='receber' ? 'Contas a Receber' : 'Contas a Pagar';
+    const catOpts = FIN_CATEGORIAS.filter(c=> tipo==='receber' ? c.tipo!=='despesa' : c.tipo!=='receita');
+    return `
+      <div class="cat">${tipoLabel}</div>
+      <h3>${editing? 'Editar lançamento' : (tipo==='receber'? 'Novo Recebimento' : 'Novo Pagamento')}</h3>
+      <div class="ps-section fin-form-grid">
+        <div><label class="ps-label">Categoria *</label>
+          <select class="ps-input" id="fl-categoria">
+            <option value="">Selecione...</option>
+            ${catOpts.map(c=>`<option value="${c.id}" ${draft.categoriaId===c.id?'selected':''}>${escapeHtml(c.nome)}</option>`).join('')}
+          </select>
+        </div>
+        <div><label class="ps-label">Descrição *</label><input class="ps-input" id="fl-descricao" value="${escapeAttr(draft.descricao)}"></div>
+        <div><label class="ps-label">Data Vencimento *</label><input class="ps-input" type="date" id="fl-vencimento" value="${escapeAttr(draft.dataVencimento)}"></div>
+        <div><label class="ps-label">Conta *</label>
+          <select class="ps-input" id="fl-conta">
+            <option value="">Selecione...</option>
+            ${FIN_CONTAS.map(c=>`<option value="${c.id}" ${draft.contaId===c.id?'selected':''}>${escapeHtml(c.nome)}</option>`).join('')}
+          </select>
+        </div>
+        <div><label class="ps-label">Forma de Pagamento *</label>
+          <select class="ps-input" id="fl-forma">
+            <option value="">Selecione...</option>
+            ${FIN_FORMAS.map(f=>`<option value="${f.id}" ${draft.formaId===f.id?'selected':''}>${escapeHtml(f.nome)}</option>`).join('')}
+          </select>
+        </div>
+        <div><label class="ps-label">Valor *</label><input class="ps-input" type="number" step="0.01" id="fl-valor" value="${draft.valor!==''? escapeAttr(draft.valor):''}"></div>
+      </div>
+
+      <div class="fin-toggle-row">
+        <label class="ps-label">Pagou</label>
+        <div class="cf-months">
+          <button type="button" class="cf-month-btn ${draft.pagou?'active':''}" data-flpagou="1">SIM</button>
+          <button type="button" class="cf-month-btn ${!draft.pagou?'active':''}" data-flpagou="0">NÃO</button>
+        </div>
+        ${draft.pagou? `
+          <div class="fin-pagou-fields">
+            <div><label class="ps-label">Dia de Pagamento</label><input class="ps-input" type="date" id="fl-diapagamento" value="${escapeAttr(draft.diaPagamento)}"></div>
+            <div><label class="ps-label">Valor Pago</label><input class="ps-input" type="number" step="0.01" id="fl-valorpago" value="${draft.valorPago!==''? escapeAttr(draft.valorPago):''}"></div>
+          </div>` : ''}
+      </div>
+
+      ${!editing? `
+      <div class="fin-toggle-row">
+        <label class="ps-label">Repetir</label>
+        <div class="cf-months">
+          <button type="button" class="cf-month-btn ${draft.repetir?'active':''}" data-flrepetir="1">SIM</button>
+          <button type="button" class="cf-month-btn ${!draft.repetir?'active':''}" data-flrepetir="0">NÃO</button>
+        </div>
+        ${draft.repetir? `
+          <div class="fin-repetir-fields">
+            <div><label class="ps-label">Quando?</label>
+              <select class="ps-input" id="fl-quando">
+                <option value="semanal" ${draft.quando==='semanal'?'selected':''}>Semanalmente</option>
+                <option value="quinzenal" ${draft.quando==='quinzenal'?'selected':''}>Quinzenalmente</option>
+                <option value="mensal" ${draft.quando==='mensal'?'selected':''}>Mensalmente</option>
+                <option value="anual" ${draft.quando==='anual'?'selected':''}>Anualmente</option>
+              </select>
+            </div>
+            <div><label class="ps-label">Ocorrências</label>
+              <select class="ps-input" id="fl-ocorrencias">
+                ${Array.from({length:60},(_,i)=>i+1).map(n=>`<option value="${n}" ${draft.ocorrencias===n?'selected':''}>${n}x</option>`).join('')}
+              </select>
+            </div>
+            <div class="fin-modo-wrap">
+              <label class="fin-modo-opt"><input type="radio" name="fl-modo" value="parcelar" ${draft.modo==='parcelar'?'checked':''}> Parcelar Valor</label>
+              <label class="fin-modo-opt"><input type="radio" name="fl-modo" value="repetir" ${draft.modo==='repetir'?'checked':''}> Repetir Valor</label>
+            </div>
+          </div>
+          <div class="table-wrap"><table class="ps-table fin-ocorr-table">
+            <thead><tr><th>Data</th><th>Valor</th></tr></thead>
+            <tbody>
+              ${draft.ocorrenciasList.map((o,i)=>`<tr>
+                <td><input class="ps-input ps-cell" type="date" data-flocc="data" data-idx="${i}" value="${escapeAttr(o.data)}"></td>
+                <td><input class="ps-input ps-cell" type="number" step="0.01" data-flocc="valor" data-idx="${i}" value="${escapeAttr(o.valor)}"></td>
+              </tr>`).join('')}
+            </tbody>
+          </table></div>
+        ` : ''}
+      </div>` : ''}
+
+      <div class="modal-actions">
+        <button class="btn-accent" id="fl-save">Salvar</button>
+        ${editing? `<button class="btn-outline" id="fl-delete" style="color:var(--danger);border-color:var(--danger)">Excluir</button>` : ''}
+        <button class="btn-outline" id="fl-cancel">Cancelar</button>
+      </div>
+    `;
+  }
+
+  function renderModal(){
+    document.getElementById('modal').innerHTML = `<div class="modal-body form-modal">${bodyHtml()}</div>`;
+    bindModalEvents();
+  }
+  function bindModalEvents(){
+    document.getElementById('fl-categoria').addEventListener('change', e=>{ draft.categoriaId = e.target.value; });
+    document.getElementById('fl-descricao').addEventListener('input', e=>{ draft.descricao = e.target.value; });
+    document.getElementById('fl-vencimento').addEventListener('change', e=>{
+      draft.dataVencimento = e.target.value;
+      if(draft.repetir){ recomputeOcorrencias(); renderModal(); }
+    });
+    document.getElementById('fl-conta').addEventListener('change', e=>{ draft.contaId = e.target.value; });
+    document.getElementById('fl-forma').addEventListener('change', e=>{ draft.formaId = e.target.value; });
+    document.getElementById('fl-valor').addEventListener('input', e=>{ draft.valor = e.target.value; });
+    document.getElementById('fl-valor').addEventListener('change', ()=>{
+      if(draft.repetir){ recomputeOcorrencias(); renderModal(); }
+    });
+    document.querySelectorAll('[data-flpagou]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        draft.pagou = btn.dataset.flpagou==='1';
+        if(draft.pagou && (draft.valorPago==='' || draft.valorPago==null)) draft.valorPago = draft.valor;
+        renderModal();
+      });
+    });
+    const diaPagEl = document.getElementById('fl-diapagamento');
+    if(diaPagEl) diaPagEl.addEventListener('change', e=>{ draft.diaPagamento = e.target.value; });
+    const valorPagoEl = document.getElementById('fl-valorpago');
+    if(valorPagoEl) valorPagoEl.addEventListener('input', e=>{ draft.valorPago = e.target.value; });
+
+    if(!editing){
+      document.querySelectorAll('[data-flrepetir]').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          draft.repetir = btn.dataset.flrepetir==='1';
+          if(draft.repetir) recomputeOcorrencias();
+          renderModal();
+        });
+      });
+      const quandoEl = document.getElementById('fl-quando');
+      if(quandoEl) quandoEl.addEventListener('change', e=>{ draft.quando = e.target.value; recomputeOcorrencias(); renderModal(); });
+      const ocorrEl = document.getElementById('fl-ocorrencias');
+      if(ocorrEl) ocorrEl.addEventListener('change', e=>{ draft.ocorrencias = +e.target.value; recomputeOcorrencias(); renderModal(); });
+      document.querySelectorAll('input[name="fl-modo"]').forEach(radio=>{
+        radio.addEventListener('change', e=>{ draft.modo = e.target.value; recomputeOcorrencias(); renderModal(); });
+      });
+      document.querySelectorAll('[data-flocc]').forEach(inp=>{
+        inp.addEventListener('input', ()=>{
+          const idx = +inp.dataset.idx;
+          const row = draft.ocorrenciasList[idx];
+          if(row) row[inp.dataset.flocc] = inp.value;
+        });
+      });
+    }
+
+    document.getElementById('fl-cancel').addEventListener('click', closeModal);
+    const delBtn = document.getElementById('fl-delete');
+    if(delBtn) delBtn.addEventListener('click', ()=>{
+      if(!confirmDelete('Excluir este lançamento? Essa ação não pode ser desfeita.')) return;
+      syncFinLancamentoDelete(editing.id);
+      const idx = FIN_LANCAMENTOS.findIndex(l=>l.id===editing.id);
+      if(idx>-1) FIN_LANCAMENTOS.splice(idx,1);
+      closeModal();
+      renderFinanceiro();
+    });
+
+    document.getElementById('fl-save').addEventListener('click', async ()=>{
+      if(!draft.categoriaId || !(draft.descricao||'').trim() || !draft.dataVencimento || !draft.contaId || !draft.formaId || !draft.valor){
+        alert('Preencha todos os campos obrigatórios (Categoria, Descrição, Data de Vencimento, Conta, Forma de Pagamento e Valor).');
+        return;
+      }
+      const saveBtn = document.getElementById('fl-save');
+      saveBtn.disabled = true;
+      try{
+        if(editing){
+          const fields = {
+            categoria_id: draft.categoriaId, descricao: draft.descricao.trim(), data_vencimento: draft.dataVencimento,
+            conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(draft.valor)||0,
+            pagou: draft.pagou, dia_pagamento: draft.pagou? (draft.diaPagamento||null) : null,
+            valor_pago: draft.pagou? (parseFloat(draft.valorPago)||0) : null,
+          };
+          syncFinLancamentoUpdate(editing.id, fields);
+          Object.assign(editing, {
+            categoriaId: fields.categoria_id, descricao: fields.descricao, dataVencimento: fields.data_vencimento,
+            contaId: fields.conta_id, formaId: fields.forma_id, valor: fields.valor,
+            pagou: fields.pagou, diaPagamento: fields.dia_pagamento||'', valorPago: fields.valor_pago,
+          });
+        } else if(draft.repetir && draft.ocorrenciasList.length>1){
+          const grupoId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('grp'+Date.now()+Math.floor(Math.random()*1000));
+          const n = draft.ocorrenciasList.length;
+          const rowsToInsert = draft.ocorrenciasList.map((o,i)=>({
+            tipo, categoria_id: draft.categoriaId, descricao: draft.descricao.trim(), data_vencimento: o.data,
+            conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(o.valor)||0,
+            pagou: i===0? draft.pagou : false,
+            dia_pagamento: i===0 && draft.pagou? (draft.diaPagamento||null) : null,
+            valor_pago: i===0 && draft.pagou? (parseFloat(draft.valorPago)||0) : null,
+            grupo_id: grupoId, parcela_num: i+1, parcela_total: n, repete_modo: draft.modo,
+            created_by: currentUser.id,
+          }));
+          const inserted = await syncFinLancamentoInsertMany(rowsToInsert);
+          inserted.forEach(r=>FIN_LANCAMENTOS.push(mapFinLancamentoRow(r)));
+        } else {
+          const row = {
+            tipo, categoria_id: draft.categoriaId, descricao: draft.descricao.trim(), data_vencimento: draft.dataVencimento,
+            conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(draft.valor)||0,
+            pagou: draft.pagou, dia_pagamento: draft.pagou? (draft.diaPagamento||null) : null,
+            valor_pago: draft.pagou? (parseFloat(draft.valorPago)||0) : null,
+            created_by: currentUser.id,
+          };
+          const inserted = await syncFinLancamentoInsertMany([row]);
+          inserted.forEach(r=>FIN_LANCAMENTOS.push(mapFinLancamentoRow(r)));
+        }
+        closeModal();
+        renderFinanceiro();
+      }catch(e){ console.error(e); alert('Não foi possível salvar. Tente novamente.'); saveBtn.disabled = false; }
+    });
+  }
+
+  modalReturnTo = null;
+  modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+  renderModal();
 }
 
 /* Quando a pessoa clica no link de recuperação de senha recebido por e-mail, o Supabase detecta o token
