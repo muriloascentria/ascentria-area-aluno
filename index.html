@@ -2047,7 +2047,9 @@ async function enterApp(){
 const _debounceTimers = {};
 function debounceSync(key, fn, delay=700){
   clearTimeout(_debounceTimers[key]);
-  _debounceTimers[key] = setTimeout(()=>{ fn().catch(e=>console.error('sync', key, e)); }, delay);
+  _debounceTimers[key] = setTimeout(()=>{
+    Promise.resolve(fn()).then(r=>{ if(r && r.error) console.error('sync', key, r.error); }).catch(e=>console.error('sync', key, e));
+  }, delay);
 }
 function syncNow(promiseLike){
   Promise.resolve(promiseLike).then(r=>{ if(r && r.error) console.error('sync', r.error); }).catch(e=>console.error('sync', e));
@@ -2063,6 +2065,25 @@ function syncModuleProgress(sid, modId, done){
 }
 function syncPanelData(sid, topicId, data){
   debounceSync('panel:'+sid+':'+topicId, ()=>sb.from('panel_data').upsert({student_id:sid, topic_id:topicId, data}));
+}
+/* Grava IMEDIATAMENTE (sem esperar o debounce de 700ms) — usada nos momentos em que o aluno diz
+   explicitamente "terminei, salvar" (botão Salvar) ou fecha o tópico: se o app for fechado logo em
+   seguida (comum no celular), um envio ainda pendente no debounce nunca chegaria a sair. Cancela
+   qualquer envio debounced pendente pra essa mesma chave (evita gravar duas vezes) e avisa o aluno
+   com um alerta se a gravação falhar de verdade, em vez de só logar no console e deixar ele achar
+   que salvou. */
+function syncPanelDataNow(sid, topicId, data){
+  const key = 'panel:'+sid+':'+topicId;
+  clearTimeout(_debounceTimers[key]);
+  Promise.resolve(sb.from('panel_data').upsert({student_id:sid, topic_id:topicId, data})).then(r=>{
+    if(r && r.error){
+      console.error('sync', key, r.error);
+      alert('Não foi possível salvar agora — verifique sua internet e tente novamente. Se o problema continuar, avise a equipe.');
+    }
+  }).catch(e=>{
+    console.error('sync', key, e);
+    alert('Não foi possível salvar agora — verifique sua internet e tente novamente. Se o problema continuar, avise a equipe.');
+  });
 }
 function syncPanelOverride(sid, topicId, filled){
   syncNow(sb.from('panel_overrides').upsert({student_id:sid, topic_id:topicId, filled}));
@@ -4825,10 +4846,16 @@ function openTopicModal(quadrant, topicId){
       if(crmSnapshotOf()===crmOpenSnapshot) return true;
       const ok = await showAppConfirm('Você fez movimentações no CRM (arrastar leads, adicionar, editar ou descartar). Deseja salvar antes de sair?', {title:'Salvar alterações do CRM?', confirmLabel:'Salvar e sair', cancelLabel:'Continuar editando'});
       if(!ok) return false;
-      syncPanelData(s.id, topic.id, data);
+      syncPanelDataNow(s.id, topic.id, data);
       crmOpenSnapshot = crmSnapshotOf();
       return true;
     };
+  } else {
+    /* Fora do CRM: sempre que o tópico for fechado (botão Fechar, clique fora do modal, ou depois de
+       clicar Salvar), grava imediatamente em vez de confiar só no debounce de 700ms — se o aluno fechar
+       o app logo em seguida (comum no celular), um envio ainda pendente no debounce nunca sairia, e o
+       que foi digitado pareceria "apagado" na próxima vez que abrir. */
+    modalCloseGuard = ()=>{ syncPanelDataNow(s.id, topic.id, data); return true; };
   }
   function renderModal(){
     const filled = topicFilled(quadrant, topic, idx, s);
@@ -4861,6 +4888,7 @@ function openTopicModal(quadrant, topicId){
            trava os campos, mesmo com dados incompletos; se ainda faltar algo, o tópico continua
            "Pendente" lá fora, mas o que foi digitado já fica salvo. */
         editing = false;
+        syncPanelDataNow(s.id, topic.id, data);
         renderModal();
         renderPainel();
       });
