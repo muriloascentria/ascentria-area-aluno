@@ -629,6 +629,13 @@
   .cf-total{margin-top:12px;font-size:13.5px;color:var(--text-dim);text-align:right;}
   .cf-total strong{color:var(--success);}
   .cf-total strong.neg{color:var(--danger);}
+  /* Contas Fixas (dentro do Fluxo de Caixa): lançamentos que se repetem todo mês (aluguel, internet
+     etc.), cadastrados uma vez e aplicados com um clique no mês em que a pessoa estiver navegando. */
+  .cfx-block{margin-bottom:22px;padding-bottom:18px;border-bottom:1px dashed var(--border);}
+  .cfx-title{font-size:13px;font-weight:700;color:var(--text);margin:0 0 4px;}
+  .cfx-sub{font-size:12px;color:var(--text-mute);margin:0 0 12px;line-height:1.5;}
+  .cfx-table .ps-cell{min-width:96px;}
+  .cfx-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;}
   /* Precificação de Protocolos e Consultas (Painel do Método → Gestão): duas colunas — itens de custo
      fixo à esquerda, horas/precificação da hora/custo variável à direita — com o Preço do Protocolo
      recalculado ao sair de qualquer campo, igual à planilha de origem. */
@@ -4345,7 +4352,8 @@ function sectionValue(data, section){
   if(section.type==='swatches'){ if(!data[section.key]) data[section.key] = new Array(section.count).fill(''); return data[section.key]; }
   if(section.type==='checklist'){ if(!data[section.key]) data[section.key] = []; return data[section.key]; }
   if(section.type==='cashflow'){
-    if(!data[section.key]) data[section.key] = { view:{year:new Date().getFullYear(), month:new Date().getMonth()}, months:{} };
+    if(!data[section.key]) data[section.key] = { view:{year:new Date().getFullYear(), month:new Date().getMonth()}, months:{}, contasFixas:[] };
+    if(!data[section.key].contasFixas) data[section.key].contasFixas = []; // compatibilidade com painéis salvos antes desse campo existir
     return data[section.key];
   }
   if(section.type==='pricing'){
@@ -4480,6 +4488,32 @@ function renderSectionHTML(section, data){
     const saldoFinal = saldo;
     return `<div class="ps-section">
       <h4 class="ps-h">${section.label}</h4>
+      <div class="cfx-block">
+        <h5 class="cfx-title">Contas Fixas</h5>
+        <p class="cfx-sub">Cadastre uma vez as contas que se repetem todo mês (aluguel, internet, assinaturas etc.) e aplique com um clique no mês em que estiver navegando abaixo.</p>
+        <div class="table-wrap"><table class="ps-table cfx-table">
+          <thead><tr><th>Descrição</th><th>Tipo</th><th>Forma de Pagamento</th><th>Valor</th><th></th></tr></thead>
+          <tbody>
+            ${val.contasFixas.map((f,i)=>`<tr>
+              <td><input class="ps-input ps-cell" data-fkind="cfx-field" data-skey="${section.key}" data-idx="${i}" data-col="descricao" value="${escapeAttr(f.descricao||'')}" placeholder="Ex.: Aluguel do consultório"></td>
+              <td><select class="ps-input ps-cell" data-fkind="cfx-field" data-skey="${section.key}" data-idx="${i}" data-col="tipo">
+                <option value="Saída" ${f.tipo!=='Entrada'?'selected':''}>Saída</option>
+                <option value="Entrada" ${f.tipo==='Entrada'?'selected':''}>Entrada</option>
+              </select></td>
+              <td><select class="ps-input ps-cell" data-fkind="cfx-field" data-skey="${section.key}" data-idx="${i}" data-col="formaPagamento">
+                <option value="">—</option>
+                ${(!f.formaPagamento || PAYMENT_TYPES.includes(f.formaPagamento)? PAYMENT_TYPES : [f.formaPagamento, ...PAYMENT_TYPES]).map(o=>`<option value="${escapeAttr(o)}" ${f.formaPagamento===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}
+              </select></td>
+              <td><input type="number" step="0.01" class="ps-input ps-cell" data-fkind="cfx-field" data-skey="${section.key}" data-idx="${i}" data-col="valor" value="${f.valor!=null && f.valor!==''? escapeAttr(f.valor) : ''}"></td>
+              <td><button class="ps-remove" data-remove="cfx" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></td>
+            </tr>`).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhuma conta fixa cadastrada ainda.</td></tr>`}
+          </tbody>
+        </table></div>
+        <div class="cfx-actions">
+          <button class="btn-mini ps-add" data-add="cfx" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar conta fixa</button>
+          ${val.contasFixas.length? `<button type="button" class="btn-outline" data-cfxapply="1" data-skey="${section.key}">${icon('check','tiny')} Aplicar contas fixas em ${MESES[val.view.month]}/${val.view.year}</button>` : ''}
+        </div>
+      </div>
       <div class="cf-nav">
         <div class="cf-year-wrap">
           <label class="ps-label">Ano</label>
@@ -4719,6 +4753,10 @@ function bindSectionEvents(sections, data, rerender, saveKey){
         const row = (val.months[key]||[])[+inp.dataset.idx];
         if(row) row[inp.dataset.col] = inp.value;
       }
+      else if(kind==='cfx-field'){
+        const fixa = val.contasFixas[+inp.dataset.idx];
+        if(fixa) fixa[inp.dataset.col] = inp.value;
+      }
       else if(kind==='pr-item'){
         const item = val.itens[+inp.dataset.idx];
         if(item) item[inp.dataset.col] = inp.value;
@@ -4803,6 +4841,34 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       const skey = btn.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       exportCashflowPDF(section, data, saveKey);
+    });
+  });
+  /* Aplica as Contas Fixas cadastradas no mês em que a pessoa está navegando — cria um lançamento
+     por conta fixa (marcado com fixaId, sem aparecer na tela) pra não duplicar se clicar de novo:
+     contas já aplicadas naquele mês são puladas, e uma conta fixa apagada manualmente do mês pode
+     ser reaplicada normalmente clicando de novo. */
+  modalEl.querySelectorAll('[data-cfxapply]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const skey = btn.dataset.skey;
+      const section = sections.find(s=>s.key===skey);
+      const val = sectionValue(data, section);
+      const key = `${val.view.year}-${val.view.month}`;
+      if(!val.months[key]) val.months[key] = [];
+      const existingIds = new Set(val.months[key].map(r=>r.fixaId).filter(Boolean));
+      const mm = String(val.view.month+1).padStart(2,'0');
+      let added = 0;
+      val.contasFixas.forEach(f=>{
+        if(!(f.descricao||'').trim() && !f.valor) return; // ignora contas fixas ainda em branco
+        if(existingIds.has(f.id)) return; // já aplicada neste mês
+        val.months[key].push({
+          data: `${val.view.year}-${mm}-01`, tipo: f.tipo||'Saída', descricao: f.descricao||'',
+          formaPagamento: f.formaPagamento||'', valor: f.valor||'', comprovante:'', fixaId: f.id,
+        });
+        added++;
+      });
+      persist();
+      rerender();
+      if(added===0) alert('Todas as contas fixas cadastradas já foram aplicadas neste mês.');
     });
   });
   modalEl.querySelectorAll('[data-fatyear]').forEach(btn=>{
@@ -5000,6 +5066,9 @@ function bindSectionEvents(sections, data, rerender, saveKey){
         if(!val.months[key]) val.months[key] = [];
         val.months[key].push({data:'',tipo:'Entrada',descricao:'',formaPagamento:'',valor:'',comprovante:''});
       }
+      else if(btn.dataset.add==='cfx'){
+        val.contasFixas.push({id:'cfx'+Date.now()+Math.floor(Math.random()*1000), descricao:'', tipo:'Saída', formaPagamento:'', valor:''});
+      }
       else if(btn.dataset.add==='pr-item'){
         val.itens.push({nome:'',valor:''});
       }
@@ -5015,6 +5084,8 @@ function bindSectionEvents(sections, data, rerender, saveKey){
       if(btn.dataset.remove==='cf'){
         const key = `${val.view.year}-${val.view.month}`;
         if(val.months[key]) val.months[key].splice(+btn.dataset.idx,1);
+      } else if(btn.dataset.remove==='cfx'){
+        val.contasFixas.splice(+btn.dataset.idx,1);
       } else if(btn.dataset.remove==='pr-item'){
         val.itens.splice(+btn.dataset.idx,1);
       } else {
