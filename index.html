@@ -910,9 +910,10 @@
       <div class="field full"><label>Nome completo</label><input class="ps-input" type="text" id="cr-nome" placeholder="Seu nome completo"></div>
       <div class="field full"><label>E-mail</label><input class="ps-input" type="email" id="cr-email" placeholder="voce@email.com"></div>
       <div class="field full"><label>Senha</label><input class="ps-input" type="password" id="cr-senha" placeholder="Crie uma senha (mín. 6 caracteres)"></div>
+      <div class="field full"><label>Código de acesso</label><input class="ps-input" type="text" id="cr-codigo" placeholder="Código fornecido pela equipe interna" autocapitalize="characters"></div>
       <p class="field-error" id="cr-error" style="display:none"></p>
       <button class="btn-primary" id="signup-btn">Criar conta</button>
-      <p class="login-note">Ao criar sua conta, você poderá preencher seus dados de matrícula e acompanhar sua jornada no Método Essência.</p>
+      <p class="login-note">Peça o código de acesso para a equipe interna. Ele define automaticamente se sua conta é de Mentoria ou do Método (curso gravado).</p>
     </div>
   </div>
 </div>
@@ -1059,6 +1060,7 @@ const ICONS = {
   externallink:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   reply:'<path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
 };
 function icon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24">${ICONS[name]}</svg>`;}
 function fillIcon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24" fill="currentColor" stroke="none">${ICONS[name]}</svg>`;}
@@ -1687,6 +1689,7 @@ let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver boots
 let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/visível pra equipe interna, ver bootstrapData
 let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
+let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/visível pra equipe interna, ver bootstrapData
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
 let WATCHED_LIVE = new Set();
@@ -1727,6 +1730,9 @@ function mapLiveSessionRow(row){
     _eventDate: row.event_date,
     _eventHour: row.event_hour || '',
     tipo: row.tipo || null,
+    /* Público do encontro coletivo: 'mentorado' (mentoria) ou 'curso' (Método/curso gravado) — encontros
+       individuais (studentId preenchido) ignoram isso, sempre visíveis só pro aluno específico. */
+    audience: row.audience || 'mentorado',
     linkGravacao: row.link_gravacao || '',
     /* null = encontro coletivo, visível na Agenda ao Vivo de todos; preenchido = reunião individual
        (agendada de dentro do Acompanhamento Interno de um mentorado específico), visível só pra esse
@@ -2039,6 +2045,11 @@ async function bootstrapData(){
     CLIENTES_REGISTRO.length = 0;
     const { data: crRows } = await sb.from('registro_clientes').select('*').order('created_at',{ascending:false});
     (crRows||[]).forEach(r=>CLIENTES_REGISTRO.push(mapClienteRow(r)));
+    // Códigos de acesso — geração e consulta são só da equipe interna (a validação/consumo no
+    // cadastro passa sempre pelas funções do banco, nunca lê esta lista diretamente).
+    ACCESS_CODES.length = 0;
+    const { data: acRows } = await sb.from('access_codes').select('*').order('created_at',{ascending:false});
+    (acRows||[]).forEach(r=>ACCESS_CODES.push(mapAccessCodeRow(r)));
   }
 
   STUDENT_POINTS = {};
@@ -2308,10 +2319,57 @@ function syncClienteTagsUpdate(id, tags){
 function syncClienteDelete(id){
   syncNow(sb.from('registro_clientes').delete().eq('id', id));
 }
+/* ---- Códigos de acesso (Criar conta) ---- */
+function mapAccessCodeRow(row){
+  return {
+    id: row.id, code: row.code, tier: row.tier, label: row.label || '',
+    usedBy: row.used_by || null, usedAt: row.used_at || null, createdAt: row.created_at || '',
+  };
+}
+function accessCodeAlphabet(){ return 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; } // sem 0/O/1/I, evita confusão na hora de digitar
+function generateAccessCodeString(tier){
+  const abc = accessCodeAlphabet();
+  let rand = '';
+  for(let i=0;i<6;i++) rand += abc[Math.floor(Math.random()*abc.length)];
+  return (tier==='curso' ? 'METODO-' : 'MENTOR-') + rand;
+}
+/* Gera e grava um código novo, tentando de novo em caso (raríssimo) de colisão com um já existente. */
+async function syncAccessCodeGenerate(tier, label){
+  for(let tries=0; tries<5; tries++){
+    const code = generateAccessCodeString(tier);
+    const { data, error } = await sb.from('access_codes').insert({ code, tier, label: label || null, created_by: currentUser.id }).select().single();
+    if(!error) return data;
+    if(!/duplicate|unique/i.test(error.message||'')) throw error;
+  }
+  throw new Error('Não foi possível gerar um código único. Tente novamente.');
+}
+function syncAccessCodeDelete(id){
+  syncNow(sb.from('access_codes').delete().eq('id', id));
+}
 /* Muda um aluno entre 'mentorado' (acesso completo) e 'curso' (curso gravado, só Aulas + comunidade
    própria) — ver Visão Geral, onde a equipe interna faz essa troca. */
 function syncStudentTierUpdate(id, tier){
   syncNow(sb.from('profiles').update({tier}).eq('id', id));
+}
+/* Códigos de acesso (Criar conta): a validação em si é sempre feita no banco (validate_access_code
+   antes do signUp, redeem_access_code depois de logado) — nunca no cliente. O único papel deste
+   armazenamento local é guardar o código já validado enquanto a conta aguarda confirmação por e-mail
+   (signUp pode não devolver sessão nesse caso), pra consumir o código automaticamente no primeiro
+   login seguinte, sem precisar pedir o código de novo. */
+function setPendingAccessCode(email, code){
+  try{ localStorage.setItem('pendingAccessCode', JSON.stringify({ email: (email||'').toLowerCase(), code })); }catch(e){}
+}
+async function tryRedeemPendingCode(){
+  let pending;
+  try{ pending = JSON.parse(localStorage.getItem('pendingAccessCode')||'null'); }catch(e){ pending = null; }
+  if(!pending || !pending.code || !currentUser) return;
+  if(pending.email && currentUser.email && pending.email !== currentUser.email.toLowerCase()){
+    try{ localStorage.removeItem('pendingAccessCode'); }catch(e){}
+    return;
+  }
+  try{ await sb.rpc('redeem_access_code', { p_code: pending.code }); }
+  catch(e){ console.error('redeem_access_code', e); }
+  try{ localStorage.removeItem('pendingAccessCode'); }catch(e){}
 }
 function parseValorBRL(str){
   if(!str) return null;
@@ -2326,6 +2384,7 @@ async function syncLiveSessionInsert(row){
     link_gravacao: row.link_gravacao || null,
     student_id: row.student_id || null,
     tipo: row.tipo || null,
+    audience: row.audience || 'mentorado',
   }).select().single();
   if(error) throw error;
   return data;
@@ -2403,6 +2462,7 @@ function renderLogin(){
     }
     currentUser = data.user;
     try{
+      await tryRedeemPendingCode();
       await bootstrapData();
       await enterApp();
     }catch(e){
@@ -2416,27 +2476,39 @@ function renderLogin(){
     const nome = document.getElementById('cr-nome').value.trim();
     const email = document.getElementById('cr-email').value.trim();
     const senha = document.getElementById('cr-senha').value;
+    const codigo = document.getElementById('cr-codigo').value.trim().toUpperCase();
     const errEl = document.getElementById('cr-error');
     errEl.style.color = 'var(--danger)';
     errEl.style.display='none';
-    if(!nome || !email || !senha){ errEl.textContent='Preencha todos os campos.'; errEl.style.display='block'; return; }
+    if(!nome || !email || !senha || !codigo){ errEl.textContent='Preencha todos os campos, incluindo o código de acesso.'; errEl.style.display='block'; return; }
     if(senha.length < 6){ errEl.textContent='A senha precisa ter ao menos 6 caracteres.'; errEl.style.display='block'; return; }
     const initials = nome.split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
     const btn = document.getElementById('signup-btn');
     btn.disabled = true; btn.textContent = 'Criando...';
+    /* Valida o código ANTES de criar a conta — assim nenhuma conta é criada com um código
+       inválido/já usado. A checagem é feita no banco (validate_access_code), nunca confiando
+       em nada calculado no cliente. */
+    const { data: tierData, error: tierErr } = await sb.rpc('validate_access_code', { p_code: codigo });
+    if(tierErr || !tierData){
+      btn.disabled = false; btn.textContent = 'Criar conta';
+      errEl.textContent = 'Código de acesso inválido ou já utilizado. Confira com a equipe interna.';
+      errEl.style.display='block'; return;
+    }
     const { data, error } = await sb.auth.signUp({ email, password: senha, options:{ data:{ name: nome, initials } } });
     btn.disabled = false; btn.textContent = 'Criar conta';
     if(error){
       errEl.textContent = /already/i.test(error.message||'') ? 'Este e-mail já está cadastrado.' : 'Não foi possível criar a conta.';
       errEl.style.display='block'; return;
     }
+    setPendingAccessCode(email, codigo);
     if(!data.session){
       errEl.style.color = 'var(--accent)';
-      errEl.textContent = 'Conta criada! Verifique seu e-mail para confirmar o acesso antes de entrar.';
+      errEl.textContent = 'Conta criada! Verifique seu e-mail para confirmar o acesso antes de entrar. Seu código de acesso será aplicado automaticamente no primeiro login.';
       errEl.style.display='block'; return;
     }
     currentUser = data.user;
     try{
+      await tryRedeemPendingCode();
       await bootstrapData();
       await enterApp();
     }catch(e){
@@ -2685,7 +2757,7 @@ function renderInicio(){
   if(needsWispform(s)){ renderWispformWizard(s); return; }
   const overall = overallProgress(s);
   const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
-  const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming' && (l.studentId==null || l.studentId===s.id));
+  const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming' && (l.studentId===s.id || (l.studentId==null && l.audience===(s.tier||'mentorado'))));
   const inProgress = COURSES.filter(c=>s.courseProgress[c.id]>0 && s.courseProgress[c.id]<100);
   const continueList = inProgress.length? inProgress : COURSES.filter(c=>s.courseProgress[c.id]===0).slice(0,3);
   const crmStats = computeCrmStats(s.id);
@@ -3766,10 +3838,17 @@ function gcalUrl(title, details){
   return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(details||'Encontro da Ascentria · Método Essência')}`;
 }
 function renderAgenda(){
-  /* Encontros coletivos (studentId null) aparecem pra todo mundo; reuniões individuais (agendadas de
-     dentro do Acompanhamento Interno de um mentorado) só aparecem pro próprio mentorado — currentStudentId
-     é sempre o contexto do aluno em questão, seja ele mesmo logado ou a equipe interna vendo o perfil dele. */
-  const visible = LIVE_SESSIONS.filter(l=>l.studentId==null || l.studentId===currentStudentId);
+  /* Encontros coletivos (studentId null) aparecem pra quem é do público certo (mentoria x método —
+     ver "audience", definido pela equipe interna no cadastro do evento); reuniões individuais (agendadas
+     de dentro do Acompanhamento Interno de um mentorado) só aparecem pro próprio mentorado, independente
+     de audience — currentStudentId é sempre o contexto do aluno em questão, seja ele mesmo logado ou a
+     equipe interna vendo o perfil dele. Enquanto a equipe interna está no modo "Equipe Interna" (não
+     "vendo como" ninguém), vê todos os encontros coletivos, dos dois públicos. */
+  const visible = LIVE_SESSIONS.filter(l=>{
+    if(l.studentId!=null) return l.studentId===currentStudentId;
+    if(currentRole==='staff') return true;
+    return l.audience===getViewingTier();
+  });
   /* Ordena sempre pela data (e horário, quando informado) — não pela ordem em que foram cadastrados —
      assim um encontro novo aparece automaticamente na posição certa da sequência, mesmo se sua data for
      anterior à de encontros já existentes. Próximos: o mais próximo primeiro. Gravações: a mais recente primeiro. */
@@ -5935,7 +6014,7 @@ function renderConteudo(){
     <p class="section-sub" style="margin-top:-6px">Agende aqui qualquer encontro ao vivo — coletivo (Mastermind, Plantão de Dúvidas, Consultório Simulado, visível na Agenda ao Vivo de todos) ou 1:1 com um mentorado específico (visível só pra ele). 1h depois do horário marcado, o encontro sai de "Próximos encontros" automaticamente: os coletivos vão para as gravações da Agenda ao Vivo, separadas por tipo; os 1:1 vão para Minhas Sessões 1:1 do mentorado. Reuniões 1:1 também podem ser agendadas direto do Acompanhamento Interno do aluno, na aba "Registro de Contatos Futuros".</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Título</th><th>Tipo</th><th>Para</th><th>Data</th><th>Horário</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
+        <thead><tr><th>Título</th><th>Tipo</th><th>Público</th><th>Para</th><th>Data</th><th>Horário</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
         <tbody>
           ${LIVE_SESSIONS.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>{
             const tipoLabel = TIPO_ENCONTRO_LABELS[l.tipo] || (l.studentId? 'Encontro 1:1' : 'Encontro');
@@ -5944,6 +6023,7 @@ function renderConteudo(){
             <tr>
               <td style="min-width:200px">${escapeHtml(l.title)}</td>
               <td><span class="resp-pill">${tipoLabel}</span></td>
+              <td>${l.studentId? '—' : (l.audience==='curso' ? '<span class="resp-pill">Método</span>' : '<span class="resp-pill">Mentoria</span>')}</td>
               <td style="white-space:nowrap">${para}</td>
               <td style="white-space:nowrap">${l.date}</td>
               <td style="min-width:140px">${escapeHtml(l.time||'—')}</td>
@@ -5951,7 +6031,7 @@ function renderConteudo(){
               <td style="min-width:200px"><input class="ps-input" data-live-link="${l.id}" value="${escapeAttr(l.linkGravacao)}" placeholder="https://..."></td>
               <td><button class="btn-mini danger" data-del-live="${l.id}">${icon('trash')} Remover</button></td>
             </tr>`;
-          }).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
+          }).join('') || `<tr><td colspan="9" style="color:var(--text-mute)">Nenhum evento cadastrado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -5964,6 +6044,13 @@ function renderConteudo(){
           <option value="consultorio_simulado">Consultório Simulado</option>
           <option value="individual">Encontro 1:1</option>
         </select>
+      </div>
+      <div class="field" id="new-live-audience-wrap"><label>Público</label>
+        <select class="ps-input" id="new-live-audience">
+          <option value="mentorado">Mentoria (mentorados)</option>
+          <option value="curso">Método (curso gravado)</option>
+        </select>
+        <p class="section-sub" style="margin:4px 0 0;font-size:11.5px">Plantão de Dúvidas, Consultório Simulado e Mastermind não são encontros do Método — direcione pra Mentoria.</p>
       </div>
       <div class="field" id="new-live-student-wrap" style="display:none">
         <label>Mentorado</label>
@@ -6045,10 +6132,14 @@ function renderConteudo(){
   document.getElementById('new-live-tipo').addEventListener('change', ()=>{
     const isIndividual = document.getElementById('new-live-tipo').value === 'individual';
     document.getElementById('new-live-student-wrap').style.display = isIndividual ? 'flex' : 'none';
+    /* Reuniões 1:1 são sempre só do próprio mentorado, então o público (mentoria x método) não se
+       aplica — só faz sentido escolher pra encontros coletivos. */
+    document.getElementById('new-live-audience-wrap').style.display = isIndividual ? 'none' : 'flex';
   });
   document.getElementById('add-live-btn').addEventListener('click', async ()=>{
     const title = document.getElementById('new-live-title').value.trim();
     const tipo = document.getElementById('new-live-tipo').value;
+    const audience = document.getElementById('new-live-audience').value;
     const eventDate = document.getElementById('new-live-date').value;
     const eventHour = document.getElementById('new-live-hour').value;
     const timeDetail = document.getElementById('new-live-timedetail').value.trim();
@@ -6064,7 +6155,7 @@ function renderConteudo(){
     const btn = document.getElementById('add-live-btn');
     btn.disabled = true;
     try{
-      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, event_hour: eventHour||null, description, link_gravacao: linkGravacao || null, student_id: studentId, tipo});
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, event_hour: eventHour||null, description, link_gravacao: linkGravacao || null, student_id: studentId, tipo, audience});
       LIVE_SESSIONS.push(mapLiveSessionRow(row));
       renderConteudo();
     }catch(e){ console.error(e); btn.disabled = false; }
@@ -6545,7 +6636,71 @@ function renderVisaoGeral(){
         </tbody>
       </table>
     </div>
+
+    <h2 class="section-title" style="margin-top:28px">${icon('idcard')} Códigos de Acesso</h2>
+    <p class="section-sub" style="margin-top:-6px">Gere um código e passe pra pessoa usar na aba "Criar conta". Cada código só pode ser usado uma vez e já define o acesso da conta nova: Mentoria (mentorado) ou Método (curso gravado).</p>
+    <div class="add-form">
+      <div class="field"><label>Tipo de acesso</label>
+        <select class="ps-input" id="new-code-tier">
+          <option value="mentorado">Mentoria (mentorado)</option>
+          <option value="curso">Método (curso gravado)</option>
+        </select>
+      </div>
+      <div class="field full"><label>Identificação (opcional)</label><input class="ps-input" type="text" id="new-code-label" placeholder="Ex.: nome de quem vai usar, ou turma"></div>
+      <div class="actions"><button class="btn-accent" id="gen-code-btn">${icon('idcard')} Gerar código</button></div>
+    </div>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Código</th><th>Tipo</th><th>Identificação</th><th>Situação</th><th></th></tr></thead>
+        <tbody>
+          ${ACCESS_CODES.map(c=>{
+            const used = !!c.usedBy;
+            const usedPerson = used ? (getPerson(c.usedBy)||{}).name || 'Conta removida' : '';
+            return `
+            <tr>
+              <td style="font-family:monospace;font-weight:600;white-space:nowrap">${escapeHtml(c.code)}</td>
+              <td><span class="resp-pill">${c.tier==='curso'?'Método':'Mentoria'}</span></td>
+              <td>${escapeHtml(c.label||'—')}</td>
+              <td>${used ? `<span class="pill replay">Usado por ${escapeHtml(usedPerson)}</span>` : '<span class="pill live">Disponível</span>'}</td>
+              <td>
+                ${!used ? `<button class="btn-mini" data-copy-code="${escapeAttr(c.code)}">${icon('copy')} Copiar</button>
+                <button class="btn-mini danger" data-del-code="${c.id}">${icon('trash')} Remover</button>` : ''}
+              </td>
+            </tr>`;
+          }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum código gerado ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
   `;
+  document.getElementById('gen-code-btn').addEventListener('click', async ()=>{
+    const tier = document.getElementById('new-code-tier').value;
+    const label = document.getElementById('new-code-label').value.trim();
+    const btn = document.getElementById('gen-code-btn');
+    btn.disabled = true;
+    try{
+      const row = await syncAccessCodeGenerate(tier, label);
+      ACCESS_CODES.unshift(mapAccessCodeRow(row));
+      renderVisaoGeral();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-copy-code]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      try{
+        await navigator.clipboard.writeText(btn.dataset.copyCode);
+        const old = btn.innerHTML;
+        btn.innerHTML = `${icon('check','tiny')} Copiado`;
+        setTimeout(()=>{ btn.innerHTML = old; }, 1500);
+      }catch(e){ /* clipboard indisponível — a pessoa copia manualmente pelo texto na tabela */ }
+    });
+  });
+  document.querySelectorAll('[data-del-code]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!confirmDelete('Remover este código de acesso? Essa ação não pode ser desfeita.')) return;
+      const idx = ACCESS_CODES.findIndex(c=>c.id==btn.dataset.delCode);
+      if(idx>-1){ syncAccessCodeDelete(ACCESS_CODES[idx].id); ACCESS_CODES.splice(idx,1); }
+      renderVisaoGeral();
+    });
+  });
   document.querySelectorAll('[data-open-staff]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       /* "Abrir" leva direto pra ver a plataforma como esse aluno vê (modo "Aluno" do role-toggle) — o
@@ -6895,6 +7050,7 @@ sb.auth.onAuthStateChange((event, session)=>{
     const { data: { session } } = await sb.auth.getSession();
     if(session && session.user){
       currentUser = session.user;
+      await tryRedeemPendingCode();
       await bootstrapData();
       await enterApp();
       return;
