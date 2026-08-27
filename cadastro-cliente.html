@@ -265,11 +265,11 @@ function renderCEP(container){
 function renderEndereco(container){
   container.innerHTML = `
     ${fieldHtml('endereco','Endereço', `<input type="text" id="in-end" value="${data.endereco}" placeholder="Rua, avenida...">`)}
-    <div class="row3">
+    <div class="row2">
       ${fieldHtml('numero','Número', `<input type="text" id="in-num" value="${data.numero}" placeholder="Ex.: 123">`)}
       ${fieldHtml('complemento','Complemento', `<input type="text" id="in-comp" value="${data.complemento}" placeholder="Apto, bloco...">`, true)}
-      ${fieldHtml('bairro','Bairro', `<input type="text" id="in-bairro" value="${data.bairro}" placeholder="Bairro">`)}
     </div>
+    ${fieldHtml('bairro','Bairro', `<input type="text" id="in-bairro" value="${data.bairro}" placeholder="Bairro">`)}
     <div class="row2">
       ${fieldHtml('estado','Estado', `<select id="in-estado">${estadoOpts(data.estado)}</select>`)}
       ${fieldHtml('cidade','Cidade', `<select id="in-cidade"><option value="">Selecione o estado primeiro</option></select>`)}
@@ -442,11 +442,7 @@ function renderSucesso(){
       <h2 class="step-q">Cadastro enviado!</h2>
       <p class="step-hint">Seus dados foram registrados com sucesso. Nossa equipe entrará em contato em breve.</p>
     </div>
-    <div class="actions" style="justify-content:center">
-      <button type="button" class="btn-primary" id="btn-novo">Registrar outra pessoa</button>
-    </div>
   `;
-  document.getElementById('btn-novo').addEventListener('click', resetForm);
 }
 function resetForm(){
   data = {nome:'',cpf:'',cnpj:'',nascimento:'',whatsapp:'',email:'',cep:'',endereco:'',numero:'',complemento:'',bairro:'',estado:'',cidade:'',comoConheceu:''};
