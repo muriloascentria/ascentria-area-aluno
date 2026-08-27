@@ -277,6 +277,12 @@
     overflow:hidden;transition:transform .15s, border-color .15s;text-align:left;
   }
   .course-tile:hover{transform:translateY(-3px);border-color:var(--accent);}
+  .course-tile.is-locked{cursor:not-allowed;}
+  .course-tile.is-locked:hover{transform:none;border-color:var(--border);}
+  .course-tile.is-locked .course-thumb{filter:grayscale(1);opacity:.55;}
+  .course-tile.is-locked .course-info .title{color:var(--text-mute);}
+  .course-tile.is-locked .course-info .meta{color:var(--text-mute);font-style:italic;}
+  .course-thumb .play-badge svg{color:#fff;}
   .course-thumb{
     height:120px;position:relative;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(135deg,var(--tint1,#8d916f),var(--tint2,#bec6b1));
@@ -1737,6 +1743,10 @@ let currentRole = 'aluno';
 let currentView = 'inicio';
 let panelQuadrantId = null;
 let communityFilter = 'todas';
+/* Qual comunidade a equipe interna está olhando agora (Mentorados ou Curso) — só existe pra equipe
+   interna, já que um aluno (mentorado ou do curso) só tem acesso à própria comunidade mesmo, sem escolha.
+   Recalculada em renderComunidade() a partir de getViewingTier() sempre que não for a equipe interna. */
+let currentCommunityAudience = 'mentorado';
 /* Guarda, por publicação, a qual comentário a pessoa está respondendo no momento (ver botão "Responder"
    em cada comentário) — usado só para desenhar o chip "Respondendo a Fulano" acima da caixa de escrever
    e para marcar o reply_to_comment_id ao enviar; nunca é persistido, some ao recarregar. */
@@ -1861,6 +1871,18 @@ let currentUserProfile = null; // linha de profiles do próprio usuário logado 
 function actingAuthorId(){
   return (currentUserRole==='staff' && currentUserProfile) ? currentUserProfile.id : currentStudentId;
 }
+/* Audiência (tier) do aluno sendo visualizado agora — o próprio aluno logado, ou o mentorado selecionado
+   pela equipe interna ao "ver como aluno". Usada pra separar o que é do "Curso" (aulas gravadas, liberadas
+   aos poucos, com comunidade própria) do que é da mentoria completa ("mentorado", como sempre foi). */
+function getViewingTier(){
+  // No modo "Equipe Interna" (currentRole==='staff'), a equipe não está vendo como um aluno específico —
+  // segue a aba de comunidade que ela mesma escolheu (currentCommunityAudience). Já no modo "Aluno" —
+  // seja o próprio aluno logado, seja a equipe "vendo como" um mentorado/aluno do curso selecionado —
+  // segue o tier de quem está sendo visto de verdade.
+  if(currentRole==='staff') return currentCommunityAudience;
+  const s = getStudent(currentStudentId);
+  return s ? (s.tier||'mentorado') : 'mentorado';
+}
 
 function timeAgo(iso){
   if(!iso) return '';
@@ -1884,6 +1906,9 @@ function mapProfileRow(p){
   (p.course_progress||[]).forEach(cp=>{ courseProgress[cp.course_id] = cp.pct; });
   return {
     id: p.id, name: p.name, initials: p.initials, color: p.color, turma: p.turma || '—', avatarUrl: p.avatar_url || null,
+    /* 'mentorado' (acesso completo, como sempre foi) ou 'curso' (aluno do curso gravado — só Aulas e uma
+       Comunidade própria, com liberação sequencial das aulas conforme vai assistindo). */
+    tier: p.tier || 'mentorado',
     cadastro:{
       nomeCompleto: sc.nome_completo || p.name || '',
       email: sc.email || '',
@@ -1920,7 +1945,7 @@ async function bootstrapData(){
 
   const me = profiles.find(p=>p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
-  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null} : null;
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado'} : null;
 
   STUDENTS.length = 0;
   profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
@@ -1990,7 +2015,7 @@ async function bootstrapData(){
   (postRows||[]).forEach(p=>{
     COMMUNITY_POSTS.push({
       id:p.id, authorId:p.author_id, type:p.type, time:timeAgo(p.created_at), text:p.text,
-      courseId:p.course_id||null, notifyAuthor:!!p.notify_author,
+      courseId:p.course_id||null, audience:p.audience||'mentorado', notifyAuthor:!!p.notify_author,
       likes:(p.community_likes||[]).length,
       liked:(p.community_likes||[]).some(l=>l.student_id===currentUser.id),
       comments:(p.community_comments||[]).map(c=>({id:c.id, authorId:c.author_id, text:c.text, replyTo:c.reply_to_comment_id||null, notifyAuthor:!!c.notify_author})),
@@ -2041,7 +2066,7 @@ async function enterApp(){
   setupNav();
   renderProfile();
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
-  goTo(currentUserRole==='staff' ? 'visaogeral' : 'inicio');
+  goTo(currentUserRole==='staff' ? 'visaogeral' : (getViewingTier()==='curso' ? 'aulas' : 'inicio'));
 }
 
 /* ================= SYNC: grava mutações locais de volta no Supabase ================= */
@@ -2089,10 +2114,10 @@ function syncPanelDataNow(sid, topicId, data){
 function syncPanelOverride(sid, topicId, filled){
   syncNow(sb.from('panel_overrides').upsert({student_id:sid, topic_id:topicId, filled}));
 }
-async function createCommunityPost(authorId, type, text, courseId){
-  const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text, course_id:courseId||null}).select().single();
+async function createCommunityPost(authorId, type, text, courseId, audience){
+  const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text, course_id:courseId||null, audience:audience||'mentorado'}).select().single();
   if(error) throw error;
-  return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, courseId:data.course_id||null, notifyAuthor:false, likes:0, liked:false, comments:[]};
+  return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, courseId:data.course_id||null, audience:data.audience||'mentorado', notifyAuthor:false, likes:0, liked:false, comments:[]};
 }
 /* Liga os botões "Sobre a aula: X — abrir aula" de qualquer lista de posts renderizada, para abrir
    direto o player+comentários daquela aula, sem precisar navegar manualmente até "Aulas". */
@@ -2283,6 +2308,11 @@ function syncClienteTagsUpdate(id, tags){
 function syncClienteDelete(id){
   syncNow(sb.from('registro_clientes').delete().eq('id', id));
 }
+/* Muda um aluno entre 'mentorado' (acesso completo) e 'curso' (curso gravado, só Aulas + comunidade
+   própria) — ver Visão Geral, onde a equipe interna faz essa troca. */
+function syncStudentTierUpdate(id, tier){
+  syncNow(sb.from('profiles').update({tier}).eq('id', id));
+}
 function parseValorBRL(str){
   if(!str) return null;
   const m = String(str).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3},)/g,'').replace(',', '.');
@@ -2462,6 +2492,12 @@ function setupNav(){
       // sem resposta registrada numa aula não aparecia lá mesmo depois de clicar no sino — a equipe
       // interna clicava e não achava do que se tratava. Abre a aula certa direto nesse caso.
       const pendingDuvida = COMMUNITY_POSTS.find(p=>p.type==='duvida' && !isAnswered(p));
+      if(pendingDuvida){
+        // getViewingTier() segue currentCommunityAudience enquanto a equipe estiver no modo "Equipe
+        // Interna" — sem isto, abrir a aula certa mostraria os comentários da comunidade errada (ou o
+        // mural cairia na aba errada) se a dúvida pendente for da comunidade do Curso.
+        currentCommunityAudience = pendingDuvida.audience||'mentorado';
+      }
       if(pendingDuvida && pendingDuvida.courseId){
         openCourseModal(pendingDuvida.courseId);
         return;
@@ -2535,12 +2571,22 @@ function setRole(role){
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
      a equipe interna troca para o modo "Aluno" (pelo botão aqui em cima, ou clicando em "Abrir" na
      Visão Geral) — exatamente como o aluno vê a própria conta hoje. Para quem realmente é aluno,
-     currentRole nunca sai de 'aluno', então esses itens continuam sempre visíveis para ele. */
-  ['inicio','aulas','comunidade','ranking','dashboard','painel','sessoes','metas'].forEach(v=>{
+     currentRole nunca sai de 'aluno', então esses itens continuam sempre visíveis para ele.
+     Um aluno do curso gravado (tier 'curso' — sem mentoria individual) tem acesso só a Aulas e Comunidade,
+     mesmo no modo "Aluno": os itens de mentoria individual (Dashboard, Painel do Método, Sessões, Metas,
+     Ranking, Prontuários, e o próprio Início) ficam escondidos também aí. getViewingTier() resolve pro
+     tier de quem está sendo visto — a própria conta, ou o mentorado selecionado pela equipe interna. */
+  const viewingTier = getViewingTier();
+  const isCursoView = role==='aluno' && viewingTier==='curso';
+  ['inicio','dashboard','ranking','painel','sessoes','metas'].forEach(v=>{
+    const el = document.querySelector(`.nav-item[data-view="${v}"]`);
+    if(el) el.style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
+  });
+  ['aulas','comunidade'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = role==='aluno' ? 'flex' : 'none';
   });
-  document.getElementById('nav-prontuarios').style.display = role==='aluno' ? 'flex' : 'none';
+  document.getElementById('nav-prontuarios').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
   document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
@@ -2549,7 +2595,8 @@ function setRole(role){
     : `${icon('idcard')}<span>${currentUserRole==='staff'? 'Dados do Aluno Selecionado' : 'Meus Dados Cadastrais'}</span>`;
   renderProfile();
   updateNotifBadge();
-  if(role==='aluno' && (currentView==='interno' || currentView==='conteudo' || currentView==='visaogeral')){ goTo('inicio'); }
+  if(role==='aluno' && (currentView==='interno' || currentView==='conteudo' || currentView==='visaogeral')){ goTo(isCursoView? 'aulas' : 'inicio'); }
+  if(role==='aluno' && isCursoView && ['inicio','dashboard','ranking','painel','sessoes','metas'].includes(currentView)){ goTo('aulas'); }
   if(role==='staff' && ['inicio','aulas','comunidade','ranking','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('visaogeral'); }
 }
 
@@ -2579,7 +2626,7 @@ function renderProfile(){
   opts.innerHTML = STUDENTS.map(st=>`
     <button class="opt" data-id="${st.id}">
       ${initialsAvatar(st.initials,st.color,24,st.avatarUrl)}
-      <span>${st.name}</span>
+      <span>${st.name}${st.tier==='curso'? ' <span style="color:var(--text-mute);font-weight:400;font-size:11px">(Curso)</span>' : ''}</span>
     </button>
   `).join('');
   opts.querySelectorAll('.opt').forEach(el=>{
@@ -2682,7 +2729,7 @@ function renderInicio(){
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
 
     <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
-    <div>${COMMUNITY_POSTS.filter(p=>!p.courseId).slice(0,2).map(p=>postHtml(p,true,true)).join('')}</div>
+    <div>${COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===getViewingTier()).slice(0,2).map(p=>postHtml(p,true,true)).join('')}</div>
   `;
   bindCourseTiles();
   document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
@@ -2812,33 +2859,60 @@ async function submitWispform(s, flat){
 function courseTileHtml(c){
   const s = getStudent(currentStudentId);
   const pct = s ? (s.courseProgress[c.id] || 0) : 0;
+  const locked = isLessonLocked(c.id, s);
   const yt = youtubeId(c.videoLink);
   const coverStyle = yt ? `background-image:url('https://img.youtube.com/vi/${yt}/hqdefault.jpg');` : '';
   return `
-    <button class="course-tile" data-id="${c.id}">
+    <button class="course-tile ${locked?'is-locked':''}" data-id="${c.id}" ${locked?'data-locked="1"':''}>
       <div class="course-thumb ${yt?'has-cover':''}" style="--tint1:${c.tint[0]};--tint2:${c.tint[1]};${coverStyle}">
-        <div class="play-badge">${fillIcon('play','play-fill')}</div>
-        ${pct===100? `<div class="done-badge">${icon('check')}</div>`:''}
-        <div class="progress-mini"><div class="fill" style="width:${pct}%"></div></div>
+        <div class="play-badge">${locked? icon('lock') : fillIcon('play','play-fill')}</div>
+        ${!locked && pct===100? `<div class="done-badge">${icon('check')}</div>`:''}
+        <div class="progress-mini"><div class="fill" style="width:${locked?0:pct}%"></div></div>
       </div>
       <div class="course-info">
         <div class="cat">${c.cat}</div>
         <div class="title">${c.title}</div>
-        <div class="meta">${c.duration}</div>
+        <div class="meta">${locked? 'Conclua a aula anterior para liberar' : c.duration}</div>
       </div>
     </button>`;
 }
 function bindCourseTiles(){
   document.querySelectorAll('.course-tile').forEach(el=>{
-    el.addEventListener('click',()=>openCourseModal(el.dataset.id));
+    el.addEventListener('click',()=>{
+      if(el.dataset.locked){
+        alert('Esta aula ainda está bloqueada. Conclua a aula anterior (marque como assistida) para liberá-la.');
+        return;
+      }
+      openCourseModal(el.dataset.id);
+    });
   });
 }
-function renderAulas(){
-  /* Ordem fixa dos módulos (Introdução, Ser, Conectar, Transformar, Gerenciar) — categorias de aulas
-     que não batem com nenhum módulo (raro) aparecem depois, na ordem em que existirem. */
+/* Ordem fixa dos módulos (Introdução, Ser, Conectar, Transformar, Gerenciar) — categorias de aulas que não
+   batem com nenhum módulo (raro) aparecem depois, na ordem em que existirem. Usada tanto pra desenhar a
+   biblioteca de Aulas quanto pra decidir a ordem de liberação sequencial do aluno do curso (ver
+   orderedCourseIds/isLessonLocked mais abaixo) — as duas coisas precisam ser a mesma ordem. */
+function orderedCourseCats(){
   const orderedCats = MODULES.map(m=>m.name).filter(name=>COURSES.some(c=>c.cat===name));
   const extraCats = [...new Set(COURSES.map(c=>c.cat))].filter(cat=>!orderedCats.includes(cat));
-  const cats = [...orderedCats, ...extraCats];
+  return [...orderedCats, ...extraCats];
+}
+function orderedCourseIds(){
+  return orderedCourseCats().flatMap(cat=>COURSES.filter(c=>c.cat===cat).map(c=>c.id));
+}
+/* Só vale pra aluno do curso gravado (tier 'curso') — a mentoria completa continua com todas as aulas
+   sempre abertas, como já era. A primeira aula da sequência nunca fica travada; as seguintes só liberam
+   depois que a pessoa marcar a anterior como assistida (courseProgress 100%). */
+function isLessonLocked(courseId, student){
+  if(currentRole==='staff') return false; // equipe interna nunca é bloqueada por aulas travadas
+  if(!student || student.tier!=='curso') return false;
+  const order = orderedCourseIds();
+  const idx = order.indexOf(courseId);
+  if(idx<=0) return false;
+  const prevId = order[idx-1];
+  return (student.courseProgress[prevId]||0) !== 100;
+}
+function renderAulas(){
+  const cats = orderedCourseCats();
   document.getElementById('view-aulas').innerHTML = `
     <p class="section-sub">Biblioteca de aulas do Método Essência, organizada pelos mesmos módulos do seu Dashboard — assista no seu ritmo.</p>
     ${cats.map((cat,i)=>`
@@ -2883,6 +2957,12 @@ function bindRowScrollers(){
 function openCourseModal(id){
   const c = getCourse(id);
   const s = getStudent(currentStudentId);
+  /* Segurança extra: mesmo que algo chame openCourseModal fora do clique no card (ex.: um link "sobre
+     esta aula" antigo em cache), uma aula travada pro aluno do curso nunca abre. */
+  if(isLessonLocked(id, s)){
+    alert('Esta aula ainda está bloqueada. Conclua a aula anterior (marque como assistida) para liberá-la.');
+    return;
+  }
   const pct = s ? (s.courseProgress[id]||0) : 0;
   const done = pct===100;
   const yt = youtubeId(c.videoLink);
@@ -2931,7 +3011,9 @@ function openCourseModal(id){
 /* ---- Dúvidas e comentários por aula — reaproveita o mesmo modelo de post da Comunidade, filtrado por courseId ---- */
 function courseCommentsHtml(c){
   const me = getPerson(actingAuthorId());
-  const posts = COMMUNITY_POSTS.filter(p=>p.courseId===c.id);
+  // As aulas são as mesmas pras duas audiências, mas os comentários ficam cada um na sua comunidade —
+  // um aluno do curso não vê (nem mistura com) os comentários dos mentorados na mesma aula, e vice-versa.
+  const posts = COMMUNITY_POSTS.filter(p=>p.courseId===c.id && p.audience===getViewingTier());
   return `
     <div class="course-comments">
       <div class="ps-h">${icon('comment')} Dúvidas e comentários desta aula</div>
@@ -2954,7 +3036,7 @@ function courseCommentsHtml(c){
 function bindCourseComments(c){
   const modalEl = document.getElementById('modal');
   const me = getPerson(actingAuthorId());
-  markVisiblePostsSeen(COMMUNITY_POSTS.filter(p=>p.courseId===c.id));
+  markVisiblePostsSeen(COMMUNITY_POSTS.filter(p=>p.courseId===c.id && p.audience===getViewingTier()));
   modalEl.querySelectorAll('#cm-type-select [data-cm-type]').forEach(btn=>{
     btn.addEventListener('click',()=>{ selectedCoursePostType = btn.dataset.cmType; openCourseModal(c.id); });
   });
@@ -2965,7 +3047,7 @@ function bindCourseComments(c){
       if(!ta.value.trim()) return;
       postBtn.disabled = true;
       try{
-        const post = await createCommunityPost(actingAuthorId(), selectedCoursePostType, ta.value.trim(), c.id);
+        const post = await createCommunityPost(actingAuthorId(), selectedCoursePostType, ta.value.trim(), c.id, getViewingTier());
         COMMUNITY_POSTS.unshift(post);
         updateNotifBadge();
         openCourseModal(c.id);
@@ -3463,6 +3545,11 @@ function hasApresentacao(authorId){
 }
 function renderComunidade(){
   const me = getPerson(actingAuthorId());
+  /* A equipe interna, navegando como equipe (currentRole 'staff'), acompanha as duas comunidades e
+     escolhe qual está vendo por essa aba. Em qualquer modo "Aluno" — o próprio aluno logado, OU a equipe
+     "vendo como" um mentorado/aluno do curso selecionado — a audiência segue sempre a de quem está sendo
+     visto (getViewingTier()), sem aba nenhuma: é pra mostrar exatamente o que aquela pessoa vê. */
+  if(currentRole!=='staff') currentCommunityAudience = getViewingTier();
   const filters = [
     {id:'todas', label:'Todas'},
     {id:'duvida', label:'Dúvidas'},
@@ -3473,12 +3560,18 @@ function renderComunidade(){
   const alreadyApresentou = me? hasApresentacao(me.id) : false;
   if(alreadyApresentou && selectedPostType==='apresentacao') selectedPostType = 'interacao';
   // Comentários feitos dentro de uma aula (post.courseId definido) ficam restritos à própria aula — não
-  // aparecem no mural da Comunidade, que mostra só o que foi publicado ali diretamente.
-  const communityOnly = COMMUNITY_POSTS.filter(p=>!p.courseId);
+  // aparecem no mural da Comunidade, que mostra só o que foi publicado ali diretamente. E cada comunidade
+  // só mostra o que é da própria audiência — mentorados e alunos do curso não se veem entre si.
+  const communityOnly = COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===currentCommunityAudience);
   const visible = communityFilter==='todas' ? communityOnly : communityOnly.filter(p=>p.type===communityFilter);
   const root = document.getElementById('view-comunidade');
   root.innerHTML = `
     <p class="section-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
+    ${currentRole==='staff'? `
+    <div class="community-filters" id="community-audience-tabs" style="margin-bottom:10px">
+      <button class="filter-tab ${currentCommunityAudience==='mentorado'?'active':''}" data-audience="mentorado">Comunidade Mentorados</button>
+      <button class="filter-tab ${currentCommunityAudience==='curso'?'active':''}" data-audience="curso">Comunidade do Curso</button>
+    </div>` : ''}
     ${me? `
     <div class="composer">
       ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
@@ -3509,6 +3602,9 @@ function renderComunidade(){
   root.querySelectorAll('#community-filters [data-filter]').forEach(btn=>{
     btn.addEventListener('click',()=>{ communityFilter = btn.dataset.filter; renderComunidade(); });
   });
+  root.querySelectorAll('#community-audience-tabs [data-audience]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ currentCommunityAudience = btn.dataset.audience; renderComunidade(); });
+  });
   const postBtn = root.querySelector('#post-btn');
   if(postBtn){
     postBtn.addEventListener('click', async ()=>{
@@ -3521,7 +3617,7 @@ function renderComunidade(){
       }
       postBtn.disabled = true;
       try{
-        const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim());
+        const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim(), null, currentCommunityAudience);
         COMMUNITY_POSTS.unshift(post);
         updateNotifBadge();
         renderComunidade();
@@ -3612,7 +3708,10 @@ function renderRanking(){
   const root = document.getElementById('view-ranking');
   const meId = actingAuthorId();
   const empty = {total:0, conquistas:0, comunidade:0, comunidadeLikes:0, aulas:0, aulasLikes:0, dashboardChecks:0, metasChecks:0, apresentacao:0};
+  // Ranking é uma dinâmica da mentoria completa — alunos do curso gravado nem veem esta página (não têm
+  // Dashboard/Metas pra pontuar), então não fazem sentido misturados no placar dos mentorados.
   const rows = STUDENTS
+    .filter(s=>s.tier!=='curso')
     .map(s=>({s, pts: STUDENT_POINTS[s.id] || empty}))
     .sort((a,b)=>b.pts.total-a.pts.total);
   root.innerHTML = `
@@ -6331,10 +6430,43 @@ function exportVendasPDF(lista, indicadores){
   setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
 }
 
+/* % de aulas concluídas sobre o total de aulas cadastradas — usado pro Aluno do Curso, que não tem
+   checklist/módulos de mentoria (moduleProgress), só o progresso real nas aulas mesmo (courseProgress). */
+function courseCompletionPct(s){
+  if(!COURSES.length) return 0;
+  const done = COURSES.filter(c=>(s.courseProgress[c.id]||0)===100).length;
+  return Math.round(done/COURSES.length*100);
+}
+/* Qual é a próxima aula ainda não liberada/concluída na sequência do curso — pra equipe acompanhar em
+   que ponto cada aluno do curso está, já que pra ele as aulas vão abrindo uma de cada vez. */
+function nextCourseLessonFor(s){
+  const order = orderedCourseIds();
+  const nextId = order.find(id=>(s.courseProgress[id]||0)!==100);
+  return nextId ? getCourse(nextId) : null;
+}
+function tierSelectHtml(s){
+  return `<select class="ps-input" style="padding:6px 8px;font-size:12px" data-tier-select="${s.id}">
+    <option value="mentorado" ${s.tier!=='curso'?'selected':''}>Mentorado</option>
+    <option value="curso" ${s.tier==='curso'?'selected':''}>Aluno do Curso</option>
+  </select>`;
+}
+function bindTierSelects(root, afterChange){
+  root.querySelectorAll('[data-tier-select]').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const s = getStudent(sel.dataset.tierSelect);
+      if(!s) return;
+      s.tier = sel.value;
+      syncStudentTierUpdate(s.id, sel.value);
+      afterChange();
+    });
+  });
+}
 function renderVisaoGeral(){
-  const totalMentorados = STUDENTS.length;
-  const avgProgress = totalMentorados ? Math.round(STUDENTS.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
-  const atrasadasTotal = STUDENTS.reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
+  const mentorados = STUDENTS.filter(s=>s.tier!=='curso');
+  const cursoAlunos = STUDENTS.filter(s=>s.tier==='curso');
+  const totalMentorados = mentorados.length;
+  const avgProgress = totalMentorados ? Math.round(mentorados.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
+  const atrasadasTotal = mentorados.reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
   const duvidas = COMMUNITY_POSTS.filter(p=>p.type==='duvida' && !isAnswered(p)).length;
 
   document.getElementById('view-visaogeral').innerHTML = `
@@ -6348,12 +6480,12 @@ function renderVisaoGeral(){
     </div>
 
     <h2 class="section-title">${icon('users')} Mentorados</h2>
-    <p class="section-sub" style="margin-top:-6px">Clique em "Abrir" para acessar o Acompanhamento Interno de um mentorado específico.</p>
+    <p class="section-sub" style="margin-top:-6px">Clique em "Abrir" para ver a plataforma como esse mentorado vê. O campo "Acesso" muda o aluno para o Curso Gravado (sem mentoria individual, só Aulas e uma comunidade própria).</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Atrasadas</th><th>Dias restantes</th><th>Estágio</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Atrasadas</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
         <tbody>
-          ${STUDENTS.map(s=>{
+          ${mentorados.map(s=>{
             const pct = overallProgress(s);
             const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
             const atrasadas = s.checklist.filter(t=>t.status==='Atrasada').length;
@@ -6376,22 +6508,53 @@ function renderVisaoGeral(){
                 <td>${atrasadas>0? `<span class="status-pill status-Atrasada">${atrasadas}</span>` : '—'}</td>
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
+                <td style="min-width:140px">${tierSelectHtml(s)}</td>
                 <td><button class="btn-mini" data-open-staff="${s.id}">${icon('idcard')} Abrir</button></td>
               </tr>`;
-          }).join('')}
+          }).join('') || `<tr><td colspan="9" style="color:var(--text-mute)">Nenhum mentorado ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="section-title" style="margin-top:28px">${icon('film')} Alunos do Curso Gravado</h2>
+    <p class="section-sub" style="margin-top:-6px">Sem mentoria individual — só acesso às Aulas (liberadas uma a uma, conforme vai assistindo) e a uma comunidade própria, separada da dos mentorados.</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th></th></tr></thead>
+        <tbody>
+          ${cursoAlunos.map(s=>{
+            const pct = courseCompletionPct(s);
+            const next = nextCourseLessonFor(s);
+            return `
+              <tr>
+                <td style="white-space:nowrap">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
+                    <span style="font-weight:600">${s.name}</span>
+                  </div>
+                </td>
+                <td style="min-width:140px">
+                  <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
+                  <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
+                </td>
+                <td>${next? escapeHtml(next.title) : '<span style="color:var(--text-mute)">Curso concluído</span>'}</td>
+                <td style="min-width:140px">${tierSelectHtml(s)}</td>
+                <td><button class="btn-mini" data-open-staff="${s.id}">${icon('idcard')} Abrir</button></td>
+              </tr>`;
+          }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum aluno do curso ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
   `;
   document.querySelectorAll('[data-open-staff]').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      /* "Abrir" na Visão Geral leva direto para ver a plataforma como esse aluno vê (modo "Aluno" do
-         role-toggle) — não mais para o registro interno. Pra ver o registro interno dele, a equipe usa
+      /* "Abrir" leva direto pra ver a plataforma como esse aluno vê (modo "Aluno" do role-toggle) — o
+         próprio setRole já decide se manda pro Início (mentorado) ou pras Aulas (aluno do curso), pelo
+         tier de quem acabou de ser selecionado. Pra ver o registro interno de um mentorado, a equipe usa
          o seletor "Ver dados de" no menu de perfil enquanto estiver no modo Equipe Interna. */
       currentStudentId = btn.dataset.openStaff;
       panelQuadrantId = null;
       setRole('aluno');
-      goTo('inicio');
     });
   });
   document.querySelectorAll('[data-open-meta]').forEach(btn=>{
@@ -6401,6 +6564,7 @@ function renderVisaoGeral(){
       goTo('metas');
     });
   });
+  bindTierSelects(document.getElementById('view-visaogeral'), renderVisaoGeral);
 }
 
 /* ================= VIEW: REGISTRO DE CLIENTES (somente equipe interna) =================
