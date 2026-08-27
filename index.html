@@ -1011,6 +1011,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ================= SUPABASE ================= */
 const SUPABASE_URL = 'https://yahjhvnubmmfvxbjxmoo.supabase.co';
@@ -2529,6 +2530,17 @@ function setRole(role){
   document.getElementById('nav-conteudo').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-vendas').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-clientes').style.display = role==='staff' ? 'flex' : 'none';
+  /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
+     os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
+     Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
+     a equipe interna troca para o modo "Aluno" (pelo botão aqui em cima, ou clicando em "Abrir" na
+     Visão Geral) — exatamente como o aluno vê a própria conta hoje. Para quem realmente é aluno,
+     currentRole nunca sai de 'aluno', então esses itens continuam sempre visíveis para ele. */
+  ['inicio','aulas','comunidade','ranking','dashboard','painel','sessoes','metas'].forEach(v=>{
+    const el = document.querySelector(`.nav-item[data-view="${v}"]`);
+    if(el) el.style.display = role==='aluno' ? 'flex' : 'none';
+  });
+  document.getElementById('nav-prontuarios').style.display = role==='aluno' ? 'flex' : 'none';
   document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
   document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
@@ -2538,6 +2550,7 @@ function setRole(role){
   renderProfile();
   updateNotifBadge();
   if(role==='aluno' && (currentView==='interno' || currentView==='conteudo' || currentView==='visaogeral')){ goTo('inicio'); }
+  if(role==='staff' && ['inicio','aulas','comunidade','ranking','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('visaogeral'); }
 }
 
 function renderProfile(){
@@ -6372,10 +6385,13 @@ function renderVisaoGeral(){
   `;
   document.querySelectorAll('[data-open-staff]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      /* "Abrir" na Visão Geral leva direto para ver a plataforma como esse aluno vê (modo "Aluno" do
+         role-toggle) — não mais para o registro interno. Pra ver o registro interno dele, a equipe usa
+         o seletor "Ver dados de" no menu de perfil enquanto estiver no modo Equipe Interna. */
       currentStudentId = btn.dataset.openStaff;
       panelQuadrantId = null;
-      renderProfile();
-      goTo('interno');
+      setRole('aluno');
+      goTo('inicio');
     });
   });
   document.querySelectorAll('[data-open-meta]').forEach(btn=>{
@@ -6395,6 +6411,7 @@ function renderClientes(){
   const busca = (clientesBusca||'').trim().toLowerCase();
   const filtrados = CLIENTES_REGISTRO.filter(c=>
     !busca || c.nome.toLowerCase().includes(busca) || (c.email||'').toLowerCase().includes(busca) || (c.cpf||'').includes(busca)
+    || (c.tags||[]).some(t=>t.toLowerCase().includes(busca))
   );
   const publicUrl = window.location.origin + '/cadastro-cliente.html';
   document.getElementById('view-clientes').innerHTML = `
@@ -6415,9 +6432,14 @@ function renderClientes(){
       <div class="actions"><button class="btn-accent" id="clientes-copy-link">${icon('externallink')} Copiar link</button></div>
     </div>
     <div class="add-form" style="margin-bottom:10px">
-      <div class="field"><label>Buscar por nome, e-mail ou CPF</label><input class="ps-input" type="text" id="clientes-busca" value="${escapeAttr(clientesBusca||'')}" placeholder="Digite para buscar..."></div>
-      <div class="actions"><button class="btn-outline" id="clientes-export-csv">${icon('download')} Baixar planilha (.csv)</button></div>
+      <div class="field"><label>Buscar por nome, e-mail, CPF ou TAG</label><input class="ps-input" type="text" id="clientes-busca" value="${escapeAttr(clientesBusca||'')}" placeholder="Digite para buscar..."></div>
+      <div class="actions">
+        <button class="btn-outline" id="clientes-import-btn">${icon('upload')} Importar planilha</button>
+        <button class="btn-outline" id="clientes-export-csv">${icon('download')} Baixar planilha (.csv)</button>
+      </div>
+      <input type="file" id="clientes-import-file" accept=".xlsx,.xls,.csv" style="display:none">
     </div>
+    <p class="section-sub" style="margin-top:-4px;font-size:12px">Importa de uma planilha Excel (.xlsx) ou CSV vinda de outro sistema. Não sabe como organizar os dados? <a href="#" id="clientes-import-modelo" style="color:var(--accent)">baixe um modelo em branco</a> e preencha nele.</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Nome</th><th>CPF</th><th>CNPJ</th><th>Nascimento</th><th>WhatsApp</th><th>E-mail</th><th>Endereço</th><th>Cidade/UF</th><th>Como conheceu</th><th>TAGs</th><th>Cadastrado em</th><th></th></tr></thead>
@@ -6455,8 +6477,27 @@ function renderClientes(){
       navigator.clipboard.writeText(publicUrl).then(marcarCopiado).catch(()=>{ /* campo já selecionado — dá pra copiar com Ctrl+C */ });
     }
   });
-  document.getElementById('clientes-busca').addEventListener('input', e=>{ clientesBusca = e.target.value; renderClientes(); });
+  document.getElementById('clientes-busca').addEventListener('input', e=>{
+    /* renderClientes() reconstrói a view inteira (innerHTML), então o campo de busca é recriado do zero
+       a cada letra digitada — sem isto, ele perderia o foco e o cursor a cada tecla, obrigando a clicar
+       de novo no campo pra continuar digitando. Guarda a posição do cursor antes de re-renderizar e
+       devolve o foco + a mesma posição pro novo campo depois. */
+    clientesBusca = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    renderClientes();
+    const novoInp = document.getElementById('clientes-busca');
+    novoInp.focus();
+    novoInp.setSelectionRange(cursorPos, cursorPos);
+  });
   document.getElementById('clientes-export-csv').addEventListener('click', exportClientesCSV);
+  document.getElementById('clientes-import-modelo').addEventListener('click', e=>{ e.preventDefault(); baixarModeloClientesXLSX(); });
+  const importInp = document.getElementById('clientes-import-file');
+  document.getElementById('clientes-import-btn').addEventListener('click', ()=> importInp.click());
+  importInp.addEventListener('change', ()=>{
+    const file = importInp.files[0];
+    if(file) handleClientesImportFile(file);
+    importInp.value = '';
+  });
   document.querySelectorAll('[data-cliente-tags]').forEach(btn=>{
     btn.addEventListener('click', ()=> openClienteTagsModal(btn.dataset.clienteTags));
   });
@@ -6515,6 +6556,159 @@ function exportClientesCSV(){
   a.href = url; a.download = 'registro-clientes.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/* ---- Importar Registro de Clientes de uma planilha Excel/CSV de outro sistema ---- */
+/* Cada coluna aceita alguns nomes alternativos de cabeçalho (maiúscula/minúscula e acento não importam),
+   pra funcionar mesmo com a planilha vindo de outro sistema, sem a equipe precisar renomear colunas. */
+const CLIENTES_IMPORT_ALIASES = {
+  nome: ['nome','nome completo','cliente','paciente','nome do cliente','nome do paciente'],
+  cpf: ['cpf'],
+  cnpj: ['cnpj'],
+  nascimento: ['data de nascimento','nascimento','dt nascimento','data nasc','data de nasc'],
+  whatsapp: ['whatsapp','telefone','celular','contato whatsapp','fone','telefone whatsapp'],
+  email: ['e-mail','email'],
+  cep: ['cep'],
+  endereco: ['endereco','rua','logradouro'],
+  numero: ['numero','n','nro'],
+  complemento: ['complemento','compl'],
+  bairro: ['bairro'],
+  estado: ['estado','uf'],
+  cidade: ['cidade'],
+  tags: ['tags','tag'],
+  comoConheceu: ['como conheceu','como nos conheceu','origem'],
+};
+function normalizeHeaderTxt(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+function baixarModeloClientesXLSX(){
+  const headers = ['Nome','CPF','CNPJ','Data de Nascimento','WhatsApp','E-mail','CEP','Endereco','Numero','Complemento','Bairro','Estado','Cidade','TAGs','Como conheceu'];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ['Ex.: Maria da Silva','529.982.247-25','','15/03/1985','(51) 99999-8888','maria@email.com','90000-000','Rua Exemplo','123','apto 4','Centro','RS','Porto Alegre','Mentoria Essência | Paciente Murilo','Indicação de amiga']]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+  XLSX.writeFile(wb, 'modelo-importacao-clientes.xlsx');
+}
+/* Lê o arquivo escolhido (xlsx/xls/csv), identifica as colunas pelos aliases acima e abre o modal de
+   pré-visualização antes de gravar qualquer coisa no banco — nada é importado sem a equipe conferir. */
+function handleClientesImportFile(file){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    let rowsRaw;
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      rowsRaw = XLSX.utils.sheet_to_json(sheet, {defval:''});
+    }catch(err){
+      console.error('import clientes', err);
+      alert('Não foi possível ler esse arquivo. Confira se é mesmo uma planilha Excel (.xlsx) ou CSV.');
+      return;
+    }
+    if(!rowsRaw.length){ alert('Essa planilha não tem nenhuma linha de dados.'); return; }
+    // Mapeia o cabeçalho real da planilha pra cada campo do sistema, usando os aliases.
+    const headerKeys = Object.keys(rowsRaw[0]);
+    const fieldToHeader = {};
+    Object.keys(CLIENTES_IMPORT_ALIASES).forEach(field=>{
+      const aliases = CLIENTES_IMPORT_ALIASES[field];
+      const found = headerKeys.find(h=> aliases.includes(normalizeHeaderTxt(h)));
+      if(found) fieldToHeader[field] = found;
+    });
+    if(!fieldToHeader.nome){
+      alert('Não encontrei uma coluna de Nome nessa planilha. Renomeie a coluna para "Nome" (ou baixe o modelo) e tente de novo.');
+      return;
+    }
+    const existentesCpf = new Set(CLIENTES_REGISTRO.map(c=>(c.cpf||'').replace(/\D/g,'')).filter(Boolean));
+    const tagsNaoReconhecidas = new Set();
+    let semNome = 0, duplicados = 0;
+    const validas = [];
+    rowsRaw.forEach(row=>{
+      const get = field => fieldToHeader[field] ? row[fieldToHeader[field]] : '';
+      const nome = String(get('nome')||'').trim();
+      if(!nome){ semNome++; return; }
+      const cpfDigits = String(get('cpf')||'').replace(/\D/g,'');
+      if(cpfDigits && existentesCpf.has(cpfDigits)){ duplicados++; return; }
+      if(cpfDigits) existentesCpf.add(cpfDigits); // evita duplicar entre linhas repetidas na própria planilha
+      const tagsRaw = String(get('tags')||'').split(/[,;|]/).map(t=>t.trim()).filter(Boolean);
+      const tags = [];
+      tagsRaw.forEach(t=>{
+        const match = CLIENTES_TAG_OPTS.find(opt=>opt.toLowerCase()===t.toLowerCase());
+        if(match) tags.push(match); else tagsNaoReconhecidas.add(t);
+      });
+      validas.push({
+        nome, cpf: String(get('cpf')||'').trim(), cnpj: String(get('cnpj')||'').trim(),
+        nascimento: parseImportDate(get('nascimento')), whatsapp: String(get('whatsapp')||'').trim(),
+        email: String(get('email')||'').trim(), cep: String(get('cep')||'').trim(),
+        endereco: String(get('endereco')||'').trim(), numero: String(get('numero')||'').trim(),
+        complemento: String(get('complemento')||'').trim(), bairro: String(get('bairro')||'').trim(),
+        estado: String(get('estado')||'').trim(), cidade: String(get('cidade')||'').trim(),
+        tags, comoConheceu: String(get('comoConheceu')||'').trim(),
+      });
+    });
+    openClientesImportPreviewModal(validas, {total: rowsRaw.length, semNome, duplicados, tagsNaoReconhecidas: [...tagsNaoReconhecidas]});
+  };
+  reader.onerror = ()=> alert('Não foi possível ler esse arquivo.');
+  reader.readAsArrayBuffer(file);
+}
+/* Datas podem chegar como objeto Date (célula formatada como data no Excel) ou como texto
+   "DD/MM/AAAA" — cobre os dois casos e devolve sempre no formato AAAA-MM-DD que o banco espera. */
+function parseImportDate(v){
+  if(!v) return '';
+  if(v instanceof Date && !isNaN(v)){
+    return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+  }
+  const s = String(v).trim();
+  const br = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(br) return `${br[3]}-${br[2].padStart(2,'0')}-${br[1].padStart(2,'0')}`;
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(iso) return `${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`;
+  return '';
+}
+function openClientesImportPreviewModal(rows, meta){
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Registro de Clientes</div>
+      <h3>Conferir importação</h3>
+      <p class="desc">${meta.total} linha(s) na planilha · <strong>${rows.length} pronta(s) para importar</strong>${meta.semNome? ` · ${meta.semNome} sem nome (ignorada${meta.semNome>1?'s':''})` : ''}${meta.duplicados? ` · ${meta.duplicados} já cadastrada${meta.duplicados>1?'s':''} (mesmo CPF, ignorada${meta.duplicados>1?'s':''})` : ''}</p>
+      ${meta.tagsNaoReconhecidas.length? `<div class="topic-note">TAGs não reconhecidas e não aplicadas: ${meta.tagsNaoReconhecidas.map(t=>escapeHtml(t)).join(', ')}. As TAGs válidas são: ${CLIENTES_TAG_OPTS.join(', ')}.</div>` : ''}
+      ${rows.length? `<div class="table-wrap" style="max-height:320px;overflow:auto">
+        <table class="check-table">
+          <thead><tr><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>E-mail</th><th>Cidade/UF</th><th>TAGs</th></tr></thead>
+          <tbody>${rows.slice(0,50).map(r=>`<tr>
+            <td>${escapeHtml(r.nome)}</td><td>${escapeHtml(r.cpf)||'—'}</td><td>${escapeHtml(r.whatsapp)||'—'}</td>
+            <td>${escapeHtml(r.email)||'—'}</td><td>${escapeHtml(r.cidade)}${r.estado?'/'+escapeHtml(r.estado):''}</td>
+            <td>${r.tags.join(', ')||'—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>${rows.length>50? `<p class="desc">Mostrando as primeiras 50 de ${rows.length} — todas serão importadas ao confirmar.</p>` : ''}` : '<p class="desc">Nenhuma linha válida para importar.</p>'}
+      <div class="modal-actions">
+        ${rows.length? `<button class="btn-accent" id="clientes-import-confirm">${icon('check')} Importar ${rows.length} cliente${rows.length>1?'s':''}</button>` : ''}
+        <button class="btn-outline" id="modal-close-2">Cancelar</button>
+      </div>
+    </div>`;
+  document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  if(rows.length){
+    document.getElementById('clientes-import-confirm').addEventListener('click', ()=> confirmClientesImport(rows));
+  }
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+async function confirmClientesImport(rows){
+  const btn = document.getElementById('clientes-import-confirm');
+  btn.disabled = true; btn.textContent = 'Importando...';
+  const payload = rows.map(r=>({
+    nome: r.nome, cpf: r.cpf || null, cnpj: r.cnpj || null, nascimento: r.nascimento || null,
+    whatsapp: r.whatsapp || null, email: r.email || null, cep: r.cep || null, endereco: r.endereco || null,
+    numero: r.numero || null, complemento: r.complemento || null, bairro: r.bairro || null,
+    estado: r.estado || null, cidade: r.cidade || null, tags: r.tags, como_conheceu: r.comoConheceu || null,
+  }));
+  const { data, error } = await sb.from('registro_clientes').insert(payload).select();
+  if(error){
+    console.error('import clientes', error);
+    alert('Não foi possível importar agora — verifique sua internet e tente novamente.');
+    btn.disabled = false; btn.textContent = `Importar ${rows.length} cliente${rows.length>1?'s':''}`;
+    return;
+  }
+  (data||[]).forEach(row=> CLIENTES_REGISTRO.unshift(mapClienteRow(row)));
+  closeModal();
+  renderClientes();
 }
 
 /* Quando a pessoa clica no link de recuperação de senha recebido por e-mail, o Supabase detecta o token
