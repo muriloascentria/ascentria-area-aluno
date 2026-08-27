@@ -854,6 +854,12 @@
 
   .empty-state{text-align:center;padding:40px 20px;color:var(--text-mute);font-size:13px;}
 
+  .locked-view{text-align:center;padding:64px 24px;max-width:460px;margin:24px auto 0;}
+  .locked-view .locked-icon{width:64px;height:64px;border-radius:50%;background:var(--individual-soft);color:var(--individual);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+  .locked-view .locked-icon .icon{width:28px;height:28px;}
+  .locked-view h2{font-size:18px;margin:0 0 10px;color:var(--text);}
+  .locked-view p{font-size:13.5px;color:var(--text-mute);line-height:1.6;margin:0;}
+
   @media (max-width:880px){
     .sidebar{position:fixed;left:-260px;top:0;transition:left .2s;z-index:50;box-shadow:0 0 40px rgba(0,0,0,0.5);}
     .sidebar.open{left:0;}
@@ -2663,6 +2669,15 @@ function setRole(role){
      com eles (modo Equipe Interna, ou aluno do Curso Gravado, que não tem mentoria individual). */
   document.getElementById('nav-group-metodo').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   document.getElementById('nav-group-individual').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
+  /* Aluno do Curso Gravado (Método) continua vendo "Agenda ao Vivo" no menu, mas com um cadeado —
+     ao clicar, a página inteira abre em modo bloqueado (ver renderAgenda), explicando o motivo. */
+  const agendaBtn = document.querySelector('.nav-item[data-view="agenda"]');
+  if(agendaBtn){
+    const [agIc, agLabel] = NAV_LABELS.agenda;
+    agendaBtn.innerHTML = isCursoView
+      ? `${icon(agIc)}<span>${agLabel}</span><span style="margin-left:auto;display:flex" title="Disponível apenas para mentorados da Mentoria Essência">${icon('lock','tiny')}</span>`
+      : `${icon(agIc)}<span>${agLabel}</span>`;
+  }
   document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
   document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
@@ -3842,6 +3857,18 @@ function gcalUrl(title, details){
   return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(details||'Encontro da Ascentria · Método Essência')}`;
 }
 function renderAgenda(){
+  /* Aluno do Curso Gravado (Método) não tem encontros ao vivo — a aba continua no menu (com um
+     cadeado), mas ao abrir mostra uma tela de bloqueio explicando o motivo, em vez da lista vazia. */
+  if(currentRole==='aluno' && getViewingTier()==='curso'){
+    document.getElementById('view-agenda').innerHTML = `
+      <div class="locked-view">
+        <div class="locked-icon">${icon('lock')}</div>
+        <h2>Encontros ao vivo bloqueados</h2>
+        <p>Mastermind, Plantão de Dúvidas e Consultório Simulado são exclusivos para mentorados da Mentoria Essência. Fale com a equipe e conheça as condições para migrar seu acesso e participar dos encontros ao vivo.</p>
+      </div>
+    `;
+    return;
+  }
   /* Encontros coletivos (studentId null) aparecem pra quem é do público certo (mentoria x método —
      ver "audience", definido pela equipe interna no cadastro do evento); reuniões individuais (agendadas
      de dentro do Acompanhamento Interno de um mentorado) só aparecem pro próprio mentorado, independente
