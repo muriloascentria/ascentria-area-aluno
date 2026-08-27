@@ -815,6 +815,10 @@
   .status-pill.status-Pendente{background:var(--individual-soft);color:var(--individual);}
   .status-pill.status-Atrasada{background:var(--danger-soft);color:var(--danger);}
   .resp-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg-elev);color:var(--text-dim);white-space:nowrap;}
+  .tag-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px;}
+  .tag-chip{border:1px solid var(--border);border-radius:20px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--bg-elev);color:var(--text);user-select:none;transition:all .12s;}
+  .tag-chip:hover{border-color:var(--accent);}
+  .tag-chip.active{background:var(--accent);border-color:var(--accent);color:var(--bg);}
   .check-table tr.venda-vendido td{background:var(--success-soft);}
   .check-table tr.venda-vendido .resp-pill{background:transparent;color:var(--success);}
   .vendas-alert-row{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0 22px;}
@@ -940,6 +944,7 @@
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
     <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-clientes" data-view="clientes" style="display:none"></button>
 
     <div class="sidebar-footer">
       <button class="nav-item" id="logout-btn"></button>
@@ -996,6 +1001,7 @@
       <div class="view" id="view-conteudo"></div>
       <div class="view" id="view-visaogeral"></div>
       <div class="view" id="view-vendas"></div>
+      <div class="view" id="view-clientes"></div>
     </div>
   </div>
 </div>
@@ -1061,9 +1067,10 @@ const NAV_LABELS = {
   conteudo:['upload','Gerenciar Conteúdo'],
   visaogeral:['users','Visão Geral'],
   vendas:['idcard','Registro de Sessões 1:1'],
+  clientes:['idcard','Registro de Clientes'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -1672,6 +1679,7 @@ let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver boots
 
 let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/visível pra equipe interna, ver bootstrapData
+let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
 let WATCHED_LIVE = new Set();
@@ -2000,6 +2008,11 @@ async function bootstrapData(){
     VENDA_SESSOES.length = 0;
     const { data: vsRows } = await sb.from('venda_sessoes').select('*').order('numero',{ascending:true});
     (vsRows||[]).forEach(r=>VENDA_SESSOES.push(mapVendaSessaoRow(r)));
+    // Registro de Clientes — cadastros feitos pelo formulário público (sem login), só visíveis/editáveis
+    // (TAG) pela equipe interna, mesma lógica das duas listas acima.
+    CLIENTES_REGISTRO.length = 0;
+    const { data: crRows } = await sb.from('registro_clientes').select('*').order('created_at',{ascending:false});
+    (crRows||[]).forEach(r=>CLIENTES_REGISTRO.push(mapClienteRow(r)));
   }
 
   STUDENT_POINTS = {};
@@ -2230,6 +2243,23 @@ function syncVendaSessaoUpdate(id, fields){
 }
 function syncVendaSessaoDelete(id){
   syncNow(sb.from('venda_sessoes').delete().eq('id', id));
+}
+/* ---- Registro de Clientes (cadastro público) ---- */
+function mapClienteRow(row){
+  return {
+    id: row.id, nome: row.nome || '', cpf: row.cpf || '', cnpj: row.cnpj || '',
+    nascimento: row.nascimento || '', whatsapp: row.whatsapp || '', email: row.email || '',
+    cep: row.cep || '', endereco: row.endereco || '', numero: row.numero || '', complemento: row.complemento || '',
+    bairro: row.bairro || '', estado: row.estado || '', cidade: row.cidade || '',
+    comoConheceu: row.como_conheceu || '', tags: row.tags || [],
+    createdAt: row.created_at || '',
+  };
+}
+function syncClienteTagsUpdate(id, tags){
+  syncNow(sb.from('registro_clientes').update({tags}).eq('id', id));
+}
+function syncClienteDelete(id){
+  syncNow(sb.from('registro_clientes').delete().eq('id', id));
 }
 function parseValorBRL(str){
   if(!str) return null;
@@ -2477,6 +2507,7 @@ function setRole(role){
   document.getElementById('nav-interno').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-conteudo').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('nav-vendas').style.display = role==='staff' ? 'flex' : 'none';
+  document.getElementById('nav-clientes').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
   document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
@@ -2547,7 +2578,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas};
+               vendas:renderVendas, clientes:renderClientes};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -5905,6 +5936,8 @@ function renderConteudo(){
 let vendasFiltroVendedor = 'todos';
 let vendasFiltroResultado = 'todos';
 let vendasBusca = '';
+let clientesBusca = '';
+const CLIENTES_TAG_OPTS = ['Mentoria Essência','Paciente Murilo','Paciente Sandra','Paciente Carmem','Paciente Diego','Método Essência','Pós-Graduação TSI'];
 const VENDAS_VENDEDOR_OPTS = ['Carmem','Carmem e Diego','Diego','Viviane'];
 const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
 const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'];
@@ -6324,6 +6357,136 @@ function renderVisaoGeral(){
       goTo('metas');
     });
   });
+}
+
+/* ================= VIEW: REGISTRO DE CLIENTES (somente equipe interna) =================
+   Cadastros vêm do formulário público cadastro-cliente.html (sem login, hospedado junto com este app),
+   que grava direto na tabela registro_clientes do Supabase. A TAG de cada cliente é definida aqui, pela
+   equipe interna, depois do cadastro — o formulário público não pergunta TAG. */
+function renderClientes(){
+  const busca = (clientesBusca||'').trim().toLowerCase();
+  const filtrados = CLIENTES_REGISTRO.filter(c=>
+    !busca || c.nome.toLowerCase().includes(busca) || (c.email||'').toLowerCase().includes(busca) || (c.cpf||'').includes(busca)
+  );
+  const publicUrl = window.location.origin + '/cadastro-cliente.html';
+  document.getElementById('view-clientes').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cadastros enviados pelo formulário público, sem necessidade de login do cliente.</div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Cadastros recebidos</div><div class="value">${CLIENTES_REGISTRO.length}</div></div>
+      <div class="kpi-tile"><div class="label">Sem TAG ainda</div><div class="value">${CLIENTES_REGISTRO.filter(c=>!c.tags.length).length}</div></div>
+    </div>
+
+    <h2 class="section-title">${icon('idcard')} Registro de Clientes</h2>
+    <p class="section-sub" style="margin-top:-6px">Compartilhe o link abaixo com um cliente novo. Assim que ele preencher, o cadastro cai automaticamente nesta lista, para a equipe classificar com TAGs.</p>
+    <div class="add-form" style="margin-bottom:14px;align-items:flex-end">
+      <div class="field full">
+        <label>Link do formulário público de cadastro</label>
+        <input class="ps-input" type="text" id="clientes-link" value="${escapeAttr(publicUrl)}" readonly>
+      </div>
+      <div class="actions"><button class="btn-accent" id="clientes-copy-link">${icon('externallink')} Copiar link</button></div>
+    </div>
+    <div class="add-form" style="margin-bottom:10px">
+      <div class="field"><label>Buscar por nome, e-mail ou CPF</label><input class="ps-input" type="text" id="clientes-busca" value="${escapeAttr(clientesBusca||'')}" placeholder="Digite para buscar..."></div>
+      <div class="actions"><button class="btn-outline" id="clientes-export-csv">${icon('download')} Baixar planilha (.csv)</button></div>
+    </div>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Nome</th><th>CPF</th><th>CNPJ</th><th>Nascimento</th><th>WhatsApp</th><th>E-mail</th><th>Endereço</th><th>Cidade/UF</th><th>Como conheceu</th><th>TAGs</th><th>Cadastrado em</th><th></th></tr></thead>
+        <tbody>
+          ${filtrados.map(c=>`
+            <tr>
+              <td style="min-width:160px">${escapeHtml(c.nome)}</td>
+              <td style="white-space:nowrap">${escapeHtml(c.cpf)||'—'}</td>
+              <td style="white-space:nowrap">${escapeHtml(c.cnpj)||'—'}</td>
+              <td style="white-space:nowrap">${c.nascimento? formatDateBR(c.nascimento) : '—'}</td>
+              <td style="white-space:nowrap">${escapeHtml(c.whatsapp)||'—'}</td>
+              <td>${escapeHtml(c.email)}</td>
+              <td style="min-width:220px">${escapeHtml(c.endereco)}${c.numero? ', '+escapeHtml(c.numero):''}${c.complemento? ' - '+escapeHtml(c.complemento):''}${c.bairro? ' — '+escapeHtml(c.bairro):''}</td>
+              <td style="white-space:nowrap">${escapeHtml(c.cidade)}${c.estado? '/'+escapeHtml(c.estado):''}</td>
+              <td style="min-width:160px">${escapeHtml(c.comoConheceu)||'—'}</td>
+              <td style="min-width:170px">${c.tags.length? c.tags.map(t=>`<span class="resp-pill">${escapeHtml(t)}</span>`).join(' ') : '<span style="color:var(--text-mute)">sem tag</span>'}</td>
+              <td style="white-space:nowrap">${c.createdAt? new Date(c.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
+              <td style="white-space:nowrap">
+                <button class="btn-mini" data-cliente-tags="${c.id}" title="Editar TAGs">${icon('edit','tiny')} TAGs</button>
+                <button class="btn-mini danger" data-cliente-del="${c.id}" title="Excluir cadastro">${icon('trash','tiny')}</button>
+              </td>
+            </tr>
+          `).join('') || `<tr><td colspan="12" style="color:var(--text-mute)">Nenhum cadastro recebido ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('clientes-copy-link').addEventListener('click', ()=>{
+    const inp = document.getElementById('clientes-link');
+    inp.select();
+    const btn = document.getElementById('clientes-copy-link');
+    const original = btn.innerHTML;
+    const marcarCopiado = ()=>{ btn.innerHTML = `${icon('check','tiny')} Copiado!`; setTimeout(()=>{ btn.innerHTML = original; }, 1800); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(publicUrl).then(marcarCopiado).catch(()=>{ /* campo já selecionado — dá pra copiar com Ctrl+C */ });
+    }
+  });
+  document.getElementById('clientes-busca').addEventListener('input', e=>{ clientesBusca = e.target.value; renderClientes(); });
+  document.getElementById('clientes-export-csv').addEventListener('click', exportClientesCSV);
+  document.querySelectorAll('[data-cliente-tags]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openClienteTagsModal(btn.dataset.clienteTags));
+  });
+  document.querySelectorAll('[data-cliente-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!confirmDelete('Excluir este cadastro de cliente? Essa ação não pode ser desfeita.')) return;
+      const id = btn.dataset.clienteDel;
+      syncClienteDelete(id);
+      CLIENTES_REGISTRO = CLIENTES_REGISTRO.filter(c=>c.id!=id);
+      renderClientes();
+    });
+  });
+}
+function openClienteTagsModal(id){
+  const c = CLIENTES_REGISTRO.find(x=>x.id==id);
+  if(!c) return;
+  let selecionadas = [...c.tags];
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Registro de Clientes</div>
+      <h3>TAGs de ${escapeHtml(c.nome)}</h3>
+      <div class="tag-chips" id="cliente-tag-chips">${CLIENTES_TAG_OPTS.map(t=>`<div class="tag-chip ${selecionadas.includes(t)?'active':''}" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</div>`).join('')}</div>
+      <div class="modal-actions">
+        <button class="btn-accent" id="cliente-tags-save">Salvar</button>
+        <button class="btn-outline" id="modal-close-2">Cancelar</button>
+      </div>
+    </div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  document.querySelectorAll('#cliente-tag-chips .tag-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const t = chip.dataset.tag;
+      if(selecionadas.includes(t)) selecionadas = selecionadas.filter(x=>x!==t);
+      else selecionadas.push(t);
+      chip.classList.toggle('active');
+    });
+  });
+  document.getElementById('cliente-tags-save').addEventListener('click', ()=>{
+    c.tags = selecionadas;
+    syncClienteTagsUpdate(c.id, selecionadas);
+    closeModal();
+    renderClientes();
+  });
+}
+function exportClientesCSV(){
+  const headers = ['Nome','CPF','CNPJ','Data de Nascimento','WhatsApp','E-mail','CEP','Endereco','Numero','Complemento','Bairro','Estado','Cidade','TAGs','Como conheceu','Cadastrado em'];
+  const csvEscape = v => `"${String(v||'').replace(/"/g,'""')}"`;
+  const lines = [headers.map(csvEscape).join(',')];
+  CLIENTES_REGISTRO.forEach(c=>{
+    lines.push([c.nome,c.cpf,c.cnpj,c.nascimento?formatDateBR(c.nascimento):'',c.whatsapp,c.email,c.cep,c.endereco,c.numero,c.complemento,c.bairro,c.estado,c.cidade,c.tags.join(' | '),c.comoConheceu,c.createdAt].map(csvEscape).join(','));
+  });
+  const csvContent = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'registro-clientes.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /* Quando a pessoa clica no link de recuperação de senha recebido por e-mail, o Supabase detecta o token
