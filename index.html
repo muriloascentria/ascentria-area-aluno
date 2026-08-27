@@ -934,11 +934,11 @@
     <button class="nav-item" data-view="agenda"></button>
     <button class="nav-item" data-view="materiais"></button>
 
-    <div class="nav-group-label">Meu Método</div>
+    <div class="nav-group-label" id="nav-group-metodo">Meu Método</div>
     <button class="nav-item shared" data-view="dashboard"></button>
     <button class="nav-item shared" data-view="painel"></button>
 
-    <div class="nav-group-label">Minha Área</div>
+    <div class="nav-group-label" id="nav-group-individual">Minha Área</div>
     <button class="nav-item individual" data-view="sessoes"></button>
     <button class="nav-item individual" data-view="metas"></button>
     <a class="nav-item individual" id="nav-prontuarios" href="https://app.ascentria.cloud/dashboard" target="_blank" rel="noopener">
@@ -2659,6 +2659,10 @@ function setRole(role){
     if(el) el.style.display = role==='aluno' ? 'flex' : 'none';
   });
   document.getElementById('nav-prontuarios').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
+  /* Os rótulos "Meu Método" e "Minha Área" só fazem sentido junto dos itens que eles agrupam — some junto
+     com eles (modo Equipe Interna, ou aluno do Curso Gravado, que não tem mentoria individual). */
+  document.getElementById('nav-group-metodo').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
+  document.getElementById('nav-group-individual').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
   document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
   document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
@@ -6050,7 +6054,6 @@ function renderConteudo(){
           <option value="mentorado">Mentoria (mentorados)</option>
           <option value="curso">Método (curso gravado)</option>
         </select>
-        <p class="section-sub" style="margin:4px 0 0;font-size:11.5px">Plantão de Dúvidas, Consultório Simulado e Mastermind não são encontros do Método — direcione pra Mentoria.</p>
       </div>
       <div class="field" id="new-live-student-wrap" style="display:none">
         <label>Mentorado</label>
