@@ -1725,9 +1725,10 @@ let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/vis
    totalmente separado do Fluxo Financeiro que cada mentorado preenche no próprio Painel do Método.
    Só carregado/visível pra equipe interna, ver bootstrapData e renderFinanceiro. */
 let FIN_CATEGORIAS = [], FIN_CONTAS = [], FIN_FORMAS = [], FIN_LANCAMENTOS = [];
-let finSubView = 'lancamentos'; // 'lancamentos' | 'categorias' | 'contas' | 'formas'
+let finSubView = 'lancamentos'; // 'lancamentos' | 'faturamento' | 'categorias' | 'contas' | 'formas'
 let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
 let finView = { year: new Date().getFullYear(), month: new Date().getMonth() };
+let finFatChartYear = null; // ano selecionado no gráfico do Faturamento interno (Financeiro > Faturamento)
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
 let WATCHED_LIVE = new Set();
@@ -4332,6 +4333,36 @@ function computeFaturamento(sid, descontos){
       faturamentoLiquido: r.total*(1-desconto),
     };
   });
+  return {detailed, monthTotals};
+}
+/* Faturamento da própria Ascentria (equipe interna) — mesma lógica do Faturamento dos mentorados
+   (agrupa por Ano/Mês, com um recorte extra — aqui por Categoria em vez de Forma de Pagamento), só que
+   a fonte é o Financeiro interno (fin_lancamentos) em vez do Fluxo Financeiro pessoal de cada aluno.
+   Só entra Conta a Receber já efetivamente PAGA (igual ao Extrato: não é previsão, é o que já entrou),
+   e o mês/ano usado é o do dia do pagamento (quando não tem, cai pro vencimento). */
+function computeFinFaturamento(){
+  const buckets = {};
+  FIN_LANCAMENTOS.filter(l=>l.tipo==='receber' && l.pagou).forEach(l=>{
+    const dateStr = l.diaPagamento || l.dataVencimento;
+    if(!dateStr) return;
+    const [year, mesNum] = dateStr.split('-').map(Number);
+    const month = mesNum - 1;
+    const cat = FIN_CATEGORIAS.find(c=>c.id===l.categoriaId);
+    const categoria = cat ? cat.nome : 'Sem categoria';
+    const v = l.valorPago!=null ? l.valorPago : l.valor;
+    const bKey = `${year}-${month}-${categoria}`;
+    if(!buckets[bKey]) buckets[bKey] = {year, month, categoria, total:0};
+    buckets[bKey].total += v;
+  });
+  const rows = Object.values(buckets);
+  const monthTotals = {};
+  rows.forEach(r=>{ const mk = `${r.year}-${r.month}`; monthTotals[mk] = (monthTotals[mk]||0)+r.total; });
+  rows.sort((a,b)=> b.year-a.year || b.month-a.month || a.categoria.localeCompare(b.categoria,'pt-BR'));
+  const detailed = rows.map(r=>({
+    year:r.year, month:r.month, categoria:r.categoria,
+    faturamento:r.total,
+    faturamentoTotalMes: monthTotals[`${r.year}-${r.month}`],
+  }));
   return {detailed, monthTotals};
 }
 /* Indicadores do consultório (página Início): leads do mês e conversão vêm direto do CRM (aba Vendas),
@@ -7236,6 +7267,7 @@ function renderFinanceiro(){
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Controle financeiro da Ascentria (não é o Fluxo Financeiro dos mentorados).</div>
     <div class="fin-subtabs">
       <button type="button" class="cf-month-btn ${finSubView==='lancamentos'?'active':''}" data-finsub="lancamentos">Lançamentos</button>
+      <button type="button" class="cf-month-btn ${finSubView==='faturamento'?'active':''}" data-finsub="faturamento">Faturamento</button>
       <button type="button" class="cf-month-btn ${finSubView==='categorias'?'active':''}" data-finsub="categorias">Categorias</button>
       <button type="button" class="cf-month-btn ${finSubView==='contas'?'active':''}" data-finsub="contas">Contas</button>
       <button type="button" class="cf-month-btn ${finSubView==='formas'?'active':''}" data-finsub="formas">Formas de Pagamento</button>
@@ -7247,7 +7279,97 @@ function renderFinanceiro(){
   });
   const body = document.getElementById('fin-subview-body');
   if(finSubView==='lancamentos') renderFinLancamentos(body);
+  else if(finSubView==='faturamento') renderFinFaturamento(body);
   else renderFinCadastroSimples(body, finSubView);
+}
+/* Faturamento do Financeiro interno — mesmo formato do Faturamento do Painel do Método (tabela por
+   Ano/Mês, gráfico do ano e PDF), só que somando as Contas a Receber já pagas da própria Ascentria,
+   por Categoria em vez de Forma de Pagamento. */
+function renderFinFaturamento(container){
+  const {detailed, monthTotals} = computeFinFaturamento();
+  const years = [...new Set(detailed.map(r=>r.year))].sort((a,b)=>b-a);
+  const chartYear = (finFatChartYear && years.includes(finFatChartYear)) ? finFatChartYear : (years[0]||new Date().getFullYear());
+  const totalGeral = detailed.reduce((s,r)=>s+r.faturamento,0);
+  container.innerHTML = `
+    <p class="section-sub">Receita já recebida (Contas a Receber pagas) do Financeiro interno da Ascentria, mês a mês e por categoria.</p>
+    ${detailed.length? `
+    <div class="table-wrap"><table class="ps-table fat-table">
+      <thead><tr><th>Ano</th><th>Mês</th><th>Categoria</th><th>Faturamento</th><th>Faturamento Total (mês)</th></tr></thead>
+      <tbody>
+        ${detailed.map(r=>`<tr>
+          <td>${r.year}</td>
+          <td>${MESES_LONGO[r.month]}</td>
+          <td>${escapeHtml(r.categoria)}</td>
+          <td>${formatBRL(r.faturamento)}</td>
+          <td>${formatBRL(r.faturamentoTotalMes)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+    <div class="pricing-total-row">Total geral recebido <strong>${formatBRL(totalGeral)}</strong></div>
+    <div class="fat-chart-block">
+      <div class="pricing-block-title">Faturamento ao longo do ano</div>
+      ${years.length>1? `<div class="cf-months">${years.map(y=>`<button type="button" class="cf-month-btn ${y===chartYear?'active':''}" data-finfatyear="${y}">${y}</button>`).join('')}</div>` : ''}
+      ${renderFaturamentoChart(monthTotals, chartYear)}
+    </div>
+    <div class="cf-actions">
+      <button class="btn-outline" id="fin-fat-pdf-btn">${icon('download','tiny')} Gerar PDF</button>
+    </div>
+    ` : `<div class="empty-state">Nenhuma conta a receber paga ainda. Assim que marcar um recebimento como pago em Lançamentos, o faturamento aparece aqui automaticamente, mês a mês.</div>`}
+  `;
+  container.querySelectorAll('[data-finfatyear]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ finFatChartYear = +btn.dataset.finfatyear; renderFinFaturamento(container); });
+  });
+  const pdfBtn = document.getElementById('fin-fat-pdf-btn');
+  if(pdfBtn) pdfBtn.addEventListener('click', ()=>exportFinFaturamentoPDF(chartYear));
+}
+/* PDF do Faturamento interno — mesmo padrão visual do exportFinanceiroPDF (logo da Ascentria, verde de
+   destaque), incluindo o gráfico do ano selecionado igual ao PDF de Faturamento dos mentorados. */
+function exportFinFaturamentoPDF(chartYear){
+  const {detailed, monthTotals} = computeFinFaturamento();
+  const win = window.open('', '_blank');
+  if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
+  const totalGeral = detailed.reduce((s,r)=>s+r.faturamento,0);
+  const rowsHtml = detailed.map(r=>`<tr>
+    <td>${r.year}</td>
+    <td>${escapeHtml(MESES_LONGO[r.month])}</td>
+    <td>${escapeHtml(r.categoria)}</td>
+    <td>${formatBRL(r.faturamento)}</td>
+    <td>${formatBRL(r.faturamentoTotalMes)}</td>
+  </tr>`).join('');
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Faturamento — Ascentria</title>
+    <style>
+      @page{ margin:24mm 16mm; }
+      body{ font-family:Arial,Helvetica,sans-serif; color:#1a1a1a; margin:0; padding:0 4mm; }
+      .pdf-header{ display:flex; align-items:center; gap:16px; border-bottom:2px solid #8d916f; padding-bottom:14px; margin-bottom:20px; }
+      .pdf-header img{ display:block; }
+      .pdf-header .cat{ font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#666; }
+      h1{ font-size:20px; margin:0 0 4px; }
+      h2{ font-size:14px; margin:22px 0 8px; color:#8d916f; border-bottom:1px solid #ddd; padding-bottom:4px; }
+      table{ width:100%; border-collapse:collapse; font-size:11px; }
+      th,td{ border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
+      th{ background:#f2f2f2; }
+      .total{ margin-top:16px; font-size:14px; text-align:right; }
+      .total strong{ color:#8d916f; }
+      .fat-chart{ width:100%; height:auto; display:block; margin-top:6px; }
+      .fat-chart-grid{ stroke:#e2e2e2; stroke-width:1; }
+      .fat-chart-area{ fill:#8d916f; fill-opacity:0.12; stroke:none; }
+      .fat-chart-line{ fill:none; stroke:#8d916f; stroke-width:2; }
+      .fat-chart-dot{ fill:#8d916f; }
+      .fat-chart-label{ fill:#666; font-size:9px; }
+    </style>
+    </head><body>
+      <div class="pdf-header">
+        <img src="${FIN_LOGO_DATA_URI}" alt="Ascentria" style="height:42px;width:auto;">
+        <div><div class="cat">Financeiro Interno</div><h1>Faturamento</h1></div>
+      </div>
+      <table><thead><tr><th>Ano</th><th>Mês</th><th>Categoria</th><th>Faturamento</th><th>Faturamento Total (mês)</th></tr></thead>
+      <tbody>${rowsHtml || `<tr><td colspan="5" style="text-align:center;color:#999;">Nenhuma conta a receber paga ainda.</td></tr>`}</tbody></table>
+      <div class="total">Total geral recebido: <strong>${formatBRL(totalGeral)}</strong></div>
+      ${detailed.length? `<h2>Faturamento em ${chartYear}</h2>${renderFaturamentoChart(monthTotals, chartYear)}` : ''}
+    </body></html>`);
+  win.document.close();
+  win.onload = ()=>{ win.focus(); win.print(); };
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
 }
 function renderFinLancamentos(container){
   const inMonth = (l)=>{
