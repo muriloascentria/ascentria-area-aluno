@@ -6481,6 +6481,8 @@ function renderVendas(){
   const showSessoes = VENDA_SESSOES.filter(v=>v.presenca==='Show');
   const fechadasShow = showSessoes.filter(v=>v.resultado==='Vendido');
   const taxaFechamento = showSessoes.length ? Math.round(fechadasShow.length/showSessoes.length*100) : 0;
+  const noShowSessoes = VENDA_SESSOES.filter(v=>v.presenca==='No-show');
+  const taxaNoShow = VENDA_SESSOES.length ? Math.round(noShowSessoes.length/VENDA_SESSOES.length*100) : 0;
   const indicadores = vendasIndicadores(VENDA_SESSOES);
 
   document.getElementById('view-vendas').innerHTML = `
@@ -6490,10 +6492,9 @@ function renderVendas(){
       <div class="kpi-tile"><div class="label">Sessões registradas</div><div class="value">${VENDA_SESSOES.length}</div></div>
       <div class="kpi-tile"><div class="label">Vendas fechadas</div><div class="value">${fechadas.length}</div></div>
       <div class="kpi-tile"><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
+      <div class="kpi-tile"><div class="label">Taxa de no-show</div><div class="value">${taxaNoShow}%</div></div>
       <div class="kpi-tile"><div class="label">Faturamento (vendas fechadas)</div><div class="value" style="font-size:16px">${formatBRL(faturamento)}</div></div>
     </div>
-
-    ${renderVendasAlertCards(indicadores)}
 
     <h2 class="section-title">${icon('idcard')} Registro de Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
@@ -6751,10 +6752,6 @@ function exportVendasPDF(lista, indicadores){
       <div class="pdf-header">
         <img src="${BRAND_LOGO_DATA_URI}" alt="Ascentria · Método Essência" style="height:34px;width:auto;">
         <div><div class="cat">Equipe Interna</div><h1>Registro de Sessões 1:1</h1></div>
-      </div>
-      <div class="vp-alerts">
-        ${alertHtml('Principais objeções dos leads', indicadores.objecoes)}
-        ${alertHtml('Sugestões de melhoria', indicadores.sugestoes)}
       </div>
       <table><thead><tr><th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th><th>Produto</th><th>Formato</th><th>Presença</th><th>Resultado</th><th>Valor</th><th>Objeções</th><th>Observações</th></tr></thead>
       <tbody>${rowsHtml || `<tr><td colspan="11" style="text-align:center;color:#999;">Nenhuma sessão encontrada.</td></tr>`}</tbody></table>
