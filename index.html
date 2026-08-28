@@ -6432,9 +6432,21 @@ function shortDateBR(str){
   return m ? `${m[1]}/${m[2]}/${m[3].slice(2)}` : str;
 }
 function vendasIndicadores(lista){
-  const objecoes = topPhrases(lista.flatMap(v=>[v.objecoes, v.objecoes2]), 5);
-  const desafios = topPhrases(lista.flatMap(v=>splitNumbered(v.problemas)), 5);
-  return {objecoes, desafios};
+  /* Só entra no ranking quem realmente teve o campo preenchido pela equipe — descarta tanto o vazio
+     quanto o texto padrão ("Não foram registradas objeções/observações."), senão esse texto padrão
+     vira artificialmente o item mais frequente. */
+  const temRegistro = (t, fallback)=> !!(t && t.trim() && t.trim()!==fallback);
+  const objecoes = topPhrases(
+    lista.flatMap(v=>[v.objecoes, v.objecoes2]).filter(t=>temRegistro(t, VENDAS_SEM_OBJECAO)),
+    5
+  );
+  /* Sugestões de melhoria: vem do campo Observações (não mais de "problemas"), também só considerando
+     os casos em que a equipe realmente escreveu algo. */
+  const sugestoes = topPhrases(
+    lista.filter(v=>temRegistro(v.observacoes, VENDAS_SEM_OBSERVACAO)).flatMap(v=>splitNumbered(v.observacoes)),
+    5
+  );
+  return {objecoes, sugestoes};
 }
 function renderVendasAlertCards(ind){
   const renderList = (items)=> items.length
@@ -6447,8 +6459,8 @@ function renderVendasAlertCards(ind){
         ${renderList(ind.objecoes)}
       </div>
       <div class="vendas-alert-card">
-        <div class="vac-title">${icon('bell')} Principais desafios nas sessões</div>
-        ${renderList(ind.desafios)}
+        <div class="vac-title">${icon('bell')} Sugestões de melhoria</div>
+        ${renderList(ind.sugestoes)}
       </div>
     </div>`;
 }
@@ -6464,7 +6476,11 @@ function renderVendas(){
 
   const fechadas = VENDA_SESSOES.filter(v=>v.resultado==='Vendido');
   const faturamento = fechadas.reduce((a,v)=>a+(v.valorNumerico||0),0);
-  const taxaFechamento = VENDA_SESSOES.length ? Math.round(fechadas.length/VENDA_SESSOES.length*100) : 0;
+  /* Taxa de fechamento: só considera reuniões que aconteceram (Presença = Show) — um no-show não é
+     uma oportunidade de venda perdida por conta do discurso, então não deve puxar a taxa pra baixo. */
+  const showSessoes = VENDA_SESSOES.filter(v=>v.presenca==='Show');
+  const fechadasShow = showSessoes.filter(v=>v.resultado==='Vendido');
+  const taxaFechamento = showSessoes.length ? Math.round(fechadasShow.length/showSessoes.length*100) : 0;
   const indicadores = vendasIndicadores(VENDA_SESSOES);
 
   document.getElementById('view-vendas').innerHTML = `
@@ -6738,7 +6754,7 @@ function exportVendasPDF(lista, indicadores){
       </div>
       <div class="vp-alerts">
         ${alertHtml('Principais objeções dos leads', indicadores.objecoes)}
-        ${alertHtml('Principais desafios nas sessões', indicadores.desafios)}
+        ${alertHtml('Sugestões de melhoria', indicadores.sugestoes)}
       </div>
       <table><thead><tr><th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th><th>Produto</th><th>Formato</th><th>Presença</th><th>Resultado</th><th>Valor</th><th>Objeções</th><th>Observações</th></tr></thead>
       <tbody>${rowsHtml || `<tr><td colspan="11" style="text-align:center;color:#999;">Nenhuma sessão encontrada.</td></tr>`}</tbody></table>
