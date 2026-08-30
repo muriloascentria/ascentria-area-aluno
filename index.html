@@ -218,6 +218,9 @@
   .profile-dropdown .opt .avatar{width:24px;height:24px;font-size:10px;}
   .profile-dropdown .cadastro-opt{font-weight:700;color:var(--individual);}
   .profile-dropdown .cadastro-opt .icon{stroke:var(--individual);width:16px;height:16px;}
+  /* Com a base de alunos crescendo, a lista de "Ver dados de" passava da altura da tela e o fim dela
+     ficava inalcançável. Agora só ela rola (Cadastro/Trocar senha seguem fixos no topo do menu). */
+  #profile-options{max-height:min(52vh,420px);overflow-y:auto;overscroll-behavior:contain;}
   .dropdown-divider{height:1px;background:var(--border);margin:6px 2px;}
 
   .content{padding:26px 28px 60px;max-width:1240px;width:100%;margin:0 auto;}
@@ -830,6 +833,12 @@
   .check-table th{text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--text-mute);padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg-elev);white-space:nowrap;}
   .check-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
   .check-table tr:last-child td{border-bottom:none;}
+  /* Visão Geral: com muitas colunas a tabela fica mais larga que a tela e o botão "Abrir" (última
+     coluna) saía do campo de visão, mesmo diminuindo o zoom. Agora essa coluna fica grudada na borda
+     direita — a tabela rola por baixo dela e o botão continua sempre visível. */
+  .vg-table th:last-child, .vg-table td:last-child{position:sticky;right:0;z-index:2;}
+  .vg-table td:last-child{background:var(--bg-card);box-shadow:-10px 0 12px -8px rgba(0,0,0,0.45);}
+  .vg-table th:last-child{background:var(--bg-elev);box-shadow:-10px 0 12px -8px rgba(0,0,0,0.45);}
   .rank-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-weight:800;font-size:12px;background:var(--bg-elev);color:var(--text-dim);}
   .rank-num.rank-top.rank-1{background:rgba(234,179,8,0.18);color:#eab308;}
   .rank-num.rank-top.rank-2{background:rgba(203,213,225,0.18);color:#cbd5e1;}
@@ -6813,7 +6822,7 @@ function renderVisaoGeral(){
     <h2 class="section-title">${icon('users')} Mentorados</h2>
     <p class="section-sub" style="margin-top:-6px">Clique em "Abrir" para ver a plataforma como esse mentorado vê. O campo "Acesso" muda o aluno para o Curso Gravado (sem mentoria individual, só Aulas e uma comunidade própria).</p>
     <div class="table-wrap">
-      <table class="check-table">
+      <table class="check-table vg-table">
         <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Atrasadas</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
         <tbody>
           ${mentorados.map(s=>{
@@ -6850,7 +6859,7 @@ function renderVisaoGeral(){
     <h2 class="section-title" style="margin-top:28px">${icon('film')} Alunos do Curso Gravado</h2>
     <p class="section-sub" style="margin-top:-6px">Sem mentoria individual — só acesso às Aulas (liberadas uma a uma, conforme vai assistindo) e a uma comunidade própria, separada da dos mentorados.</p>
     <div class="table-wrap">
-      <table class="check-table">
+      <table class="check-table vg-table">
         <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th></th></tr></thead>
         <tbody>
           ${cursoAlunos.map(s=>{
