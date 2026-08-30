@@ -2729,13 +2729,18 @@ function setRole(role){
     b.classList.toggle('active', active);
     b.classList.toggle('staff-active', active && role==='staff');
   });
-  document.getElementById('staff-group-label').style.display = role==='staff' ? 'flex' : 'none';
-  document.getElementById('nav-visaogeral').style.display = role==='staff' ? 'flex' : 'none';
-  document.getElementById('nav-interno').style.display = role==='staff' ? 'flex' : 'none';
-  document.getElementById('nav-conteudo').style.display = role==='staff' ? 'flex' : 'none';
-  document.getElementById('nav-vendas').style.display = role==='staff' ? 'flex' : 'none';
-  document.getElementById('nav-clientes').style.display = role==='staff' ? 'flex' : 'none';
-  document.getElementById('nav-financeiro').style.display = role==='staff' ? 'flex' : 'none';
+  /* Os itens da equipe interna ficam disponíveis o tempo todo para quem é da equipe — inclusive
+     enquanto ela está vendo a plataforma como um aluno. Assim, abrir um aluno (pelo "Abrir" da Visão
+     Geral ou pelo nome no menu de perfil) não fecha a parte interna: os dois lados convivem na barra
+     lateral. Quem é aluno de verdade (currentUserRole!=='staff') nunca vê nada disso. */
+  const staffNav = currentUserRole==='staff';
+  document.getElementById('staff-group-label').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-visaogeral').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-interno').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-conteudo').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-vendas').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-clientes').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-financeiro').style.display = staffNav ? 'flex' : 'none';
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
@@ -2770,8 +2775,10 @@ function setRole(role){
       ? `${icon(agIc)}<span>${agLabel}</span><span style="margin-left:auto;display:flex" title="Disponível apenas para mentorados da Mentoria Essência">${icon('lock','tiny')}</span>`
       : `${icon(agIc)}<span>${agLabel}</span>`;
   }
-  document.getElementById('profile-dropdown-label').style.display = role==='staff' ? 'flex' : 'none';
-  document.getElementById('profile-options').style.display = role==='staff' ? 'block' : 'none';
+  /* O seletor de alunos continua no menu de perfil mesmo no modo "Aluno", pra equipe pular de um
+     mentorado pro outro sem ter que voltar pro modo Equipe Interna a cada troca. */
+  document.getElementById('profile-dropdown-label').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('profile-options').style.display = staffNav ? 'block' : 'none';
   document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
   document.getElementById('open-cadastro').innerHTML = role==='staff'
     ? `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`
@@ -2814,11 +2821,14 @@ function renderProfile(){
   `).join('');
   opts.querySelectorAll('.opt').forEach(el=>{
     el.addEventListener('click',()=>{
+      /* Escolher um aluno aqui já abre a área dele (modo "Aluno"), sem precisar mexer no botão lá em
+         cima — igual ao "Abrir" da Visão Geral. Os itens da equipe interna seguem na barra lateral;
+         só o botão "Equipe Interna" lá em cima é que volta pro modo exclusivo da equipe. */
       currentStudentId = el.dataset.id;
       panelQuadrantId = null;
-      renderProfile();
-      renderCurrentView();
       document.getElementById('profile-dropdown').classList.remove('open');
+      if(currentUserRole==='staff') setRole('aluno');
+      else { renderProfile(); renderCurrentView(); }
     });
   });
 }
@@ -6823,12 +6833,11 @@ function renderVisaoGeral(){
     <p class="section-sub" style="margin-top:-6px">Clique em "Abrir" para ver a plataforma como esse mentorado vê. O campo "Acesso" muda o aluno para o Curso Gravado (sem mentoria individual, só Aulas e uma comunidade própria).</p>
     <div class="table-wrap">
       <table class="check-table vg-table">
-        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Atrasadas</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
         <tbody>
           ${mentorados.map(s=>{
             const pct = overallProgress(s);
             const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
-            const atrasadas = s.checklist.filter(t=>t.status==='Atrasada').length;
             const dias = diasRestantes(s);
             const estagio = estagioMentoria(mesPrograma(s));
             return `
@@ -6845,13 +6854,12 @@ function renderVisaoGeral(){
                   <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
                 </td>
                 <td style="min-width:140px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}">Meta pendente</button>` : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
-                <td>${atrasadas>0? `<span class="status-pill status-Atrasada">${atrasadas}</span>` : '—'}</td>
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
                 <td style="min-width:140px">${tierSelectHtml(s)}</td>
                 <td><button class="btn-mini" data-open-staff="${s.id}">${icon('idcard')} Abrir</button></td>
               </tr>`;
-          }).join('') || `<tr><td colspan="9" style="color:var(--text-mute)">Nenhum mentorado ainda.</td></tr>`}
+          }).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum mentorado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
