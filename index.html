@@ -3193,8 +3193,11 @@ function openCourseModal(id){
   document.getElementById('modal-close-2').addEventListener('click',closeModal);
   if(s){
     document.getElementById('modal-toggle-done').addEventListener('click',()=>{
-      s.courseProgress[id] = s.courseProgress[id]===100? 60 : 100;
+      const marcandoComoAssistida = s.courseProgress[id]!==100;
+      s.courseProgress[id] = marcandoComoAssistida? 100 : 60;
       syncCourseProgress(s.id, id, s.courseProgress[id]);
+      /* Dá o check automático no item correspondente do Dashboard (e desfaz, se o aluno desmarcar). */
+      syncChecklistFromCourse(s, c, marcandoComoAssistida);
       closeModal();
       renderCurrentView();
     });
@@ -4140,6 +4143,37 @@ function checklistLinkedCourse(label, catName){
     if(qualifies && score>bestScore){ bestScore=score; best=c; }
   });
   return best;
+}
+/* Caminho inverso do checklistLinkedCourse: dada uma aula, encontra o item "Assistir aula ..." do
+   checklist do módulo dela que aponta pra essa aula. */
+function checklistItemForCourse(course){
+  if(!course) return null;
+  const mod = MODULES.find(m=>m.id===course.modId) || MODULES.find(m=>m.name===course.cat);
+  if(!mod) return null;
+  const items = MODULE_CHECKLIST[mod.id];
+  if(!items) return null;
+  for(let idx=0; idx<items.length; idx++){
+    const linked = checklistLinkedCourse(items[idx], mod.name);
+    if(linked && linked.id===course.id) return {modId:mod.id, idx};
+  }
+  return null;
+}
+/* Mantém o checklist do Dashboard em sincronia com a aula: marcar a aula como assistida já dá o check
+   no item correspondente do módulo (e desmarcar desfaz o check), sem o aluno precisar marcar a mesma
+   coisa em dois lugares. Só escreve quando o item ainda não está no estado desejado — se o aluno já
+   tinha marcado o item na mão, nada é regravado. Aulas sem item correspondente no checklist (ou de
+   módulos sem checklist) simplesmente não mexem em nada. */
+function syncChecklistFromCourse(student, course, checked){
+  if(!student) return false;
+  const hit = checklistItemForCourse(course);
+  if(!hit) return false;
+  const state = getModuleChecklistState(student.id, hit.modId);
+  if(!!state[hit.idx] === !!checked) return false;
+  state[hit.idx] = !!checked;
+  student.moduleProgress[hit.modId] = state.filter(Boolean).length;
+  syncModuleChecklist(student.id, hit.modId, hit.idx, !!checked);
+  syncModuleProgress(student.id, hit.modId, student.moduleProgress[hit.modId]);
+  return true;
 }
 
 /* ================= MODAL: CHECKLIST DO MÓDULO (Dashboard) ================= */
