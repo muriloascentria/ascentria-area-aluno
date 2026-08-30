@@ -346,6 +346,13 @@
   .btn-outline:hover{border-color:var(--accent);color:var(--text);}
   .btn-accent{padding:10px 16px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;font-weight:700;}
   .btn-accent.done{background:var(--success);}
+  .btn-accent.disabled,.btn-accent:disabled{background:var(--bg-elev);color:var(--text-mute);cursor:not-allowed;}
+  /* Faixa de "assista X% para liberar" no modal da aula (só aluno do Curso Gravado) */
+  .watch-gate{margin-top:12px;}
+  .watch-gate-bar{height:8px;background:var(--bg-elev);border-radius:6px;overflow:hidden;margin-bottom:7px;}
+  .watch-gate-bar .fill{height:100%;background:var(--accent);border-radius:6px;transition:width .3s ease;}
+  .watch-gate-txt{font-size:12.5px;color:var(--text-dim);line-height:1.5;}
+  .watch-gate-ok{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--success);line-height:1.5;}
   .gabarito{font-size:11.5px;color:var(--text-mute);background:var(--bg-card);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-style:italic;line-height:1.5;}
   .form-modal textarea{width:100%;min-height:90px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:14px;}
   .form-modal textarea:focus{outline:none;border-color:var(--shared);}
@@ -1827,6 +1834,53 @@ function needsWispform(s){
 
 function getStudent(id){ return STUDENTS.find(s=>s.id===id); }
 function getCourse(id){ return COURSES.find(c=>c.id===id); }
+/* Quanto da aula o aluno do Curso Gravado precisa assistir antes de poder marcá-la como assistida
+   (é a marcação que libera a próxima aula da sequência). */
+const MIN_WATCH_PCT = 60;
+/* Acompanha o quanto de um vídeo do YouTube embutido já foi assistido, via IFrame Player API. Chama
+   onProgress com o maior ponto alcançado, em %. Se a API não carregar (rede bloqueada, extensão etc.),
+   simplesmente não trava o aluno: reporta 100 para não deixar ninguém preso sem conseguir avançar. */
+let _ytApiPromise = null;
+function loadYouTubeApi(){
+  if(window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  if(_ytApiPromise) return _ytApiPromise;
+  _ytApiPromise = new Promise((resolve, reject)=>{
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = ()=>{ if(typeof prev==='function') prev(); resolve(window.YT); };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.onerror = reject;
+    document.head.appendChild(tag);
+    setTimeout(()=>reject(new Error('YouTube API timeout')), 8000);
+  });
+  return _ytApiPromise;
+}
+function trackYouTubeWatch(iframeId, onProgress){
+  loadYouTubeApi().then(YT=>{
+    const el = document.getElementById(iframeId);
+    if(!el) return;
+    let timer = null;
+    const player = new YT.Player(el, {
+      events:{
+        onStateChange: (e)=>{
+          if(e.data===YT.PlayerState.PLAYING){
+            clearInterval(timer);
+            timer = setInterval(()=>{
+              /* O modal pode ter sido fechado no meio do vídeo — aí o player some do DOM e paramos. */
+              if(!document.getElementById(iframeId)){ clearInterval(timer); return; }
+              const dur = player.getDuration ? player.getDuration() : 0;
+              const cur = player.getCurrentTime ? player.getCurrentTime() : 0;
+              if(dur>0) onProgress(Math.min(100, cur/dur*100));
+            }, 1000);
+          } else {
+            clearInterval(timer);
+            if(e.data===YT.PlayerState.ENDED) onProgress(100);
+          }
+        },
+      },
+    });
+  }).catch(()=>{ onProgress(100); });
+}
 function youtubeId(url){
   if(!url) return null;
   const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([a-zA-Z0-9_-]{11})/);
@@ -1957,7 +2011,8 @@ function mapProfileRow(p){
   MODULES.forEach(m=>moduleProgress[m.id]=0);
   (p.module_progress||[]).forEach(mp=>{ moduleProgress[mp.module_id] = mp.done; });
   const courseProgress = {};
-  (p.course_progress||[]).forEach(cp=>{ courseProgress[cp.course_id] = cp.pct; });
+  const courseWatch = {}; // % da aula realmente assistido no player (maior ponto alcançado)
+  (p.course_progress||[]).forEach(cp=>{ courseProgress[cp.course_id] = cp.pct; courseWatch[cp.course_id] = cp.watch_pct || 0; });
   return {
     id: p.id, name: p.name, initials: p.initials, color: p.color, turma: p.turma || '—', avatarUrl: p.avatar_url || null,
     /* 'mentorado' (acesso completo, como sempre foi) ou 'curso' (aluno do curso gravado — só Aulas e uma
@@ -1973,7 +2028,7 @@ function mapProfileRow(p){
       duracaoMeses: sc.duracao_meses || 12,
       plano: sc.plano || '—',
     },
-    moduleProgress, courseProgress,
+    moduleProgress, courseProgress, courseWatch,
     progressoMentorado: diag.progresso_mentorado || 0,
     progressoMentor: diag.progresso_mentor || 0,
     diagnostico:{
@@ -2152,8 +2207,15 @@ function debounceSync(key, fn, delay=700){
 function syncNow(promiseLike){
   Promise.resolve(promiseLike).then(r=>{ if(r && r.error) console.error('sync', r.error); }).catch(e=>console.error('sync', e));
 }
-function syncCourseProgress(sid, courseId, pct){
-  syncNow(sb.from('course_progress').upsert({student_id:sid, course_id:courseId, pct}));
+function syncCourseProgress(sid, courseId, pct, watchPct){
+  const row = {student_id:sid, course_id:courseId, pct};
+  if(watchPct!=null) row.watch_pct = watchPct;
+  syncNow(sb.from('course_progress').upsert(row));
+}
+/* Grava o quanto da aula já foi assistido sem martelar o banco a cada segundo de vídeo — o player
+   dispara com frequência, então só sobe a cada poucos segundos (e sempre o maior valor alcançado). */
+function syncCourseWatch(sid, courseId, watchPct){
+  debounceSync('watch:'+sid+':'+courseId, ()=>sb.from('course_progress').upsert({student_id:sid, course_id:courseId, watch_pct:watchPct}), 4000);
 }
 function syncModuleChecklist(sid, modId, idx, checked){
   syncNow(sb.from('module_checklist_state').upsert({student_id:sid, module_id:modId, item_idx:idx, checked}));
@@ -3065,7 +3127,7 @@ function courseTileHtml(c){
       <div class="course-info">
         <div class="cat">${c.cat}</div>
         <div class="title">${c.title}</div>
-        <div class="meta">${locked? 'Conclua a aula anterior para liberar' : c.duration}</div>
+        <div class="meta">${locked? `Assista ${MIN_WATCH_PCT}% da aula anterior e marque como assistida para liberar` : c.duration}</div>
       </div>
     </button>`;
 }
@@ -3073,7 +3135,7 @@ function bindCourseTiles(){
   document.querySelectorAll('.course-tile').forEach(el=>{
     el.addEventListener('click',()=>{
       if(el.dataset.locked){
-        alert('Esta aula ainda está bloqueada. Conclua a aula anterior (marque como assistida) para liberá-la.');
+        alert('Esta aula ainda está bloqueada. Assista pelo menos '+MIN_WATCH_PCT+'% da aula anterior e marque-a como assistida para liberá-la.');
         return;
       }
       openCourseModal(el.dataset.id);
@@ -3153,16 +3215,23 @@ function openCourseModal(id){
   /* Segurança extra: mesmo que algo chame openCourseModal fora do clique no card (ex.: um link "sobre
      esta aula" antigo em cache), uma aula travada pro aluno do curso nunca abre. */
   if(isLessonLocked(id, s)){
-    alert('Esta aula ainda está bloqueada. Conclua a aula anterior (marque como assistida) para liberá-la.');
+    alert('Esta aula ainda está bloqueada. Assista pelo menos '+MIN_WATCH_PCT+'% da aula anterior e marque-a como assistida para liberá-la.');
     return;
   }
   const pct = s ? (s.courseProgress[id]||0) : 0;
   const done = pct===100;
   const yt = youtubeId(c.videoLink);
   const materiais = c.materiais || [];
+  /* Aluno do Curso Gravado só pode marcar a aula como concluída depois de assistir MIN_WATCH_PCT dela —
+     é isso que libera a aula seguinte na sequência. Só dá pra medir isso em vídeo do YouTube embutido
+     (o player avisa o progresso); aula sem vídeo embutido não tem como ser medida, então segue liberada
+     pra marcar direto, como antes. Mentorado nunca é travado por isso. */
+  const exigeWatch = !!(s && s.tier==='curso' && currentRole==='aluno' && yt);
+  let watchPct = s ? (s.courseWatch ? (s.courseWatch[id]||0) : 0) : 0;
+  if(done) watchPct = Math.max(watchPct, MIN_WATCH_PCT); // aula já concluída antes dessa regra existir continua concluída
   document.getElementById('modal').innerHTML = `
     ${yt
-      ? `<div class="modal-yt"><button class="modal-close" id="modal-close">${icon('x')}</button><iframe src="https://www.youtube.com/embed/${yt}" title="${c.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      ? `<div class="modal-yt"><button class="modal-close" id="modal-close">${icon('x')}</button><iframe id="course-yt-frame" src="https://www.youtube.com/embed/${yt}?enablejsapi=1&origin=${encodeURIComponent(location.origin)}" title="${c.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
       : `<div class="modal-player" style="--tint1:${c.tint[0]};--tint2:${c.tint[1]}">
           <button class="modal-close" id="modal-close">${icon('x')}</button>
           ${fillIcon('play','play-fill')}
@@ -3176,6 +3245,7 @@ function openCourseModal(id){
         ${(c.videoLink && !yt)? `<a class="btn-outline" href="${c.videoLink}" target="_blank" rel="noopener">${icon('video')} Assistir no link</a>` : ''}
         <button class="btn-outline" id="modal-close-2">Fechar</button>
       </div>
+      ${exigeWatch? `<div class="watch-gate" id="watch-gate"></div>` : ''}
       ${materiais.length? `
         <div class="course-materials">
           <div class="ps-h">Materiais desta aula</div>
@@ -3192,10 +3262,38 @@ function openCourseModal(id){
   document.getElementById('modal-close').addEventListener('click',closeModal);
   document.getElementById('modal-close-2').addEventListener('click',closeModal);
   if(s){
-    document.getElementById('modal-toggle-done').addEventListener('click',()=>{
+    const doneBtn = document.getElementById('modal-toggle-done');
+    const gateEl = document.getElementById('watch-gate');
+    /* Enquanto não bater o mínimo, o botão fica desabilitado e a faixa abaixo mostra o quanto falta,
+       atualizando conforme o vídeo roda. Depois de concluída, some — não faz sentido cobrar de novo. */
+    function refreshGate(){
+      if(!exigeWatch || !gateEl) return;
+      const jaConcluida = s.courseProgress[id]===100;
+      const liberado = jaConcluida || watchPct>=MIN_WATCH_PCT;
+      doneBtn.disabled = !liberado;
+      doneBtn.classList.toggle('disabled', !liberado);
+      gateEl.style.display = jaConcluida? 'none' : 'block';
+      gateEl.innerHTML = liberado
+        ? `<div class="watch-gate-ok">${icon('check','tiny')} Você já assistiu o suficiente — pode marcar a aula como assistida para liberar a próxima.</div>`
+        : `<div class="watch-gate-bar"><div class="fill" style="width:${Math.min(100, Math.round(watchPct/MIN_WATCH_PCT*100))}%"></div></div>
+           <div class="watch-gate-txt">Assista pelo menos ${MIN_WATCH_PCT}% da aula para poder marcá-la como assistida e liberar a próxima. Você já viu <strong>${Math.round(watchPct)}%</strong>.</div>`;
+    }
+    refreshGate();
+    if(exigeWatch){
+      trackYouTubeWatch('course-yt-frame', (p)=>{
+        if(p<=watchPct) return;
+        watchPct = p;
+        if(!s.courseWatch) s.courseWatch = {};
+        s.courseWatch[id] = Math.round(p);
+        syncCourseWatch(s.id, id, Math.round(p));
+        refreshGate();
+      });
+    }
+    doneBtn.addEventListener('click',()=>{
+      if(doneBtn.disabled) return;
       const marcandoComoAssistida = s.courseProgress[id]!==100;
       s.courseProgress[id] = marcandoComoAssistida? 100 : 60;
-      syncCourseProgress(s.id, id, s.courseProgress[id]);
+      syncCourseProgress(s.id, id, s.courseProgress[id], s.courseWatch? s.courseWatch[id] : null);
       /* Dá o check automático no item correspondente do Dashboard (e desfaz, se o aluno desmarcar). */
       syncChecklistFromCourse(s, c, marcandoComoAssistida);
       closeModal();
