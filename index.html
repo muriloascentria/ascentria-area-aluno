@@ -988,9 +988,9 @@
     <div class="nav-group-label" id="nav-group-individual">Minha Área</div>
     <button class="nav-item individual" data-view="sessoes"></button>
     <button class="nav-item individual" data-view="metas"></button>
-    <a class="nav-item individual" id="nav-prontuarios" href="https://app.ascentria.cloud/dashboard" target="_blank" rel="noopener">
+    <a class="nav-item individual" id="nav-prontuarios" href="https://muriloascentria.github.io/prontuario-clinico/" target="_blank" rel="noopener">
       <svg class="icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
-      <span>Prontuários</span>
+      <span>Prontuários eSIS</span>
     </a>
 
     <div class="nav-group-label" id="staff-group-label" style="display:none"><svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Equipe Interna</div>
@@ -2061,6 +2061,20 @@ async function bootstrapData(){
   currentUserRole = me ? me.role : 'aluno';
   currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado'} : null;
 
+  /* Papel 'vendas' (vendedora do time): acesso restrito ao Registro de Sessões 1:1 e nada mais.
+     Carrega só essa lista — nenhum dado de aluno, comunidade, aulas, clientes ou financeiro chega ao
+     navegador dela. Isso é conveniência de carregamento; a garantia de verdade está nas políticas do
+     banco (is_staff() é false pra ela, então nem pedindo direto na API o resto vem). */
+  if(currentUserRole==='vendas'){
+    VENDA_SESSOES.length = 0;
+    const { data: vsRows } = await sb.from('venda_sessoes').select('*').order('numero',{ascending:true});
+    (vsRows||[]).forEach(r=>VENDA_SESSOES.push(mapVendaSessaoRow(r)));
+    PEOPLE = {};
+    if(me) PEOPLE[me.id] = {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, role:me.role};
+    currentStudentId = null;
+    return;
+  }
+
   STUDENTS.length = 0;
   profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
 
@@ -2197,6 +2211,11 @@ async function enterApp(){
   document.getElementById('app').classList.add('active');
   setupNav();
   renderProfile();
+  if(currentUserRole==='vendas'){
+    setRoleVendas();
+    goTo('vendas');
+    return;
+  }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
   goTo(currentUserRole==='staff' ? 'visaogeral' : (getViewingTier()==='curso' ? 'aulas' : 'inicio'));
 }
@@ -2788,7 +2807,26 @@ function updateNotifBadge(){
   }
 }
 
+/* Barra lateral da vendedora (role 'vendas'): esconde TUDO e reacende só o Registro de Sessões 1:1.
+   Feito por exclusão de propósito — se amanhã surgir um item novo no menu, ele já nasce invisível pra
+   ela, em vez de aparecer por esquecimento. */
+function setRoleVendas(){
+  currentRole = 'staff';
+  document.getElementById('role-toggle').style.display = 'none';
+  document.querySelectorAll('.nav-item[data-view]').forEach(el=>{ el.style.display = 'none'; });
+  document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
+  const navVendas = document.getElementById('nav-vendas');
+  if(navVendas) navVendas.style.display = 'flex';
+  const grupo = document.getElementById('staff-group-label');
+  if(grupo) grupo.style.display = 'flex';
+  document.getElementById('profile-dropdown-label').style.display = 'none';
+  document.getElementById('profile-options').style.display = 'none';
+  document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados</span>`;
+  renderProfile();
+  if(currentView !== 'vendas') goTo('vendas');
+}
 function setRole(role){
+  if(currentUserRole==='vendas'){ setRoleVendas(); return; }
   currentRole = role;
   document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
   document.querySelectorAll('#role-toggle [data-role]').forEach(b=>{
@@ -2901,6 +2939,10 @@ function renderProfile(){
 }
 
 function goTo(view){
+  /* Trava final: a vendedora só abre o Registro de Sessões 1:1. Os outros itens já estão escondidos
+     do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
+     goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
+  if(currentUserRole==='vendas' && view!=='vendas') view = 'vendas';
   currentView = view;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
