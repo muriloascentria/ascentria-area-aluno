@@ -34,9 +34,91 @@
     --success-soft:rgba(34,197,94,0.15);
     --danger:#f43f5e;
     --danger-soft:rgba(244,63,94,0.15);
+    /* Tons que dependem do fundo (claro/escuro) — ficam em variável para o tema claro poder trocar
+       só estes, sem duplicar regra de CSS nenhuma. */
+    --topbar-bg:rgba(12,13,11,0.85);
+    --hero-grad-1:rgba(141,145,111,0.16);
+    --hero-grad-2:rgba(190,198,177,0.06);
+    --bar-2:#c6aa83;
+    --module-bar-2:#c5c9d1;
+    --on-individual:#0c0d0b;
+    --row-highlight:rgba(190,198,177,0.08);
+    --stage-abertura:#c5c9d1;
+    --stage-ser:#b4b49a;
+    --stage-conectar:#9ba4ba;
+    --stage-transformar:#c6aa83;
+    --stage-gerenciar:#89886d;
+    --shadow-drop:0 12px 30px rgba(0,0,0,0.4);
+    --shadow-soft:0 2px 8px rgba(0,0,0,0.35);
+    --shadow-col:-10px 0 12px -8px rgba(0,0,0,0.45);
+    --shadow-side:0 0 40px rgba(0,0,0,0.5);
+    --banner-danger-fg:#fca5b5;
+    --rank-1-bg:rgba(234,179,8,0.18);
+    --rank-1-fg:#eab308;
+    --rank-2-bg:rgba(203,213,225,0.18);
+    --rank-2-fg:#cbd5e1;
+    --logo-filter:none;
     --radius:14px;
     --radius-sm:8px;
+    color-scheme:dark;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  /* ---- TEMA CLARO ----
+     Mesma paleta da marca (Reseda Green, Copper, French Gray), só que calibrada para fundo claro:
+     os fundos viram off-white levemente quente (não branco puro, que estoura a vista) e as cores de
+     marca escurecem um pouco. Isso é necessário porque um tom que contrasta bem sobre preto fica
+     lavado sobre branco — o verde #8d916f como texto sobre claro fica ilegível. O escurecimento
+     mantém a mesma matiz, então a identidade continua a mesma, só com o contraste correto. */
+  [data-theme="light"]{
+    --bg:#f6f6f1;
+    --bg-elev:#ffffff;
+    --bg-card:#eeefe7;
+    --bg-card-hover:#e5e7db;
+    --border:#d7d9cb;
+    --text:#1c1e19;
+    --text-dim:#575a4e;
+    --text-mute:#7f8276;
+    --accent:#6f7355;
+    /* No tema escuro, accent-2 é um verde MAIS CLARO que o accent: sobre preto, destacar é
+       clarear. No claro é o contrário — destacar é escurecer. Por isso aqui ela é mais escura
+       que o accent, e não mais clara (é cor de texto em ~20 lugares: btn-mini, item ativo do
+       menu, pontos do ranking, resultado da precificação). */
+    --accent-2:#565a40;
+    --accent-soft:rgba(111,115,85,0.13);
+    --individual:#8f5a22;
+    --individual-soft:rgba(143,90,34,0.13);
+    --shared:#56637d;
+    --shared-soft:rgba(86,99,125,0.13);
+    --success:#15803d;
+    --success-soft:rgba(21,128,61,0.13);
+    --danger:#be123c;
+    --danger-soft:rgba(190,18,60,0.11);
+    --topbar-bg:rgba(246,246,241,0.85);
+    --hero-grad-1:rgba(111,115,85,0.14);
+    --hero-grad-2:rgba(141,145,111,0.06);
+    --bar-2:#c08b4a;
+    --module-bar-2:#8b98b3;
+    --on-individual:#ffffff;
+    --row-highlight:rgba(111,115,85,0.11);
+    --stage-abertura:#455170;
+    --stage-ser:#5f6247;
+    --stage-conectar:#4b5875;
+    --stage-transformar:#875619;
+    --stage-gerenciar:#565741;
+    --shadow-drop:0 12px 30px rgba(28,30,25,0.15);
+    --shadow-soft:0 2px 8px rgba(28,30,25,0.12);
+    --shadow-col:-10px 0 12px -8px rgba(28,30,25,0.18);
+    --shadow-side:0 0 40px rgba(28,30,25,0.18);
+    --banner-danger-fg:#9f1239;
+    --rank-1-bg:rgba(161,98,7,0.15);
+    --rank-1-fg:#a16207;
+    --rank-2-bg:rgba(100,116,139,0.15);
+    --rank-2-fg:#64748b;
+    /* A logomarca é um wordmark cinza-claro, feito para fundo escuro. Em fundo
+       claro ela sumiria — como é cinza puro, inverter devolve o mesmo desenho em
+       tom escuro, sem precisar de um segundo arquivo de imagem. */
+    --logo-filter:invert(1);
+    color-scheme:light;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;}
@@ -84,7 +166,7 @@
   }
   .brand-dot{width:12px;height:12px;border-radius:4px;background:linear-gradient(135deg,var(--accent),var(--accent-2));flex-shrink:0;}
   .brand-name{font-size:14px;font-weight:700;letter-spacing:0.3px;}
-  .brand-logo{display:block;height:auto;width:100%;}
+  .brand-logo{display:block;height:auto;width:100%;filter:var(--logo-filter);}
   .login-box .brand-logo{max-width:280px;}
   .sidebar .brand-logo{max-width:180px;}
   .login-box h1{font-size:22px;font-weight:700;margin-top:22px;margin-bottom:6px;}
@@ -174,7 +256,7 @@
     height:64px;flex-shrink:0;
     display:flex;align-items:center;justify-content:space-between;
     padding:0 28px;border-bottom:1px solid var(--border);
-    position:sticky;top:0;background:rgba(12,13,11,0.85);backdrop-filter:blur(8px);z-index:20;
+    position:sticky;top:0;background:var(--topbar-bg);backdrop-filter:blur(8px);z-index:20;
     gap:16px;
   }
   .topbar-title{font-size:16px;font-weight:700;white-space:nowrap;}
@@ -209,7 +291,7 @@
   .profile-dropdown{
     position:absolute;right:0;top:44px;width:240px;
     background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-sm);
-    box-shadow:0 12px 30px rgba(0,0,0,0.4);padding:8px;display:none;z-index:30;
+    box-shadow:var(--shadow-drop);padding:8px;display:none;z-index:30;
   }
   .profile-dropdown.open{display:block;}
   .profile-dropdown .label{font-size:11px;color:var(--text-mute);padding:6px 8px;text-transform:uppercase;letter-spacing:0.5px;}
@@ -222,6 +304,13 @@
      ficava inalcançável. Agora só ela rola (Cadastro/Trocar senha seguem fixos no topo do menu). */
   #profile-options{max-height:min(52vh,420px);overflow-y:auto;overscroll-behavior:contain;}
   .dropdown-divider{height:1px;background:var(--border);margin:6px 2px;}
+  /* Seletor de tema (Claro / Escuro) dentro do menu do perfil */
+  .theme-switch{display:flex;gap:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:3px;margin:2px 2px 4px;}
+  .theme-switch button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 8px;border-radius:16px;font-size:12px;font-weight:700;color:var(--text-dim);white-space:nowrap;}
+  .theme-switch button .icon{width:14px;height:14px;}
+  .theme-switch button:hover{color:var(--text);}
+  .theme-switch button.active{background:var(--accent);color:#fff;}
+  .theme-switch button.active .icon{stroke:#fff;}
 
   .content{padding:26px 28px 60px;max-width:1240px;width:100%;margin:0 auto;}
   .view{display:none;}
@@ -234,7 +323,7 @@
 
   /* Hero / greeting */
   .hero{
-    background:linear-gradient(120deg, rgba(141,145,111,0.16), rgba(190,198,177,0.06));
+    background:linear-gradient(120deg, var(--hero-grad-1), var(--hero-grad-2));
     border:1px solid var(--border);border-radius:var(--radius);
     padding:26px 28px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
   }
@@ -266,7 +355,7 @@
   .row-scroll-btn{
     position:absolute;top:43px;width:32px;height:32px;border-radius:50%;z-index:2;
     display:flex;align-items:center;justify-content:center;border:1px solid var(--border);
-    background:var(--bg-card);color:var(--text);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);
+    background:var(--bg-card);color:var(--text);cursor:pointer;box-shadow:var(--shadow-soft);
     transition:opacity .15s, background .15s; opacity:.92;
   }
   .row-scroll-btn:hover{background:var(--bg-card-hover);opacity:1;}
@@ -494,7 +583,7 @@
   .ring .ring-inner .pct{font-size:22px;font-weight:800;}
   .ring .ring-inner .lbl{font-size:10px;color:var(--text-mute);text-transform:uppercase;}
   .bar{height:7px;background:var(--bg-elev);border-radius:6px;overflow:hidden;}
-  .bar .fill{height:100%;background:linear-gradient(90deg,var(--individual),#c6aa83);border-radius:6px;}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--individual),var(--bar-2));border-radius:6px;}
   .cert-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--success);background:var(--success-soft);padding:2px 8px;border-radius:20px;margin-left:8px;}
 
   /* Dashboard: module bars */
@@ -505,7 +594,7 @@
   .module-bar-row .top .frac{font-size:11.5px;color:var(--text-mute);}
   .module-bar-row .top .pct{font-size:12.5px;font-weight:700;color:var(--shared);}
   .module-bar{height:8px;background:var(--bg-elev);border-radius:6px;overflow:hidden;}
-  .module-bar .fill{height:100%;background:linear-gradient(90deg,var(--shared),#c5c9d1);border-radius:6px;}
+  .module-bar .fill{height:100%;background:linear-gradient(90deg,var(--shared),var(--module-bar-2));border-radius:6px;}
   .module-bar-row.clickable{cursor:pointer;transition:border-color .15s;}
   .module-bar-row.clickable:hover{border-color:var(--shared);}
   .module-bar-cta{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--shared);margin-top:8px;}
@@ -764,7 +853,7 @@
     display:flex;align-items:center;justify-content:center;transition:all .15s;
   }
   .goal-check.checked{background:var(--individual);border-color:var(--individual);}
-  .goal-check .icon{width:13px;height:13px;stroke:#0c0d0b;display:none;}
+  .goal-check .icon{width:13px;height:13px;stroke:var(--on-individual);display:none;}
   .goal-check.checked .icon{display:block;}
   .goal-body{flex:1;}
   .goal-body .title{font-size:13.5px;font-weight:700;margin-bottom:3px;}
@@ -773,7 +862,7 @@
   .goal-body .desc{font-size:12.5px;color:var(--text-dim);margin-top:4px;line-height:1.5;}
 
   /* Staff / internal */
-  .staff-banner{display:flex;align-items:center;gap:10px;background:var(--danger-soft);border:1px solid rgba(244,63,94,0.3);color:#fca5b5;border-radius:var(--radius-sm);padding:12px 16px;font-size:12.5px;margin-bottom:22px;}
+  .staff-banner{display:flex;align-items:center;gap:10px;background:var(--danger-soft);border:1px solid rgba(244,63,94,0.3);color:var(--banner-danger-fg);border-radius:var(--radius-sm);padding:12px 16px;font-size:12.5px;margin-bottom:22px;}
   .staff-banner .icon{stroke:var(--danger);flex-shrink:0;}
   .diag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:8px;}
   .diag-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
@@ -783,11 +872,11 @@
   .diag-panel .ps-section:first-of-type .ps-h{margin-top:0;}
   .field-error{color:var(--danger);font-size:11.5px;margin:-6px 0 10px;}
   .stage-tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap;text-transform:uppercase;}
-  .stage-tag.abertura{background:rgba(155,164,186,0.15);color:#c5c9d1;}
-  .stage-tag.ser{background:rgba(130,137,102,0.15);color:#b4b49a;}
-  .stage-tag.conectar{background:rgba(124,137,165,0.15);color:#9ba4ba;}
-  .stage-tag.transformar{background:rgba(171,111,48,0.15);color:#c6aa83;}
-  .stage-tag.gerenciar{background:rgba(92,93,70,0.15);color:#89886d;}
+  .stage-tag.abertura{background:rgba(155,164,186,0.15);color:var(--stage-abertura);}
+  .stage-tag.ser{background:rgba(130,137,102,0.15);color:var(--stage-ser);}
+  .stage-tag.conectar{background:rgba(124,137,165,0.15);color:var(--stage-conectar);}
+  .stage-tag.transformar{background:rgba(171,111,48,0.15);color:var(--stage-transformar);}
+  .stage-tag.gerenciar{background:rgba(92,93,70,0.15);color:var(--stage-gerenciar);}
   .stage-tag.fechamento{background:var(--danger-soft);color:var(--danger);}
   .module-block{margin-bottom:26px;}
   .module-block-h{font-size:13px;font-weight:700;color:var(--text-dim);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
@@ -849,13 +938,13 @@
      coluna) saía do campo de visão, mesmo diminuindo o zoom. Agora essa coluna fica grudada na borda
      direita — a tabela rola por baixo dela e o botão continua sempre visível. */
   .vg-table th:last-child, .vg-table td:last-child{position:sticky;right:0;z-index:2;}
-  .vg-table td:last-child{background:var(--bg-card);box-shadow:-10px 0 12px -8px rgba(0,0,0,0.45);}
-  .vg-table th:last-child{background:var(--bg-elev);box-shadow:-10px 0 12px -8px rgba(0,0,0,0.45);}
+  .vg-table td:last-child{background:var(--bg-card);box-shadow:var(--shadow-col);}
+  .vg-table th:last-child{background:var(--bg-elev);box-shadow:var(--shadow-col);}
   .rank-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-weight:800;font-size:12px;background:var(--bg-elev);color:var(--text-dim);}
-  .rank-num.rank-top.rank-1{background:rgba(234,179,8,0.18);color:#eab308;}
-  .rank-num.rank-top.rank-2{background:rgba(203,213,225,0.18);color:#cbd5e1;}
+  .rank-num.rank-top.rank-1{background:var(--rank-1-bg);color:var(--rank-1-fg);}
+  .rank-num.rank-top.rank-2{background:var(--rank-2-bg);color:var(--rank-2-fg);}
   .rank-num.rank-top.rank-3{background:var(--individual-soft);color:var(--individual);}
-  tr.rank-me td{background:var(--accent-2, rgba(190,198,177,0.08));background:rgba(190,198,177,0.08);}
+  tr.rank-me td{background:var(--row-highlight);}
   .rank-pts{font-weight:800;color:var(--accent-2);}
   .status-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
   .status-pill.status-Concluida{background:var(--success-soft);color:var(--success);}
@@ -902,7 +991,7 @@
   .locked-view p{font-size:13.5px;color:var(--text-mute);line-height:1.6;margin:0;}
 
   @media (max-width:880px){
-    .sidebar{position:fixed;left:-260px;top:0;transition:left .2s;z-index:50;box-shadow:0 0 40px rgba(0,0,0,0.5);}
+    .sidebar{position:fixed;left:-260px;top:0;transition:left .2s;z-index:50;box-shadow:var(--shadow-side);}
     .sidebar.open{left:0;}
     .content{padding:20px 16px 50px;}
     .topbar{padding:0 14px;gap:10px;}
@@ -920,6 +1009,20 @@
 </style>
 </head>
 <body>
+<script>
+/* Aplica o tema salvo antes de qualquer pintura — se isso rodasse junto com o resto do app, a tela
+   apareceria escura por um instante e só depois viraria clara, dando um "flash" a cada carregamento.
+   Sem preferência salva, segue o tema do sistema operacional da pessoa. */
+(function(){
+  try{
+    var t = localStorage.getItem('ascentria-tema');
+    if(t!=='claro' && t!=='escuro'){
+      t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'claro' : 'escuro';
+    }
+    if(t==='claro') document.documentElement.setAttribute('data-theme','light');
+  }catch(e){}
+})();
+</script>
 
 <!-- ============ LOGIN ============ -->
 <div id="login-screen">
@@ -1034,6 +1137,12 @@
             <button class="opt cadastro-opt" id="open-cadastro"></button>
             <button class="opt" id="open-change-password"></button>
             <div class="dropdown-divider"></div>
+            <div class="label">Tema</div>
+            <div class="theme-switch" id="theme-switch">
+              <button type="button" data-tema="claro"></button>
+              <button type="button" data-tema="escuro"></button>
+            </div>
+            <div class="dropdown-divider"></div>
             <div class="label" id="profile-dropdown-label">Visualizar como (demo)</div>
             <div id="profile-options"></div>
           </div>
@@ -1111,6 +1220,8 @@ const ICONS = {
   reply:'<path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
   copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   money:'<circle cx="12" cy="12" r="9"/><path d="M12 6.5v11M15.5 9.3c0-1.5-1.6-2.5-3.5-2.5s-3.5 1-3.5 2.4c0 3 7 1.3 7 4.3 0 1.5-1.6 2.5-3.5 2.5s-3.5-1-3.5-2.5"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>',
 };
 function icon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24">${ICONS[name]}</svg>`;}
 function fillIcon(name,cls){return `<svg class="icon ${cls||''}" viewBox="0 0 24 24" fill="currentColor" stroke="none">${ICONS[name]}</svg>`;}
@@ -2702,7 +2813,43 @@ function renderLogin(){
 }
 
 /* ================= NAV / SHELL ================= */
+/* ---- Tema Claro / Escuro ----
+   A escolha fica no navegador de quem usa (localStorage), não na conta: é preferência de cada
+   aparelho — a mesma pessoa pode querer claro no notebook do consultório e escuro no celular à noite.
+   Quem nunca escolheu segue o tema do próprio sistema operacional. */
+function getTema(){
+  try{
+    const t = localStorage.getItem('ascentria-tema');
+    if(t==='claro' || t==='escuro') return t;
+  }catch(e){}
+  try{
+    if(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) return 'claro';
+  }catch(e){}
+  return 'escuro';
+}
+function aplicarTema(tema, salvar){
+  if(tema==='claro') document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  if(salvar){ try{ localStorage.setItem('ascentria-tema', tema); }catch(e){} }
+  document.querySelectorAll('#theme-switch [data-tema]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tema===tema);
+  });
+}
+function setupTemaSwitch(){
+  const wrap = document.getElementById('theme-switch');
+  if(!wrap) return;
+  wrap.querySelector('[data-tema="claro"]').innerHTML = `${icon('sun')}<span>Claro</span>`;
+  wrap.querySelector('[data-tema="escuro"]').innerHTML = `${icon('moon')}<span>Escuro</span>`;
+  wrap.querySelectorAll('[data-tema]').forEach(btn=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation(); // não fecha o menu do perfil, pra dar pra ver a mudança na hora
+      aplicarTema(btn.dataset.tema, true);
+    });
+  });
+  aplicarTema(getTema(), false);
+}
 function setupNav(){
+  setupTemaSwitch();
   document.querySelectorAll('.nav-item[data-view]').forEach(btn=>{
     const view = btn.dataset.view;
     const [ic,label] = NAV_LABELS[view];
