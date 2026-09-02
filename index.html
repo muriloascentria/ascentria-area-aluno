@@ -564,6 +564,12 @@
   .pill.replay{background:var(--bg-elev);color:var(--text-mute);}
   .pill.watched{background:var(--success-soft);color:var(--success);display:inline-flex;align-items:center;gap:3px;}
   .pill.watched .icon{width:10px;height:10px;stroke:var(--success);}
+  /* Situação no Financeiro interno. A de "Pago" usava a mesma classe do "ao vivo" (vermelha) e sem
+     inline-flex, então o ícone e a palavra quebravam em duas linhas. */
+  .pill.pago{background:var(--success-soft);color:var(--success);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+  .pill.pago .icon{width:10px;height:10px;stroke:var(--success);}
+  .pill.receita{background:var(--success-soft);color:var(--success);white-space:nowrap;}
+  .pill.despesa{background:var(--individual-soft);color:var(--individual);white-space:nowrap;}
 
   /* Materials */
   .materials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
@@ -753,6 +759,14 @@
   .fin-modo-opt{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);cursor:pointer;}
   .fin-ocorr-table{margin-top:12px;}
   .fin-modal-actions{margin-top:26px;}
+  /* Indicadores do topo do Financeiro interno */
+  .fin-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;}
+  .fin-resumo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+  .fin-resumo-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);font-weight:700;margin-bottom:6px;}
+  .fin-resumo-card .value{font-size:19px;font-weight:800;color:var(--text);line-height:1.2;}
+  .fin-resumo-card .value.pos{color:var(--success);}
+  .fin-resumo-card .value.neg{color:var(--danger);}
+  .fin-resumo-card .hint{font-size:11px;color:var(--text-mute);margin-top:4px;}
   /* Precificação de Protocolos e Consultas (Painel do Método → Gestão): duas colunas — itens de custo
      fixo à esquerda, horas/precificação da hora/custo variável à direita — com o Preço do Protocolo
      recalculado ao sair de qualquer campo, igual à planilha de origem. */
@@ -1860,6 +1874,7 @@ let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/vis
 let FIN_CATEGORIAS = [], FIN_CONTAS = [], FIN_FORMAS = [], FIN_LANCAMENTOS = [];
 let finSubView = 'lancamentos'; // 'lancamentos' | 'faturamento' | 'categorias' | 'contas' | 'formas'
 let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
+let finExtratoConta = null; // id da conta bancária cujo extrato está aberto (null = primeira da lista)
 let finView = { year: new Date().getFullYear(), month: new Date().getMonth() };
 let finFatChartYear = null; // ano selecionado no gráfico do Faturamento interno (Financeiro > Faturamento)
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
@@ -7805,71 +7820,140 @@ function exportFinFaturamentoPDF(chartYear){
   win.onload = ()=>{ win.focus(); win.print(); };
   setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
 }
+/* Data que "vale" para o lançamento: enquanto está pendente, o vencimento; depois de pago, o dia em
+   que o dinheiro entrou/saiu de fato. É o que faz o lançamento migrar das Contas a Receber/Pagar para
+   o extrato do mês em que foi efetivado. */
+function finDataEfetiva(l){
+  return l.pagou ? (l.diaPagamento || l.dataVencimento) : l.dataVencimento;
+}
+function finNoMes(dateStr, year, month){
+  if(!dateStr) return false;
+  const [y,m] = dateStr.split('-').map(Number);
+  return y===year && (m-1)===month;
+}
+function finValorEfetivo(l){
+  return l.pagou && l.valorPago!=null ? l.valorPago : l.valor;
+}
+/* Indicadores do topo do Financeiro. "A receber/a pagar no mês" são só os que ainda estão em aberto
+   (é o que sobra nas abas). "Faturado" é receita já recebida, contada pelo dia do pagamento — mesma
+   régra da aba Faturamento, pra os números baterem entre as duas telas. */
+function computeFinResumo(year, month){
+  let aReceber=0, aPagar=0, faturadoMes=0, faturadoAno=0, pagoMes=0;
+  FIN_LANCAMENTOS.forEach(l=>{
+    const efet = finDataEfetiva(l);
+    if(!l.pagou){
+      if(finNoMes(l.dataVencimento, year, month)){
+        if(l.tipo==='receber') aReceber += l.valor; else aPagar += l.valor;
+      }
+      return;
+    }
+    const v = finValorEfetivo(l);
+    const [y] = (efet||'').split('-').map(Number);
+    if(l.tipo==='receber'){
+      if(finNoMes(efet, year, month)) faturadoMes += v;
+      if(y===year) faturadoAno += v;
+    } else if(finNoMes(efet, year, month)){
+      pagoMes += v;
+    }
+  });
+  return {aReceber, aPagar, faturadoMes, faturadoAno, pagoMes};
+}
 function renderFinLancamentos(container){
-  const inMonth = (l)=>{
-    const [y,m] = l.dataVencimento.split('-').map(Number);
-    return y===finView.year && (m-1)===finView.month;
-  };
   const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : 0);
-  const receber = FIN_LANCAMENTOS.filter(l=>l.tipo==='receber' && inMonth(l)).sort(byVencAsc);
-  const pagar = FIN_LANCAMENTOS.filter(l=>l.tipo==='pagar' && inMonth(l)).sort(byVencAsc);
-  const extrato = FIN_LANCAMENTOS.filter(inMonth).sort(byVencAsc);
+  const byEfetivaAsc = (a,b)=>{
+    const da=finDataEfetiva(a), db=finDataEfetiva(b);
+    return da<db? -1 : (da>db? 1 : 0);
+  };
+  /* Contas a Receber / a Pagar mostram SÓ o que ainda está em aberto. Assim que o lançamento é marcado
+     como pago ele sai da aba e passa a viver no extrato da conta bancária que recebeu/pagou. */
+  const emAberto = (tipo)=> FIN_LANCAMENTOS
+    .filter(l=>l.tipo===tipo && !l.pagou && finNoMes(l.dataVencimento, finView.year, finView.month))
+    .sort(byVencAsc);
+  const resumo = computeFinResumo(finView.year, finView.month);
 
   const rowHtml = (l)=>{
     const cat = FIN_CATEGORIAS.find(c=>c.id===l.categoriaId);
     const forma = FIN_FORMAS.find(f=>f.id===l.formaId);
+    const conta = FIN_CONTAS.find(x=>x.id===l.contaId);
     const parcelaTxt = l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—';
     return `<tr data-fllinha="${l.id}">
       <td style="white-space:nowrap">${formatDateBR(l.dataVencimento)}</td>
       <td>${escapeHtml(l.descricao||'—')}<br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(cat? cat.nome : '—')}</span></td>
+      <td>${escapeHtml(conta? conta.nome : '—')}</td>
       <td>${escapeHtml(forma? forma.nome : '—')}</td>
       <td style="text-align:center">${parcelaTxt}</td>
-      <td style="white-space:nowrap">${l.pagou? `<span class="pill live">${icon('check','tiny')} Pago</span>` : '<span class="pill replay">Pendente</span>'}</td>
       <td style="text-align:right;font-weight:600;white-space:nowrap">${formatBRL(l.valor)}</td>
     </tr>`;
   };
 
   let bodyHtml;
+  let subAbasExtrato = '';
   if(finTab==='receber' || finTab==='pagar'){
-    const list = finTab==='receber'? receber : pagar;
+    const list = emAberto(finTab);
     const total = list.reduce((s,l)=>s+l.valor,0);
-    const totalPago = list.filter(l=>l.pagou).reduce((s,l)=>s+(l.valorPago!=null?l.valorPago:l.valor),0);
     bodyHtml = `
       <div class="cf-actions" style="margin-bottom:14px">
         <button type="button" class="btn-accent" data-flnew="${finTab}">${icon('plus','ps-plus')} ${finTab==='receber'?'Novo Recebimento':'Novo Pagamento'}</button>
       </div>
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Forma</th><th>Parcela</th><th>Situação</th><th style="text-align:right">Valor</th></tr></thead>
-        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum lançamento em ${MESES_LONGO[finView.month]}/${finView.year}.</td></tr>`}</tbody>
+        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Conta</th><th>Forma</th><th>Parcela</th><th style="text-align:right">Valor</th></tr></thead>
+        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nada em aberto em ${MESES_LONGO[finView.month]}/${finView.year} — o que já foi ${finTab==='receber'?'recebido':'pago'} está no Extrato.</td></tr>`}</tbody>
       </table></div>
-      <div class="cf-total">Total ${finTab==='receber'?'a receber':'a pagar'}: <strong>${formatBRL(total)}</strong> · Já ${finTab==='receber'?'recebido':'pago'}: <strong>${formatBRL(totalPago)}</strong></div>
+      <div class="cf-total">Total ${finTab==='receber'?'a receber':'a pagar'} em aberto: <strong>${formatBRL(total)}</strong></div>
     `;
   } else {
-    /* Extrato: junta Contas a Receber e Contas a Pagar do mês, e calcula o saldo corrido só com o que
-       já foi efetivamente pago/recebido — igual a um extrato bancário real, não uma previsão. */
+    /* Extrato por conta bancária: uma aba para cada conta cadastrada (Inter, Infinity...). Só entra o
+       que já foi efetivado, lançado no mês do pagamento — é um extrato bancário de verdade, não uma
+       previsão. As abas saem do cadastro de Contas, então criar uma conta nova já cria o extrato dela. */
+    const pagos = FIN_LANCAMENTOS.filter(l=>l.pagou && finNoMes(finDataEfetiva(l), finView.year, finView.month));
+    const semConta = pagos.filter(l=>!l.contaId || !FIN_CONTAS.some(c=>c.id===l.contaId));
+    const opcoes = FIN_CONTAS.map(c=>({id:c.id, nome:c.nome}));
+    if(semConta.length) opcoes.push({id:'__sem__', nome:'Sem conta'});
+    const contaAtual = (finExtratoConta && opcoes.some(o=>o.id===finExtratoConta))
+      ? finExtratoConta : (opcoes[0] ? opcoes[0].id : null);
+    finExtratoConta = contaAtual;
+
+    subAbasExtrato = opcoes.length ? `
+      <div class="community-filters" style="margin-top:-6px">
+        ${opcoes.map(o=>`<button type="button" class="cf-month-btn ${o.id===contaAtual?'active':''}" data-finconta="${escapeAttr(o.id)}">${icon('money','tiny')} ${escapeHtml(o.nome)}</button>`).join('')}
+      </div>` : '';
+
+    const daConta = pagos.filter(l=> contaAtual==='__sem__'
+        ? (!l.contaId || !FIN_CONTAS.some(c=>c.id===l.contaId))
+        : l.contaId===contaAtual)
+      .sort(byEfetivaAsc);
     let saldo = 0;
-    const rows = extrato.map(l=>{
-      const v = l.pagou? (l.valorPago!=null? l.valorPago : l.valor) : 0;
-      if(l.pagou) saldo += (l.tipo==='pagar'? -v : v);
-      return {l, saldo};
+    const rows = daConta.map(l=>{
+      const v = finValorEfetivo(l);
+      saldo += (l.tipo==='pagar'? -v : v);
+      return {l, saldo, v};
     });
+    const entradas = daConta.filter(l=>l.tipo==='receber').reduce((s,l)=>s+finValorEfetivo(l),0);
+    const saidas = daConta.filter(l=>l.tipo==='pagar').reduce((s,l)=>s+finValorEfetivo(l),0);
+    const nomeConta = (opcoes.find(o=>o.id===contaAtual)||{}).nome || '—';
     bodyHtml = `
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
-        <tbody>${rows.map(({l,saldo})=>`<tr>
-          <td style="white-space:nowrap">${formatDateBR(l.dataVencimento)}</td>
+        <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
+        <tbody>${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}">
+          <td style="white-space:nowrap">${formatDateBR(finDataEfetiva(l))}</td>
           <td>${escapeHtml(l.descricao||'—')}</td>
-          <td>${l.tipo==='receber'? '<span class="pill live">Receita</span>' : '<span class="pill replay">Despesa</span>'}</td>
-          <td>${l.pagou? `<span class="pill live">${icon('check','tiny')} Pago</span>` : '<span class="pill replay">Pendente</span>'}</td>
-          <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(l.pagou? (l.valorPago!=null?l.valorPago:l.valor) : l.valor)}</td>
-          <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${l.pagou? formatBRL(saldo) : '—'}</td>
-        </tr>`).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum lançamento em ${MESES_LONGO[finView.month]}/${finView.year}.</td></tr>`}</tbody>
+          <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
+          <td><span class="pill pago">${icon('check','tiny')} Pago</span></td>
+          <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
+          <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
+        </tr>`).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
       </table></div>
-      <div class="cf-total">Saldo do mês (só o que já foi pago/recebido): <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
+      <div class="cf-total">Entradas: <strong>${formatBRL(entradas)}</strong> · Saídas: <strong class="neg">${formatBRL(saidas)}</strong> · Saldo do mês em ${escapeHtml(nomeConta)}: <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
     `;
   }
 
   container.innerHTML = `
+    <div class="fin-resumo">
+      <div class="fin-resumo-card"><div class="label">A receber em ${MESES_LONGO[finView.month]}</div><div class="value">${formatBRL(resumo.aReceber)}</div><div class="hint">ainda em aberto</div></div>
+      <div class="fin-resumo-card"><div class="label">A pagar em ${MESES_LONGO[finView.month]}</div><div class="value neg">${formatBRL(resumo.aPagar)}</div><div class="hint">ainda em aberto</div></div>
+      <div class="fin-resumo-card"><div class="label">Faturado em ${MESES_LONGO[finView.month]}</div><div class="value pos">${formatBRL(resumo.faturadoMes)}</div><div class="hint">já recebido no mês</div></div>
+      <div class="fin-resumo-card"><div class="label">Faturado em ${finView.year}</div><div class="value pos">${formatBRL(resumo.faturadoAno)}</div><div class="hint">já recebido no ano</div></div>
+    </div>
     <div class="cf-nav">
       <div class="cf-year-wrap"><label class="ps-label">Ano</label>
         <input type="number" class="ps-input" id="fin-year" value="${finView.year}">
@@ -7886,8 +7970,12 @@ function renderFinLancamentos(container){
       </div>
       <button type="button" class="btn-outline" id="fin-pdf-btn">${icon('download','ps-plus')} Gerar PDF</button>
     </div>
+    ${subAbasExtrato}
     ${bodyHtml}
   `;
+  document.querySelectorAll('[data-finconta]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ finExtratoConta = btn.dataset.finconta; renderFinanceiro(); });
+  });
   document.getElementById('fin-year').addEventListener('change', e=>{
     finView.year = parseInt(e.target.value,10) || new Date().getFullYear();
     renderFinanceiro();
@@ -7911,52 +7999,58 @@ function renderFinLancamentos(container){
 /* PDF do mês/aba selecionados em Lançamentos (Contas a Receber, Contas a Pagar ou Extrato) — com a
    logo da Ascentria (empresa), não a do Método Essência usada nos PDFs do Painel do Método. */
 function exportFinanceiroPDF(){
-  const inMonth = (l)=>{
-    const [y,m] = l.dataVencimento.split('-').map(Number);
-    return y===finView.year && (m-1)===finView.month;
-  };
   const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : 0);
+  const byEfetivaAsc = (a,b)=>{ const da=finDataEfetiva(a), db=finDataEfetiva(b); return da<db? -1 : (da>db? 1 : 0); };
   const win = window.open('', '_blank');
   if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
   const mesAno = `${MESES_LONGO[finView.month]}/${finView.year}`;
   const catName = (id)=> (FIN_CATEGORIAS.find(c=>c.id===id)||{}).nome || '—';
   const formaName = (id)=> (FIN_FORMAS.find(f=>f.id===id)||{}).nome || '—';
+  const contaName = (id)=> (FIN_CONTAS.find(c=>c.id===id)||{}).nome || '—';
 
   let titulo, theadHtml, rowsHtml, totalHtml;
   if(finTab==='receber' || finTab==='pagar'){
-    const list = FIN_LANCAMENTOS.filter(l=>l.tipo===finTab && inMonth(l)).sort(byVencAsc);
-    titulo = finTab==='receber'? 'Contas a Receber' : 'Contas a Pagar';
+    /* Mesmo recorte da tela: só o que continua em aberto. */
+    const list = FIN_LANCAMENTOS
+      .filter(l=>l.tipo===finTab && !l.pagou && finNoMes(l.dataVencimento, finView.year, finView.month))
+      .sort(byVencAsc);
+    titulo = finTab==='receber'? 'Contas a Receber (em aberto)' : 'Contas a Pagar (em aberto)';
     const total = list.reduce((s,l)=>s+l.valor,0);
-    const totalPago = list.filter(l=>l.pagou).reduce((s,l)=>s+(l.valorPago!=null?l.valorPago:l.valor),0);
-    theadHtml = '<tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Forma</th><th>Parcela</th><th>Situação</th><th>Valor</th></tr>';
+    theadHtml = '<tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Conta</th><th>Forma</th><th>Parcela</th><th>Valor</th></tr>';
     rowsHtml = list.map(l=>`<tr>
       <td>${formatDateBR(l.dataVencimento)}</td>
       <td>${escapeHtml(l.descricao||'—')}</td>
       <td>${escapeHtml(catName(l.categoriaId))}</td>
+      <td>${escapeHtml(contaName(l.contaId))}</td>
       <td>${escapeHtml(formaName(l.formaId))}</td>
       <td>${l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—'}</td>
-      <td>${l.pagou? 'Pago' : 'Pendente'}</td>
       <td>${formatBRL(l.valor)}</td>
-    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:#999;">Nenhum lançamento neste mês.</td></tr>`;
-    totalHtml = `<div class="total">Total ${finTab==='receber'?'a receber':'a pagar'}: <strong>${formatBRL(total)}</strong> &nbsp;·&nbsp; Já ${finTab==='receber'?'recebido':'pago'}: <strong>${formatBRL(totalPago)}</strong></div>`;
+    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:#999;">Nada em aberto neste mês.</td></tr>`;
+    totalHtml = `<div class="total">Total ${finTab==='receber'?'a receber':'a pagar'} em aberto: <strong>${formatBRL(total)}</strong></div>`;
   } else {
-    const list = FIN_LANCAMENTOS.filter(inMonth).sort(byVencAsc);
-    titulo = 'Extrato';
+    /* Extrato da conta bancária aberta na tela, só com o que já foi efetivado. */
+    const pagos = FIN_LANCAMENTOS.filter(l=>l.pagou && finNoMes(finDataEfetiva(l), finView.year, finView.month));
+    const semConta = (l)=> !l.contaId || !FIN_CONTAS.some(c=>c.id===l.contaId);
+    const list = pagos.filter(l=> finExtratoConta==='__sem__' ? semConta(l) : l.contaId===finExtratoConta).sort(byEfetivaAsc);
+    const nomeConta = finExtratoConta==='__sem__' ? 'Sem conta' : contaName(finExtratoConta);
+    titulo = `Extrato — ${nomeConta}`;
     let saldo = 0;
-    theadHtml = '<tr><th>Vencimento</th><th>Descrição</th><th>Tipo</th><th>Situação</th><th>Valor</th><th>Saldo</th></tr>';
+    theadHtml = '<tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Saldo</th></tr>';
     rowsHtml = list.map(l=>{
-      const v = l.pagou? (l.valorPago!=null? l.valorPago : l.valor) : 0;
-      if(l.pagou) saldo += (l.tipo==='pagar'? -v : v);
+      const v = finValorEfetivo(l);
+      saldo += (l.tipo==='pagar'? -v : v);
       return `<tr>
-        <td>${formatDateBR(l.dataVencimento)}</td>
+        <td>${formatDateBR(finDataEfetiva(l))}</td>
         <td>${escapeHtml(l.descricao||'—')}</td>
+        <td>${escapeHtml(catName(l.categoriaId))}</td>
         <td>${l.tipo==='receber'? 'Receita' : 'Despesa'}</td>
-        <td>${l.pagou? 'Pago' : 'Pendente'}</td>
-        <td>${l.tipo==='pagar'?'- ':''}${formatBRL(l.pagou? (l.valorPago!=null?l.valorPago:l.valor) : l.valor)}</td>
-        <td>${l.pagou? formatBRL(saldo) : '—'}</td>
+        <td>${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
+        <td>${formatBRL(saldo)}</td>
       </tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;color:#999;">Nenhum lançamento neste mês.</td></tr>`;
-    totalHtml = `<div class="total">Saldo do mês (só o que já foi pago/recebido): <strong>${formatBRL(saldo)}</strong></div>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;color:#999;">Nenhuma movimentação neste mês.</td></tr>`;
+    const entradas = list.filter(l=>l.tipo==='receber').reduce((s,l)=>s+finValorEfetivo(l),0);
+    const saidas = list.filter(l=>l.tipo==='pagar').reduce((s,l)=>s+finValorEfetivo(l),0);
+    totalHtml = `<div class="total">Entradas: <strong>${formatBRL(entradas)}</strong> &nbsp;·&nbsp; Saídas: <strong>${formatBRL(saidas)}</strong> &nbsp;·&nbsp; Saldo do mês: <strong>${formatBRL(saldo)}</strong></div>`;
   }
 
   win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo} — ${mesAno} — Ascentria</title>
