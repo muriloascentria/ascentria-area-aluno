@@ -1012,14 +1012,15 @@
 <script>
 /* Aplica o tema salvo antes de qualquer pintura — se isso rodasse junto com o resto do app, a tela
    apareceria escura por um instante e só depois viraria clara, dando um "flash" a cada carregamento.
-   Sem preferência salva, segue o tema do sistema operacional da pessoa. */
+   O padrão é ESCURO, que sempre foi a cara da plataforma. Só sai disso quem escolher no menu do
+   perfil — e essa escolha vale para sempre, em todo carregamento seguinte. Não seguimos o tema do
+   sistema operacional de propósito: quem usa o computador no modo claro receberia um tema que nunca
+   pediu, e a cada F5 pareceria que a escolha se perdeu. */
 (function(){
   try{
-    var t = localStorage.getItem('ascentria-tema');
-    if(t!=='claro' && t!=='escuro'){
-      t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'claro' : 'escuro';
+    if(localStorage.getItem('ascentria-tema')==='claro'){
+      document.documentElement.setAttribute('data-theme','light');
     }
-    if(t==='claro') document.documentElement.setAttribute('data-theme','light');
   }catch(e){}
 })();
 </script>
@@ -2816,16 +2817,13 @@ function renderLogin(){
 /* ---- Tema Claro / Escuro ----
    A escolha fica no navegador de quem usa (localStorage), não na conta: é preferência de cada
    aparelho — a mesma pessoa pode querer claro no notebook do consultório e escuro no celular à noite.
-   Quem nunca escolheu segue o tema do próprio sistema operacional. */
+   Uma vez escolhido, o tema vale em todos os carregamentos seguintes daquele aparelho. */
 function getTema(){
   try{
     const t = localStorage.getItem('ascentria-tema');
     if(t==='claro' || t==='escuro') return t;
   }catch(e){}
-  try{
-    if(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) return 'claro';
-  }catch(e){}
-  return 'escuro';
+  return 'escuro'; // padrão da plataforma; só muda por escolha explícita no menu do perfil
 }
 function aplicarTema(tema, salvar){
   if(tema==='claro') document.documentElement.setAttribute('data-theme','light');
