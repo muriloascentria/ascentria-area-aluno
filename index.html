@@ -7933,15 +7933,16 @@ function renderFinLancamentos(container){
     const nomeConta = (opcoes.find(o=>o.id===contaAtual)||{}).nome || '—';
     bodyHtml = `
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
+        <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
         <tbody>${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}">
           <td style="white-space:nowrap">${formatDateBR(finDataEfetiva(l))}</td>
           <td>${escapeHtml(l.descricao||'—')}</td>
+          <td>${escapeHtml((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome || '—')}</td>
           <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
           <td><span class="pill pago">${icon('check','tiny')} Pago</span></td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
           <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
-        </tr>`).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
+        </tr>`).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
       </table></div>
       <div class="cf-total">Entradas: <strong>${formatBRL(entradas)}</strong> · Saídas: <strong class="neg">${formatBRL(saidas)}</strong> · Saldo do mês em ${escapeHtml(nomeConta)}: <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
     `;
