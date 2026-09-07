@@ -761,13 +761,24 @@
   .fin-modal-actions{margin-top:26px;}
   /* Indicadores do topo do Financeiro interno */
   /* Planilha de Análise Sessões 1:1 */
-  .an-table td{vertical-align:top;}
+  /* Larguras fixas: sem isso o navegador dimensiona cada coluna pelo conteúdo, e a tabela muda de
+     forma a cada aprendizado preenchido — as três colunas de aprendizados ficavam com tamanhos bem
+     diferentes mesmo guardando o mesmo tipo de texto. */
+  .an-table{table-layout:fixed;min-width:1080px;}
+  .an-table th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .an-table td{vertical-align:top;word-break:break-word;}
   .an-table .ps-cell{width:100%;}
   .an-lead{min-width:170px;}
   .an-manual{display:inline-block;margin-top:4px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--shared);background:var(--shared-soft);border-radius:20px;padding:2px 7px;}
-  .an-vend{min-width:170px;}
-  .an-links{display:flex;flex-direction:column;gap:4px;min-width:130px;}
+  .an-vend{min-width:0;}
+  .an-links{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .an-links a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .an-wpp{white-space:nowrap;}
+  .an-table .vendas-actions-cell{white-space:nowrap;}
+  .an-table .vendas-actions-cell .btn-mini{margin:0 0 4px;}
   .an-ap-list{margin-top:5px;font-size:11.5px;color:var(--text-dim);line-height:1.5;}
+  .an-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .an-clamp.expanded{display:block;-webkit-line-clamp:unset;overflow:visible;}
   .fin-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;}
   .fin-resumo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
   .fin-resumo-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);font-weight:700;margin-bottom:6px;}
@@ -7027,7 +7038,7 @@ function renderVendas(){
             <tr class="${v.resultado==='Vendido'?'venda-vendido':''}">
               <td class="vendas-num-cell">${v.numero ?? ''}</td>
               <td>${escapeHtml(shortDateBR(v.dataTexto))}</td>
-              <td style="font-weight:600">${escapeHtml(v.lead)}${(v.videoVenda||'').trim()? `<br><a class="link-btn" style="font-weight:600" href="${escapeAttr(v.videoVenda.trim())}" target="_blank" rel="noopener">${icon('video','tiny')} Vídeo da venda</a>` : ''}</td>
+              <td style="font-weight:600">${escapeHtml(v.lead)}</td>
               <td>${whatsappCell(v.whatsapp)}</td>
               <td>${escapeHtml(v.vendedor)}</td>
               <td>${escapeHtml(v.produto)}</td>
@@ -7054,7 +7065,6 @@ function renderVendas(){
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-venda-data"></div>
       <div class="field full"><label>Lead</label><input class="ps-input" type="text" id="new-venda-lead" placeholder="Nome do lead"></div>
       <div class="field"><label>WhatsApp</label><input class="ps-input" type="text" id="new-venda-whatsapp" placeholder="(00) 00000-0000"></div>
-      <div class="field full"><label>Link do vídeo da venda</label><input class="ps-input" type="text" id="new-venda-video" placeholder="https://..."></div>
       <div class="field"><label>Vendedor</label>
         <select class="ps-input" id="new-venda-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS,'')}</select>
       </div>
@@ -7118,7 +7128,6 @@ function renderVendas(){
       dataTexto: dataIso ? formatDateBR(dataIso) : '',
       lead,
       whatsapp: document.getElementById('new-venda-whatsapp').value.trim(),
-      videoVenda: document.getElementById('new-venda-video').value.trim(),
       vendedor: document.getElementById('new-venda-vendedor').value,
       produto: document.getElementById('new-venda-produto').value,
       upsell: document.getElementById('new-venda-upsell').checked,
@@ -7156,8 +7165,6 @@ function openEditVendaModal(id){
         <input class="ps-input" type="text" id="ev-lead" value="${escapeAttr(v.lead)}">
         <label class="ps-label">WhatsApp</label>
         <input class="ps-input" type="text" id="ev-whatsapp" value="${escapeAttr(v.whatsapp||'')}" placeholder="(00) 00000-0000">
-        <label class="ps-label">Link do vídeo da venda</label>
-        <input class="ps-input" type="text" id="ev-video" value="${escapeAttr(v.videoVenda||'')}" placeholder="https://...">
         <label class="ps-label">Vendedor</label>
         <select class="ps-input" id="ev-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS, v.vendedor)}</select>
         <label class="ps-label">Produto</label>
@@ -7194,7 +7201,6 @@ function openEditVendaModal(id){
     v.dataTexto = dataIso ? formatDateBR(dataIso) : v.dataTexto;
     v.lead = document.getElementById('ev-lead').value.trim();
     v.whatsapp = document.getElementById('ev-whatsapp').value.trim();
-    v.videoVenda = document.getElementById('ev-video').value.trim();
     v.vendedor = document.getElementById('ev-vendedor').value;
     v.produto = document.getElementById('ev-produto').value;
     v.upsell = document.getElementById('ev-upsell').checked;
@@ -7209,7 +7215,7 @@ function openEditVendaModal(id){
     v.contrato = document.getElementById('ev-contrato').value.trim();
     syncVendaSessaoUpdate(v.id, {
       data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null, lead_nome: v.lead || null,
-      whatsapp: v.whatsapp || null, video_venda: v.videoVenda || null,
+      whatsapp: v.whatsapp || null,
       vendedor: v.vendedor || null, produto: v.produto || null, upsell: v.upsell, formato: v.formato || null,
       presenca: v.presenca || null,
       resultado: v.resultado || null, valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
@@ -7246,8 +7252,20 @@ function analiseLinkCell(url, rotulo){
 function analiseAprendizadosCell(a, v){
   const marcados = [a[v.ap[0]], a[v.ap[1]]].map(t=>String(t||'').trim()).filter(Boolean);
   if(!a[v.assistiu] && !marcados.length) return '<span class="pill replay">Pendente</span>';
-  return `${a[v.assistiu]? `<span class="pill pago">${icon('check','tiny')} Assistiu</span>` : '<span class="pill replay">Não assistiu</span>'}
-    ${marcados.length? `<div class="an-ap-list">${marcados.map((t,i)=>`<div>${i+1}. ${escapeHtml(t)}</div>`).join('')}</div>` : ''}`;
+  const situacao = a[v.assistiu]
+    ? `<span class="pill pago">${icon('check','tiny')} Assistiu</span>`
+    : '<span class="pill replay">Não assistiu</span>';
+  if(!marcados.length) return situacao;
+  /* Aprendizado é texto livre e costuma ser longo: sem recolher, uma única linha da planilha
+     estica a altura de todas as outras e a tabela fica desalinhada. Reaproveita o "Ver mais"
+     que o Registro de Sessões 1:1 já usa nas Objeções/Observações. */
+  /* Corta em 3 linhas para todas as linhas da planilha ficarem da mesma altura. O "Ver mais" só
+     aparece quando o texto realmente passa de 3 linhas — isso é medido depois de renderizar
+     (scrollHeight x clientHeight), e não por contagem de caracteres, porque a mesma quantidade de
+     letras ocupa um número de linhas diferente dependendo da largura da coluna. */
+  const cid = `an-${v.key}-${a.id}`;
+  const lista = `<div class="an-ap-list an-clamp" data-anclamp="${cid}">${marcados.map((t,i)=>`<div>${i+1}. ${escapeHtml(t)}</div>`).join('')}</div>`;
+  return situacao + lista + `<button type="button" class="cc-toggle" data-anclamp-toggle="${cid}" style="display:none">Ver mais</button>`;
 }
 function renderAnalise(){
   const busca = analiseBusca.trim().toLowerCase();
@@ -7269,15 +7287,20 @@ function renderAnalise(){
     </div>
 
     <div class="table-wrap"><table class="check-table an-table">
+      <colgroup>
+        <col style="width:15%"><col style="width:9%"><col style="width:8%"><col style="width:11%">
+        ${ANALISE_VENDEDORAS.map(()=>'<col style="width:16%">').join('')}
+        <col style="width:9%">
+      </colgroup>
       <thead><tr>
-        <th>Lead</th><th>WhatsApp</th><th>Data da venda</th><th>Links</th>
+        <th>Lead</th><th>WhatsApp</th><th>Data</th><th>Links</th>
         ${ANALISE_VENDEDORAS.map(v=>`<th>Aprendizados ${v.nome}</th>`).join('')}
         <th></th>
       </tr></thead>
       <tbody>
         ${lista.map(a=>`<tr>
           <td style="font-weight:600">${escapeHtml(a.leadNome||'—')}${a.vendaSessaoId? '' : '<br><span class="an-manual">manual</span>'}</td>
-          <td>${whatsappCell(a.whatsapp)}</td>
+          <td class="an-wpp">${whatsappCell(a.whatsapp)}</td>
           <td style="white-space:nowrap">${escapeHtml(a.dataVenda||'—')}</td>
           <td class="an-links">
             ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo da venda') : ''}
@@ -7299,6 +7322,15 @@ function renderAnalise(){
   buscaEl.addEventListener('change', ()=>renderAnalise());
   buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter') renderAnalise(); });
 
+  /* Mostra o "Ver mais" só onde o texto de fato não coube nas 3 linhas. */
+  document.querySelectorAll('#view-analise [data-anclamp-toggle]').forEach(btn=>{
+    const alvo = document.querySelector(`#view-analise [data-anclamp="${btn.dataset.anclampToggle}"]`);
+    if(!alvo) return;
+    if(alvo.scrollHeight > alvo.clientHeight + 1) btn.style.display = 'block';
+    btn.addEventListener('click', ()=>{
+      btn.textContent = alvo.classList.toggle('expanded') ? 'Ver menos' : 'Ver mais';
+    });
+  });
   document.querySelectorAll('#view-analise [data-an-edit]').forEach(btn=>{
     btn.addEventListener('click',()=>openAnaliseModal(btn.dataset.anEdit));
   });
