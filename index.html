@@ -765,12 +765,8 @@
   .an-table .ps-cell{width:100%;}
   .an-lead{min-width:170px;}
   .an-manual{display:inline-block;margin-top:4px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--shared);background:var(--shared-soft);border-radius:20px;padding:2px 7px;}
-  .an-link-cell{display:flex;flex-direction:column;gap:5px;}
-  .an-vend{min-width:210px;}
-  .an-check{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--text-mute);cursor:pointer;margin-bottom:6px;}
-  .an-check.on{color:var(--success);}
-  .an-check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
-  .an-aprendizado{width:100%;margin-bottom:5px;font-size:12px;resize:vertical;}
+  .an-vend{min-width:180px;}
+  .an-ap-list{margin-top:5px;font-size:11.5px;color:var(--text-dim);line-height:1.5;}
   .fin-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;}
   .fin-resumo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
   .fin-resumo-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);font-weight:700;margin-bottom:6px;}
@@ -2599,7 +2595,7 @@ function mapVendaSessaoRow(row){
     dataTexto: row.data_texto || (row.data_sessao ? formatDateBR(row.data_sessao) : ''),
     lead: row.lead_nome || '', vendedor: row.vendedor || '', produto: row.produto || '',
     upsell: !!row.upsell, formato: row.formato || '',
-    presenca: row.presenca || '', resultado: row.resultado || '',
+    presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '',
     valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
     objecoes: row.objecoes || '', objecoes2: row.objecoes2 || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
     contrato: row.contrato_texto || '',
@@ -2610,7 +2606,7 @@ async function syncVendaSessaoInsert(v){
     numero: v.numero || null, data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null,
     lead_nome: v.lead || null, vendedor: v.vendedor || null, produto: v.produto || null,
     upsell: !!v.upsell, formato: v.formato || null,
-    presenca: v.presenca || null, resultado: v.resultado || null,
+    presenca: v.presenca || null, resultado: v.resultado || null, whatsapp: v.whatsapp || null,
     valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
     objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
     contrato_texto: v.contrato || null,
@@ -6945,6 +6941,21 @@ function renderVendasAlertCards(ind){
       </div>
     </div>`;
 }
+/* WhatsApp do lead: mostra o número como veio e, quando dá pra extrair dígitos suficientes, vira
+   link que abre a conversa direto. Assume DDI 55 quando o número vem só com DDD (padrão brasileiro). */
+function whatsappHref(num){
+  const d = String(num||'').replace(/\D/g,'');
+  if(d.length < 10) return '';
+  return 'https://wa.me/' + (d.length<=11 ? '55'+d : d);
+}
+function whatsappCell(num){
+  const txt = String(num||'').trim();
+  if(!txt) return '';
+  const href = whatsappHref(txt);
+  return href
+    ? `<a class="link-btn" href="${escapeAttr(href)}" target="_blank" rel="noopener">${escapeHtml(txt)}</a>`
+    : escapeHtml(txt);
+}
 function renderVendas(){
   const vendedores = Array.from(new Set(VENDA_SESSOES.map(v=>v.vendedor).filter(Boolean))).sort();
   const resultados = Array.from(new Set(VENDA_SESSOES.map(v=>v.resultado).filter(Boolean))).sort();
@@ -6998,13 +7009,13 @@ function renderVendas(){
     <div class="table-wrap vendas-table-wrap">
       <table class="check-table vendas-table">
         <colgroup>
-          <col style="width:3%"><col style="width:6%"><col style="width:9%"><col style="width:7%">
+          <col style="width:3%"><col style="width:6%"><col style="width:9%"><col style="width:8%"><col style="width:7%">
           <col style="width:8%"><col style="width:4%"><col style="width:8%"><col style="width:6%">
-          <col style="width:7%"><col style="width:6%"><col style="width:13%"><col style="width:14%">
+          <col style="width:6%"><col style="width:5%"><col style="width:12%"><col style="width:12%">
           <col style="width:5%"><col style="width:4%">
         </colgroup>
         <thead><tr>
-          <th>Nº</th><th>Data</th><th>Lead</th><th>Vendedor</th>
+          <th>Nº</th><th>Data</th><th>Lead</th><th>WhatsApp</th><th>Vendedor</th>
           <th>Produto</th><th>Upsell</th><th>Formato</th><th>Presença</th>
           <th>Resultado</th><th>Valor</th><th>Objeções</th><th>Observações</th>
           <th colspan="2">Contrato</th>
@@ -7015,6 +7026,7 @@ function renderVendas(){
               <td class="vendas-num-cell">${v.numero ?? ''}</td>
               <td>${escapeHtml(shortDateBR(v.dataTexto))}</td>
               <td style="font-weight:600">${escapeHtml(v.lead)}</td>
+              <td>${whatsappCell(v.whatsapp)}</td>
               <td>${escapeHtml(v.vendedor)}</td>
               <td>${escapeHtml(v.produto)}</td>
               <td class="vendas-upsell-check">${v.upsell? icon('check','tiny') : icon('xcircle','tiny x-danger')}</td>
@@ -7030,7 +7042,7 @@ function renderVendas(){
                 <button class="btn-mini icon-only danger" data-del-venda="${v.id}" title="Excluir">${icon('trash','tiny')}</button>
               </td>
             </tr>
-          `).join('') || `<tr><td colspan="14" style="color:var(--text-mute)">Nenhuma sessão encontrada com esses filtros.</td></tr>`}
+          `).join('') || `<tr><td colspan="15" style="color:var(--text-mute)">Nenhuma sessão encontrada com esses filtros.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -7039,6 +7051,7 @@ function renderVendas(){
     <div class="add-form">
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-venda-data"></div>
       <div class="field full"><label>Lead</label><input class="ps-input" type="text" id="new-venda-lead" placeholder="Nome do lead"></div>
+      <div class="field"><label>WhatsApp</label><input class="ps-input" type="text" id="new-venda-whatsapp" placeholder="(00) 00000-0000"></div>
       <div class="field"><label>Vendedor</label>
         <select class="ps-input" id="new-venda-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS,'')}</select>
       </div>
@@ -7101,6 +7114,7 @@ function renderVendas(){
       dataSessao: dataIso || null,
       dataTexto: dataIso ? formatDateBR(dataIso) : '',
       lead,
+      whatsapp: document.getElementById('new-venda-whatsapp').value.trim(),
       vendedor: document.getElementById('new-venda-vendedor').value,
       produto: document.getElementById('new-venda-produto').value,
       upsell: document.getElementById('new-venda-upsell').checked,
@@ -7136,6 +7150,8 @@ function openEditVendaModal(id){
         <input class="ps-input" type="date" id="ev-data" value="${escapeAttr(v.dataSessao||'')}">
         <label class="ps-label">Lead</label>
         <input class="ps-input" type="text" id="ev-lead" value="${escapeAttr(v.lead)}">
+        <label class="ps-label">WhatsApp</label>
+        <input class="ps-input" type="text" id="ev-whatsapp" value="${escapeAttr(v.whatsapp||'')}" placeholder="(00) 00000-0000">
         <label class="ps-label">Vendedor</label>
         <select class="ps-input" id="ev-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS, v.vendedor)}</select>
         <label class="ps-label">Produto</label>
@@ -7171,6 +7187,7 @@ function openEditVendaModal(id){
     v.dataSessao = dataIso || '';
     v.dataTexto = dataIso ? formatDateBR(dataIso) : v.dataTexto;
     v.lead = document.getElementById('ev-lead').value.trim();
+    v.whatsapp = document.getElementById('ev-whatsapp').value.trim();
     v.vendedor = document.getElementById('ev-vendedor').value;
     v.produto = document.getElementById('ev-produto').value;
     v.upsell = document.getElementById('ev-upsell').checked;
@@ -7185,6 +7202,7 @@ function openEditVendaModal(id){
     v.contrato = document.getElementById('ev-contrato').value.trim();
     syncVendaSessaoUpdate(v.id, {
       data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null, lead_nome: v.lead || null,
+      whatsapp: v.whatsapp || null,
       vendedor: v.vendedor || null, produto: v.produto || null, upsell: v.upsell, formato: v.formato || null,
       presenca: v.presenca || null,
       resultado: v.resultado || null, valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
@@ -7198,46 +7216,39 @@ function openEditVendaModal(id){
 /* ================= VIEW: ANÁLISE SESSÕES 1:1 (equipe interna + vendedora) =================
    Planilha derivada do Registro de Sessões 1:1: toda sessão registrada lá cria sozinha uma linha
    aqui (o banco faz isso por gatilho, então vale mesmo se o registro vier de outro caminho).
-   O Diego cola o link da análise; cada vendedora marca que assistiu e escreve dois aprendizados.
-   Também dá para adicionar um lead manualmente, para casos que não vieram do registro. */
+   Segue o mesmo formato do Registro: a tabela é só de leitura e a edição acontece dentro de um
+   modal, com botão de salvar — assim ninguém altera a planilha sem querer ao passar o mouse ou
+   clicar numa célula. A análise do Diego e os aprendizados de cada vendedora entram depois, pelo
+   mesmo modal (botão "Analisar"), que é como o trabalho realmente acontece: a sessão é registrada
+   primeiro e a análise vem em outro momento. */
 const ANALISE_VENDEDORAS = [
   {key:'carmem',  nome:'Carmem',  assistiu:'carmemAssistiu',  campoAssistiu:'carmem_assistiu',
    ap:['carmemAp1','carmemAp2'],  campoAp:['carmem_aprendizado1','carmem_aprendizado2']},
   {key:'viviane', nome:'Viviane', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu',
    ap:['vivianeAp1','vivianeAp2'], campoAp:['viviane_aprendizado1','viviane_aprendizado2']},
 ];
+function analiseLinkCell(url, rotulo){
+  const u = String(url||'').trim();
+  if(!u) return '<span style="color:var(--text-mute)">—</span>';
+  return /^https?:\/\//i.test(u)
+    ? `<a class="link-btn" href="${escapeAttr(u)}" target="_blank" rel="noopener">${escapeHtml(rotulo)}</a>`
+    : escapeHtml(u);
+}
+function analiseAprendizadosCell(a, v){
+  const marcados = [a[v.ap[0]], a[v.ap[1]]].map(t=>String(t||'').trim()).filter(Boolean);
+  if(!a[v.assistiu] && !marcados.length) return '<span class="pill replay">Pendente</span>';
+  return `${a[v.assistiu]? `<span class="pill pago">${icon('check','tiny')} Assistiu</span>` : '<span class="pill replay">Não assistiu</span>'}
+    ${marcados.length? `<div class="an-ap-list">${marcados.map((t,i)=>`<div>${i+1}. ${escapeHtml(t)}</div>`).join('')}</div>` : ''}`;
+}
 function renderAnalise(){
   const busca = analiseBusca.trim().toLowerCase();
   const lista = ANALISE_SESSOES
-    .filter(a=>!busca || (a.leadNome||'').toLowerCase().includes(busca))
+    .filter(a=>!busca || (a.leadNome||'').toLowerCase().includes(busca) || (a.whatsapp||'').toLowerCase().includes(busca))
     .slice()
     .sort((a,b)=> (b.ordem||0)-(a.ordem||0) || String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 
   const comAnalise = ANALISE_SESSOES.filter(a=>(a.linkAnalise||'').trim()).length;
-  const pendentes = ANALISE_SESSOES.filter(a=>{
-    const temAnalise = (a.linkAnalise||'').trim();
-    return temAnalise && (!a.carmemAssistiu || !a.vivianeAssistiu);
-  }).length;
-
-  const linkCell = (a, campo, campoDb, rotulo)=>{
-    const url = (a[campo]||'').trim();
-    return `<div class="an-link-cell">
-      ${url? `<a class="btn-mini" href="${escapeAttr(url)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : ''}
-      <input class="ps-input ps-cell" data-an-campo="${campoDb}" data-an-prop="${campo}" data-an-id="${a.id}"
-             value="${escapeAttr(a[campo]||'')}" placeholder="${rotulo}">
-    </div>`;
-  };
-
-  const vendedoraCells = (a)=> ANALISE_VENDEDORAS.map(v=>`
-    <td class="an-vend">
-      <label class="an-check ${a[v.assistiu]?'on':''}">
-        <input type="checkbox" data-an-assistiu="${v.campoAssistiu}" data-an-prop="${v.assistiu}" data-an-id="${a.id}" ${a[v.assistiu]?'checked':''}>
-        <span>${a[v.assistiu]? 'Assistiu' : 'Não assistiu'}</span>
-      </label>
-      ${[0,1].map(i=>`<textarea class="ps-input an-aprendizado" rows="2"
-          data-an-campo="${v.campoAp[i]}" data-an-prop="${v.ap[i]}" data-an-id="${a.id}"
-          placeholder="Aprendizado ${i+1}">${escapeHtml(a[v.ap[i]]||'')}</textarea>`).join('')}
-    </td>`).join('');
+  const pendentes = ANALISE_SESSOES.filter(a=>(a.linkAnalise||'').trim() && (!a.carmemAssistiu || !a.vivianeAssistiu)).length;
 
   document.getElementById('view-analise').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cada sessão registrada em "Registro de Sessões 1:1" entra aqui automaticamente.</div>
@@ -7249,9 +7260,9 @@ function renderAnalise(){
     </div>
 
     <h2 class="section-title">${icon('chart')} Análise Sessões 1:1</h2>
-    <p class="section-sub" style="margin-top:-6px">O Diego cola o link da análise; cada vendedora marca que assistiu e registra dois aprendizados. Tudo salva sozinho ao sair do campo.</p>
+    <p class="section-sub" style="margin-top:-6px">A tabela é só de leitura. Clique em "Analisar" na linha para anexar o link da análise e registrar os aprendizados.</p>
     <div class="add-form" style="margin-bottom:14px">
-      <div class="field full"><label>Buscar por lead</label>
+      <div class="field full"><label>Buscar por lead ou WhatsApp</label>
         <input class="ps-input" type="text" id="analise-busca" value="${escapeAttr(analiseBusca)}" placeholder="Digite o nome do lead">
       </div>
       <div class="actions"><button class="btn-accent" id="analise-add">${icon('plus','ps-plus')} Adicionar lead manualmente</button></div>
@@ -7259,26 +7270,23 @@ function renderAnalise(){
 
     <div class="table-wrap"><table class="check-table an-table">
       <thead><tr>
-        <th>Lead</th><th>Data da venda</th><th>Vídeo da venda</th><th>Análise (Diego)</th>
+        <th>Lead</th><th>WhatsApp</th><th>Data da venda</th><th>Vídeo</th><th>Análise (Diego)</th>
         ${ANALISE_VENDEDORAS.map(v=>`<th>Aprendizados ${v.nome}</th>`).join('')}
         <th></th>
       </tr></thead>
       <tbody>
         ${lista.map(a=>`<tr>
-          <td class="an-lead">
-            <input class="ps-input ps-cell" data-an-campo="lead_nome" data-an-prop="leadNome" data-an-id="${a.id}"
-                   value="${escapeAttr(a.leadNome)}" placeholder="Nome do lead">
-            ${a.vendaSessaoId? '' : '<span class="an-manual">manual</span>'}
+          <td style="font-weight:600">${escapeHtml(a.leadNome||'—')}${a.vendaSessaoId? '' : '<br><span class="an-manual">manual</span>'}</td>
+          <td>${whatsappCell(a.whatsapp)}</td>
+          <td style="white-space:nowrap">${escapeHtml(a.dataVenda||'—')}</td>
+          <td>${analiseLinkCell(a.linkVideo,'Ver vídeo')}</td>
+          <td>${analiseLinkCell(a.linkAnalise,'Ver análise')}</td>
+          ${ANALISE_VENDEDORAS.map(v=>`<td class="an-vend">${analiseAprendizadosCell(a,v)}</td>`).join('')}
+          <td class="vendas-actions-cell">
+            <button class="btn-mini" data-an-edit="${a.id}" title="Analisar">${icon('edit','tiny')} Analisar</button>
+            <button class="btn-mini icon-only danger" data-an-del="${a.id}" title="Remover da planilha">${icon('trash','tiny')}</button>
           </td>
-          <td style="min-width:120px">
-            <input class="ps-input ps-cell" data-an-campo="data_venda" data-an-prop="dataVenda" data-an-id="${a.id}"
-                   value="${escapeAttr(a.dataVenda)}" placeholder="dd/mm/aaaa">
-          </td>
-          <td style="min-width:170px">${linkCell(a,'linkVideo','link_video','Link do vídeo')}</td>
-          <td style="min-width:170px">${linkCell(a,'linkAnalise','link_analise','Link da análise')}</td>
-          ${vendedoraCells(a)}
-          <td><button class="btn-mini danger" data-an-del="${a.id}">${icon('trash')} Remover</button></td>
-        </tr>`).join('') || `<tr><td colspan="${5+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse nome.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
+        </tr>`).join('') || `<tr><td colspan="${6+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse termo.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
       </tbody>
     </table></div>
   `;
@@ -7288,24 +7296,8 @@ function renderAnalise(){
   buscaEl.addEventListener('change', ()=>renderAnalise());
   buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter') renderAnalise(); });
 
-  /* Texto salva ao sair do campo (blur) e enquanto digita (input, com atraso). Sem re-render aqui:
-     re-desenhar a tabela no meio da digitação tiraria o foco do campo. */
-  document.querySelectorAll('#view-analise [data-an-campo]').forEach(el=>{
-    const id = el.dataset.anId, campo = el.dataset.anCampo, prop = el.dataset.anProp;
-    const item = ANALISE_SESSOES.find(a=>a.id===id);
-    const salvar = ()=>{ if(item) item[prop] = el.value; syncAnaliseUpdate(id, {[campo]: el.value}); };
-    el.addEventListener('input', salvar);
-    el.addEventListener('blur', ()=>{ if(item) item[prop] = el.value; syncAnaliseUpdateNow(id, {[campo]: el.value}); });
-  });
-
-  document.querySelectorAll('#view-analise [data-an-assistiu]').forEach(el=>{
-    el.addEventListener('change', ()=>{
-      const id = el.dataset.anId, campo = el.dataset.anAssistiu, prop = el.dataset.anProp;
-      const item = ANALISE_SESSOES.find(a=>a.id===id);
-      if(item) item[prop] = el.checked;
-      syncAnaliseUpdateNow(id, {[campo]: el.checked});
-      renderAnalise();
-    });
+  document.querySelectorAll('#view-analise [data-an-edit]').forEach(btn=>{
+    btn.addEventListener('click',()=>openAnaliseModal(btn.dataset.anEdit));
   });
 
   document.getElementById('analise-add').addEventListener('click', async ()=>{
@@ -7316,8 +7308,7 @@ function renderAnalise(){
       ANALISE_SESSOES.unshift(mapAnaliseRow(row));
       analiseBusca = '';
       renderAnalise();
-      const primeiro = document.querySelector('#view-analise [data-an-campo="lead_nome"]');
-      if(primeiro) primeiro.focus();
+      openAnaliseModal(row.id);
     }catch(e){ console.error(e); btn.disabled = false; }
   });
 
@@ -7332,6 +7323,66 @@ function renderAnalise(){
       syncAnaliseDelete(id);
       renderAnalise();
     });
+  });
+}
+function openAnaliseModal(id){
+  const a = ANALISE_SESSOES.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Análise Sessões 1:1</div>
+      <h3>${escapeHtml(a.leadNome || 'Novo lead')}</h3>
+      <div class="ps-section">
+        <label class="ps-label">Lead</label>
+        <input class="ps-input" type="text" id="an-lead" value="${escapeAttr(a.leadNome)}" placeholder="Nome do lead">
+        <label class="ps-label">WhatsApp</label>
+        <input class="ps-input" type="text" id="an-whatsapp" value="${escapeAttr(a.whatsapp||'')}" placeholder="(00) 00000-0000">
+        <label class="ps-label">Data da venda</label>
+        <input class="ps-input" type="text" id="an-data" value="${escapeAttr(a.dataVenda)}" placeholder="dd/mm/aaaa">
+        <label class="ps-label">Link do vídeo da venda</label>
+        <input class="ps-input" type="text" id="an-video" value="${escapeAttr(a.linkVideo)}" placeholder="https://...">
+        <label class="ps-label">Link da análise (Diego)</label>
+        <input class="ps-input" type="text" id="an-analise" value="${escapeAttr(a.linkAnalise)}" placeholder="https://...">
+      </div>
+      ${ANALISE_VENDEDORAS.map(v=>`
+      <div class="ps-section">
+        <h4 class="ps-h">Aprendizados ${v.nome}</h4>
+        <label class="ps-label" style="display:flex;align-items:center;gap:8px;margin-top:2px">
+          <input type="checkbox" id="an-${v.key}-assistiu" ${a[v.assistiu]?'checked':''}> Já assistiu a análise
+        </label>
+        <label class="ps-label">Aprendizado 1</label>
+        <textarea class="ps-input" id="an-${v.key}-ap1" rows="2">${escapeHtml(a[v.ap[0]]||'')}</textarea>
+        <label class="ps-label">Aprendizado 2</label>
+        <textarea class="ps-input" id="an-${v.key}-ap2" rows="2">${escapeHtml(a[v.ap[1]]||'')}</textarea>
+      </div>`).join('')}
+      <div class="modal-actions">
+        <button class="btn-accent" id="an-save">Salvar alterações</button>
+        <button class="btn-outline" id="modal-close-2">Fechar</button>
+      </div>
+    </div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  document.getElementById('an-save').addEventListener('click', ()=>{
+    a.leadNome = document.getElementById('an-lead').value.trim();
+    a.whatsapp = document.getElementById('an-whatsapp').value.trim();
+    a.dataVenda = document.getElementById('an-data').value.trim();
+    a.linkVideo = document.getElementById('an-video').value.trim();
+    a.linkAnalise = document.getElementById('an-analise').value.trim();
+    const campos = {
+      lead_nome: a.leadNome, whatsapp: a.whatsapp, data_venda: a.dataVenda,
+      link_video: a.linkVideo, link_analise: a.linkAnalise,
+    };
+    ANALISE_VENDEDORAS.forEach(v=>{
+      a[v.assistiu] = document.getElementById(`an-${v.key}-assistiu`).checked;
+      a[v.ap[0]] = document.getElementById(`an-${v.key}-ap1`).value.trim();
+      a[v.ap[1]] = document.getElementById(`an-${v.key}-ap2`).value.trim();
+      campos[v.campoAssistiu] = a[v.assistiu];
+      campos[v.campoAp[0]] = a[v.ap[0]];
+      campos[v.campoAp[1]] = a[v.ap[1]];
+    });
+    syncAnaliseUpdateNow(a.id, campos);
+    closeModal();
+    renderAnalise();
   });
 }
 function exportVendasPDF(lista, indicadores){
