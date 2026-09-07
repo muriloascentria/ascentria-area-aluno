@@ -766,16 +766,28 @@
      diferentes mesmo guardando o mesmo tipo de texto. */
   .an-table{table-layout:fixed;min-width:1080px;}
   .an-table th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* Alinhamento das linhas: as etiquetas de situação tinham caixas diferentes entre si
+     ("Assistiu" é inline-flex por causa do ícone; "Pendente" era inline puro), então o conteúdo de
+     cada coluna começava alguns pixels acima ou abaixo do vizinho e a linha parecia torta. Aqui todas
+     passam a ter a mesma caixa e o mesmo alinhamento pelo topo, junto com a primeira linha de texto
+     das outras colunas. */
+  .an-table .pill{display:inline-flex;align-items:center;gap:4px;vertical-align:top;min-height:18px;box-sizing:border-box;}
+  .an-table td{line-height:1.45;}
+  .an-table .vendas-actions-cell{text-align:right;}
+  .an-table .vendas-actions-cell .btn-mini{margin:0;vertical-align:top;}
   .an-table td{vertical-align:top;word-break:break-word;}
   .an-table .ps-cell{width:100%;}
   .an-lead{min-width:170px;}
   .an-manual{display:inline-block;margin-top:4px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--shared);background:var(--shared-soft);border-radius:20px;padding:2px 7px;}
   .an-vend{min-width:0;}
-  .an-links{display:flex;flex-direction:column;gap:4px;min-width:0;}
-  .an-links a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Links e WhatsApp como blocos com a mesma entrelinha das demais células — em flex o conteúdo
+     encostava no topo do padding e ficava 1–2px acima do texto das outras colunas. */
+  .an-links{min-width:0;}
+  .an-links a{display:block;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .an-links a + a{margin-top:4px;}
   .an-wpp{white-space:nowrap;}
+  .an-wpp a{display:inline-block;line-height:1.45;vertical-align:top;}
   .an-table .vendas-actions-cell{white-space:nowrap;}
-  .an-table .vendas-actions-cell .btn-mini{margin:0 0 4px;}
   .an-ap-list{margin-top:5px;font-size:11.5px;color:var(--text-dim);line-height:1.5;}
   .an-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
   .an-clamp.expanded{display:block;-webkit-line-clamp:unset;overflow:visible;}
