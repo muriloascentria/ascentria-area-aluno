@@ -760,6 +760,17 @@
   .fin-ocorr-table{margin-top:12px;}
   .fin-modal-actions{margin-top:26px;}
   /* Indicadores do topo do Financeiro interno */
+  /* Planilha de Análise Sessões 1:1 */
+  .an-table td{vertical-align:top;}
+  .an-table .ps-cell{width:100%;}
+  .an-lead{min-width:170px;}
+  .an-manual{display:inline-block;margin-top:4px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--shared);background:var(--shared-soft);border-radius:20px;padding:2px 7px;}
+  .an-link-cell{display:flex;flex-direction:column;gap:5px;}
+  .an-vend{min-width:210px;}
+  .an-check{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--text-mute);cursor:pointer;margin-bottom:6px;}
+  .an-check.on{color:var(--success);}
+  .an-check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+  .an-aprendizado{width:100%;margin-bottom:5px;font-size:12px;resize:vertical;}
   .fin-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;}
   .fin-resumo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
   .fin-resumo-card .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);font-weight:700;margin-bottom:6px;}
@@ -1116,6 +1127,7 @@
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
     <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-analise" data-view="analise" style="display:none"></button>
     <button class="nav-item restrict" id="nav-clientes" data-view="clientes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
 
@@ -1180,6 +1192,7 @@
       <div class="view" id="view-conteudo"></div>
       <div class="view" id="view-visaogeral"></div>
       <div class="view" id="view-vendas"></div>
+      <div class="view" id="view-analise"></div>
       <div class="view" id="view-clientes"></div>
       <div class="view" id="view-financeiro"></div>
     </div>
@@ -1252,6 +1265,7 @@ const NAV_LABELS = {
   conteudo:['upload','Gerenciar Conteúdo'],
   visaogeral:['users','Visão Geral'],
   vendas:['idcard','Registro de Sessões 1:1'],
+  analise:['chart','Análise Sessões 1:1'],
   clientes:['idcard','Registro de Clientes'],
   financeiro:['money','Financeiro'],
 };
@@ -1866,6 +1880,8 @@ let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver boots
 
 let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/visível pra equipe interna, ver bootstrapData
+let ANALISE_SESSOES = []; // Análise Sessões 1:1 — uma linha por sessão registrada (ver bootstrapData)
+let analiseBusca = '';
 let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
 let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/visível pra equipe interna, ver bootstrapData
 /* Financeiro interno da Ascentria (equipe interna) — controle de Contas a Receber/Pagar da empresa,
@@ -2196,6 +2212,9 @@ async function bootstrapData(){
     VENDA_SESSOES.length = 0;
     const { data: vsRows } = await sb.from('venda_sessoes').select('*').order('numero',{ascending:true});
     (vsRows||[]).forEach(r=>VENDA_SESSOES.push(mapVendaSessaoRow(r)));
+    ANALISE_SESSOES.length = 0;
+    const { data: anRows } = await sb.from('analise_sessoes').select('*').order('ordem',{ascending:false});
+    (anRows||[]).forEach(r=>ANALISE_SESSOES.push(mapAnaliseRow(r)));
     PEOPLE = {};
     if(me) PEOPLE[me.id] = {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, role:me.role};
     currentStudentId = null;
@@ -2289,6 +2308,10 @@ async function bootstrapData(){
     VENDA_SESSOES.length = 0;
     const { data: vsRows } = await sb.from('venda_sessoes').select('*').order('numero',{ascending:true});
     (vsRows||[]).forEach(r=>VENDA_SESSOES.push(mapVendaSessaoRow(r)));
+    // Análise Sessões 1:1 — planilha derivada do registro acima, mesma regra de acesso.
+    ANALISE_SESSOES.length = 0;
+    const { data: anRows } = await sb.from('analise_sessoes').select('*').order('ordem',{ascending:false});
+    (anRows||[]).forEach(r=>ANALISE_SESSOES.push(mapAnaliseRow(r)));
     // Registro de Clientes — cadastros feitos pelo formulário público (sem login), só visíveis/editáveis
     // (TAG) pela equipe interna, mesma lógica das duas listas acima.
     CLIENTES_REGISTRO.length = 0;
@@ -2544,6 +2567,31 @@ function syncMaterialDelete(id){
   syncNow(sb.from('materials').delete().eq('id', id));
 }
 /* ---- Registro de Sessões 1:1 (Vendas) — só equipe interna, importado da planilha de vendas ---- */
+function mapAnaliseRow(r){
+  return {
+    id:r.id, vendaSessaoId:r.venda_sessao_id||null, leadNome:r.lead_nome||'', dataVenda:r.data_venda||'',
+    linkVideo:r.link_video||'', linkAnalise:r.link_analise||'',
+    carmemAssistiu:!!r.carmem_assistiu, carmemAp1:r.carmem_aprendizado1||'', carmemAp2:r.carmem_aprendizado2||'',
+    vivianeAssistiu:!!r.viviane_assistiu, vivianeAp1:r.viviane_aprendizado1||'', vivianeAp2:r.viviane_aprendizado2||'',
+    ordem:r.ordem, createdAt:r.created_at,
+  };
+}
+/* Campos de texto gravam com um respiro curto: a pessoa está digitando, então esperamos ela parar
+   antes de mandar pro banco, em vez de gravar a cada tecla. */
+function syncAnaliseUpdate(id, fields){
+  debounceSync('analise:'+id+':'+Object.keys(fields).join(','), ()=>sb.from('analise_sessoes').update(fields).eq('id', id));
+}
+function syncAnaliseUpdateNow(id, fields){
+  syncNow(sb.from('analise_sessoes').update(fields).eq('id', id));
+}
+async function syncAnaliseInsert(leadNome){
+  const { data, error } = await sb.from('analise_sessoes').insert({lead_nome:leadNome||''}).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncAnaliseDelete(id){
+  syncNow(sb.from('analise_sessoes').delete().eq('id', id));
+}
 function mapVendaSessaoRow(row){
   return {
     id: row.id, numero: row.numero,
@@ -2975,15 +3023,17 @@ function setRoleVendas(){
   document.getElementById('role-toggle').style.display = 'none';
   document.querySelectorAll('.nav-item[data-view]').forEach(el=>{ el.style.display = 'none'; });
   document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
-  const navVendas = document.getElementById('nav-vendas');
-  if(navVendas) navVendas.style.display = 'flex';
+  ['nav-vendas','nav-analise'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'flex';
+  });
   const grupo = document.getElementById('staff-group-label');
   if(grupo) grupo.style.display = 'flex';
   document.getElementById('profile-dropdown-label').style.display = 'none';
   document.getElementById('profile-options').style.display = 'none';
   document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados</span>`;
   renderProfile();
-  if(currentView !== 'vendas') goTo('vendas');
+  if(!['vendas','analise'].includes(currentView)) goTo('vendas');
 }
 function setRole(role){
   if(currentUserRole==='vendas'){ setRoleVendas(); return; }
@@ -3005,6 +3055,7 @@ function setRole(role){
   document.getElementById('nav-conteudo').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-vendas').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-clientes').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-analise').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-financeiro').style.display = staffNav ? 'flex' : 'none';
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
@@ -3102,7 +3153,7 @@ function goTo(view){
   /* Trava final: a vendedora só abre o Registro de Sessões 1:1. Os outros itens já estão escondidos
      do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
-  if(currentUserRole==='vendas' && view!=='vendas') view = 'vendas';
+  if(currentUserRole==='vendas' && !['vendas','analise'].includes(view)) view = 'vendas';
   currentView = view;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -3121,7 +3172,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, clientes:renderClientes, financeiro:renderFinanceiro};
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -7142,6 +7193,145 @@ function openEditVendaModal(id){
     });
     closeModal();
     renderVendas();
+  });
+}
+/* ================= VIEW: ANÁLISE SESSÕES 1:1 (equipe interna + vendedora) =================
+   Planilha derivada do Registro de Sessões 1:1: toda sessão registrada lá cria sozinha uma linha
+   aqui (o banco faz isso por gatilho, então vale mesmo se o registro vier de outro caminho).
+   O Diego cola o link da análise; cada vendedora marca que assistiu e escreve dois aprendizados.
+   Também dá para adicionar um lead manualmente, para casos que não vieram do registro. */
+const ANALISE_VENDEDORAS = [
+  {key:'carmem',  nome:'Carmem',  assistiu:'carmemAssistiu',  campoAssistiu:'carmem_assistiu',
+   ap:['carmemAp1','carmemAp2'],  campoAp:['carmem_aprendizado1','carmem_aprendizado2']},
+  {key:'viviane', nome:'Viviane', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu',
+   ap:['vivianeAp1','vivianeAp2'], campoAp:['viviane_aprendizado1','viviane_aprendizado2']},
+];
+function renderAnalise(){
+  const busca = analiseBusca.trim().toLowerCase();
+  const lista = ANALISE_SESSOES
+    .filter(a=>!busca || (a.leadNome||'').toLowerCase().includes(busca))
+    .slice()
+    .sort((a,b)=> (b.ordem||0)-(a.ordem||0) || String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+
+  const comAnalise = ANALISE_SESSOES.filter(a=>(a.linkAnalise||'').trim()).length;
+  const pendentes = ANALISE_SESSOES.filter(a=>{
+    const temAnalise = (a.linkAnalise||'').trim();
+    return temAnalise && (!a.carmemAssistiu || !a.vivianeAssistiu);
+  }).length;
+
+  const linkCell = (a, campo, campoDb, rotulo)=>{
+    const url = (a[campo]||'').trim();
+    return `<div class="an-link-cell">
+      ${url? `<a class="btn-mini" href="${escapeAttr(url)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : ''}
+      <input class="ps-input ps-cell" data-an-campo="${campoDb}" data-an-prop="${campo}" data-an-id="${a.id}"
+             value="${escapeAttr(a[campo]||'')}" placeholder="${rotulo}">
+    </div>`;
+  };
+
+  const vendedoraCells = (a)=> ANALISE_VENDEDORAS.map(v=>`
+    <td class="an-vend">
+      <label class="an-check ${a[v.assistiu]?'on':''}">
+        <input type="checkbox" data-an-assistiu="${v.campoAssistiu}" data-an-prop="${v.assistiu}" data-an-id="${a.id}" ${a[v.assistiu]?'checked':''}>
+        <span>${a[v.assistiu]? 'Assistiu' : 'Não assistiu'}</span>
+      </label>
+      ${[0,1].map(i=>`<textarea class="ps-input an-aprendizado" rows="2"
+          data-an-campo="${v.campoAp[i]}" data-an-prop="${v.ap[i]}" data-an-id="${a.id}"
+          placeholder="Aprendizado ${i+1}">${escapeHtml(a[v.ap[i]]||'')}</textarea>`).join('')}
+    </td>`).join('');
+
+  document.getElementById('view-analise').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cada sessão registrada em "Registro de Sessões 1:1" entra aqui automaticamente.</div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Sessões na planilha</div><div class="value">${ANALISE_SESSOES.length}</div></div>
+      <div class="kpi-tile"><div class="label">Com análise do Diego</div><div class="value">${comAnalise}</div></div>
+      <div class="kpi-tile"><div class="label">Análises a assistir</div><div class="value">${pendentes}</div></div>
+    </div>
+
+    <h2 class="section-title">${icon('chart')} Análise Sessões 1:1</h2>
+    <p class="section-sub" style="margin-top:-6px">O Diego cola o link da análise; cada vendedora marca que assistiu e registra dois aprendizados. Tudo salva sozinho ao sair do campo.</p>
+    <div class="add-form" style="margin-bottom:14px">
+      <div class="field full"><label>Buscar por lead</label>
+        <input class="ps-input" type="text" id="analise-busca" value="${escapeAttr(analiseBusca)}" placeholder="Digite o nome do lead">
+      </div>
+      <div class="actions"><button class="btn-accent" id="analise-add">${icon('plus','ps-plus')} Adicionar lead manualmente</button></div>
+    </div>
+
+    <div class="table-wrap"><table class="check-table an-table">
+      <thead><tr>
+        <th>Lead</th><th>Data da venda</th><th>Vídeo da venda</th><th>Análise (Diego)</th>
+        ${ANALISE_VENDEDORAS.map(v=>`<th>Aprendizados ${v.nome}</th>`).join('')}
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${lista.map(a=>`<tr>
+          <td class="an-lead">
+            <input class="ps-input ps-cell" data-an-campo="lead_nome" data-an-prop="leadNome" data-an-id="${a.id}"
+                   value="${escapeAttr(a.leadNome)}" placeholder="Nome do lead">
+            ${a.vendaSessaoId? '' : '<span class="an-manual">manual</span>'}
+          </td>
+          <td style="min-width:120px">
+            <input class="ps-input ps-cell" data-an-campo="data_venda" data-an-prop="dataVenda" data-an-id="${a.id}"
+                   value="${escapeAttr(a.dataVenda)}" placeholder="dd/mm/aaaa">
+          </td>
+          <td style="min-width:170px">${linkCell(a,'linkVideo','link_video','Link do vídeo')}</td>
+          <td style="min-width:170px">${linkCell(a,'linkAnalise','link_analise','Link da análise')}</td>
+          ${vendedoraCells(a)}
+          <td><button class="btn-mini danger" data-an-del="${a.id}">${icon('trash')} Remover</button></td>
+        </tr>`).join('') || `<tr><td colspan="${5+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse nome.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
+      </tbody>
+    </table></div>
+  `;
+
+  const buscaEl = document.getElementById('analise-busca');
+  buscaEl.addEventListener('input', e=>{ analiseBusca = e.target.value; });
+  buscaEl.addEventListener('change', ()=>renderAnalise());
+  buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter') renderAnalise(); });
+
+  /* Texto salva ao sair do campo (blur) e enquanto digita (input, com atraso). Sem re-render aqui:
+     re-desenhar a tabela no meio da digitação tiraria o foco do campo. */
+  document.querySelectorAll('#view-analise [data-an-campo]').forEach(el=>{
+    const id = el.dataset.anId, campo = el.dataset.anCampo, prop = el.dataset.anProp;
+    const item = ANALISE_SESSOES.find(a=>a.id===id);
+    const salvar = ()=>{ if(item) item[prop] = el.value; syncAnaliseUpdate(id, {[campo]: el.value}); };
+    el.addEventListener('input', salvar);
+    el.addEventListener('blur', ()=>{ if(item) item[prop] = el.value; syncAnaliseUpdateNow(id, {[campo]: el.value}); });
+  });
+
+  document.querySelectorAll('#view-analise [data-an-assistiu]').forEach(el=>{
+    el.addEventListener('change', ()=>{
+      const id = el.dataset.anId, campo = el.dataset.anAssistiu, prop = el.dataset.anProp;
+      const item = ANALISE_SESSOES.find(a=>a.id===id);
+      if(item) item[prop] = el.checked;
+      syncAnaliseUpdateNow(id, {[campo]: el.checked});
+      renderAnalise();
+    });
+  });
+
+  document.getElementById('analise-add').addEventListener('click', async ()=>{
+    const btn = document.getElementById('analise-add');
+    btn.disabled = true;
+    try{
+      const row = await syncAnaliseInsert('');
+      ANALISE_SESSOES.unshift(mapAnaliseRow(row));
+      analiseBusca = '';
+      renderAnalise();
+      const primeiro = document.querySelector('#view-analise [data-an-campo="lead_nome"]');
+      if(primeiro) primeiro.focus();
+    }catch(e){ console.error(e); btn.disabled = false; }
+  });
+
+  document.querySelectorAll('#view-analise [data-an-del]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id = btn.dataset.anDel;
+      const item = ANALISE_SESSOES.find(a=>a.id===id);
+      const nome = (item && item.leadNome) || 'esta linha';
+      if(!confirmDelete(`Remover "${nome}" da planilha de análise? Isso não apaga a sessão no Registro de Sessões 1:1.`)) return;
+      const i = ANALISE_SESSOES.findIndex(a=>a.id===id);
+      if(i>=0) ANALISE_SESSOES.splice(i,1);
+      syncAnaliseDelete(id);
+      renderAnalise();
+    });
   });
 }
 function exportVendasPDF(lista, indicadores){
