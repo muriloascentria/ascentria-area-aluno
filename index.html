@@ -7256,17 +7256,8 @@ function renderAnalise(){
     .slice()
     .sort((a,b)=> (b.ordem||0)-(a.ordem||0) || String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 
-  const comAnalise = ANALISE_SESSOES.filter(a=>(a.linkAnalise||'').trim()).length;
-  const pendentes = ANALISE_SESSOES.filter(a=>(a.linkAnalise||'').trim() && (!a.carmemAssistiu || !a.vivianeAssistiu)).length;
-
   document.getElementById('view-analise').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cada sessão registrada em "Registro de Sessões 1:1" entra aqui automaticamente.</div>
-
-    <div class="kpi-row">
-      <div class="kpi-tile"><div class="label">Sessões na planilha</div><div class="value">${ANALISE_SESSOES.length}</div></div>
-      <div class="kpi-tile"><div class="label">Com análise do Diego</div><div class="value">${comAnalise}</div></div>
-      <div class="kpi-tile"><div class="label">Análises a assistir</div><div class="value">${pendentes}</div></div>
-    </div>
 
     <h2 class="section-title">${icon('chart')} Análise Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">A tabela é só de leitura. Clique em "Analisar" na linha para anexar o link da análise e registrar os aprendizados.</p>
