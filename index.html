@@ -1900,6 +1900,92 @@ const POST_TYPES = {
   apresentacao: {label:'Apresentação',  icon:'idcard',  css:'apresentacao'},
 };
 let COMMUNITY_POSTS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
+/* ---- Carregamento sob demanda da Comunidade ----
+   Antes, TODA abertura da plataforma baixava a comunidade inteira: todas as publicações, todos os
+   comentários e TODAS as curtidas, linha por linha — inclusive os comentários de aula, que são a maior
+   parte e nunca aparecem no mural. Como isso só cresce, a plataforma ficava mais lenta a cada mês.
+   Agora: o mural vem em páginas, os comentários de cada aula só chegam quando a aula é aberta, e as
+   curtidas viram uma contagem no banco (o app só precisa do total e de saber se EU curti). */
+const MURAL_PAGINA = 25;
+const MURAL_ESTADO = { mentorado:{fim:false, carregando:false}, curso:{fim:false, carregando:false} };
+const AULAS_COMENTADAS = new Set();  // ids de aula cujos comentários já foram baixados
+let MEUS_LIKES = new Set();          // ids de publicações que EU curti
+let PENDENCIAS = [];                 // sininho — vem da função comunidade_pendencias() no banco
+let EU_JA_APRESENTEI = false;        // se já publiquei minha apresentação (checado direto no banco)
+let cursoAbertoNoModal = null;
+
+function mapPostRow(p){
+  return {
+    id:p.id, authorId:p.author_id, type:p.type, time:timeAgo(p.created_at), text:p.text,
+    courseId:p.course_id||null, audience:p.audience||'mentorado', notifyAuthor:!!p.notify_author,
+    likes: p.likes_count || 0,   // contador mantido por gatilho no banco (ver community_likes_recount)
+    liked: MEUS_LIKES.has(p.id),
+    comments:(p.community_comments||[]).map(c=>({id:c.id, authorId:c.author_id, text:c.text, replyTo:c.reply_to_comment_id||null, notifyAuthor:!!c.notify_author})),
+  };
+}
+/* Junta linhas novas ao que já está na memória sem duplicar — o mesmo post pode chegar por mais de um
+   caminho (página do mural, comentários de uma aula, algo publicado agora). Mantém a ordem por data. */
+function mergeCommunityRows(rows){
+  const porId = new Map(COMMUNITY_POSTS.map(p=>[String(p.id), p]));
+  (rows||[]).forEach(row=>{
+    const novo = mapPostRow(row);
+    const atual = porId.get(String(novo.id));
+    if(atual){ Object.assign(atual, novo); }
+    else { COMMUNITY_POSTS.push(novo); porId.set(String(novo.id), novo); }
+  });
+}
+const POST_SELECT = '*, community_comments(*)';
+/* Busca mais uma página do mural (publicações sem aula vinculada) de uma das comunidades. */
+async function carregarMural(audience){
+  const st = MURAL_ESTADO[audience];
+  if(!st || st.carregando || st.fim) return 0;
+  st.carregando = true;
+  try{
+    const desde = COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===audience).length;
+    const { data, error } = await sb.from('community_posts').select(POST_SELECT)
+      .is('course_id', null).eq('audience', audience)
+      .order('created_at',{ascending:false})
+      .range(desde, desde + MURAL_PAGINA - 1);
+    if(error) throw error;
+    mergeCommunityRows(data);
+    if(!data || data.length < MURAL_PAGINA) st.fim = true;
+    return (data||[]).length;
+  }catch(e){
+    console.error('Não foi possível carregar o mural', e);
+    return 0;
+  }finally{ st.carregando = false; }
+}
+/* Baixa os comentários de uma aula na primeira vez que ela é aberta. Se a aula ainda estiver na tela
+   quando chegarem, redesenha pra mostrá-los. */
+async function ensureCourseComments(courseId){
+  if(!courseId || AULAS_COMENTADAS.has(courseId)) return;
+  AULAS_COMENTADAS.add(courseId); // marca antes pra não disparar duas buscas iguais
+  try{
+    const { data, error } = await sb.from('community_posts').select(POST_SELECT)
+      .eq('course_id', courseId).order('created_at',{ascending:false});
+    if(error) throw error;
+    mergeCommunityRows(data);
+    if(cursoAbertoNoModal === courseId) openCourseModal(courseId);
+  }catch(e){
+    AULAS_COMENTADAS.delete(courseId); // deixa tentar de novo numa próxima abertura
+    console.error('Não foi possível carregar os comentários da aula', e);
+  }
+}
+/* Sininho: calculado no banco, não mais varrendo a comunidade inteira no navegador. */
+async function refreshPendencias(){
+  try{
+    const { data, error } = await sb.rpc('comunidade_pendencias');
+    if(error) throw error;
+    PENDENCIAS = data || [];
+  }catch(e){
+    console.error('Não foi possível verificar as pendências da comunidade', e);
+  }
+  updateNotifBadge();
+}
+function pendenciasDoSino(){
+  if(currentRole==='staff') return PENDENCIAS.filter(x=>x.motivo==='duvida');
+  return PENDENCIAS.filter(x=>x.motivo==='resposta');
+}
 
 let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
 let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/visível pra equipe interna, ver bootstrapData
@@ -2250,16 +2336,19 @@ async function bootstrapData(){
   PEOPLE = {};
   profiles.forEach(p=>{ PEOPLE[p.id] = {id:p.id, name:p.name, initials:p.initials, color:p.color, avatarUrl:p.avatar_url||null, role:p.role}; });
 
-  const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:postRows},{data:liveRows},{data:watchedRows}] = await Promise.all([
+  const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:liveRows},{data:watchedRows},{data:meusLikes},{data:apresentacaoRows}] = await Promise.all([
     sb.from('module_checklist_state').select('*'),
     sb.from('panel_data').select('*'),
     sb.from('panel_overrides').select('*'),
     sb.from('internal_diag_answers').select('*'),
     sb.from('courses').select('*, course_materials(*)').order('mod_id').order('order_index'),
     sb.from('materials').select('*').order('id'),
-    sb.from('community_posts').select('*, community_comments(*), community_likes(*)').order('created_at',{ascending:false}),
     sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
     sb.from('live_session_watched').select('live_session_id').eq('student_id', currentUser.id),
+    // Só os ids do que EU curti — em vez das curtidas de todo mundo, linha por linha.
+    sb.from('community_likes').select('post_id').eq('student_id', currentUser.id),
+    // Uma linha, só pra saber se a pessoa já publicou a apresentação dela (o mural vem paginado agora).
+    sb.from('community_posts').select('id').eq('author_id', currentUser.id).eq('type','apresentacao').limit(1),
   ]);
 
   LIVE_SESSIONS.length = 0;
@@ -2308,16 +2397,17 @@ async function bootstrapData(){
   MATERIALS.length = 0;
   (materialRows||[]).forEach(m=>MATERIALS.push({id:m.id, title:m.title, type:m.type, link:m.link||'', size:m.size||''}));
 
+  MEUS_LIKES = new Set((meusLikes||[]).map(l=>l.post_id));
+  EU_JA_APRESENTEI = !!(apresentacaoRows && apresentacaoRows.length);
   COMMUNITY_POSTS.length = 0;
-  (postRows||[]).forEach(p=>{
-    COMMUNITY_POSTS.push({
-      id:p.id, authorId:p.author_id, type:p.type, time:timeAgo(p.created_at), text:p.text,
-      courseId:p.course_id||null, audience:p.audience||'mentorado', notifyAuthor:!!p.notify_author,
-      likes:(p.community_likes||[]).length,
-      liked:(p.community_likes||[]).some(l=>l.student_id===currentUser.id),
-      comments:(p.community_comments||[]).map(c=>({id:c.id, authorId:c.author_id, text:c.text, replyTo:c.reply_to_comment_id||null, notifyAuthor:!!c.notify_author})),
-    });
-  });
+  AULAS_COMENTADAS.clear();
+  MURAL_ESTADO.mentorado = {fim:false, carregando:false};
+  MURAL_ESTADO.curso = {fim:false, carregando:false};
+  cursoAbertoNoModal = null;
+  /* Primeira página das duas comunidades. O aluno recebe zero linhas da que não é dele (a RLS corta),
+     então a consulta extra é inofensiva e evita depender da ordem em que o app descobre o tier. */
+  await Promise.all([carregarMural('mentorado'), carregarMural('curso')]);
+  refreshPendencias(); // sem await de propósito: o sininho pode chegar meio segundo depois
 
   // Registros Internos: buscado à parte, e só quando é equipe interna — o aluno nunca faz essa
   // consulta, então esse conteúdo jamais chega ao navegador dele (nem via RLS, nem por não pedir).
@@ -2488,22 +2578,30 @@ function maybeNotifyCommentAuthor(p, replyToCommentId){
    novidade depois que a pessoa já abriu a tela e viu a resposta. */
 function markVisiblePostsSeen(posts){
   const myId = actingAuthorId();
+  const vistos = new Set();
   let changed = false;
   posts.forEach(p=>{
+    let estePost = false;
     if(p.authorId===myId && p.notifyAuthor){
       p.notifyAuthor = false;
       setPostNotifyAuthor(p.id, false);
-      changed = true;
+      estePost = true;
     }
     p.comments.forEach(c=>{
       if(c.authorId===myId && c.notifyAuthor){
         c.notifyAuthor = false;
         setCommentNotifyAuthor(c.id, false);
-        changed = true;
+        estePost = true;
       }
     });
+    if(estePost){ vistos.add(String(p.id)); changed = true; }
   });
-  if(changed) updateNotifBadge();
+  if(changed){
+    // Tira da lista do sininho na hora. A gravação no banco é assíncrona, então recalcular pela RPC
+    // agora poderia trazer o estado antigo de volta e o sino piscaria sozinho.
+    PENDENCIAS = PENDENCIAS.filter(x=>!(x.motivo==='resposta' && vistos.has(String(x.post_id))));
+    updateNotifBadge();
+  }
 }
 function syncCommunityLike(postId, sid, liked){
   if(liked) syncNow(sb.from('community_likes').upsert({post_id:postId, student_id:sid}));
@@ -2978,15 +3076,15 @@ function setupNav(){
       // Como comentários feitos dentro de uma aula não aparecem mais no mural da Comunidade, uma dúvida
       // sem resposta registrada numa aula não aparecia lá mesmo depois de clicar no sino — a equipe
       // interna clicava e não achava do que se tratava. Abre a aula certa direto nesse caso.
-      const pendingDuvida = COMMUNITY_POSTS.find(p=>p.type==='duvida' && !isAnswered(p));
+      const pendingDuvida = pendenciasDoSino()[0];
       if(pendingDuvida){
         // getViewingTier() segue currentCommunityAudience enquanto a equipe estiver no modo "Equipe
         // Interna" — sem isto, abrir a aula certa mostraria os comentários da comunidade errada (ou o
         // mural cairia na aba errada) se a dúvida pendente for da comunidade do Curso.
         currentCommunityAudience = pendingDuvida.audience||'mentorado';
       }
-      if(pendingDuvida && pendingDuvida.courseId){
-        openCourseModal(pendingDuvida.courseId);
+      if(pendingDuvida && pendingDuvida.course_id){
+        openCourseModal(pendingDuvida.course_id);
         return;
       }
       communityFilter = 'duvida';
@@ -2995,10 +3093,9 @@ function setupNav(){
     }
     // Se o aviso pendente for de um comentário feito dentro de uma aula (que não aparece mais no mural
     // da Comunidade), abre a aula direto — senão a pessoa clicaria no sino e não acharia a resposta.
-    const myId = actingAuthorId();
-    const pending = COMMUNITY_POSTS.find(p=>(p.authorId===myId && p.notifyAuthor) || p.comments.some(c=>c.authorId===myId && c.notifyAuthor));
-    if(pending && pending.courseId){
-      openCourseModal(pending.courseId);
+    const pending = pendenciasDoSino()[0];
+    if(pending && pending.course_id){
+      openCourseModal(pending.course_id);
       return;
     }
     communityFilter = 'todas';
@@ -3024,17 +3121,15 @@ function isAnswered(p){
 function updateNotifBadge(){
   const dot = document.getElementById('notif-dot');
   const badge = document.getElementById('notif-badge');
+  // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
+  // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
+  const pend = pendenciasDoSino();
   if(currentRole==='staff'){
-    const duvidas = COMMUNITY_POSTS.filter(p=>p.type==='duvida' && !isAnswered(p)).length;
     dot.style.display = 'none';
-    badge.style.display = duvidas>0 ? 'flex' : 'none';
-    badge.textContent = duvidas;
+    badge.style.display = pend.length>0 ? 'flex' : 'none';
+    badge.textContent = pend.length;
   } else {
-    // Para quem não é equipe interna, o sino avisa quando UMA publicação/comentário SEU recebeu
-    // uma resposta nova ainda não vista (ver maybeNotifyPostAuthor / markVisiblePostsSeen).
-    const myId = actingAuthorId();
-    const hasNewReply = myId ? COMMUNITY_POSTS.some(p=>(p.authorId===myId && p.notifyAuthor) || p.comments.some(c=>c.authorId===myId && c.notifyAuthor)) : false;
-    dot.style.display = hasNewReply ? 'block' : 'none';
+    dot.style.display = pend.length>0 ? 'block' : 'none';
     badge.style.display = 'none';
   }
 }
@@ -3566,6 +3661,8 @@ function bindRowScrollers(){
 function openCourseModal(id){
   const c = getCourse(id);
   const s = getStudent(currentStudentId);
+  cursoAbertoNoModal = id;
+  ensureCourseComments(id); // busca os comentários desta aula na primeira abertura e redesenha ao chegar
   /* Segurança extra: mesmo que algo chame openCourseModal fora do clique no card (ex.: um link "sobre
      esta aula" antigo em cache), uma aula travada pro aluno do curso nunca abre. */
   if(isLessonLocked(id, s)){
@@ -3678,7 +3775,7 @@ function courseCommentsHtml(c){
           </div>
         </div>
       </div>` : `<p class="section-sub">Nenhuma conta disponível para comentar no momento.</p>`}
-      <div id="cm-posts-list">${posts.map(p=>postHtml(p,false,false)).join('') || '<p class="section-sub">Nenhum comentário nesta aula ainda.</p>'}</div>
+      <div id="cm-posts-list">${posts.map(p=>postHtml(p,false,false)).join('') || (AULAS_COMENTADAS.has(c.id) ? '<p class="section-sub">Nenhum comentário nesta aula ainda.</p>' : '<p class="section-sub">Carregando comentários...</p>')}</div>
     </div>`;
 }
 function bindCourseComments(c){
@@ -3697,7 +3794,7 @@ function bindCourseComments(c){
       try{
         const post = await createCommunityPost(actingAuthorId(), selectedCoursePostType, ta.value.trim(), c.id, getViewingTier());
         COMMUNITY_POSTS.unshift(post);
-        updateNotifBadge();
+        refreshPendencias();
         openCourseModal(c.id);
       }catch(e){ console.error(e); postBtn.disabled = false; }
     });
@@ -3708,6 +3805,7 @@ function bindCourseComments(c){
       const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.like);
       p.liked = !p.liked;
       p.likes += p.liked? 1 : -1;
+      if(p.liked) MEUS_LIKES.add(p.id); else MEUS_LIKES.delete(p.id);
       syncCommunityLike(p.id, actingAuthorId(), p.liked);
       openCourseModal(c.id);
     });
@@ -3728,7 +3826,7 @@ function bindCourseComments(c){
         maybeNotifyPostAuthor(p);
         maybeNotifyCommentAuthor(p, rt? rt.commentId : null);
         delete replyTargets[pid];
-        updateNotifBadge();
+        refreshPendencias();
         openCourseModal(c.id);
       }catch(e){ console.error(e); btn.disabled = false; }
     };
@@ -3756,7 +3854,13 @@ function bindCourseComments(c){
       if(!confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.')) return;
       const pid = btn.dataset.delPost;
       const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
-      if(idx>-1){ syncCommunityPostDelete(COMMUNITY_POSTS[idx].id); COMMUNITY_POSTS.splice(idx,1); }
+      if(idx>-1){
+        const removido = COMMUNITY_POSTS[idx];
+        syncCommunityPostDelete(removido.id);
+        COMMUNITY_POSTS.splice(idx,1);
+        if(removido.type==='apresentacao' && removido.authorId===actingAuthorId()) EU_JA_APRESENTEI = false;
+        PENDENCIAS = PENDENCIAS.filter(x=>String(x.post_id)!==String(removido.id));
+      }
       updateNotifBadge();
       openCourseModal(c.id);
     });
@@ -4276,7 +4380,11 @@ function postHtml(p,compact,showCourseTag){
 }
 /* Apresentação vale 10 pontos no ranking, mas só uma vez por mentorado — se ele excluir a apresentação
    anterior, o contador zera e ele pode publicar uma nova (ver view "student_points" no Supabase). */
+/* Checado no banco na abertura (EU_JA_APRESENTEI) porque o mural agora vem paginado — uma apresentação
+   antiga poderia estar fora da primeira página e o aluno seria convidado a publicar outra. Continua
+   olhando a memória também, pra refletir na hora quem acabou de publicar ou de excluir a sua. */
 function hasApresentacao(authorId){
+  if(authorId===actingAuthorId() && EU_JA_APRESENTEI) return true;
   return COMMUNITY_POSTS.some(p=>p.type==='apresentacao' && p.authorId===authorId);
 }
 function renderComunidade(){
@@ -4328,6 +4436,10 @@ function renderComunidade(){
       ${filters.map(f=>`<button class="filter-tab ${communityFilter===f.id?'active':''}" data-filter="${f.id}">${f.label}</button>`).join('')}
     </div>
     <div id="posts-list">${visible.map(p=>postHtml(p,false,true)).join('') || '<p class="section-sub">Nenhuma publicação nesse filtro ainda.</p>'}</div>
+    ${MURAL_ESTADO[currentCommunityAudience] && !MURAL_ESTADO[currentCommunityAudience].fim ? `
+    <div class="cf-actions" style="justify-content:center;margin-top:16px">
+      <button class="btn-outline" id="mural-mais">${MURAL_ESTADO[currentCommunityAudience].carregando? 'Carregando...' : 'Ver publicações mais antigas'}</button>
+    </div>` : ''}
   `;
   markVisiblePostsSeen(visible);
   bindOpenCourseTags(root);
@@ -4341,6 +4453,17 @@ function renderComunidade(){
   root.querySelectorAll('#community-audience-tabs [data-audience]').forEach(btn=>{
     btn.addEventListener('click',()=>{ currentCommunityAudience = btn.dataset.audience; renderComunidade(); });
   });
+  const maisBtn = root.querySelector('#mural-mais');
+  if(maisBtn){
+    maisBtn.addEventListener('click', async ()=>{
+      const alvo = currentCommunityAudience;
+      maisBtn.disabled = true;
+      maisBtn.textContent = 'Carregando...';
+      await carregarMural(alvo);
+      // Se a pessoa trocou de comunidade enquanto carregava, não redesenha por cima do que ela abriu.
+      if(currentCommunityAudience===alvo && currentView==='comunidade') renderComunidade();
+    });
+  }
   const postBtn = root.querySelector('#post-btn');
   if(postBtn){
     postBtn.addEventListener('click', async ()=>{
@@ -4355,7 +4478,8 @@ function renderComunidade(){
       try{
         const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim(), null, currentCommunityAudience);
         COMMUNITY_POSTS.unshift(post);
-        updateNotifBadge();
+        if(post.type==='apresentacao' && post.authorId===actingAuthorId()) EU_JA_APRESENTEI = true;
+        refreshPendencias();
         renderComunidade();
       }catch(e){ console.error(e); postBtn.disabled = false; }
     });
@@ -4366,6 +4490,7 @@ function renderComunidade(){
       const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.like);
       p.liked = !p.liked;
       p.likes += p.liked? 1 : -1;
+      if(p.liked) MEUS_LIKES.add(p.id); else MEUS_LIKES.delete(p.id);
       syncCommunityLike(p.id, actingAuthorId(), p.liked);
       renderComunidade();
     });
@@ -4386,7 +4511,7 @@ function renderComunidade(){
         maybeNotifyPostAuthor(p);
         maybeNotifyCommentAuthor(p, rt? rt.commentId : null);
         delete replyTargets[pid];
-        updateNotifBadge();
+        refreshPendencias();
         renderComunidade();
       }catch(e){ console.error(e); btn.disabled = false; }
     };
@@ -4414,7 +4539,13 @@ function renderComunidade(){
       if(!confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.')) return;
       const pid = btn.dataset.delPost;
       const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
-      if(idx>-1){ syncCommunityPostDelete(COMMUNITY_POSTS[idx].id); COMMUNITY_POSTS.splice(idx,1); }
+      if(idx>-1){
+        const removido = COMMUNITY_POSTS[idx];
+        syncCommunityPostDelete(removido.id);
+        COMMUNITY_POSTS.splice(idx,1);
+        if(removido.type==='apresentacao' && removido.authorId===actingAuthorId()) EU_JA_APRESENTEI = false;
+        PENDENCIAS = PENDENCIAS.filter(x=>String(x.post_id)!==String(removido.id));
+      }
       updateNotifBadge();
       renderComunidade();
     });
@@ -7610,7 +7741,9 @@ function renderVisaoGeral(){
   const totalMentorados = mentorados.length;
   const avgProgress = totalMentorados ? Math.round(mentorados.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
   const atrasadasTotal = mentorados.reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
-  const duvidas = COMMUNITY_POSTS.filter(p=>p.type==='duvida' && !isAnswered(p)).length;
+  // Mesma fonte do sininho (comunidade_pendencias no banco): a comunidade não é mais carregada
+  // inteira no navegador, então contar varrendo COMMUNITY_POSTS daria um número menor que o real.
+  const duvidas = PENDENCIAS.filter(x=>x.motivo==='duvida').length;
 
   document.getElementById('view-visaogeral').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Visão consolidada de todos os mentorados do Método Essência.</div>
