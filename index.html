@@ -442,6 +442,35 @@
   .watch-gate-bar .fill{height:100%;background:var(--accent);border-radius:6px;transition:width .3s ease;}
   .watch-gate-txt{font-size:12.5px;color:var(--text-dim);line-height:1.5;}
   .watch-gate-ok{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--success);line-height:1.5;}
+  /* Aviso de aniversariantes — cartãozinho fixo no canto inferior direito */
+  .aniv-canto{
+    position:fixed;right:18px;bottom:18px;z-index:60;width:290px;max-width:calc(100vw - 36px);
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow-lg, 0 10px 30px rgba(0,0,0,.35));padding:14px 14px 13px;
+  }
+  .aniv-canto .aniv-fechar{
+    position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;
+    color:var(--text-mute);padding:4px;line-height:0;border-radius:6px;
+  }
+  .aniv-canto .aniv-fechar:hover{background:var(--bg-elev);color:var(--text);}
+  .aniv-titulo{font-size:12.5px;font-weight:600;color:var(--accent-2);margin-bottom:10px;padding-right:20px;display:flex;align-items:center;gap:6px;}
+  .aniv-titulo .icon{flex-shrink:0;}
+  .aniv-lista{display:flex;flex-direction:column;gap:9px;max-height:210px;overflow-y:auto;}
+  .aniv-item{display:flex;align-items:center;gap:9px;}
+  .aniv-info{min-width:0;}
+  .aniv-nome{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .aniv-sub{font-size:11.5px;color:var(--text-dim);line-height:1.35;}
+  .aniv-rodape{font-size:11.5px;color:var(--text-mute);margin-top:11px;line-height:1.45;}
+  .aniv-btn{width:100%;margin-top:10px;font-size:12.5px;padding:8px 10px;}
+  @media (max-width:640px){ .aniv-canto{right:10px;bottom:10px;width:auto;left:10px;} }
+  /* Faixa de aniversariantes na Visão Geral (equipe interna) */
+  .aniv-banner{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text);line-height:1.5;
+  }
+  .aniv-banner .icon{color:var(--accent-2);flex-shrink:0;}
+  .aniv-banner strong{color:var(--accent-2);}
   /* Status do "Exportar backup" (Visão Geral) */
   .backup-status{margin-top:10px;font-size:12.5px;color:var(--text-dim);line-height:1.6;}
   .backup-status.ok{color:var(--success);}
@@ -2151,6 +2180,101 @@ function initialsAvatar(initials,color,size,avatarUrl){
   }
   return `<div class="avatar" style="background:${color};${sizeStyle}">${initials}</div>`;
 }
+/* ---- Aniversariantes ----------------------------------------------------------------
+   A data vem do banco como texto 'AAAA-MM-DD'. Se ela fosse lida com new Date('1990-05-12'),
+   o navegador entenderia meia-noite em UTC — que no Brasil (UTC-3) ainda é dia 11. O aniversário
+   apareceria sempre um dia antes. Por isso o texto é separado na mão, sem passar por fuso. */
+function partesDataNasc(txt){
+  const m = String(txt||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  const ano=+m[1], mes=+m[2], dia=+m[3];
+  if(mes<1||mes>12||dia<1||dia>31) return null;
+  return {ano, mes, dia};
+}
+function ehBissexto(ano){ return (ano%4===0 && ano%100!==0) || ano%400===0; }
+function fazAniversarioEm(txt, hoje){
+  const d = partesDataNasc(txt);
+  if(!d) return false;
+  const hj = hoje || new Date();
+  const mesHoje = hj.getMonth()+1, diaHoje = hj.getDate();
+  // Nascido em 29/02: em ano não bissexto, comemora no dia 28.
+  if(d.mes===2 && d.dia===29 && !ehBissexto(hj.getFullYear())) return mesHoje===2 && diaHoje===28;
+  return d.mes===mesHoje && d.dia===diaHoje;
+}
+function idadeQueFaz(txt, hoje){
+  const d = partesDataNasc(txt);
+  if(!d) return null;
+  const anos = (hoje || new Date()).getFullYear() - d.ano;
+  return (anos>0 && anos<130) ? anos : null;
+}
+/* tier = 'mentorado' | 'curso' para a comunidade do aluno; null traz todos (equipe interna). */
+function aniversariantesHoje(tier, hoje){
+  const hj = hoje || new Date();
+  return STUDENTS
+    .filter(st=>(tier==null || (st.tier||'mentorado')===tier))
+    .filter(st=>st.cadastro && fazAniversarioEm(st.cadastro.dataNascimento, hj))
+    .map(st=>({id:st.id, nome:st.name, initials:st.initials, color:st.color, avatarUrl:st.avatarUrl,
+               tier:st.tier||'mentorado', idade:idadeQueFaz(st.cadastro.dataNascimento, hj)}))
+    .sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+}
+function chaveAniversarioHoje(){
+  const h = new Date();
+  return 'ascentria-aniv-'+h.getFullYear()+'-'+(h.getMonth()+1)+'-'+h.getDate();
+}
+function primeiroNome(n){ return String(n||'').trim().split(/\s+/)[0] || n; }
+/* Cartãozinho no canto da tela, como o aviso de aniversários das redes sociais. Aparece só nos dias
+   em que há aniversariante e some quando a pessoa fecha (volta no próximo aniversário, não no mesmo dia). */
+function renderAniversarioCanto(){
+  const antigo = document.getElementById('aniv-canto');
+  if(antigo) antigo.remove();
+  if(!STUDENTS.length) return;
+  let dispensado = false;
+  try{ dispensado = localStorage.getItem(chaveAniversarioHoje())==='1'; }catch(e){}
+  if(dispensado) return;
+
+  const equipe = currentRole==='staff';
+  const lista = aniversariantesHoje(equipe ? null : getViewingTier());
+  if(!lista.length) return;
+
+  const el = document.createElement('div');
+  el.id = 'aniv-canto';
+  el.className = 'aniv-canto';
+  el.innerHTML = `
+    <button class="aniv-fechar" id="aniv-fechar" title="Fechar" aria-label="Fechar">${icon('x')}</button>
+    <div class="aniv-titulo">${icon('award')} ${lista.length>1? 'Aniversariantes de hoje' : 'Aniversariante de hoje'}</div>
+    <div class="aniv-lista">
+      ${lista.map(a=>`
+        <div class="aniv-item">
+          ${initialsAvatar(a.initials, a.color, 34, a.avatarUrl)}
+          <div class="aniv-info">
+            <div class="aniv-nome">${escapeHtml(a.nome)}</div>
+            <div class="aniv-sub">${a.idade? 'Fazendo '+a.idade+' anos' : 'Hoje é o dia dela'}${equipe? ' · '+(a.tier==='curso'?'Curso':'Mentoria') : ''}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="aniv-rodape">${equipe
+      ? 'Vale uma mensagem do time hoje.'
+      : 'Que tal deixar uma mensagem na Comunidade?'}</div>
+    ${equipe? '' : `<button class="btn-accent aniv-btn" id="aniv-parabenizar">Parabenizar na Comunidade</button>`}`;
+  document.body.appendChild(el);
+
+  document.getElementById('aniv-fechar').addEventListener('click', ()=>{
+    try{ localStorage.setItem(chaveAniversarioHoje(),'1'); }catch(e){}
+    el.remove();
+  });
+  const btn = document.getElementById('aniv-parabenizar');
+  if(btn) btn.addEventListener('click', ()=>{
+    goTo('comunidade');
+    setTimeout(()=>{
+      const ta = document.getElementById('new-post');
+      if(ta){
+        ta.value = 'Feliz aniversário, ' + lista.map(a=>primeiroNome(a.nome)).join(' e ') + '! 🎉';
+        ta.focus();
+        ta.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    }, 80);
+  });
+}
 function overallProgress(s){
   let done=0;
   MODULES.forEach(m=>done+=s.moduleProgress[m.id]);
@@ -2282,6 +2406,7 @@ function mapProfileRow(p){
       cpf: sc.cpf || '',
       cidade: sc.cidade || '',
       dataMatricula: sc.data_matricula || new Date().toISOString().slice(0,10),
+      dataNascimento: sc.data_nascimento || '',
       duracaoMeses: sc.duracao_meses || 12,
       plano: sc.plano || '—',
     },
@@ -3298,6 +3423,9 @@ function renderCurrentView(){
     return;
   }
   map[currentView]();
+  // O cartãozinho de aniversário acompanha a navegação: fica visível em qualquer tela, como nas redes
+  // sociais, e leva em conta quem está sendo visto (comunidade do mentorado x comunidade do Curso).
+  renderAniversarioCanto();
 }
 
 /* ================= HELPERS: DOWNLOAD & CALENDAR ================= */
@@ -6330,6 +6458,8 @@ function openEditAlunoModal(s){
         <input class="ps-input" type="text" id="ea-nicho" value="${escapeAttr(s.diagnostico.nicho==='—'?'':s.diagnostico.nicho)}">
         <label class="ps-label">Subnicho</label>
         <input class="ps-input" type="text" id="ea-subnicho" value="${escapeAttr(s.diagnostico.subnicho==='—'?'':s.diagnostico.subnicho)}">
+        <label class="ps-label">Data de nascimento</label>
+        <input class="ps-input" type="date" id="ea-datanascimento" value="${escapeAttr(s.cadastro.dataNascimento||'')}">
         <label class="ps-label">Data de matrícula</label>
         <input class="ps-input" type="date" id="ea-datamatricula" value="${escapeAttr(s.cadastro.dataMatricula)}">
         <label class="ps-label">Duração (meses)</label>
@@ -6360,6 +6490,7 @@ function openEditAlunoModal(s){
       nicho: document.getElementById('ea-nicho').value.trim(),
       subnicho: document.getElementById('ea-subnicho').value.trim(),
       dataMatricula: document.getElementById('ea-datamatricula').value,
+      dataNascimento: document.getElementById('ea-datanascimento').value,
       duracaoMeses: +document.getElementById('ea-duracao').value || 12,
       plano: document.getElementById('ea-plano').value.trim(),
       progressoMentorado: Math.max(0,Math.min(100, +document.getElementById('ea-progmentorado').value || 0)),
@@ -6370,7 +6501,8 @@ function openEditAlunoModal(s){
         sb.from('profiles').update({turma: vals.turma}).eq('id', s.id),
         sb.from('student_cadastro').update({
           nome_completo: vals.nomeCompleto, email: vals.email, telefone: vals.telefone, cpf: vals.cpf,
-          cidade: vals.cidade, data_matricula: vals.dataMatricula || null, duracao_meses: vals.duracaoMeses, plano: vals.plano,
+          cidade: vals.cidade, data_matricula: vals.dataMatricula || null, data_nascimento: vals.dataNascimento || null,
+          duracao_meses: vals.duracaoMeses, plano: vals.plano,
         }).eq('student_id', s.id),
         sb.from('diagnostico').update({
           nicho: vals.nicho, subnicho: vals.subnicho,
@@ -6382,6 +6514,7 @@ function openEditAlunoModal(s){
       s.cadastro.nomeCompleto = vals.nomeCompleto; s.cadastro.email = vals.email; s.cadastro.telefone = vals.telefone;
       s.cadastro.cpf = vals.cpf; s.cadastro.cidade = vals.cidade;
       s.cadastro.dataMatricula = vals.dataMatricula || s.cadastro.dataMatricula;
+      s.cadastro.dataNascimento = vals.dataNascimento || '';
       s.cadastro.duracaoMeses = vals.duracaoMeses; s.cadastro.plano = vals.plano || '—';
       s.diagnostico.nicho = vals.nicho || '—'; s.diagnostico.subnicho = vals.subnicho || '—';
       s.progressoMentorado = vals.progressoMentorado; s.progressoMentor = vals.progressoMentor;
@@ -7747,6 +7880,8 @@ function renderVisaoGeral(){
 
   document.getElementById('view-visaogeral').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Visão consolidada de todos os mentorados do Método Essência.</div>
+    ${(()=>{ const a = aniversariantesHoje(null); return a.length? `
+    <div class="aniv-banner">${icon('award')}<div>Hoje é aniversário de <strong>${a.map(x=>escapeHtml(x.nome)+(x.idade? ' ('+x.idade+' anos)' : '')).join(', ')}</strong>. Vale uma mensagem do time.</div></div>` : ''; })()}
 
     <div class="kpi-row">
       <div class="kpi-tile"><div class="label">Mentorados ativos</div><div class="value">${totalMentorados}</div></div>
