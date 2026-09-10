@@ -3950,25 +3950,31 @@ function resizeImageForUpload(file, maxBytes, maxDim){
     reader.readAsDataURL(file);
   });
 }
+/* A foto de perfil nunca aparece maior que 64px na tela (34px nos posts, 22px nos comentários).
+   Guardar o arquivo original da câmera — que costuma ter 300KB a 2,6MB — só faz o sistema demorar
+   pra abrir, sem ganho nenhum de qualidade visível. 256px cobre telas retina com folga. */
+const AVATAR_MAX_DIM = 256;
+const AVATAR_ALVO_BYTES = 50*1024;   // alvo depois de comprimir
+const AVATAR_LIMITE_BYTES = 400*1024; // teto de segurança se o navegador não conseguir processar
 async function uploadAvatarFile(file, personId){
-  const MAX_BYTES = 5*1024*1024; // 5MB — tamanho máximo padrão após redimensionamento automático
   let toUpload = file;
   try{
     // Timeout de segurança: em alguns celulares/formatos (ex.: HEIC) o navegador pode não
     // conseguir decodificar a imagem via <canvas>. Nesse caso, não travamos o envio —
     // seguimos com o arquivo original após alguns segundos.
     toUpload = await Promise.race([
-      resizeImageForUpload(file, MAX_BYTES, 1600),
+      resizeImageForUpload(file, AVATAR_ALVO_BYTES, AVATAR_MAX_DIM),
       new Promise((_,rej)=> setTimeout(()=>rej(new Error('Tempo esgotado ao processar a imagem.')), 12000))
     ]);
   }catch(e){
     console.error('Falha ao redimensionar imagem automaticamente, tentando enviar original:', e);
     toUpload = file;
   }
-  if(toUpload.size > MAX_BYTES) throw new Error('Arquivo muito grande (máx. 5MB). Escolha uma foto menor.');
+  if(toUpload.size > AVATAR_LIMITE_BYTES) throw new Error('Arquivo muito grande. Escolha uma foto menor.');
   const ext = (toUpload.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
   const path = `${personId}/${Date.now()}.${ext}`;
-  const { error: upErr } = await sb.storage.from('avatars').upload(path, toUpload, {upsert:true, contentType: toUpload.type || undefined});
+  // cacheControl alto: a foto fica guardada no navegador do aluno em vez de ser rebaixada a cada visita.
+  const { error: upErr } = await sb.storage.from('avatars').upload(path, toUpload, {upsert:true, cacheControl:'31536000', contentType: toUpload.type || undefined});
   if(upErr) throw upErr;
   const { data } = sb.storage.from('avatars').getPublicUrl(path);
   const url = data.publicUrl;
@@ -3976,6 +3982,88 @@ async function uploadAvatarFile(file, personId){
   if(updErr) throw updErr;
   if(PEOPLE[personId]) PEOPLE[personId].avatarUrl = url; // mantém a foto em sincronia em posts/comentários já carregados
   return url;
+}
+/* ---- Manutenção: reprocessa as fotos antigas, enviadas antes do redimensionamento correto ----
+   Antes desta correção o sistema só comprimia a foto se ela passasse de 5MB, então uma foto comum de
+   celular (300KB a 2,6MB) subia praticamente inteira e era baixada por todos os alunos a cada visita.
+   Este botão baixa cada foto, reduz para 256px e regrava, apagando o arquivo antigo. Roda uma vez;
+   fotos novas já nascem pequenas. Só a equipe interna executa. */
+function avatarStoragePath(url){
+  const m = String(url||'').match(/\/avatars\/(.+?)(?:\?|$)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+async function otimizarFotosExistentes(){
+  const btn = document.getElementById('fotos-btn');
+  const status = document.getElementById('fotos-status');
+  btn.disabled = true;
+  status.className = 'backup-status';
+  status.textContent = 'Lendo as fotos cadastradas...';
+
+  const { data: rows, error } = await sb.from('profiles').select('id, name, avatar_url').not('avatar_url','is',null);
+  if(error){
+    status.className = 'backup-status warn';
+    status.textContent = 'Não foi possível ler os perfis: ' + error.message;
+    btn.disabled = false;
+    return;
+  }
+  const alvos = (rows||[]).filter(r=>r.avatar_url && avatarStoragePath(r.avatar_url));
+  if(!alvos.length){
+    status.className = 'backup-status ok';
+    status.textContent = 'Nenhuma foto para otimizar.';
+    btn.disabled = false;
+    return;
+  }
+
+  let feitas=0, puladas=0, antes=0, depois=0;
+  const falhas=[];
+  for(let i=0;i<alvos.length;i++){
+    const r = alvos[i];
+    status.textContent = `Otimizando ${i+1} de ${alvos.length} — ${r.name||''}...`;
+    try{
+      const pathAntigo = avatarStoragePath(r.avatar_url);
+      const resp = await fetch(r.avatar_url, {cache:'no-store'});
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const blob = await resp.blob();
+      antes += blob.size;
+      // Já está pequena: não gasta processamento nem cria arquivo novo à toa.
+      if(blob.size <= 60*1024){ depois += blob.size; puladas++; continue; }
+      const originalFile = new File([blob], 'foto.jpg', {type: blob.type || 'image/jpeg'});
+      const menor = await resizeImageForUpload(originalFile, AVATAR_ALVO_BYTES, AVATAR_MAX_DIM);
+      // Se por algum motivo não encolheu, não troca — evita piorar.
+      if(menor.size >= blob.size){ depois += blob.size; puladas++; continue; }
+      const novoPath = `${r.id}/${Date.now()}.jpg`;
+      const { error: upErr } = await sb.storage.from('avatars').upload(novoPath, menor, {upsert:true, cacheControl:'31536000', contentType:'image/jpeg'});
+      if(upErr) throw upErr;
+      const { data: pub } = sb.storage.from('avatars').getPublicUrl(novoPath);
+      const { error: updErr } = await sb.from('profiles').update({avatar_url: pub.publicUrl}).eq('id', r.id);
+      if(updErr) throw updErr;
+      if(PEOPLE[r.id]) PEOPLE[r.id].avatarUrl = pub.publicUrl;
+      const st = getStudent(r.id); if(st) st.avatarUrl = pub.publicUrl;
+      if(currentUserProfile && currentUserProfile.id===r.id) currentUserProfile.avatarUrl = pub.publicUrl;
+      // Só apaga o arquivo antigo depois que o novo já está gravado E o perfil já aponta pra ele.
+      if(pathAntigo && pathAntigo !== novoPath){
+        const { error: delErr } = await sb.storage.from('avatars').remove([pathAntigo]);
+        if(delErr) console.warn('Não foi possível apagar a foto antiga', pathAntigo, delErr);
+      }
+      depois += menor.size;
+      feitas++;
+    }catch(e){
+      console.error('Falha ao otimizar foto de', r.name, e);
+      falhas.push((r.name||r.id) + (e && e.message ? (' — '+e.message) : ''));
+    }
+  }
+
+  const mb = n => (n/1024/1024).toFixed(2)+' MB';
+  let msg = `${feitas} foto(s) otimizada(s)` + (puladas? `, ${puladas} já estavam adequadas` : '') + `. De ${mb(antes)} para ${mb(depois)}.`;
+  if(falhas.length){
+    status.className = 'backup-status warn';
+    msg += ` Não foi possível otimizar ${falhas.length}: ${falhas.join('; ')}.`;
+  }else{
+    status.className = 'backup-status ok';
+  }
+  status.textContent = msg;
+  btn.disabled = false;
+  renderCurrentView();
 }
 function wireAvatarUpload(idPrefix, person, onUpdated){
   document.getElementById(idPrefix+'-upload-btn').addEventListener('click', ()=>{
@@ -7640,8 +7728,16 @@ function renderVisaoGeral(){
       <button class="btn-accent" id="backup-btn">${icon('download','ps-plus')} Exportar backup</button>
     </div>
     <div id="backup-status" class="backup-status"></div>
+
+    <h2 class="section-title" style="margin-top:28px">${icon('upload')} Otimização de Fotos</h2>
+    <p class="section-sub" style="margin-top:-6px">As fotos de perfil enviadas antes desta correção subiram no tamanho original da câmera — algumas com mais de 2 MB — e são baixadas por <strong>todos</strong> os alunos toda vez que a plataforma abre, mesmo aparecendo num círculo de poucos milímetros. Este botão reduz as fotos antigas e apaga os arquivos grandes. <strong>Rode uma vez só</strong>: as fotos enviadas de agora em diante já nascem no tamanho certo.</p>
+    <div class="cf-actions">
+      <button class="btn-outline" id="fotos-btn">${icon('upload')} Otimizar fotos existentes</button>
+    </div>
+    <div id="fotos-status" class="backup-status"></div>
   `;
   document.getElementById('backup-btn').addEventListener('click', exportarBackup);
+  document.getElementById('fotos-btn').addEventListener('click', otimizarFotosExistentes);
   document.getElementById('gen-code-btn').addEventListener('click', async ()=>{
     const tier = document.getElementById('new-code-tier').value;
     const label = document.getElementById('new-code-label').value.trim();
