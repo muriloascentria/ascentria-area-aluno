@@ -9505,7 +9505,6 @@ function exportFinanceiroPDF(){
 }
 /* Cadastros compartilhados usados nos lançamentos — Categoria, Conta (bancária) e Forma de Pagamento.
    Apagar um item não apaga os lançamentos que já usavam ele (a referência só fica em branco). */
-let finCadFormAberto = {}; // qual lista está com o formulário "Adicionar" aberto
 function renderFinCadastroSimples(container, kind){
   const CONFIG = {
     categorias: { title:'Categorias', list:FIN_CATEGORIAS, addLabel:'Adicionar categoria', placeholder:'Ex.: Mentoria Essência' },
@@ -9519,73 +9518,24 @@ function renderFinCadastroSimples(container, kind){
     return FIN_LANCAMENTOS.filter(l=>l.formaId===id).length;
   };
   const colspan = kind==='categorias'? 5 : 3;
-  const aberto = !!finCadFormAberto[kind];
   container.innerHTML = `
     <h2 class="section-title">${icon('folder')} ${cfg.title}</h2>
-    ${aberto? '' : `<div style="margin:6px 0 14px"><button class="btn-accent" id="fin-cad-abrir">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>`}
-    <div class="add-form" ${aberto? '' : 'hidden'}>
-      <div class="field full"><label>Nome</label><input class="ps-input" type="text" id="fin-cad-nome" placeholder="${cfg.placeholder}"></div>
-      ${kind==='categorias'? `<div class="field"><label>Tipo</label>
-        <select class="ps-input" id="fin-cad-tipo">
-          <option value="ambos">Receita e Despesa</option>
-          <option value="receita">Só Receita</option>
-          <option value="despesa">Só Despesa</option>
-        </select>
-      </div>
-      <div class="field"><label>Exige aluno</label>
-        <label class="ps-label" style="display:flex;align-items:center;gap:6px;margin:0;text-transform:none;font-size:12px"><input type="checkbox" id="fin-cad-exige"> Recebimento de aluno do Método</label>
-      </div>` : ''}
-      <div class="actions" style="gap:8px"><button class="btn-accent" id="fin-cad-add">${icon('plus','ps-plus')} Salvar</button><button class="btn-outline" id="fin-cad-fechar">Cancelar</button></div>
-    </div>
+    <div style="margin:6px 0 14px"><button class="btn-accent" id="fin-cad-abrir">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>
     <div class="table-wrap"><table class="check-table">
       <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th><th title="Lançamentos nesta categoria só salvam com o aluno informado">Exige aluno</th>':''}<th>Em uso</th><th></th></tr></thead>
       <tbody>
         ${cfg.list.map(item=>`<tr>
           <td>${escapeHtml(item.nome)}</td>
-          ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td><td><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-fin-cat-exige="${item.id}" ${item.exigeAluno?'checked':''}> ${item.exigeAluno?'Sim':'Não'}</label></td>` : ''}
+          ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td><td>${item.exigeAluno? '<span class="resp-pill">Sim</span>' : '<span style="color:var(--text-mute)">Não</span>'}</td>` : ''}
           <td>${inUseCount(item.id)}x</td>
           <td style="white-space:nowrap"><button class="btn-mini" data-fin-cad-edit="${item.id}">${icon('edit','tiny')} Editar</button> <button class="btn-mini danger" data-fin-cad-del="${item.id}">${icon('trash')} Remover</button></td>
         </tr>`).join('') || `<tr><td colspan="${colspan}" style="color:var(--text-mute)">Nada cadastrado ainda.</td></tr>`}
       </tbody>
     </table></div>
   `;
-  const abrirBtn = document.getElementById('fin-cad-abrir');
-  if(abrirBtn) abrirBtn.addEventListener('click', ()=>{ finCadFormAberto[kind] = true; renderFinanceiro(); const inp = document.getElementById('fin-cad-nome'); if(inp) inp.focus(); });
-  document.getElementById('fin-cad-fechar').addEventListener('click', ()=>{ finCadFormAberto[kind] = false; renderFinanceiro(); });
+  document.getElementById('fin-cad-abrir').addEventListener('click', ()=> openFinCadastroEditModal(kind, null));
   document.querySelectorAll('[data-fin-cad-edit]').forEach(btn=>{
     btn.addEventListener('click', ()=> openFinCadastroEditModal(kind, btn.dataset.finCadEdit));
-  });
-  document.getElementById('fin-cad-add').addEventListener('click', async ()=>{
-    const nome = document.getElementById('fin-cad-nome').value.trim();
-    if(!nome) return;
-    const btn = document.getElementById('fin-cad-add');
-    btn.disabled = true;
-    try{
-      let row;
-      if(kind==='categorias'){
-        const tipo = document.getElementById('fin-cad-tipo').value;
-        const exige = !!(document.getElementById('fin-cad-exige')||{}).checked;
-        row = await syncFinCategoriaInsert(nome, tipo, exige);
-        FIN_CATEGORIAS.push({id:row.id, nome:row.nome, tipo:row.tipo, exigeAluno:!!row.exige_aluno});
-      } else if(kind==='contas'){
-        row = await syncFinContaInsert(nome);
-        FIN_CONTAS.push({id:row.id, nome:row.nome});
-      } else {
-        row = await syncFinFormaInsert(nome);
-        FIN_FORMAS.push({id:row.id, nome:row.nome});
-      }
-      finCadFormAberto[kind] = false;
-      renderFinanceiro();
-    }catch(e){ console.error(e); btn.disabled = false; }
-  });
-  document.querySelectorAll('[data-fin-cat-exige]').forEach(chk=>{
-    chk.addEventListener('change',()=>{
-      const cat = FIN_CATEGORIAS.find(c=>c.id===chk.dataset.finCatExige);
-      if(!cat) return;
-      cat.exigeAluno = chk.checked;
-      syncFinCategoriaUpdate(cat.id, { exige_aluno: cat.exigeAluno });
-      renderFinanceiro();
-    });
   });
   document.querySelectorAll('[data-fin-cad-del]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -9606,16 +9556,19 @@ function renderFinCadastroSimples(container, kind){
    (eles apontam pelo id), só passa a mostrar o nome novo. */
 function openFinCadastroEditModal(kind, id){
   const lista = kind==='categorias' ? FIN_CATEGORIAS : kind==='contas' ? FIN_CONTAS : FIN_FORMAS;
-  const item = lista.find(x=>x.id===id);
-  if(!item) return;
-  const titulo = kind==='categorias' ? 'Editar categoria' : kind==='contas' ? 'Editar conta' : 'Editar forma de pagamento';
+  const existente = id ? lista.find(x=>x.id===id) : null;
+  if(id && !existente) return;
+  const item = existente || { nome:'', tipo:'ambos', exigeAluno:false };
+  const nomeTipo = kind==='categorias' ? 'categoria' : kind==='contas' ? 'conta' : 'forma de pagamento';
+  const titulo = (existente? 'Editar ' : 'Nova ') + nomeTipo;
+  const placeholder = kind==='categorias' ? 'Ex.: Mentoria Essência' : kind==='contas' ? 'Ex.: Banco Inter' : 'Ex.: Pix';
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
       <div class="cat">Financeiro</div>
       <h3>${titulo}</h3>
       <div class="ps-section">
         <label class="ps-label">Nome</label>
-        <input class="ps-input" type="text" id="fce-nome" value="${escapeAttr(item.nome)}">
+        <input class="ps-input" type="text" id="fce-nome" value="${escapeAttr(item.nome)}" placeholder="${placeholder}">
         ${kind==='categorias'? `
           <label class="ps-label">Tipo</label>
           <select class="ps-input" id="fce-tipo">
@@ -9627,7 +9580,7 @@ function openFinCadastroEditModal(kind, id){
         ` : ''}
       </div>
       <div class="modal-actions">
-        <button class="btn-accent" id="fce-save">Salvar alterações</button>
+        <button class="btn-accent" id="fce-save">${existente? 'Salvar alterações' : 'Cadastrar'}</button>
         <button class="btn-outline" id="fce-cancel">Cancelar</button>
       </div>
     </div>`;
@@ -9636,9 +9589,28 @@ function openFinCadastroEditModal(kind, id){
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('fce-cancel').addEventListener('click', closeModal);
   document.getElementById('fce-nome').focus();
-  document.getElementById('fce-save').addEventListener('click', ()=>{
+  document.getElementById('fce-save').addEventListener('click', async ()=>{
     const nome = document.getElementById('fce-nome').value.trim();
     if(!nome){ alert('Informe o nome.'); return; }
+    if(!existente){
+      const btn = document.getElementById('fce-save'); btn.disabled = true;
+      try{
+        let row;
+        if(kind==='categorias'){
+          row = await syncFinCategoriaInsert(nome, document.getElementById('fce-tipo').value, document.getElementById('fce-exige').checked);
+          FIN_CATEGORIAS.push({id:row.id, nome:row.nome, tipo:row.tipo, exigeAluno:!!row.exige_aluno});
+        } else if(kind==='contas'){
+          row = await syncFinContaInsert(nome);
+          FIN_CONTAS.push({id:row.id, nome:row.nome});
+        } else {
+          row = await syncFinFormaInsert(nome);
+          FIN_FORMAS.push({id:row.id, nome:row.nome});
+        }
+        closeModal();
+        renderFinanceiro();
+      }catch(e){ console.error(e); alert('Não foi possível salvar. Tente novamente.'); btn.disabled = false; }
+      return;
+    }
     item.nome = nome;
     if(kind==='categorias'){
       item.tipo = document.getElementById('fce-tipo').value;
