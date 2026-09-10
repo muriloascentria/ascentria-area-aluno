@@ -6529,6 +6529,245 @@ function openEditAlunoModal(s){
    "mentora") no rótulo mostrado pro aluno em Minhas Sessões 1:1 (ver mentorLabel). */
 const RESPONSAVEL_CONTATO_OPTS = ['Murilo Pedroso','Sandra Bublitz','Carmem Goretty','Diego Eller'];
 const MENTORES_MASC = ['Murilo Pedroso','Diego Eller'];
+/* ---- Acompanhamento Completo do Mentorado (PDF) ------------------------------------------
+   Junta, num documento só, tudo que a empresa registrou sobre um aluno: cadastro, diagnóstico de
+   entrada, linha do tempo dos encontros e contatos, registros internos, checklist, progresso no
+   método e aulas assistidas.
+
+   Sobre as datas: "Data da reunião" e afins são campos de texto livre (a pessoa digita "25/08/2026",
+   "25/08", "25 ago"...). Então a ordenação é uma tentativa de leitura, não uma garantia. O que não
+   for reconhecido NÃO é chutado nem descartado — vai para o fim, numa seção própria, com o texto
+   original preservado, pra ninguém achar que o histórico está completo quando não está. */
+const MESES_PT = {jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+function dataOrdenavel(txt){
+  const t = String(txt||'').trim().toLowerCase();
+  if(!t) return null;
+  let m;
+  // 2026-08-25
+  if((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return chaveData(+m[1], +m[2], +m[3]);
+  // 25/08/2026 ou 25-08-2026 ou 25/08/26
+  if((m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/))){
+    let ano = +m[3]; if(ano < 100) ano += 2000;
+    return chaveData(ano, +m[2], +m[1]);
+  }
+  // 25/08 (sem ano) — assume o ano corrente
+  if((m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})$/))) return chaveData(new Date().getFullYear(), +m[2], +m[1]);
+  // 25 ago / 25 de agosto / 25 ago 2026
+  if((m = t.match(/^(\d{1,2})\s*(?:de\s+)?([a-zà-ú]{3,})\.?\s*(?:de\s+)?(\d{4})?/))){
+    const mes = MESES_PT[m[2].slice(0,3)];
+    if(mes) return chaveData(m[3]? +m[3] : new Date().getFullYear(), mes, +m[1]);
+  }
+  return null;
+}
+function chaveData(ano, mes, dia){
+  if(!(ano>1900 && ano<2200) || !(mes>=1 && mes<=12) || !(dia>=1 && dia<=31)) return null;
+  return String(ano).padStart(4,'0')+'-'+String(mes).padStart(2,'0')+'-'+String(dia).padStart(2,'0');
+}
+function dataBonita(iso){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || '—');
+}
+/* Monta a linha do tempo do aluno a partir de tudo que tem data. */
+function linhaDoTempoAluno(s){
+  const eventos = [];
+  const add = (txtData, tipo, titulo, detalhe, links)=>{
+    eventos.push({ chave: dataOrdenavel(txtData), textoData: txtData || '', tipo, titulo, detalhe: detalhe||'', links: links||[] });
+  };
+  if(s.cadastro && s.cadastro.dataMatricula){
+    add(s.cadastro.dataMatricula, 'Matrícula', 'Entrada na mentoria',
+        (s.cadastro.plano && s.cadastro.plano!=='—' ? s.cadastro.plano : '') +
+        (s.cadastro.duracaoMeses ? (s.cadastro.plano && s.cadastro.plano!=='—' ? ' · ' : '') + s.cadastro.duracaoMeses + ' meses' : ''));
+  }
+  if(s.diagnostico && s.diagnostico.wispformSubmittedAt){
+    add(String(s.diagnostico.wispformSubmittedAt).slice(0,10), 'Diagnóstico', 'Diagnóstico inicial respondido', '');
+  }
+  (s.sessions||[]).forEach(x=>{
+    const links = [];
+    if(x.linkGravacao) links.push({rotulo:'Gravação', url:x.linkGravacao});
+    if(x.linkTranscricao) links.push({rotulo:'Transcrição', url:x.linkTranscricao});
+    add(x.date, 'Encontro', x.title || 'Encontro',
+        (x.responsavel? 'Com '+x.responsavel : '') + (x.notes? (x.responsavel? ' — ' : '') + x.notes : ''), links);
+  });
+  (s.contatos||[]).forEach(c=>{
+    if(c.syncedToSessions) return; // já aparece como Encontro, não duplica
+    const links = [];
+    if(c.linkGravacao) links.push({rotulo:'Gravação', url:c.linkGravacao});
+    if(c.linkTranscricao) links.push({rotulo:'Transcrição', url:c.linkTranscricao});
+    add(c.data, 'Contato', 'Contato registrado',
+        (c.responsavel? 'Com '+c.responsavel : '') + (c.resumo? (c.responsavel? ' — ' : '') + c.resumo : ''), links);
+  });
+  (s.registrosInternos||[]).forEach(r=>{
+    add(r.data, 'Registro interno', 'Registro da equipe',
+        (r.autorNome? r.autorNome+': ' : '') + (r.texto||''));
+  });
+  const comData = eventos.filter(e=>e.chave).sort((a,b)=> a.chave < b.chave ? -1 : a.chave > b.chave ? 1 : 0);
+  const semData = eventos.filter(e=>!e.chave);
+  return { comData, semData };
+}
+function progressoPorModuloAluno(s){
+  return MODULES.map(m=>{
+    const total = (MODULE_CHECKLIST[m.id]||[]).length;
+    const feitos = Math.min(s.moduleProgress[m.id]||0, total);
+    return { nome:m.name, feitos, total, pct: total? Math.round(feitos/total*100) : 0 };
+  });
+}
+function exportAcompanhamentoPDF(s){
+  const win = window.open('', '_blank');
+  if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
+
+  const c = s.cadastro || {};
+  const d = s.diagnostico || {};
+  const { comData, semData } = linhaDoTempoAluno(s);
+  const modulos = progressoPorModuloAluno(s);
+  const aulasFeitas = COURSES.filter(x=>(s.courseProgress[x.id]||0)===100);
+  const aulasAndamento = COURSES.filter(x=>{ const v=s.courseProgress[x.id]||0; return v>0 && v<100; });
+  const tarefas = s.checklist || [];
+  const feitas = tarefas.filter(t=>t.status==='Concluída').length;
+  const hoje = new Date();
+  const geradoEm = String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
+
+  const linha = (rotulo, valor)=> `<tr><th>${escapeHtml(rotulo)}</th><td>${escapeHtml(valor==null||valor===''? '—' : String(valor))}</td></tr>`;
+  const linksHtml = (links)=> links.length? ' ' + links.map(l=>`<a href="${escapeAttr(l.url)}">${escapeHtml(l.rotulo)}</a>`).join(' · ') : '';
+  const eventoHtml = (e)=> `
+    <div class="ev">
+      <div class="ev-data">${e.chave? dataBonita(e.chave) : escapeHtml(e.textoData||'sem data')}</div>
+      <div class="ev-corpo">
+        <span class="ev-tag ev-${e.tipo.toLowerCase().replace(/[^a-z]/g,'')}">${escapeHtml(e.tipo)}</span>
+        <strong>${escapeHtml(e.titulo)}</strong>
+        ${e.detalhe? `<div class="ev-det">${escapeHtml(e.detalhe)}</div>` : ''}
+        ${e.links.length? `<div class="ev-links">${linksHtml(e.links)}</div>` : ''}
+      </div>
+    </div>`;
+
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Acompanhamento — ${escapeHtml(s.name)}</title>
+    <style>
+      @page{ margin:16mm 12mm; }
+      body{ font-family:Arial,Helvetica,sans-serif; color:#1a1a1a; margin:0; padding:0 4mm; font-size:11px; line-height:1.5; }
+      .pdf-header{ display:flex; align-items:center; gap:14px; border-bottom:2px solid #ab6f30; padding-bottom:14px; margin-bottom:18px; }
+      .pdf-header img{ display:block; }
+      .pdf-header .cat{ font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; color:#666; }
+      h1{ font-size:19px; margin:0 0 3px; }
+      h2{ font-size:13px; margin:22px 0 9px; color:#ab6f30; border-bottom:1px solid #e6d7c2; padding-bottom:4px; page-break-after:avoid; }
+      .sub{ font-size:10.5px; color:#666; margin:-4px 0 10px; }
+      table.dados{ width:100%; border-collapse:collapse; margin-bottom:4px; }
+      table.dados th{ text-align:left; width:34%; font-weight:600; color:#555; padding:3px 8px 3px 0; vertical-align:top; font-size:10.5px; }
+      table.dados td{ padding:3px 0; vertical-align:top; }
+      .cols{ display:flex; gap:22px; }
+      .cols > div{ flex:1; min-width:0; }
+      table.grade{ width:100%; border-collapse:collapse; font-size:10px; }
+      table.grade th{ background:#f4efe7; text-align:left; padding:5px 7px; border:1px solid #e6d7c2; font-size:9.5px; }
+      table.grade td{ padding:5px 7px; border:1px solid #eee; vertical-align:top; }
+      tr{ page-break-inside:avoid; }
+      .ev{ display:flex; gap:12px; padding:7px 0; border-bottom:1px solid #f0f0f0; page-break-inside:avoid; }
+      .ev-data{ width:74px; flex-shrink:0; color:#666; font-size:10px; padding-top:1px; }
+      .ev-corpo{ flex:1; min-width:0; }
+      .ev-tag{ display:inline-block; font-size:8.5px; text-transform:uppercase; letter-spacing:.4px; padding:1px 6px; border-radius:9px; background:#f4efe7; color:#8a5a26; margin-right:6px; }
+      .ev-det{ color:#444; margin-top:2px; }
+      .ev-links{ margin-top:2px; font-size:10px; }
+      .ev-links a{ color:#ab6f30; }
+      .barra{ height:7px; background:#efefef; border-radius:4px; overflow:hidden; margin-top:3px; }
+      .barra i{ display:block; height:100%; background:#ab6f30; }
+      .mod{ margin-bottom:9px; page-break-inside:avoid; }
+      .mod b{ font-size:10.5px; }
+      .mod span{ float:right; color:#666; font-size:10px; }
+      .vazio{ color:#999; font-style:italic; }
+      .aviso{ background:#fbf3e8; border:1px solid #e0c9a6; border-radius:6px; padding:9px 11px; margin-top:8px; font-size:10.5px; }
+      .rodape{ margin-top:26px; padding-top:9px; border-top:1px solid #e6d7c2; font-size:9.5px; color:#888; }
+    </style></head><body>
+      <div class="pdf-header">
+        <img src="${BRAND_LOGO_DATA_URI}" alt="Ascentria · Método Essência" style="height:34px;width:auto;">
+        <div>
+          <div class="cat">Acompanhamento completo do mentorado</div>
+          <h1>${escapeHtml(s.name)}</h1>
+          <div class="cat" style="text-transform:none">${escapeHtml((s.tier==='curso'?'Curso Gravado':'Mentoria Método Essência'))} · Documento gerado em ${geradoEm}</div>
+        </div>
+      </div>
+
+      <h2>Identificação</h2>
+      <div class="cols">
+        <div><table class="dados">
+          ${linha('Nome completo', c.nomeCompleto)}
+          ${linha('E-mail', c.email)}
+          ${linha('Telefone', c.telefone)}
+          ${linha('Cidade', c.cidade)}
+          ${linha('CPF', c.cpf)}
+        </table></div>
+        <div><table class="dados">
+          ${linha('Nascimento', c.dataNascimento? dataBonita(c.dataNascimento) : '')}
+          ${linha('Turma', s.turma)}
+          ${linha('Plano', c.plano)}
+          ${linha('Data de matrícula', c.dataMatricula? dataBonita(c.dataMatricula) : '')}
+          ${linha('Duração contratada', c.duracaoMeses? c.duracaoMeses+' meses' : '')}
+        </table></div>
+      </div>
+
+      <h2>Como chegou — diagnóstico de entrada</h2>
+      <div class="cols">
+        <div><table class="dados">
+          ${linha('Nicho', d.nicho)}
+          ${linha('Subnicho', d.subnicho)}
+          ${linha('Tempo de consultório', d.tempoConsultorio)}
+          ${linha('Consultório é a única renda', d.unicaRenda)}
+          ${linha('Persona definida', d.personaDefinida)}
+          ${linha('Nota do negócio (0-10)', d.nota)}
+        </table></div>
+        <div><table class="dados">
+          ${linha('Faturamento médio', d.faturamentoMedio)}
+          ${linha('Pacientes ativos', d.pacientesAtivos)}
+          ${linha('Leads por mês', d.leadsMes)}
+          ${linha('Taxa de conversão', d.taxaConversao)}
+          ${linha('Horas por semana', d.horasSemana)}
+        </table></div>
+      </div>
+      <table class="dados" style="margin-top:6px">
+        ${linha('Maior gargalo', d.maiorGargalo)}
+        ${linha('Objetivo em 12 meses', d.objetivo12meses)}
+      </table>
+
+      <h2>Linha do tempo na mentoria</h2>
+      <p class="sub">Encontros, contatos e registros da equipe, do mais antigo ao mais recente.</p>
+      ${comData.length? comData.map(eventoHtml).join('') : '<p class="vazio">Nenhum evento com data registrada.</p>'}
+      ${semData.length? `
+      <div class="aviso"><strong>${semData.length} registro(s) sem data reconhecível.</strong> Os campos de data são preenchidos como texto livre, então estes não puderam ser posicionados na linha do tempo — aparecem abaixo com o texto exatamente como foi digitado.</div>
+      ${semData.map(eventoHtml).join('')}` : ''}
+
+      <h2>Checklist de acompanhamento</h2>
+      <p class="sub">${feitas} de ${tarefas.length} tarefas concluídas.</p>
+      ${tarefas.length? `<table class="grade">
+        <thead><tr><th style="width:38%">Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th style="width:26%">Observações</th></tr></thead>
+        <tbody>${tarefas.map(t=>`<tr>
+          <td>${escapeHtml(t.tarefa)}</td>
+          <td>${escapeHtml(t.responsavel)}</td>
+          <td>${escapeHtml(t.prazo)}</td>
+          <td>${escapeHtml(t.status)}</td>
+          <td>${escapeHtml(t.obs||'—')}</td>
+        </tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhuma tarefa registrada.</p>'}
+
+      <h2>Progresso no Método</h2>
+      ${modulos.map(m=>`
+        <div class="mod">
+          <b>${escapeHtml(m.nome)}</b><span>${m.feitos}/${m.total} · ${m.pct}%</span>
+          <div class="barra"><i style="width:${m.pct}%"></i></div>
+        </div>`).join('')}
+
+      <h2>Aulas</h2>
+      <p class="sub">${aulasFeitas.length} concluída(s) de ${COURSES.length} · ${aulasAndamento.length} em andamento.</p>
+      ${aulasFeitas.length? `<table class="grade">
+        <thead><tr><th style="width:62%">Aula concluída</th><th>Módulo</th></tr></thead>
+        <tbody>${aulasFeitas.map(x=>`<tr><td>${escapeHtml(x.title)}</td><td>${escapeHtml(x.cat)}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="vazio">Nenhuma aula concluída ainda.</p>'}
+      ${aulasAndamento.length? `<table class="grade" style="margin-top:9px">
+        <thead><tr><th style="width:62%">Aula em andamento</th><th>Progresso</th></tr></thead>
+        <tbody>${aulasAndamento.map(x=>`<tr><td>${escapeHtml(x.title)}</td><td>${s.courseProgress[x.id]||0}%</td></tr>`).join('')}</tbody></table>` : ''}
+
+      <div class="rodape">
+        Documento interno da Ascentria — Método Essência. Contém dados pessoais do mentorado; trate conforme a LGPD e não compartilhe fora da equipe.
+      </div>
+    </body></html>`);
+  win.document.close();
+  win.onload = ()=>{ win.focus(); win.print(); };
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
+}
 function mentorLabel(responsavel){
   return MENTORES_MASC.includes(responsavel) ? 'do mentor' : 'da mentora';
 }
@@ -6540,7 +6779,10 @@ function renderInterno(){
   const editing = getInternalEditing(s.id, internoDiagTab);
   document.getElementById('view-interno').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Dados vindos da planilha "Acompanhamento de Mentorados — Método Essência".</div>
-    <div class="actions" style="margin:-8px 0 16px"><button class="btn-outline" id="edit-aluno-btn">${icon('idcard')} Editar Dados do Aluno</button></div>
+    <div class="actions" style="margin:-8px 0 16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-outline" id="edit-aluno-btn">${icon('idcard')} Editar Dados do Aluno</button>
+      <button class="btn-outline" id="acomp-pdf-btn">${icon('download')} Gerar Acompanhamento Completo (PDF)</button>
+    </div>
 
     <div class="stat-row">
       <div class="stat-card"><div class="label">Progresso do mentorado</div><div class="value individual">${s.progressoMentorado}%</div></div>
@@ -6691,6 +6933,7 @@ function renderInterno(){
     </div>
   `;
   document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
+  document.getElementById('acomp-pdf-btn').addEventListener('click',()=>exportAcompanhamentoPDF(s));
   document.querySelectorAll('#diag-tabs [data-diagtab]').forEach(btn=>{
     btn.addEventListener('click',()=>{ internoDiagTab = btn.dataset.diagtab; renderInterno(); });
   });
