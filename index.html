@@ -3037,12 +3037,14 @@ async function syncFinContaInsert(nome){
   return data;
 }
 function syncFinContaDelete(id){ syncNow(sb.from('fin_contas').delete().eq('id', id)); }
+function syncFinContaUpdate(id, fields){ syncNow(sb.from('fin_contas').update(fields).eq('id', id)); }
 async function syncFinFormaInsert(nome){
   const { data, error } = await sb.from('fin_formas').insert({ nome }).select().single();
   if(error) throw error;
   return data;
 }
 function syncFinFormaDelete(id){ syncNow(sb.from('fin_formas').delete().eq('id', id)); }
+function syncFinFormaUpdate(id, fields){ syncNow(sb.from('fin_formas').update(fields).eq('id', id)); }
 async function syncFinLancamentoInsertMany(rows){
   const { data, error } = await sb.from('fin_lancamentos').insert(rows).select();
   if(error) throw error;
@@ -8950,11 +8952,13 @@ const CLIENTES_IMPORT_ALIASES = {
   cnpj: ['cnpj'],
   nascimento: ['data de nascimento','nascimento','dt nascimento','data nasc','data de nasc'],
   whatsapp: ['whatsapp','telefone','celular','contato whatsapp','fone','telefone whatsapp'],
-  email: ['e-mail','email'],
+  email: ['e mail','e-mail','email','mail'],
   cep: ['cep'],
   endereco: ['endereco','rua','logradouro'],
   numero: ['numero','n','nro'],
   complemento: ['complemento','compl'],
+  pontoReferencia: ['ponto de referencia','referencia','ponto referencia'],
+  pais: ['pais'],
   bairro: ['bairro'],
   estado: ['estado','uf'],
   cidade: ['cidade'],
@@ -8965,8 +8969,8 @@ function normalizeHeaderTxt(s){
   return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 }
 function baixarModeloClientesXLSX(){
-  const headers = ['Nome','CPF','CNPJ','Data de Nascimento','WhatsApp','E-mail','CEP','Endereco','Numero','Complemento','Bairro','Estado','Cidade','TAGs','Como conheceu'];
-  const ws = XLSX.utils.aoa_to_sheet([headers, ['Ex.: Maria da Silva','529.982.247-25','','15/03/1985','(51) 99999-8888','maria@email.com','90000-000','Rua Exemplo','123','apto 4','Centro','RS','Porto Alegre','Mentoria Essência | Paciente Murilo','Indicação de amiga']]);
+  const headers = ['Nome','CPF','CNPJ','Data de Nascimento','WhatsApp','E-mail','CEP','Endereco','Numero','Complemento','Ponto de Referencia','Bairro','Estado','Cidade','Pais','TAGs','Como conheceu'];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ['Ex.: Maria da Silva','529.982.247-25','','15/03/1985','(51) 99999-8888','maria@email.com','90000-000','Rua Exemplo','123','apto 4','Perto da praça','Centro','RS','Porto Alegre','Brasil','Mentoria Essência | Paciente Murilo','Indicação de amiga']]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
   XLSX.writeFile(wb, 'modelo-importacao-clientes.xlsx');
@@ -8999,7 +9003,16 @@ function handleClientesImportFile(file){
       alert('Não encontrei uma coluna de Nome nessa planilha. Renomeie a coluna para "Nome" (ou baixe o modelo) e tente de novo.');
       return;
     }
-    const existentesCpf = new Set(CLIENTES_REGISTRO.map(c=>(c.cpf||'').replace(/\D/g,'')).filter(Boolean));
+    /* Quem já está na lista (mesmo CPF, ou mesmo e-mail + mesmo primeiro nome) não é duplicado: a linha
+       da planilha COMPLETA o cadastro existente — preenche só o que está vazio e soma as TAGs. Assim os
+       alunos que entraram pela sincronização ganham endereço sem virar dois cadastros. */
+    const porCpf = {}, porEmail = {};
+    CLIENTES_REGISTRO.forEach(c=>{
+      const d = (c.cpf||'').replace(/\D/g,''); if(d) porCpf[d] = c;
+      const e = (c.email||'').trim().toLowerCase(); if(e) porEmail[e] = c;
+    });
+    const primeiroNome = n => normalizeHeaderTxt(n).split(' ')[0]||'';
+    const vistosCpf = new Set();
     const tagsNaoReconhecidas = new Set();
     let semNome = 0, duplicados = 0;
     const validas = [];
@@ -9008,8 +9021,11 @@ function handleClientesImportFile(file){
       const nome = String(get('nome')||'').trim();
       if(!nome){ semNome++; return; }
       const cpfDigits = String(get('cpf')||'').replace(/\D/g,'');
-      if(cpfDigits && existentesCpf.has(cpfDigits)){ duplicados++; return; }
-      if(cpfDigits) existentesCpf.add(cpfDigits); // evita duplicar entre linhas repetidas na própria planilha
+      if(cpfDigits && vistosCpf.has(cpfDigits)){ duplicados++; return; } // linha repetida na própria planilha
+      if(cpfDigits) vistosCpf.add(cpfDigits);
+      const emailKey = String(get('email')||'').trim().toLowerCase();
+      let existente = cpfDigits ? porCpf[cpfDigits] : null;
+      if(!existente && emailKey && porEmail[emailKey] && primeiroNome(porEmail[emailKey].nome)===primeiroNome(nome)) existente = porEmail[emailKey];
       const tagsRaw = String(get('tags')||'').split(/[,;|]/).map(t=>t.trim()).filter(Boolean);
       const tags = [];
       tagsRaw.forEach(t=>{
@@ -9022,8 +9038,10 @@ function handleClientesImportFile(file){
         email: String(get('email')||'').trim(), cep: String(get('cep')||'').trim(),
         endereco: String(get('endereco')||'').trim(), numero: String(get('numero')||'').trim(),
         complemento: String(get('complemento')||'').trim(), bairro: String(get('bairro')||'').trim(),
+        pontoReferencia: String(get('pontoReferencia')||'').trim(), pais: String(get('pais')||'').trim() || 'Brasil',
         estado: String(get('estado')||'').trim(), cidade: String(get('cidade')||'').trim(),
         tags, comoConheceu: String(get('comoConheceu')||'').trim(),
+        existenteId: existente ? existente.id : null,
       });
     });
     openClientesImportPreviewModal(validas, {total: rowsRaw.length, semNome, duplicados, tagsNaoReconhecidas: [...tagsNaoReconhecidas]});
@@ -9050,12 +9068,13 @@ function openClientesImportPreviewModal(rows, meta){
     <div class="modal-body form-modal">
       <div class="cat">Registro de Clientes</div>
       <h3>Conferir importação</h3>
-      <p class="desc">${meta.total} linha(s) na planilha · <strong>${rows.length} pronta(s) para importar</strong>${meta.semNome? ` · ${meta.semNome} sem nome (ignorada${meta.semNome>1?'s':''})` : ''}${meta.duplicados? ` · ${meta.duplicados} já cadastrada${meta.duplicados>1?'s':''} (mesmo CPF, ignorada${meta.duplicados>1?'s':''})` : ''}</p>
+      <p class="desc">${meta.total} linha(s) na planilha · <strong>${rows.filter(r=>!r.existenteId).length} nova(s)</strong> · <strong>${rows.filter(r=>r.existenteId).length} já cadastrada(s) — serão completadas</strong> (preenche o que estiver vazio e soma as TAGs, sem apagar nada)${meta.semNome? ` · ${meta.semNome} sem nome (ignorada${meta.semNome>1?'s':''})` : ''}${meta.duplicados? ` · ${meta.duplicados} repetida${meta.duplicados>1?'s':''} na planilha (ignorada${meta.duplicados>1?'s':''})` : ''}</p>
       ${meta.tagsNaoReconhecidas.length? `<div class="topic-note">TAGs não reconhecidas e não aplicadas: ${meta.tagsNaoReconhecidas.map(t=>escapeHtml(t)).join(', ')}. As TAGs válidas são: ${CLIENTES_TAG_OPTS.join(', ')}.</div>` : ''}
       ${rows.length? `<div class="table-wrap" style="max-height:320px;overflow:auto">
         <table class="check-table">
-          <thead><tr><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>E-mail</th><th>Cidade/UF</th><th>TAGs</th></tr></thead>
+          <thead><tr><th></th><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>E-mail</th><th>Cidade/UF</th><th>TAGs</th></tr></thead>
           <tbody>${rows.slice(0,50).map(r=>`<tr>
+            <td style="white-space:nowrap">${r.existenteId? '<span class="resp-pill">completar</span>' : '<span class="resp-pill" style="opacity:.7">nova</span>'}</td>
             <td>${escapeHtml(r.nome)}</td><td>${escapeHtml(r.cpf)||'—'}</td><td>${escapeHtml(r.whatsapp)||'—'}</td>
             <td>${escapeHtml(r.email)||'—'}</td><td>${escapeHtml(r.cidade)}${r.estado?'/'+escapeHtml(r.estado):''}</td>
             <td>${r.tags.join(', ')||'—'}</td>
@@ -9063,7 +9082,7 @@ function openClientesImportPreviewModal(rows, meta){
         </table>
       </div>${rows.length>50? `<p class="desc">Mostrando as primeiras 50 de ${rows.length} — todas serão importadas ao confirmar.</p>` : ''}` : '<p class="desc">Nenhuma linha válida para importar.</p>'}
       <div class="modal-actions">
-        ${rows.length? `<button class="btn-accent" id="clientes-import-confirm">${icon('check')} Importar ${rows.length} cliente${rows.length>1?'s':''}</button>` : ''}
+        ${rows.length? `<button class="btn-accent" id="clientes-import-confirm">${icon('check')} Importar ${rows.length} linha${rows.length>1?'s':''}</button>` : ''}
         <button class="btn-outline" id="modal-close-2">Cancelar</button>
       </div>
     </div>`;
@@ -9076,20 +9095,36 @@ function openClientesImportPreviewModal(rows, meta){
 async function confirmClientesImport(rows){
   const btn = document.getElementById('clientes-import-confirm');
   btn.disabled = true; btn.textContent = 'Importando...';
-  const payload = rows.map(r=>({
+  const novos = rows.filter(r=>!r.existenteId);
+  const completar = rows.filter(r=>r.existenteId);
+  const payload = novos.map(r=>({
     nome: r.nome, cpf: r.cpf || null, cnpj: r.cnpj || null, nascimento: r.nascimento || null,
     whatsapp: r.whatsapp || null, email: r.email || null, cep: r.cep || null, endereco: r.endereco || null,
-    numero: r.numero || null, complemento: r.complemento || null, bairro: r.bairro || null,
-    estado: r.estado || null, cidade: r.cidade || null, tags: r.tags, como_conheceu: r.comoConheceu || null,
+    numero: r.numero || null, complemento: r.complemento || null, ponto_referencia: r.pontoReferencia || null,
+    bairro: r.bairro || null, estado: r.estado || null, cidade: r.cidade || null, pais: r.pais || 'Brasil',
+    tags: r.tags, como_conheceu: r.comoConheceu || null,
   }));
-  const { data, error } = await sb.from('registro_clientes').insert(payload).select();
-  if(error){
-    console.error('import clientes', error);
-    alert('Não foi possível importar agora — verifique sua internet e tente novamente.');
-    btn.disabled = false; btn.textContent = `Importar ${rows.length} cliente${rows.length>1?'s':''}`;
-    return;
+  if(payload.length){
+    const { data, error } = await sb.from('registro_clientes').insert(payload).select();
+    if(error){
+      console.error('import clientes', error);
+      alert('Não foi possível importar agora — verifique sua internet e tente novamente.');
+      btn.disabled = false; btn.textContent = `Importar ${rows.length} linha${rows.length>1?'s':''}`;
+      return;
+    }
+    (data||[]).forEach(row=> CLIENTES_REGISTRO.unshift(mapClienteRow(row)));
   }
-  (data||[]).forEach(row=> CLIENTES_REGISTRO.unshift(mapClienteRow(row)));
+  // Completa os já cadastrados: só campos vazios + união das TAGs. Nome, aluno vinculado e o que já
+  // estava preenchido ficam como estão.
+  const CAMPOS = ['cpf','cnpj','nascimento','whatsapp','email','cep','endereco','numero','complemento','pontoReferencia','bairro','estado','cidade','comoConheceu'];
+  completar.forEach(r=>{
+    const c = CLIENTES_REGISTRO.find(x=>x.id===r.existenteId);
+    if(!c) return;
+    CAMPOS.forEach(k=>{ if(!c[k] && r[k]) c[k] = r[k]; });
+    if((!c.pais || c.pais==='Brasil') && r.pais) c.pais = r.pais;
+    r.tags.forEach(t=>{ if(!c.tags.includes(t)) c.tags.push(t); });
+    syncClienteUpdate(c.id, c);
+  });
   closeModal();
   renderClientes();
 }
@@ -9470,6 +9505,7 @@ function exportFinanceiroPDF(){
 }
 /* Cadastros compartilhados usados nos lançamentos — Categoria, Conta (bancária) e Forma de Pagamento.
    Apagar um item não apaga os lançamentos que já usavam ele (a referência só fica em branco). */
+let finCadFormAberto = {}; // qual lista está com o formulário "Adicionar" aberto
 function renderFinCadastroSimples(container, kind){
   const CONFIG = {
     categorias: { title:'Categorias', list:FIN_CATEGORIAS, addLabel:'Adicionar categoria', placeholder:'Ex.: Mentoria Essência' },
@@ -9483,9 +9519,11 @@ function renderFinCadastroSimples(container, kind){
     return FIN_LANCAMENTOS.filter(l=>l.formaId===id).length;
   };
   const colspan = kind==='categorias'? 5 : 3;
+  const aberto = !!finCadFormAberto[kind];
   container.innerHTML = `
     <h2 class="section-title">${icon('folder')} ${cfg.title}</h2>
-    <div class="add-form">
+    ${aberto? '' : `<div style="margin:6px 0 14px"><button class="btn-accent" id="fin-cad-abrir">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>`}
+    <div class="add-form" ${aberto? '' : 'hidden'}>
       <div class="field full"><label>Nome</label><input class="ps-input" type="text" id="fin-cad-nome" placeholder="${cfg.placeholder}"></div>
       ${kind==='categorias'? `<div class="field"><label>Tipo</label>
         <select class="ps-input" id="fin-cad-tipo">
@@ -9497,7 +9535,7 @@ function renderFinCadastroSimples(container, kind){
       <div class="field"><label>Exige aluno</label>
         <label class="ps-label" style="display:flex;align-items:center;gap:6px;margin:0;text-transform:none;font-size:12px"><input type="checkbox" id="fin-cad-exige"> Recebimento de aluno do Método</label>
       </div>` : ''}
-      <div class="actions"><button class="btn-accent" id="fin-cad-add">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>
+      <div class="actions" style="gap:8px"><button class="btn-accent" id="fin-cad-add">${icon('plus','ps-plus')} Salvar</button><button class="btn-outline" id="fin-cad-fechar">Cancelar</button></div>
     </div>
     <div class="table-wrap"><table class="check-table">
       <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th><th title="Lançamentos nesta categoria só salvam com o aluno informado">Exige aluno</th>':''}<th>Em uso</th><th></th></tr></thead>
@@ -9506,11 +9544,17 @@ function renderFinCadastroSimples(container, kind){
           <td>${escapeHtml(item.nome)}</td>
           ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td><td><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-fin-cat-exige="${item.id}" ${item.exigeAluno?'checked':''}> ${item.exigeAluno?'Sim':'Não'}</label></td>` : ''}
           <td>${inUseCount(item.id)}x</td>
-          <td><button class="btn-mini danger" data-fin-cad-del="${item.id}">${icon('trash')} Remover</button></td>
+          <td style="white-space:nowrap"><button class="btn-mini" data-fin-cad-edit="${item.id}">${icon('edit','tiny')} Editar</button> <button class="btn-mini danger" data-fin-cad-del="${item.id}">${icon('trash')} Remover</button></td>
         </tr>`).join('') || `<tr><td colspan="${colspan}" style="color:var(--text-mute)">Nada cadastrado ainda.</td></tr>`}
       </tbody>
     </table></div>
   `;
+  const abrirBtn = document.getElementById('fin-cad-abrir');
+  if(abrirBtn) abrirBtn.addEventListener('click', ()=>{ finCadFormAberto[kind] = true; renderFinanceiro(); const inp = document.getElementById('fin-cad-nome'); if(inp) inp.focus(); });
+  document.getElementById('fin-cad-fechar').addEventListener('click', ()=>{ finCadFormAberto[kind] = false; renderFinanceiro(); });
+  document.querySelectorAll('[data-fin-cad-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openFinCadastroEditModal(kind, btn.dataset.finCadEdit));
+  });
   document.getElementById('fin-cad-add').addEventListener('click', async ()=>{
     const nome = document.getElementById('fin-cad-nome').value.trim();
     if(!nome) return;
@@ -9530,6 +9574,7 @@ function renderFinCadastroSimples(container, kind){
         row = await syncFinFormaInsert(nome);
         FIN_FORMAS.push({id:row.id, nome:row.nome});
       }
+      finCadFormAberto[kind] = false;
       renderFinanceiro();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
@@ -9555,6 +9600,57 @@ function renderFinCadastroSimples(container, kind){
       else { syncFinFormaDelete(id); const i=FIN_FORMAS.findIndex(f=>f.id===id); if(i>-1) FIN_FORMAS.splice(i,1); }
       renderFinanceiro();
     });
+  });
+}
+/* Edição de Categoria / Conta / Forma de Pagamento já cadastrada. Renomear não mexe nos lançamentos
+   (eles apontam pelo id), só passa a mostrar o nome novo. */
+function openFinCadastroEditModal(kind, id){
+  const lista = kind==='categorias' ? FIN_CATEGORIAS : kind==='contas' ? FIN_CONTAS : FIN_FORMAS;
+  const item = lista.find(x=>x.id===id);
+  if(!item) return;
+  const titulo = kind==='categorias' ? 'Editar categoria' : kind==='contas' ? 'Editar conta' : 'Editar forma de pagamento';
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Financeiro</div>
+      <h3>${titulo}</h3>
+      <div class="ps-section">
+        <label class="ps-label">Nome</label>
+        <input class="ps-input" type="text" id="fce-nome" value="${escapeAttr(item.nome)}">
+        ${kind==='categorias'? `
+          <label class="ps-label">Tipo</label>
+          <select class="ps-input" id="fce-tipo">
+            <option value="ambos" ${item.tipo==='ambos'?'selected':''}>Receita e Despesa</option>
+            <option value="receita" ${item.tipo==='receita'?'selected':''}>Só Receita</option>
+            <option value="despesa" ${item.tipo==='despesa'?'selected':''}>Só Despesa</option>
+          </select>
+          <label class="ps-label" style="display:flex;align-items:center;gap:6px;margin-top:12px;text-transform:none;font-size:12.5px"><input type="checkbox" id="fce-exige" ${item.exigeAluno?'checked':''}> Exige aluno (recebimento de aluno do Método)</label>
+        ` : ''}
+      </div>
+      <div class="modal-actions">
+        <button class="btn-accent" id="fce-save">Salvar alterações</button>
+        <button class="btn-outline" id="fce-cancel">Cancelar</button>
+      </div>
+    </div>`;
+  modalReturnTo = null;
+  modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('fce-cancel').addEventListener('click', closeModal);
+  document.getElementById('fce-nome').focus();
+  document.getElementById('fce-save').addEventListener('click', ()=>{
+    const nome = document.getElementById('fce-nome').value.trim();
+    if(!nome){ alert('Informe o nome.'); return; }
+    item.nome = nome;
+    if(kind==='categorias'){
+      item.tipo = document.getElementById('fce-tipo').value;
+      item.exigeAluno = document.getElementById('fce-exige').checked;
+      syncFinCategoriaUpdate(item.id, { nome: item.nome, tipo: item.tipo, exige_aluno: item.exigeAluno });
+    } else if(kind==='contas'){
+      syncFinContaUpdate(item.id, { nome: item.nome });
+    } else {
+      syncFinFormaUpdate(item.id, { nome: item.nome });
+    }
+    closeModal();
+    renderFinanceiro();
   });
 }
 /* Modal de Novo Recebimento / Novo Pagamento (ou edição de um lançamento já existente — nesse caso,
