@@ -934,6 +934,22 @@
   .goal-body .title.done{text-decoration:line-through;color:var(--text-mute);}
   .goal-body .due{font-size:11.5px;color:var(--text-mute);}
   .goal-body .desc{font-size:12.5px;color:var(--text-dim);margin-top:4px;line-height:1.5;}
+  /* Aulas de apoio vinculadas a uma tarefa do checklist (Minhas Metas / Acompanhamento Interno) */
+  .goal-aulas{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .goal-aula{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg-elev);color:var(--accent-2);cursor:pointer;font-family:inherit;text-align:left;}
+  .goal-aula .icon{width:12px;height:12px;flex-shrink:0;}
+  .goal-aula:hover{border-color:var(--accent);}
+  .goal-aula.locked{opacity:.55;}
+  .aula-pick{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-elev);}
+  .aula-pick .mod{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);margin-top:4px;}
+  .aula-pick .pills{display:flex;flex-wrap:wrap;gap:6px;}
+  .aula-pill{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);cursor:pointer;font-family:inherit;text-align:left;}
+  .aula-pill.active{background:var(--accent);color:#fff;border-color:transparent;}
+  .aula-mini{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:12px;background:var(--accent-soft);color:var(--accent-2);margin:2px 4px 0 0;}
+  .aluno-tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;background:var(--success-soft);color:var(--success);margin-top:3px;white-space:nowrap;}
+  .aluno-tag .icon{width:11px;height:11px;}
+  .sugestoes-aluno{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .sugestoes-aluno .aula-pill{color:var(--text);}
 
   /* Staff / internal */
   .staff-banner{display:flex;align-items:center;gap:10px;background:var(--danger-soft);border:1px solid rgba(244,63,94,0.3);color:var(--banner-danger-fg);border-radius:var(--radius-sm);padding:12px 16px;font-size:12.5px;margin-bottom:22px;}
@@ -942,6 +958,20 @@
   .diag-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
   .diag-item .label{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px;}
   .diag-item .value{font-size:13px;font-weight:600;line-height:1.4;}
+  /* Cabeçalho recolhível — o Diagnóstico é longo (duas planilhas inteiras, pergunta a pergunta)
+     e empurrava o Checklist e os Encontros pra bem longe. Fica fechado por padrão. */
+  .sec-toggle{
+    display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:0;
+    cursor:pointer;text-align:left;color:inherit;font:inherit;margin:30px 0 14px;
+  }
+  /* O espaçamento passa pro botão: dentro dele o h2 é o primeiro filho, e a regra
+     h2.section-title:first-child zeraria a margem de cima, colando no bloco anterior. */
+  .sec-toggle .section-title{margin:0;}
+  .sec-toggle .sec-seta{color:var(--text-dim);flex-shrink:0;transition:transform .18s ease;margin-left:2px;}
+  .sec-toggle[aria-expanded="true"] .sec-seta{transform:rotate(180deg);}
+  .sec-toggle:hover .sec-seta{color:var(--text);}
+  .sec-toggle .sec-resumo{font-size:12px;color:var(--text-mute);font-weight:400;margin-left:auto;padding-left:10px;}
+  .sec-corpo[hidden]{display:none;}
   .diag-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:22px;}
   .diag-panel .ps-section:first-of-type .ps-h{margin-top:0;}
   .field-error{color:var(--danger);font-size:11.5px;margin:-6px 0 10px;}
@@ -2102,6 +2132,14 @@ let selectedPostType = 'interacao';
 let selectedCoursePostType = 'duvida'; // tipo padrão pré-selecionado no mural de comentários dentro de cada aula
 let CHECKLIST_STATE = {}; // in-memory, chave `${studentId}:${moduleId}` -> array de booleans
 let internoDiagTab = 'wispform';
+/* Fica fechado por padrão: a seção é longa e empurrava Checklist e Encontros pra fora da tela.
+   A escolha de cada pessoa é lembrada no próprio navegador dela. */
+function getDiagAberto(){
+  try{ return localStorage.getItem('ascentria-diag-aberto')==='1'; }catch(e){ return false; }
+}
+function setDiagAberto(v){
+  try{ localStorage.setItem('ascentria-diag-aberto', v? '1':'0'); }catch(e){}
+}
 let INTERNAL_DIAG = {}; // in-memory, chave `${studentId}:wispform`/`:abertura` -> array de respostas (flat)
 let INTERNAL_DIAG_EDITING = {}; // mesma chave -> array de booleans (true = campo aberto para edição)
 
@@ -2120,6 +2158,34 @@ function needsWispform(s){
 
 function getStudent(id){ return STUDENTS.find(s=>s.id===id); }
 function getCourse(id){ return COURSES.find(c=>c.id===id); }
+/* ---- Alunos como "tag": lista ordenada por nome pra menus de vínculo (vendas, financeiro) ---- */
+function alunosParaVinculo(){
+  return STUDENTS.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+}
+function nomeAlunoTag(id){
+  const s = id ? getStudent(id) : null;
+  return s ? s.name : '';
+}
+function alunoSelectOpts(current){
+  return `<option value="">— Sem aluno vinculado —</option>` +
+    alunosParaVinculo().map(s=>`<option value="${s.id}" ${current===s.id?'selected':''}>${escapeHtml(s.name)}${s.tier==='curso'?' (Curso)':''}</option>`).join('');
+}
+/* Sugestões de aluno por semelhança de nome — só SUGERE; quem confirma é a pessoa. Os nomes de lead
+   no registro de vendas são descritivos ("Enfermeira Fulana e esposo"), então casar sozinho erraria. */
+function tokensNome(txt){
+  const IGNORAR = new Set(['e','de','da','do','das','dos','a','o','enfermeira','enfermeiro','enf','dra','dr','esposo','esposa','marido','sra','sr']);
+  return String(txt||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .split(/[^a-z0-9]+/).filter(t=>t.length>=3 && !IGNORAR.has(t));
+}
+function sugerirAlunosPorNome(txt, max){
+  const alvo = tokensNome(txt);
+  if(!alvo.length) return [];
+  return alunosParaVinculo().map(s=>{
+    const toks = tokensNome(s.name + ' ' + ((s.cadastro||{}).nomeCompleto||''));
+    const comuns = alvo.filter(t=>toks.includes(t)).length;
+    return {s, score: comuns};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0, max||3).map(x=>x.s);
+}
 /* Quanto da aula o aluno do Curso Gravado precisa assistir antes de poder marcá-la como assistida
    (é a marcação que libera a próxima aula da sequência). */
 const MIN_WATCH_PCT = 60;
@@ -2422,7 +2488,7 @@ function mapProfileRow(p){
       objetivo12meses: diag.objetivo_12meses || '—', horasSemana: diag.horas_semana || '—',
       wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
-    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||''})),
+    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : []})),
     sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||'',responsavel:x.responsavel||''})),
     contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
     registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
@@ -2563,7 +2629,7 @@ async function bootstrapData(){
     // Financeiro interno da Ascentria — igual às listas acima, só pra equipe interna.
     FIN_CATEGORIAS.length = 0;
     const { data: fcRows } = await sb.from('fin_categorias').select('*').order('nome');
-    (fcRows||[]).forEach(r=>FIN_CATEGORIAS.push({id:r.id, nome:r.nome, tipo:r.tipo}));
+    (fcRows||[]).forEach(r=>FIN_CATEGORIAS.push({id:r.id, nome:r.nome, tipo:r.tipo, exigeAluno:!!r.exige_aluno}));
     FIN_CONTAS.length = 0;
     const { data: fcoRows } = await sb.from('fin_contas').select('*').order('nome');
     (fcoRows||[]).forEach(r=>FIN_CONTAS.push({id:r.id, nome:r.nome}));
@@ -2747,9 +2813,12 @@ function syncChecklistItemStatus(id, status){
   syncNow(sb.from('checklist_items').update({status}).eq('id', id));
 }
 async function syncChecklistItemInsert(sid, item){
-  const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs}).select().single();
+  const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[]}).select().single();
   if(error) throw error;
   return data.id;
+}
+function syncChecklistItemAulas(id, aulas){
+  syncNow(sb.from('checklist_items').update({aulas: aulas||[]}).eq('id', id));
 }
 function syncChecklistItemDelete(id){
   syncNow(sb.from('checklist_items').delete().eq('id', id));
@@ -2850,6 +2919,7 @@ function mapVendaSessaoRow(row){
     valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
     objecoes: row.objecoes || '', objecoes2: row.objecoes2 || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
     contrato: row.contrato_texto || '',
+    studentId: row.student_id || null, // tag do aluno — vínculo explícito, feito pela equipe no modal de edição
   };
 }
 async function syncVendaSessaoInsert(v){
@@ -2861,6 +2931,7 @@ async function syncVendaSessaoInsert(v){
     valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
     objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
     contrato_texto: v.contrato || null,
+    student_id: v.studentId || null,
   }).select().single();
   if(error) throw error;
   return data;
@@ -2924,13 +2995,15 @@ function mapFinLancamentoRow(r){
     diaPagamento: r.dia_pagamento || '', valorPago: r.valor_pago!=null ? Number(r.valor_pago) : null,
     grupoId: r.grupo_id || null, parcelaNum: r.parcela_num || null, parcelaTotal: r.parcela_total || null,
     repeteModo: r.repete_modo || null,
+    studentId: r.student_id || null, // aluno pagador (obrigatório quando a categoria exige)
   };
 }
-async function syncFinCategoriaInsert(nome, tipo){
-  const { data, error } = await sb.from('fin_categorias').insert({ nome, tipo }).select().single();
+async function syncFinCategoriaInsert(nome, tipo, exigeAluno){
+  const { data, error } = await sb.from('fin_categorias').insert({ nome, tipo, exige_aluno: !!exigeAluno }).select().single();
   if(error) throw error;
   return data;
 }
+function syncFinCategoriaUpdate(id, fields){ syncNow(sb.from('fin_categorias').update(fields).eq('id', id)); }
 function syncFinCategoriaDelete(id){ syncNow(sb.from('fin_categorias').delete().eq('id', id)); }
 async function syncFinContaInsert(nome){
   const { data, error } = await sb.from('fin_contas').insert({ nome }).select().single();
@@ -6388,10 +6461,14 @@ function renderMetas(){
         <div class="goal-body">
           <div class="title ${t.status==='Concluída'?'done':''}">${t.tarefa}</div>
           <div class="due">Prazo: ${t.prazo} ${t.status==='Atrasada'?'<span class="status-pill status-Atrasada" style="margin-left:6px">Atrasada</span>':''}</div>
+          ${goalAulasHtml(t.aulas, s)}
         </div>
       </div>
     `).join('')}
   `;
+  document.querySelectorAll('#view-metas [data-goal-aula]').forEach(btn=>{
+    btn.addEventListener('click',()=>openCourseModal(btn.dataset.goalAula));
+  });
   document.querySelectorAll('[data-goal]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const t = s.checklist.find(x=>x.id==btn.dataset.goal);
@@ -6600,9 +6677,28 @@ function linhaDoTempoAluno(s){
     add(r.data, 'Registro interno', 'Registro da equipe',
         (r.autorNome? r.autorNome+': ' : '') + (r.texto||''));
   });
+  // Sessões 1:1 de venda vinculadas a este aluno pela tag (nunca por nome)
+  vendasDoAluno(s.id).forEach(v=>{
+    add(v.dataSessao || v.dataTexto, 'Venda', 'Sessão 1:1 de venda' + (v.resultado? ' — '+v.resultado : ''),
+        [v.vendedor? 'Com '+v.vendedor : '', v.produto||'', v.valorTexto||''].filter(Boolean).join(' · '));
+  });
+  // Parcelas pagas no Financeiro (lançamentos vinculados ao aluno)
+  lancamentosDoAluno(s.id).filter(l=>l.pagou).forEach(l=>{
+    add(l.diaPagamento || l.dataVencimento, 'Pagamento', 'Pagamento recebido',
+        [l.descricao||'', l.parcelaTotal? `parcela ${l.parcelaNum}/${l.parcelaTotal}` : '', formatBRL(l.valorPago!=null? l.valorPago : l.valor)].filter(Boolean).join(' · '));
+  });
   const comData = eventos.filter(e=>e.chave).sort((a,b)=> a.chave < b.chave ? -1 : a.chave > b.chave ? 1 : 0);
   const semData = eventos.filter(e=>!e.chave);
   return { comData, semData };
+}
+function vendasDoAluno(sid){
+  return VENDA_SESSOES.filter(v=>v.studentId===sid).slice().sort((a,b)=>(a.dataSessao||'').localeCompare(b.dataSessao||''));
+}
+function analiseDaVenda(vendaId){
+  return ANALISE_SESSOES.find(a=>a.vendaSessaoId===vendaId) || null;
+}
+function lancamentosDoAluno(sid){
+  return FIN_LANCAMENTOS.filter(l=>l.studentId===sid).slice().sort((a,b)=>(a.dataVencimento||'').localeCompare(b.dataVencimento||''));
 }
 function progressoPorModuloAluno(s){
   return MODULES.map(m=>{
@@ -6623,6 +6719,8 @@ function exportAcompanhamentoPDF(s){
   const aulasAndamento = COURSES.filter(x=>{ const v=s.courseProgress[x.id]||0; return v>0 && v<100; });
   const tarefas = s.checklist || [];
   const feitas = tarefas.filter(t=>t.status==='Concluída').length;
+  const vendas = vendasDoAluno(s.id);
+  const pagamentos = lancamentosDoAluno(s.id);
   const hoje = new Date();
   const geradoEm = String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
 
@@ -6724,6 +6822,35 @@ function exportAcompanhamentoPDF(s){
         ${linha('Objetivo em 12 meses', d.objetivo12meses)}
       </table>
 
+      <h2>Processo de venda</h2>
+      ${vendas.length? vendas.map(v=>{
+        const an = analiseDaVenda(v.id);
+        const aprend = an ? [
+          ['Diego', an.diegoAp1, an.diegoAp2], ['Carmem', an.carmemAp1, an.carmemAp2], ['Viviane', an.vivianeAp1, an.vivianeAp2],
+        ].filter(x=>x[1]||x[2]) : [];
+        return `
+        <div class="cols" style="margin-bottom:8px">
+          <div><table class="dados">
+            ${linha('Data da sessão', v.dataSessao? dataBonita(v.dataSessao) : v.dataTexto)}
+            ${linha('Vendedor(a)', v.vendedor)}
+            ${linha('Produto', v.produto + (v.upsell? ' (upsell)' : ''))}
+            ${linha('Formato', v.formato)}
+            ${linha('Presença', v.presenca)}
+          </table></div>
+          <div><table class="dados">
+            ${linha('Resultado', v.resultado)}
+            ${linha('Valor', v.valorTexto)}
+            ${linha('Objeção 1', v.objecoes)}
+            ${linha('Objeção 2', v.objecoes2)}
+            ${linha('Observações', v.observacoes)}
+          </table></div>
+        </div>
+        ${aprend.length? `<table class="grade" style="margin-bottom:10px">
+          <thead><tr><th style="width:16%">Análise 1:1</th><th>Aprendizado 1</th><th>Aprendizado 2</th></tr></thead>
+          <tbody>${aprend.map(x=>`<tr><td>${escapeHtml(x[0])}</td><td>${escapeHtml(x[1]||'—')}</td><td>${escapeHtml(x[2]||'—')}</td></tr>`).join('')}</tbody>
+        </table>` : ''}`;
+      }).join('') : '<p class="vazio">Nenhuma sessão de venda vinculada a este aluno. O vínculo é feito em Registro de Sessões 1:1 → Editar → Aluno vinculado.</p>'}
+
       <h2>Linha do tempo na mentoria</h2>
       <p class="sub">Encontros, contatos e registros da equipe, do mais antigo ao mais recente.</p>
       ${comData.length? comData.map(eventoHtml).join('') : '<p class="vazio">Nenhum evento com data registrada.</p>'}
@@ -6736,7 +6863,7 @@ function exportAcompanhamentoPDF(s){
       ${tarefas.length? `<table class="grade">
         <thead><tr><th style="width:38%">Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th style="width:26%">Observações</th></tr></thead>
         <tbody>${tarefas.map(t=>`<tr>
-          <td>${escapeHtml(t.tarefa)}</td>
+          <td>${escapeHtml(t.tarefa)}${(t.aulas||[]).length? `<div style="color:#666;font-size:9.5px;margin-top:2px">Aulas de apoio: ${escapeHtml((t.aulas||[]).map(id=>(getCourse(id)||{}).title).filter(Boolean).join(' · '))}</div>` : ''}</td>
           <td>${escapeHtml(t.responsavel)}</td>
           <td>${escapeHtml(t.prazo)}</td>
           <td>${escapeHtml(t.status)}</td>
@@ -6760,6 +6887,20 @@ function exportAcompanhamentoPDF(s){
         <thead><tr><th style="width:62%">Aula em andamento</th><th>Progresso</th></tr></thead>
         <tbody>${aulasAndamento.map(x=>`<tr><td>${escapeHtml(x.title)}</td><td>${s.courseProgress[x.id]||0}%</td></tr>`).join('')}</tbody></table>` : ''}
 
+      <h2>Pagamentos</h2>
+      ${pagamentos.length? `
+      <p class="sub">${pagamentos.filter(l=>l.pagou).length} de ${pagamentos.length} lançamento(s) pago(s) · recebido ${formatBRL(pagamentos.filter(l=>l.pagou).reduce((a,l)=>a+(l.valorPago!=null? l.valorPago : l.valor),0))} de ${formatBRL(pagamentos.reduce((a,l)=>a+l.valor,0))}.</p>
+      <table class="grade">
+        <thead><tr><th>Vencimento</th><th style="width:40%">Descrição</th><th>Parcela</th><th>Valor</th><th>Situação</th><th>Pago em</th></tr></thead>
+        <tbody>${pagamentos.map(l=>`<tr>
+          <td>${l.dataVencimento? dataBonita(l.dataVencimento) : '—'}</td>
+          <td>${escapeHtml(l.descricao||'—')}</td>
+          <td>${l.parcelaTotal? `${l.parcelaNum}/${l.parcelaTotal}` : '—'}</td>
+          <td>${formatBRL(l.valor)}</td>
+          <td>${l.pagou? 'Pago' : 'Em aberto'}</td>
+          <td>${l.pagou? (l.diaPagamento? dataBonita(l.diaPagamento) : '—') + (l.valorPago!=null && l.valorPago!==l.valor? ' ('+formatBRL(l.valorPago)+')' : '') : '—'}</td>
+        </tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhum lançamento do Financeiro vinculado a este aluno.</p>'}
+
       <div class="rodape">
         Documento interno da Ascentria — Método Essência. Contém dados pessoais do mentorado; trate conforme a LGPD e não compartilhe fora da equipe.
       </div>
@@ -6771,12 +6912,78 @@ function exportAcompanhamentoPDF(s){
 function mentorLabel(responsavel){
   return MENTORES_MASC.includes(responsavel) ? 'do mentor' : 'da mentora';
 }
+/* ---- Aulas de apoio vinculadas a uma tarefa do checklist ----
+   A equipe escolhe (várias) aulas que ajudam o mentorado a executar a tarefa; em Minhas Metas elas
+   viram links que abrem a aula direto. Guardadas em checklist_items.aulas (ids de courses). */
+let novaTarefaAulas = new Set(); // seleção do formulário "Nova tarefa" (zera ao salvar)
+function aulaPickHtml(selecionadas, prefix){
+  const sel = new Set(selecionadas||[]);
+  const cats = orderedCourseCats();
+  if(!COURSES.length) return `<div class="aula-pick"><span style="color:var(--text-mute);font-size:12px">Nenhuma aula cadastrada ainda.</span></div>`;
+  return `<div class="aula-pick" id="${prefix}-pick">
+    ${cats.map(cat=>`
+      <div class="mod">${escapeHtml(cat)}</div>
+      <div class="pills">${COURSES.filter(c=>c.cat===cat).map(c=>`<button type="button" class="aula-pill ${sel.has(c.id)?'active':''}" data-${prefix}-aula="${escapeAttr(c.id)}">${escapeHtml(c.title)}</button>`).join('')}</div>
+    `).join('')}
+  </div>`;
+}
+function bindAulaPick(prefix, set){
+  document.querySelectorAll(`[data-${prefix}-aula]`).forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id = btn.getAttribute(`data-${prefix}-aula`);
+      if(set.has(id)) set.delete(id); else set.add(id);
+      btn.classList.toggle('active', set.has(id));
+      const cnt = document.getElementById(prefix+'-count');
+      if(cnt) cnt.textContent = set.size? `${set.size} selecionada${set.size>1?'s':''}` : 'nenhuma selecionada';
+    });
+  });
+}
+function aulasChipsHtml(ids){
+  return (ids||[]).map(id=>{ const c = getCourse(id); return c ? `<span class="aula-mini">${escapeHtml(c.title)}</span>` : ''; }).join('');
+}
+/* Cartão de Minhas Metas: cada aula vira um link que abre a aula. Se a aula ainda estiver travada
+   pro aluno do Curso, openCourseModal avisa e não abre — comportamento proposital, não contornar. */
+function goalAulasHtml(ids, s){
+  const aulas = (ids||[]).map(getCourse).filter(Boolean);
+  if(!aulas.length) return '';
+  return `<div class="goal-aulas">${aulas.map(c=>{
+    const locked = isLessonLocked(c.id, s);
+    return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada — conclua a anterior':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
+  }).join('')}</div>`;
+}
+function openTarefaAulasModal(s, t){
+  const sel = new Set(t.aulas||[]);
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Checklist de Acompanhamento</div>
+      <h3>Aulas de apoio</h3>
+      <p class="desc">${escapeHtml(t.tarefa)}</p>
+      <p class="section-sub" style="margin-top:-4px">Selecione as aulas que ajudam o mentorado a executar esta tarefa — <span id="ta-count">${sel.size? `${sel.size} selecionada${sel.size>1?'s':''}` : 'nenhuma selecionada'}</span>.</p>
+      ${aulaPickHtml(t.aulas, 'ta')}
+      <div class="modal-actions">
+        <button class="btn-accent" id="ta-save">Salvar</button>
+        <button class="btn-outline" id="ta-cancel">Cancelar</button>
+      </div>
+    </div>`;
+  modalReturnTo = null;
+  modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+  bindAulaPick('ta', sel);
+  document.getElementById('ta-cancel').addEventListener('click', closeModal);
+  document.getElementById('ta-save').addEventListener('click', ()=>{
+    t.aulas = orderedCourseIds().filter(id=>sel.has(id));
+    syncChecklistItemAulas(t.id, t.aulas);
+    closeModal();
+    renderInterno();
+  });
+}
 function renderInterno(){
   const s = getStudent(currentStudentId);
   const d = s.diagnostico;
   const groups = internoDiagTab==='wispform' ? WISPFORM_QUESTIONS : DIAGNOSTICO_ABERTURA_QUESTIONS;
   const answers = getInternalAnswers(s.id, internoDiagTab);
   const editing = getInternalEditing(s.id, internoDiagTab);
+  const diagAberto = getDiagAberto();
   document.getElementById('view-interno').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Dados vindos da planilha "Acompanhamento de Mentorados — Método Essência".</div>
     <div class="actions" style="margin:-8px 0 16px;display:flex;gap:10px;flex-wrap:wrap">
@@ -6791,23 +6998,30 @@ function renderInterno(){
       <div class="stat-card"><div class="label">Tempo de consultório</div><div class="value" style="font-size:14px">${d.tempoConsultorio}</div></div>
     </div>
 
-    <h2 class="section-title">Diagnóstico e Acompanhamento</h2>
-    <p class="section-sub" style="margin-top:-6px">Reflete as abas "Respostas Wispform" e "Diagnóstico Abertura" da planilha interna, pergunta a pergunta.</p>
-    <div class="community-filters" id="diag-tabs">
-      <button class="filter-tab ${internoDiagTab==='wispform'?'active':''}" data-diagtab="wispform">Respostas Wispform</button>
-      <button class="filter-tab ${internoDiagTab==='abertura'?'active':''}" data-diagtab="abertura">Diagnóstico Abertura</button>
+    <button class="sec-toggle" id="diag-toggle" aria-expanded="${diagAberto? 'true':'false'}" aria-controls="diag-corpo">
+      <h2 class="section-title">Diagnóstico e Acompanhamento</h2>
+      ${icon('down','sec-seta')}
+      <span class="sec-resumo">${diagAberto? 'ocultar' : 'mostrar'}</span>
+    </button>
+    <div class="sec-corpo" id="diag-corpo" ${diagAberto? '' : 'hidden'}>
+      <p class="section-sub" style="margin-top:2px">Reflete as abas "Respostas Wispform" e "Diagnóstico Abertura" da planilha interna, pergunta a pergunta.</p>
+      <div class="community-filters" id="diag-tabs">
+        <button class="filter-tab ${internoDiagTab==='wispform'?'active':''}" data-diagtab="wispform">Respostas Wispform</button>
+        <button class="filter-tab ${internoDiagTab==='abertura'?'active':''}" data-diagtab="abertura">Diagnóstico Abertura</button>
+      </div>
+      <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
     </div>
-    <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
 
     <h2 class="section-title">Checklist de Acompanhamento</h2>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Nº</th><th>Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th><th></th></tr></thead>
+        <thead><tr><th>Nº</th><th>Tarefa</th><th>Aulas de apoio</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th><th></th></tr></thead>
         <tbody>
           ${s.checklist.map(t=>`
             <tr>
               <td>${t.id}</td>
               <td style="min-width:220px">${t.tarefa}</td>
+              <td style="min-width:160px">${aulasChipsHtml(t.aulas)}<div><button class="btn-mini" data-task-aulas="${t.id}" title="Escolher aulas de apoio">${icon('edit','tiny')} ${(t.aulas||[]).length? 'Editar' : 'Vincular aulas'}</button></div></td>
               <td><span class="resp-pill">${t.responsavel}</span></td>
               <td>${t.prazo}</td>
               <td><button class="status-pill ${statusClass(t.status)}" data-check="${t.id}">${t.status}</button></td>
@@ -6824,6 +7038,9 @@ function renderInterno(){
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
       </div>
       <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="new-task-prazo" placeholder="Ex.: 30 ago"></div>
+      <div class="field full"><label>Aulas de apoio (opcional — toque para selecionar uma ou mais; <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
+        ${aulaPickHtml([...novaTarefaAulas], 'nt')}
+      </div>
       <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
     </div>
 
@@ -6933,6 +7150,15 @@ function renderInterno(){
     </div>
   `;
   document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
+  document.getElementById('diag-toggle').addEventListener('click',()=>{
+    const corpo = document.getElementById('diag-corpo');
+    const btn = document.getElementById('diag-toggle');
+    const abrindo = corpo.hidden;
+    corpo.hidden = !abrindo;
+    btn.setAttribute('aria-expanded', abrindo? 'true' : 'false');
+    btn.querySelector('.sec-resumo').textContent = abrindo? 'ocultar' : 'mostrar';
+    setDiagAberto(abrindo);
+  });
   document.getElementById('acomp-pdf-btn').addEventListener('click',()=>exportAcompanhamentoPDF(s));
   document.querySelectorAll('#diag-tabs [data-diagtab]').forEach(btn=>{
     btn.addEventListener('click',()=>{ internoDiagTab = btn.dataset.diagtab; renderInterno(); });
@@ -6986,12 +7212,20 @@ function renderInterno(){
     const prazo = document.getElementById('new-task-prazo').value.trim() || '—';
     const btn = document.getElementById('add-task-btn');
     btn.disabled = true;
-    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:''};
+    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: orderedCourseIds().filter(id=>novaTarefaAulas.has(id))};
     try{
       item.id = await syncChecklistItemInsert(s.id, item);
       s.checklist.push(item);
+      novaTarefaAulas = new Set();
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  bindAulaPick('nt', novaTarefaAulas);
+  document.querySelectorAll('[data-task-aulas]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t = s.checklist.find(x=>x.id==btn.dataset.taskAulas);
+      if(t) openTarefaAulasModal(s, t);
+    });
   });
   document.querySelectorAll('[data-del-task]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -7648,7 +7882,7 @@ function renderVendas(){
             <tr class="${v.resultado==='Vendido'?'venda-vendido':''}">
               <td class="vendas-num-cell">${v.numero ?? ''}</td>
               <td>${escapeHtml(shortDateBR(v.dataTexto))}</td>
-              <td style="font-weight:600">${escapeHtml(v.lead)}</td>
+              <td style="font-weight:600">${escapeHtml(v.lead)}${v.studentId && nomeAlunoTag(v.studentId)? `<br><span class="aluno-tag" title="Aluno vinculado">${icon('check','tiny')} ${escapeHtml(nomeAlunoTag(v.studentId))}</span>` : ''}</td>
               <td>${whatsappCell(v.whatsapp)}</td>
               <td>${escapeHtml(v.vendedor)}</td>
               <td>${escapeHtml(v.produto)}</td>
@@ -7764,6 +7998,10 @@ function renderVendas(){
 function openEditVendaModal(id){
   const v = VENDA_SESSOES.find(x=>x.id==id);
   if(!v) return;
+  /* A vendedora (papel 'vendas') não enxerga o cadastro de alunos (RLS), então STUDENTS chega vazio
+     pra ela e o vínculo só aparece pra equipe interna. */
+  const podeVincular = currentUserRole==='staff' && STUDENTS.length>0;
+  const sugestoes = podeVincular ? sugerirAlunosPorNome(v.lead, 3) : [];
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
       <div class="cat">Registro de Sessões 1:1</div>
@@ -7797,6 +8035,14 @@ function openEditVendaModal(id){
         <label class="ps-label">Link do contrato</label>
         <input class="ps-input" type="text" id="ev-contrato" value="${escapeAttr(v.contrato)}" placeholder="https://...">
       </div>
+      <div class="ps-section">
+        <div class="ps-h">Aluno vinculado (tag)</div>
+        ${podeVincular ? `
+          <p class="section-sub" style="margin-top:0">Quando este lead virou aluno, vincule aqui. O vínculo é sempre confirmado por você — as sugestões abaixo são só por semelhança de nome.</p>
+          <select class="ps-input" id="ev-aluno">${alunoSelectOpts(v.studentId)}</select>
+          ${sugestoes.length? `<div class="sugestoes-aluno">${sugestoes.map(s=>`<button type="button" class="aula-pill ${v.studentId===s.id?'active':''}" data-ev-sugestao="${s.id}">${icon('idcard','tiny')} ${escapeHtml(s.name)}</button>`).join('')}</div>` : ''}
+        ` : `<p class="section-sub" style="margin-top:0">${v.studentId? 'Já vinculado a um aluno.' : 'Sem aluno vinculado.'} O vínculo com o cadastro de alunos é feito pela equipe interna.</p>`}
+      </div>
       <div class="modal-actions">
         <button class="btn-accent" id="ev-save">Salvar alterações</button>
         <button class="btn-outline" id="modal-close-2">Fechar</button>
@@ -7804,6 +8050,13 @@ function openEditVendaModal(id){
     </div>`;
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  document.querySelectorAll('[data-ev-sugestao]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const sel = document.getElementById('ev-aluno');
+      sel.value = sel.value===btn.dataset.evSugestao ? '' : btn.dataset.evSugestao;
+      document.querySelectorAll('[data-ev-sugestao]').forEach(b=>b.classList.toggle('active', b.dataset.evSugestao===sel.value));
+    });
+  });
   document.getElementById('ev-save').addEventListener('click', ()=>{
     const dataIso = document.getElementById('ev-data').value;
     const valorTexto = document.getElementById('ev-valor').value.trim();
@@ -7823,7 +8076,10 @@ function openEditVendaModal(id){
     v.objecoes2 = defaultIfEmpty(document.getElementById('ev-objecao2').value, VENDAS_SEM_OBJECAO);
     v.observacoes = defaultIfEmpty(document.getElementById('ev-observacoes').value, VENDAS_SEM_OBSERVACAO);
     v.contrato = document.getElementById('ev-contrato').value.trim();
+    const alunoSel = document.getElementById('ev-aluno');
+    if(alunoSel) v.studentId = alunoSel.value || null;
     syncVendaSessaoUpdate(v.id, {
+      student_id: v.studentId || null,
       data_sessao: v.dataSessao || null, data_texto: v.dataTexto || null, lead_nome: v.lead || null,
       whatsapp: v.whatsapp || null,
       vendedor: v.vendedor || null, produto: v.produto || null, upsell: v.upsell, formato: v.formato || null,
@@ -8779,7 +9035,7 @@ function renderFinLancamentos(container){
     const parcelaTxt = l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—';
     return `<tr data-fllinha="${l.id}">
       <td style="white-space:nowrap">${formatDateBR(l.dataVencimento)}</td>
-      <td>${escapeHtml(l.descricao||'—')}<br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(cat? cat.nome : '—')}</span></td>
+      <td>${escapeHtml(l.descricao||'—')}${l.studentId && nomeAlunoTag(l.studentId)? ` <span class="aluno-tag">${icon('idcard','tiny')} ${escapeHtml(nomeAlunoTag(l.studentId))}</span>` : ''}<br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(cat? cat.nome : '—')}</span></td>
       <td>${escapeHtml(conta? conta.nome : '—')}</td>
       <td>${escapeHtml(forma? forma.nome : '—')}</td>
       <td style="text-align:center">${parcelaTxt}</td>
@@ -8921,7 +9177,7 @@ function exportFinanceiroPDF(){
     theadHtml = '<tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Conta</th><th>Forma</th><th>Parcela</th><th>Valor</th></tr>';
     rowsHtml = list.map(l=>`<tr>
       <td>${formatDateBR(l.dataVencimento)}</td>
-      <td>${escapeHtml(l.descricao||'—')}</td>
+      <td>${escapeHtml(l.descricao||'—')}${l.studentId && nomeAlunoTag(l.studentId)? ' — '+escapeHtml(nomeAlunoTag(l.studentId)) : ''}</td>
       <td>${escapeHtml(catName(l.categoriaId))}</td>
       <td>${escapeHtml(contaName(l.contaId))}</td>
       <td>${escapeHtml(formaName(l.formaId))}</td>
@@ -8995,7 +9251,7 @@ function renderFinCadastroSimples(container, kind){
     if(kind==='contas') return FIN_LANCAMENTOS.filter(l=>l.contaId===id).length;
     return FIN_LANCAMENTOS.filter(l=>l.formaId===id).length;
   };
-  const colspan = kind==='categorias'? 4 : 3;
+  const colspan = kind==='categorias'? 5 : 3;
   container.innerHTML = `
     <h2 class="section-title">${icon('folder')} ${cfg.title}</h2>
     <div class="add-form">
@@ -9006,15 +9262,18 @@ function renderFinCadastroSimples(container, kind){
           <option value="receita">Só Receita</option>
           <option value="despesa">Só Despesa</option>
         </select>
+      </div>
+      <div class="field"><label>Exige aluno</label>
+        <label class="ps-label" style="display:flex;align-items:center;gap:6px;margin:0;text-transform:none;font-size:12px"><input type="checkbox" id="fin-cad-exige"> Recebimento de aluno do Método</label>
       </div>` : ''}
       <div class="actions"><button class="btn-accent" id="fin-cad-add">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>
     </div>
     <div class="table-wrap"><table class="check-table">
-      <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th>':''}<th>Em uso</th><th></th></tr></thead>
+      <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th><th title="Lançamentos nesta categoria só salvam com o aluno informado">Exige aluno</th>':''}<th>Em uso</th><th></th></tr></thead>
       <tbody>
         ${cfg.list.map(item=>`<tr>
           <td>${escapeHtml(item.nome)}</td>
-          ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td>` : ''}
+          ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td><td><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-fin-cat-exige="${item.id}" ${item.exigeAluno?'checked':''}> ${item.exigeAluno?'Sim':'Não'}</label></td>` : ''}
           <td>${inUseCount(item.id)}x</td>
           <td><button class="btn-mini danger" data-fin-cad-del="${item.id}">${icon('trash')} Remover</button></td>
         </tr>`).join('') || `<tr><td colspan="${colspan}" style="color:var(--text-mute)">Nada cadastrado ainda.</td></tr>`}
@@ -9030,8 +9289,9 @@ function renderFinCadastroSimples(container, kind){
       let row;
       if(kind==='categorias'){
         const tipo = document.getElementById('fin-cad-tipo').value;
-        row = await syncFinCategoriaInsert(nome, tipo);
-        FIN_CATEGORIAS.push({id:row.id, nome:row.nome, tipo:row.tipo});
+        const exige = !!(document.getElementById('fin-cad-exige')||{}).checked;
+        row = await syncFinCategoriaInsert(nome, tipo, exige);
+        FIN_CATEGORIAS.push({id:row.id, nome:row.nome, tipo:row.tipo, exigeAluno:!!row.exige_aluno});
       } else if(kind==='contas'){
         row = await syncFinContaInsert(nome);
         FIN_CONTAS.push({id:row.id, nome:row.nome});
@@ -9041,6 +9301,15 @@ function renderFinCadastroSimples(container, kind){
       }
       renderFinanceiro();
     }catch(e){ console.error(e); btn.disabled = false; }
+  });
+  document.querySelectorAll('[data-fin-cat-exige]').forEach(chk=>{
+    chk.addEventListener('change',()=>{
+      const cat = FIN_CATEGORIAS.find(c=>c.id===chk.dataset.finCatExige);
+      if(!cat) return;
+      cat.exigeAluno = chk.checked;
+      syncFinCategoriaUpdate(cat.id, { exige_aluno: cat.exigeAluno });
+      renderFinanceiro();
+    });
   });
   document.querySelectorAll('[data-fin-cad-del]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -9069,12 +9338,17 @@ function openFinLancamentoModal(tipo, existingId){
     contaId: editing.contaId, formaId: editing.formaId, valor: editing.valor,
     pagou: editing.pagou, diaPagamento: editing.diaPagamento || today,
     valorPago: editing.valorPago!=null? editing.valorPago : editing.valor,
+    studentId: editing.studentId || '',
     repetir:false, quando:'mensal', ocorrencias:1, modo:'parcelar', ocorrenciasList:[],
   } : {
     categoriaId:'', descricao:'', dataVencimento: today, contaId:'', formaId:'', valor:'',
     pagou:false, diaPagamento: today, valorPago:'',
+    studentId:'',
     repetir:false, quando:'mensal', ocorrencias:1, modo:'parcelar', ocorrenciasList:[],
   };
+  /* Categoria marcada como "exige aluno" (recebimento de aluno do Método): o menu de alunos aparece e
+     o salvamento fica bloqueado enquanto estiver vazio. Lançamentos antigos ficam sem aluno. */
+  const categoriaExigeAluno = ()=> !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeAluno;
 
   function addInterval(dateStr, quando){
     const [y,m,d] = dateStr.split('-').map(Number);
@@ -9118,6 +9392,9 @@ function openFinLancamentoModal(tipo, existingId){
             ${catOpts.map(c=>`<option value="${c.id}" ${draft.categoriaId===c.id?'selected':''}>${escapeHtml(c.nome)}</option>`).join('')}
           </select>
         </div>
+        ${categoriaExigeAluno()? `<div><label class="ps-label">Aluno *</label>
+          <select class="ps-input" id="fl-aluno">${alunoSelectOpts(draft.studentId)}</select>
+        </div>` : ''}
         <div><label class="ps-label">Descrição *</label><input class="ps-input" id="fl-descricao" value="${escapeAttr(draft.descricao)}"></div>
         <div><label class="ps-label">Data Vencimento *</label><input class="ps-input" type="date" id="fl-vencimento" value="${escapeAttr(draft.dataVencimento)}"></div>
         <div><label class="ps-label">Conta *</label>
@@ -9200,7 +9477,13 @@ function openFinLancamentoModal(tipo, existingId){
     bindModalEvents();
   }
   function bindModalEvents(){
-    document.getElementById('fl-categoria').addEventListener('change', e=>{ draft.categoriaId = e.target.value; });
+    document.getElementById('fl-categoria').addEventListener('change', e=>{
+      const antes = categoriaExigeAluno();
+      draft.categoriaId = e.target.value;
+      if(antes !== categoriaExigeAluno()) renderModal(); // mostra/esconde o menu de alunos
+    });
+    const alunoEl = document.getElementById('fl-aluno');
+    if(alunoEl) alunoEl.addEventListener('change', e=>{ draft.studentId = e.target.value; });
     document.getElementById('fl-descricao').addEventListener('input', e=>{ draft.descricao = e.target.value; });
     document.getElementById('fl-vencimento').addEventListener('change', e=>{
       draft.dataVencimento = e.target.value;
@@ -9264,6 +9547,12 @@ function openFinLancamentoModal(tipo, existingId){
         alert('Preencha todos os campos obrigatórios (Categoria, Descrição, Data de Vencimento, Conta, Forma de Pagamento e Valor).');
         return;
       }
+      if(categoriaExigeAluno() && !draft.studentId){
+        alert('Esta categoria é de recebimento de aluno: selecione o aluno antes de salvar.');
+        const el = document.getElementById('fl-aluno'); if(el) el.focus();
+        return;
+      }
+      const studentId = categoriaExigeAluno() ? draft.studentId : (draft.studentId || null);
       const saveBtn = document.getElementById('fl-save');
       saveBtn.disabled = true;
       try{
@@ -9273,13 +9562,22 @@ function openFinLancamentoModal(tipo, existingId){
             conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(draft.valor)||0,
             pagou: draft.pagou, dia_pagamento: draft.pagou? (draft.diaPagamento||null) : null,
             valor_pago: draft.pagou? (parseFloat(draft.valorPago)||0) : null,
+            student_id: studentId || null,
           };
           syncFinLancamentoUpdate(editing.id, fields);
           Object.assign(editing, {
             categoriaId: fields.categoria_id, descricao: fields.descricao, dataVencimento: fields.data_vencimento,
             contaId: fields.conta_id, formaId: fields.forma_id, valor: fields.valor,
             pagou: fields.pagou, diaPagamento: fields.dia_pagamento||'', valorPago: fields.valor_pago,
+            studentId: fields.student_id,
           });
+          /* Parcelas de um mesmo grupo: o aluno vale pra série inteira, então propaga pras irmãs. */
+          if(editing.grupoId){
+            FIN_LANCAMENTOS.filter(l=>l.grupoId===editing.grupoId && l.id!==editing.id && l.studentId!==fields.student_id).forEach(l=>{
+              l.studentId = fields.student_id;
+              syncFinLancamentoUpdate(l.id, { student_id: fields.student_id });
+            });
+          }
         } else if(draft.repetir && draft.ocorrenciasList.length>1){
           const grupoId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('grp'+Date.now()+Math.floor(Math.random()*1000));
           const n = draft.ocorrenciasList.length;
@@ -9290,6 +9588,7 @@ function openFinLancamentoModal(tipo, existingId){
             dia_pagamento: i===0 && draft.pagou? (draft.diaPagamento||null) : null,
             valor_pago: i===0 && draft.pagou? (parseFloat(draft.valorPago)||0) : null,
             grupo_id: grupoId, parcela_num: i+1, parcela_total: n, repete_modo: draft.modo,
+            student_id: studentId || null, // o aluno vai em TODAS as parcelas do grupo
             created_by: currentUser.id,
           }));
           const inserted = await syncFinLancamentoInsertMany(rowsToInsert);
@@ -9300,6 +9599,7 @@ function openFinLancamentoModal(tipo, existingId){
             conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(draft.valor)||0,
             pagou: draft.pagou, dia_pagamento: draft.pagou? (draft.diaPagamento||null) : null,
             valor_pago: draft.pagou? (parseFloat(draft.valorPago)||0) : null,
+            student_id: studentId || null,
             created_by: currentUser.id,
           };
           const inserted = await syncFinLancamentoInsertMany([row]);
