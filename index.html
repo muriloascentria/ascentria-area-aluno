@@ -935,15 +935,19 @@
   .goal-body .due{font-size:11.5px;color:var(--text-mute);}
   .goal-body .desc{font-size:12.5px;color:var(--text-dim);margin-top:4px;line-height:1.5;}
   /* Aulas de apoio vinculadas a uma tarefa do checklist (Minhas Metas / Acompanhamento Interno) */
-  .goal-aulas{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .goal-aulas-label{font-size:11.5px;font-weight:700;color:var(--text-dim);margin-top:8px;}
+  .goal-aulas{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;}
   .goal-aula{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg-elev);color:var(--accent-2);cursor:pointer;font-family:inherit;text-align:left;}
   .goal-aula .icon{width:12px;height:12px;flex-shrink:0;}
   .goal-aula:hover{border-color:var(--accent);}
   .goal-aula.locked{opacity:.55;}
-  .aula-pick{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-elev);}
+  .aula-pick{display:flex;flex-direction:column;gap:8px;}
+  .aula-pick .ps-input{max-width:420px;}
+  .aula-pill-x{background:none;border:none;color:inherit;font-size:14px;line-height:1;padding:0 0 0 4px;cursor:pointer;font-family:inherit;opacity:.85;}
+  .aula-pill-x:hover{opacity:1;}
   .aula-pick .mod{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);margin-top:4px;}
   .aula-pick .pills{display:flex;flex-wrap:wrap;gap:6px;}
-  .aula-pill{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);cursor:pointer;font-family:inherit;text-align:left;}
+  .aula-pill{display:inline-flex;align-items:center;gap:2px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);cursor:pointer;font-family:inherit;text-align:left;}
   .aula-pill.active{background:var(--accent);color:#fff;border-color:transparent;}
   .aula-mini{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:12px;background:var(--accent-soft);color:var(--accent-2);margin:2px 4px 0 0;}
   .aluno-tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;background:var(--success-soft);color:var(--success);margin-top:3px;white-space:nowrap;}
@@ -6917,26 +6921,37 @@ function mentorLabel(responsavel){
    viram links que abrem a aula direto. Guardadas em checklist_items.aulas (ids de courses). */
 let novaTarefaAulas = new Set(); // seleção do formulário "Nova tarefa" (zera ao salvar)
 function aulaPickHtml(selecionadas, prefix){
-  const sel = new Set(selecionadas||[]);
+  return `<div class="aula-pick" id="${prefix}-pick">${aulaPickInnerHtml(new Set(selecionadas||[]), prefix)}</div>`;
+}
+/* Menu suspenso: escolhe uma aula por vez; as escolhidas viram etiquetas com "x" pra tirar. */
+function aulaPickInnerHtml(sel, prefix){
+  if(!COURSES.length) return `<span style="color:var(--text-mute);font-size:12px">Nenhuma aula cadastrada ainda.</span>`;
+  const escolhidas = orderedCourseIds().filter(id=>sel.has(id)).map(getCourse).filter(Boolean);
   const cats = orderedCourseCats();
-  if(!COURSES.length) return `<div class="aula-pick"><span style="color:var(--text-mute);font-size:12px">Nenhuma aula cadastrada ainda.</span></div>`;
-  return `<div class="aula-pick" id="${prefix}-pick">
-    ${cats.map(cat=>`
-      <div class="mod">${escapeHtml(cat)}</div>
-      <div class="pills">${COURSES.filter(c=>c.cat===cat).map(c=>`<button type="button" class="aula-pill ${sel.has(c.id)?'active':''}" data-${prefix}-aula="${escapeAttr(c.id)}">${escapeHtml(c.title)}</button>`).join('')}</div>
-    `).join('')}
-  </div>`;
+  return `
+    ${escolhidas.length? `<div class="pills">${escolhidas.map(c=>`<span class="aula-pill active">${escapeHtml(c.title)} <button type="button" class="aula-pill-x" data-${prefix}-remove="${escapeAttr(c.id)}" title="Remover">×</button></span>`).join('')}</div>` : ''}
+    <select class="ps-input" data-${prefix}-select>
+      <option value="">${escolhidas.length? 'Adicionar outra aula...' : 'Selecionar aula...'}</option>
+      ${cats.map(cat=>`<optgroup label="${escapeAttr(cat)}">${COURSES.filter(c=>c.cat===cat && !sel.has(c.id)).map(c=>`<option value="${escapeAttr(c.id)}">${escapeHtml(c.title)}</option>`).join('')}</optgroup>`).join('')}
+    </select>`;
 }
 function bindAulaPick(prefix, set){
-  document.querySelectorAll(`[data-${prefix}-aula]`).forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const id = btn.getAttribute(`data-${prefix}-aula`);
-      if(set.has(id)) set.delete(id); else set.add(id);
-      btn.classList.toggle('active', set.has(id));
-      const cnt = document.getElementById(prefix+'-count');
-      if(cnt) cnt.textContent = set.size? `${set.size} selecionada${set.size>1?'s':''}` : 'nenhuma selecionada';
+  const box = document.getElementById(prefix+'-pick');
+  if(!box) return;
+  const atualiza = ()=>{
+    box.innerHTML = aulaPickInnerHtml(set, prefix);
+    const cnt = document.getElementById(prefix+'-count');
+    if(cnt) cnt.textContent = set.size? `${set.size} selecionada${set.size>1?'s':''}` : 'nenhuma selecionada';
+    liga();
+  };
+  const liga = ()=>{
+    const sel = box.querySelector(`[data-${prefix}-select]`);
+    if(sel) sel.addEventListener('change', ()=>{ if(sel.value){ set.add(sel.value); atualiza(); } });
+    box.querySelectorAll(`[data-${prefix}-remove]`).forEach(btn=>{
+      btn.addEventListener('click', ()=>{ set.delete(btn.getAttribute(`data-${prefix}-remove`)); atualiza(); });
     });
-  });
+  };
+  liga();
 }
 function aulasChipsHtml(ids){
   return (ids||[]).map(id=>{ const c = getCourse(id); return c ? `<span class="aula-mini">${escapeHtml(c.title)}</span>` : ''; }).join('');
@@ -6946,7 +6961,7 @@ function aulasChipsHtml(ids){
 function goalAulasHtml(ids, s){
   const aulas = (ids||[]).map(getCourse).filter(Boolean);
   if(!aulas.length) return '';
-  return `<div class="goal-aulas">${aulas.map(c=>{
+  return `<div class="goal-aulas-label">Aulas que vão ajudar na tarefa:</div><div class="goal-aulas">${aulas.map(c=>{
     const locked = isLessonLocked(c.id, s);
     return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada — conclua a anterior':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
   }).join('')}</div>`;
@@ -6958,7 +6973,7 @@ function openTarefaAulasModal(s, t){
       <div class="cat">Checklist de Acompanhamento</div>
       <h3>Aulas de apoio</h3>
       <p class="desc">${escapeHtml(t.tarefa)}</p>
-      <p class="section-sub" style="margin-top:-4px">Selecione as aulas que ajudam o mentorado a executar esta tarefa — <span id="ta-count">${sel.size? `${sel.size} selecionada${sel.size>1?'s':''}` : 'nenhuma selecionada'}</span>.</p>
+      <p class="section-sub" style="margin-top:-4px">Escolha as aulas que ajudam o mentorado a executar esta tarefa — <span id="ta-count">${sel.size? `${sel.size} selecionada${sel.size>1?'s':''}` : 'nenhuma selecionada'}</span>.</p>
       ${aulaPickHtml(t.aulas, 'ta')}
       <div class="modal-actions">
         <button class="btn-accent" id="ta-save">Salvar</button>
@@ -7038,7 +7053,7 @@ function renderInterno(){
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
       </div>
       <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="new-task-prazo" placeholder="Ex.: 30 ago"></div>
-      <div class="field full"><label>Aulas de apoio (opcional — toque para selecionar uma ou mais; <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
+      <div class="field full"><label>Aulas de apoio (opcional — pode escolher mais de uma; <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
         ${aulaPickHtml([...novaTarefaAulas], 'nt')}
       </div>
       <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
