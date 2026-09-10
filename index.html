@@ -2954,8 +2954,30 @@ function mapClienteRow(row){
     cep: row.cep || '', endereco: row.endereco || '', numero: row.numero || '', complemento: row.complemento || '',
     bairro: row.bairro || '', estado: row.estado || '', cidade: row.cidade || '',
     comoConheceu: row.como_conheceu || '', tags: row.tags || [],
+    pontoReferencia: row.ponto_referencia || '', pais: row.pais || 'Brasil',
+    studentId: row.student_id || null, // aluno vinculado (tag) — vínculo explícito, nunca por nome
     createdAt: row.created_at || '',
   };
+}
+function clientePayload(c){
+  return {
+    nome: c.nome, cpf: c.cpf || null, cnpj: c.cnpj || null, nascimento: c.nascimento || null,
+    whatsapp: c.whatsapp || null, email: c.email || null, cep: c.cep || null, endereco: c.endereco || null,
+    numero: c.numero || null, complemento: c.complemento || null, ponto_referencia: c.pontoReferencia || null,
+    bairro: c.bairro || null, estado: c.estado || null, cidade: c.cidade || null, pais: c.pais || 'Brasil',
+    como_conheceu: c.comoConheceu || null, tags: c.tags || [], student_id: c.studentId || null,
+  };
+}
+async function syncClienteInsert(c){
+  const { data, error } = await sb.from('registro_clientes').insert(clientePayload(c)).select().single();
+  if(error) throw error;
+  return data;
+}
+function syncClienteUpdate(id, c){
+  syncNow(sb.from('registro_clientes').update(clientePayload(c)).eq('id', id));
+}
+function syncClienteStudentUpdate(id, studentId){
+  syncNow(sb.from('registro_clientes').update({student_id: studentId||null}).eq('id', id));
 }
 function syncClienteTagsUpdate(id, tags){
   syncNow(sb.from('registro_clientes').update({tags}).eq('id', id));
@@ -7744,7 +7766,7 @@ let vendasFiltroVendedor = 'todos';
 let vendasFiltroResultado = 'todos';
 let vendasBusca = '';
 let clientesBusca = '';
-const CLIENTES_TAG_OPTS = ['Mentoria Essência','Paciente Murilo','Paciente Sandra','Paciente Carmem','Paciente Diego','Método Essência','Pós-Graduação TSI'];
+const CLIENTES_TAG_OPTS = ['Paciente Murilo','Paciente Sandra','Paciente Diego','Paciente Carmem','Mentoria Essência','Método Essência','Pós-Graduação'];
 const VENDAS_VENDEDOR_OPTS = ['Carmem','Carmem e Diego','Diego','Viviane'];
 const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
 const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'];
@@ -8585,12 +8607,20 @@ function renderClientes(){
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cadastros enviados pelo formulário público, sem necessidade de login do cliente.</div>
 
     <div class="kpi-row">
-      <div class="kpi-tile"><div class="label">Cadastros recebidos</div><div class="value">${CLIENTES_REGISTRO.length}</div></div>
+      <div class="kpi-tile"><div class="label">Clientes cadastrados</div><div class="value">${CLIENTES_REGISTRO.length}</div></div>
+      <div class="kpi-tile"><div class="label">Vinculados a aluno</div><div class="value">${CLIENTES_REGISTRO.filter(c=>c.studentId).length}</div></div>
       <div class="kpi-tile"><div class="label">Sem TAG ainda</div><div class="value">${CLIENTES_REGISTRO.filter(c=>!c.tags.length).length}</div></div>
+      <div class="kpi-tile"><div class="label">Alunos ainda fora da lista</div><div class="value">${alunosSemCliente().length}</div></div>
     </div>
 
     <h2 class="section-title">${icon('idcard')} Registro de Clientes</h2>
-    <p class="section-sub" style="margin-top:-6px">Compartilhe o link abaixo com um cliente novo. Assim que ele preencher, o cadastro cai automaticamente nesta lista, para a equipe classificar com TAGs.</p>
+    <p class="section-sub" style="margin-top:-6px">Cadastre direto por aqui ou compartilhe o link do formulário público — assim que a pessoa preencher, o cadastro cai nesta lista. Alunos da Mentoria e do Método entram pela sincronização, já vinculados e etiquetados.</p>
+    <div class="add-form" style="margin-bottom:10px;align-items:flex-end">
+      <div class="actions" style="gap:8px;flex-wrap:wrap">
+        <button class="btn-accent" id="clientes-novo">${icon('plus')} Novo cliente</button>
+        <button class="btn-outline" id="clientes-sync-alunos" ${alunosSemCliente().length? '' : 'disabled'} title="Cria o cadastro dos alunos que ainda não estão nesta lista">${icon('upload')} Sincronizar alunos${alunosSemCliente().length? ` (${alunosSemCliente().length})` : ''}</button>
+      </div>
+    </div>
     <div class="add-form" style="margin-bottom:14px;align-items:flex-end">
       <div class="field full">
         <label>Link do formulário público de cadastro</label>
@@ -8609,27 +8639,27 @@ function renderClientes(){
     <p class="section-sub" style="margin-top:-4px;font-size:12px">Importa de uma planilha Excel (.xlsx) ou CSV vinda de outro sistema. Não sabe como organizar os dados? <a href="#" id="clientes-import-modelo" style="color:var(--accent)">baixe um modelo em branco</a> e preencha nele.</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Nome</th><th>CPF</th><th>CNPJ</th><th>Nascimento</th><th>WhatsApp</th><th>E-mail</th><th>Endereço</th><th>Cidade/UF</th><th>Como conheceu</th><th>TAGs</th><th>Cadastrado em</th><th></th></tr></thead>
+        <thead><tr><th>Nome</th><th>Aluno vinculado</th><th>CPF</th><th>Nascimento</th><th>WhatsApp</th><th>E-mail</th><th>Endereço</th><th>Cidade/UF</th><th>TAGs</th><th>Cadastrado em</th><th></th></tr></thead>
         <tbody>
           ${filtrados.map(c=>`
             <tr>
-              <td style="min-width:160px">${escapeHtml(c.nome)}</td>
+              <td style="min-width:160px">${escapeHtml(c.nome)}${c.cnpj? `<br><span style="color:var(--text-mute);font-size:11px">CNPJ ${escapeHtml(c.cnpj)}</span>` : ''}</td>
+              <td style="min-width:170px">${clienteAlunoCellHtml(c)}</td>
               <td style="white-space:nowrap">${escapeHtml(c.cpf)||'—'}</td>
-              <td style="white-space:nowrap">${escapeHtml(c.cnpj)||'—'}</td>
               <td style="white-space:nowrap">${c.nascimento? formatDateBR(c.nascimento) : '—'}</td>
               <td style="white-space:nowrap">${escapeHtml(c.whatsapp)||'—'}</td>
               <td>${escapeHtml(c.email)}</td>
-              <td style="min-width:220px">${escapeHtml(c.endereco)}${c.numero? ', '+escapeHtml(c.numero):''}${c.complemento? ' - '+escapeHtml(c.complemento):''}${c.bairro? ' — '+escapeHtml(c.bairro):''}</td>
-              <td style="white-space:nowrap">${escapeHtml(c.cidade)}${c.estado? '/'+escapeHtml(c.estado):''}</td>
-              <td style="min-width:160px">${escapeHtml(c.comoConheceu)||'—'}</td>
+              <td style="min-width:220px">${escapeHtml(c.endereco)}${c.numero? ', '+escapeHtml(c.numero):''}${c.complemento? ' - '+escapeHtml(c.complemento):''}${c.bairro? ' — '+escapeHtml(c.bairro):''}${c.pontoReferencia? `<br><span style="color:var(--text-mute);font-size:11px">Ref.: ${escapeHtml(c.pontoReferencia)}</span>` : ''}</td>
+              <td style="white-space:nowrap">${escapeHtml(c.cidade)}${c.estado? '/'+escapeHtml(c.estado):''}${c.pais && c.pais!=='Brasil'? ' · '+escapeHtml(c.pais) : ''}</td>
               <td style="min-width:170px">${c.tags.length? c.tags.map(t=>`<span class="resp-pill">${escapeHtml(t)}</span>`).join(' ') : '<span style="color:var(--text-mute)">sem tag</span>'}</td>
               <td style="white-space:nowrap">${c.createdAt? new Date(c.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
               <td style="white-space:nowrap">
-                <button class="btn-mini" data-cliente-tags="${c.id}" title="Editar TAGs">${icon('edit','tiny')} TAGs</button>
+                <button class="btn-mini" data-cliente-edit="${c.id}" title="Editar cadastro">${icon('edit','tiny')} Editar</button>
+                <button class="btn-mini" data-cliente-tags="${c.id}" title="Editar TAGs">TAGs</button>
                 <button class="btn-mini danger" data-cliente-del="${c.id}" title="Excluir cadastro">${icon('trash','tiny')}</button>
               </td>
             </tr>
-          `).join('') || `<tr><td colspan="12" style="color:var(--text-mute)">Nenhum cadastro recebido ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="11" style="color:var(--text-mute)">Nenhum cadastro ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -8667,6 +8697,23 @@ function renderClientes(){
   });
   document.querySelectorAll('[data-cliente-tags]').forEach(btn=>{
     btn.addEventListener('click', ()=> openClienteTagsModal(btn.dataset.clienteTags));
+  });
+  document.getElementById('clientes-novo').addEventListener('click', ()=> openClienteModal(null));
+  document.getElementById('clientes-sync-alunos').addEventListener('click', sincronizarAlunosClientes);
+  document.querySelectorAll('[data-cliente-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openClienteModal(btn.dataset.clienteEdit));
+  });
+  /* Sugestão de vínculo por semelhança de nome: só vincula depois que a pessoa confirma. */
+  document.querySelectorAll('[data-cliente-vincular]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const c = CLIENTES_REGISTRO.find(x=>x.id==btn.dataset.clienteVincular);
+      const st = getStudent(btn.dataset.aluno);
+      if(!c || !st) return;
+      if(!confirm(`Vincular o cadastro "${c.nome}" ao aluno "${st.name}"?`)) return;
+      c.studentId = st.id;
+      syncClienteStudentUpdate(c.id, st.id);
+      renderClientes();
+    });
   });
   document.querySelectorAll('[data-cliente-del]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -8709,12 +8756,171 @@ function openClienteTagsModal(id){
     renderClientes();
   });
 }
+/* ---- Registro de Clientes × alunos ---- */
+function alunosSemCliente(){
+  const comCliente = new Set(CLIENTES_REGISTRO.map(c=>c.studentId).filter(Boolean));
+  return STUDENTS.filter(st=>!comCliente.has(st.id));
+}
+function clienteDeAluno(st){
+  const sc = st.cadastro || {};
+  return {
+    nome: sc.nomeCompleto || st.name, cpf: sc.cpf || '', cnpj: '', nascimento: sc.dataNascimento || '',
+    whatsapp: sc.telefone || '', email: sc.email || '', cep:'', endereco:'', numero:'', complemento:'', pontoReferencia:'',
+    bairro:'', estado:'', cidade: sc.cidade || '', pais:'Brasil', comoConheceu:'',
+    tags: [st.tier==='curso' ? 'Método Essência' : 'Mentoria Essência'], studentId: st.id,
+  };
+}
+async function sincronizarAlunosClientes(){
+  const faltam = alunosSemCliente();
+  if(!faltam.length) return;
+  if(!confirm(`Criar o cadastro de ${faltam.length} aluno${faltam.length>1?'s':''} no Registro de Clientes, já vinculado${faltam.length>1?'s':''} e com a TAG do programa?`)) return;
+  const btn = document.getElementById('clientes-sync-alunos');
+  if(btn){ btn.disabled = true; btn.textContent = 'Sincronizando...'; }
+  try{
+    for(const st of faltam){
+      const row = await syncClienteInsert(clienteDeAluno(st));
+      CLIENTES_REGISTRO.unshift(mapClienteRow(row));
+    }
+  }catch(e){ console.error('sync alunos', e); alert('Não foi possível sincronizar todos os alunos agora. Tente novamente.'); }
+  renderClientes();
+}
+function clienteAlunoCellHtml(c){
+  if(c.studentId){
+    const st = getStudent(c.studentId);
+    return st ? `<span class="aluno-tag" title="Aluno vinculado">${icon('check','tiny')} ${escapeHtml(st.name)}</span>` : '<span style="color:var(--text-mute)">aluno não encontrado</span>';
+  }
+  const sug = sugerirAlunosPorNome(c.nome, 2).filter(st=>!CLIENTES_REGISTRO.some(x=>x.studentId===st.id));
+  if(!sug.length) return '<span style="color:var(--text-mute)">—</span>';
+  return `<div style="font-size:11px;color:var(--text-mute);margin-bottom:3px">Parece ser aluno?</div>` +
+    sug.map(st=>`<button class="btn-mini" data-cliente-vincular="${c.id}" data-aluno="${st.id}" title="Vincular a este aluno">${icon('idcard','tiny')} ${escapeHtml(st.name)}</button>`).join(' ');
+}
+async function buscarCEPInterno(cep){
+  const digits = String(cep||'').replace(/\D/g,'');
+  if(digits.length!==8) return {error:'CEP precisa ter 8 dígitos.'};
+  try{
+    const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+    const json = await res.json();
+    if(json.erro) return {error:'CEP não encontrado.'};
+    return { endereco: json.logradouro||'', bairro: json.bairro||'', cidade: json.localidade||'', estado: json.uf||'' };
+  }catch(e){ return {error:'Não foi possível consultar o CEP agora — preencha manualmente.'}; }
+}
+/* Cadastro/edição de cliente pela equipe interna. O CEP busca o endereço no ViaCEP ao sair do campo. */
+function openClienteModal(id){
+  const existente = id ? CLIENTES_REGISTRO.find(x=>x.id==id) : null;
+  const d = existente ? Object.assign({}, existente, {tags:[...existente.tags]}) : {
+    nome:'', cpf:'', cnpj:'', nascimento:'', whatsapp:'', email:'', cep:'', endereco:'', numero:'', complemento:'',
+    pontoReferencia:'', bairro:'', estado:'', cidade:'', pais:'Brasil', comoConheceu:'', tags:[], studentId:null,
+  };
+  const f = (idc, label, key, extra)=> `<div><label class="ps-label">${label}</label><input class="ps-input" id="cl-${idc}" value="${escapeAttr(d[key]||'')}" ${extra||''}></div>`;
+  const sugestoes = d.studentId ? [] : sugerirAlunosPorNome(d.nome, 3);
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Registro de Clientes</div>
+      <h3>${existente? 'Editar cliente' : 'Novo cliente'}</h3>
+      <div class="ps-section fin-form-grid">
+        <div style="grid-column:1/-1"><label class="ps-label">Nome *</label><input class="ps-input" id="cl-nome" value="${escapeAttr(d.nome)}"></div>
+        ${f('cpf','CPF','cpf','placeholder="000.000.000-00"')}
+        ${f('cnpj','CNPJ (opcional)','cnpj')}
+        ${f('nascimento','Data de nascimento','nascimento','type="date"')}
+        ${f('whatsapp','WhatsApp','whatsapp','placeholder="(00) 00000-0000"')}
+        ${f('email','E-mail','email','type="email"')}
+      </div>
+      <div class="ps-section fin-form-grid">
+        <div><label class="ps-label">CEP</label><input class="ps-input" id="cl-cep" value="${escapeAttr(d.cep)}" placeholder="00000-000" inputmode="numeric"><div id="cl-cep-msg" style="font-size:11.5px;color:var(--text-mute);margin-top:4px"></div></div>
+        ${f('endereco','Endereço','endereco')}
+        ${f('numero','Número','numero')}
+        ${f('complemento','Complemento','complemento')}
+        ${f('referencia','Ponto de referência','pontoReferencia')}
+        ${f('bairro','Bairro','bairro')}
+        ${f('estado','Estado (UF)','estado','maxlength="2" style="text-transform:uppercase"')}
+        ${f('cidade','Cidade','cidade')}
+        ${f('pais','País','pais')}
+        ${f('conheceu','Como conheceu','comoConheceu')}
+      </div>
+      <div class="ps-section">
+        <div class="ps-h">TAGs</div>
+        <div class="tag-chips" id="cl-tag-chips">${CLIENTES_TAG_OPTS.map(t=>`<div class="tag-chip ${d.tags.includes(t)?'active':''}" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</div>`).join('')}</div>
+      </div>
+      <div class="ps-section">
+        <div class="ps-h">Aluno vinculado</div>
+        <p class="section-sub" style="margin-top:0">Se esta pessoa é aluna da Mentoria ou do Método, vincule ao cadastro dela. As sugestões são só por semelhança de nome — quem confirma é você.</p>
+        <select class="ps-input" id="cl-aluno">${alunoSelectOpts(d.studentId)}</select>
+        ${sugestoes.length? `<div class="sugestoes-aluno">${sugestoes.map(st=>`<button type="button" class="aula-pill" data-cl-sugestao="${st.id}">${icon('idcard','tiny')} ${escapeHtml(st.name)}</button>`).join('')}</div>` : ''}
+      </div>
+      <div class="modal-actions">
+        <button class="btn-accent" id="cl-save">${existente? 'Salvar alterações' : 'Cadastrar cliente'}</button>
+        <button class="btn-outline" id="cl-cancel">Cancelar</button>
+      </div>
+    </div>`;
+  modalReturnTo = null;
+  modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('cl-cancel').addEventListener('click', closeModal);
+  document.querySelectorAll('#cl-tag-chips .tag-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const t = chip.dataset.tag;
+      if(d.tags.includes(t)) d.tags = d.tags.filter(x=>x!==t); else d.tags.push(t);
+      chip.classList.toggle('active');
+    });
+  });
+  document.querySelectorAll('[data-cl-sugestao]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const sel = document.getElementById('cl-aluno');
+      sel.value = sel.value===btn.dataset.clSugestao ? '' : btn.dataset.clSugestao;
+      document.querySelectorAll('[data-cl-sugestao]').forEach(b=>b.classList.toggle('active', b.dataset.clSugestao===sel.value));
+    });
+  });
+  const cepEl = document.getElementById('cl-cep');
+  const consultaCEP = async ()=>{
+    const msg = document.getElementById('cl-cep-msg');
+    const digits = cepEl.value.replace(/\D/g,'');
+    if(digits.length!==8){ msg.textContent = ''; return; }
+    cepEl.value = digits.slice(0,5)+'-'+digits.slice(5);
+    msg.textContent = 'Buscando endereço...';
+    const r = await buscarCEPInterno(digits);
+    if(r.error){ msg.textContent = r.error; return; }
+    msg.textContent = 'Endereço preenchido pelo CEP — confira e complete o número.';
+    const set = (idc, v)=>{ const el = document.getElementById('cl-'+idc); if(el && v) el.value = v; };
+    set('endereco', r.endereco); set('bairro', r.bairro); set('cidade', r.cidade); set('estado', r.estado); set('pais', 'Brasil');
+    const num = document.getElementById('cl-numero'); if(num && !num.value) num.focus();
+  };
+  cepEl.addEventListener('blur', consultaCEP);
+  cepEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); consultaCEP(); } });
+  document.getElementById('cl-save').addEventListener('click', async ()=>{
+    const v = (idc)=> (document.getElementById('cl-'+idc).value||'').trim();
+    const nome = v('nome');
+    if(!nome){ alert('Informe o nome.'); document.getElementById('cl-nome').focus(); return; }
+    const email = v('email');
+    if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('E-mail inválido.'); return; }
+    Object.assign(d, {
+      nome, cpf:v('cpf'), cnpj:v('cnpj'), nascimento:v('nascimento'), whatsapp:v('whatsapp'), email,
+      cep:v('cep'), endereco:v('endereco'), numero:v('numero'), complemento:v('complemento'), pontoReferencia:v('referencia'),
+      bairro:v('bairro'), estado:v('estado').toUpperCase(), cidade:v('cidade'), pais:v('pais')||'Brasil', comoConheceu:v('conheceu'),
+      studentId: document.getElementById('cl-aluno').value || null,
+    });
+    if(d.studentId && CLIENTES_REGISTRO.some(x=>x.studentId===d.studentId && x.id!==d.id)){
+      alert('Este aluno já está vinculado a outro cadastro de cliente.'); return;
+    }
+    const btn = document.getElementById('cl-save'); btn.disabled = true;
+    try{
+      if(existente){
+        Object.assign(existente, d);
+        syncClienteUpdate(existente.id, existente);
+      } else {
+        const row = await syncClienteInsert(d);
+        CLIENTES_REGISTRO.unshift(mapClienteRow(row));
+      }
+      closeModal();
+      renderClientes();
+    }catch(e){ console.error(e); alert('Não foi possível salvar. Tente novamente.'); btn.disabled = false; }
+  });
+}
 function exportClientesCSV(){
-  const headers = ['Nome','CPF','CNPJ','Data de Nascimento','WhatsApp','E-mail','CEP','Endereco','Numero','Complemento','Bairro','Estado','Cidade','TAGs','Como conheceu','Cadastrado em'];
+  const headers = ['Nome','CPF','CNPJ','Data de Nascimento','WhatsApp','E-mail','CEP','Endereco','Numero','Complemento','Ponto de Referencia','Bairro','Estado','Cidade','Pais','TAGs','Aluno vinculado','Como conheceu','Cadastrado em'];
   const csvEscape = v => `"${String(v||'').replace(/"/g,'""')}"`;
   const lines = [headers.map(csvEscape).join(',')];
   CLIENTES_REGISTRO.forEach(c=>{
-    lines.push([c.nome,c.cpf,c.cnpj,c.nascimento?formatDateBR(c.nascimento):'',c.whatsapp,c.email,c.cep,c.endereco,c.numero,c.complemento,c.bairro,c.estado,c.cidade,c.tags.join(' | '),c.comoConheceu,c.createdAt].map(csvEscape).join(','));
+    lines.push([c.nome,c.cpf,c.cnpj,c.nascimento?formatDateBR(c.nascimento):'',c.whatsapp,c.email,c.cep,c.endereco,c.numero,c.complemento,c.pontoReferencia,c.bairro,c.estado,c.cidade,c.pais,c.tags.join(' | '),nomeAlunoTag(c.studentId),c.comoConheceu,c.createdAt].map(csvEscape).join(','));
   });
   const csvContent = '﻿' + lines.join('\r\n');
   const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
