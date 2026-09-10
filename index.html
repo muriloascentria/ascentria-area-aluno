@@ -7766,6 +7766,7 @@ let vendasFiltroVendedor = 'todos';
 let vendasFiltroResultado = 'todos';
 let vendasBusca = '';
 let clientesBusca = '';
+let clientesOrdem = 'nome'; // 'nome' (A–Z) ou 'recentes'
 const CLIENTES_TAG_OPTS = ['Paciente Murilo','Paciente Sandra','Paciente Diego','Paciente Carmem','Mentoria Essência','Método Essência','Pós-Graduação'];
 const VENDAS_VENDEDOR_OPTS = ['Carmem','Carmem e Diego','Diego','Viviane'];
 const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
@@ -8601,7 +8602,9 @@ function renderClientes(){
   const filtrados = CLIENTES_REGISTRO.filter(c=>
     !busca || c.nome.toLowerCase().includes(busca) || (c.email||'').toLowerCase().includes(busca) || (c.cpf||'').includes(busca)
     || (c.tags||[]).some(t=>t.toLowerCase().includes(busca))
-  );
+  ).sort((a,b)=> clientesOrdem==='nome'
+    ? a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'})
+    : String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   const publicUrl = window.location.origin + '/cadastro-cliente.html';
   document.getElementById('view-clientes').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cadastros enviados pelo formulário público, sem necessidade de login do cliente.</div>
@@ -8630,6 +8633,12 @@ function renderClientes(){
     </div>
     <div class="add-form" style="margin-bottom:10px">
       <div class="field"><label>Buscar por nome, e-mail, CPF ou TAG</label><input class="ps-input" type="text" id="clientes-busca" value="${escapeAttr(clientesBusca||'')}" placeholder="Digite para buscar..."></div>
+      <div class="field"><label>Ordenar por</label>
+        <select class="ps-input" id="clientes-ordem">
+          <option value="nome" ${clientesOrdem==='nome'?'selected':''}>Nome (A–Z)</option>
+          <option value="recentes" ${clientesOrdem==='recentes'?'selected':''}>Mais recentes primeiro</option>
+        </select>
+      </div>
       <div class="actions">
         <button class="btn-outline" id="clientes-import-btn">${icon('upload')} Importar planilha</button>
         <button class="btn-outline" id="clientes-export-csv">${icon('download')} Baixar planilha (.csv)</button>
@@ -8686,6 +8695,7 @@ function renderClientes(){
     novoInp.focus();
     novoInp.setSelectionRange(cursorPos, cursorPos);
   });
+  document.getElementById('clientes-ordem').addEventListener('change', e=>{ clientesOrdem = e.target.value; renderClientes(); });
   document.getElementById('clientes-export-csv').addEventListener('click', exportClientesCSV);
   document.getElementById('clientes-import-modelo').addEventListener('click', e=>{ e.preventDefault(); baixarModeloClientesXLSX(); });
   const importInp = document.getElementById('clientes-import-file');
