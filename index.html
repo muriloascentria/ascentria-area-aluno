@@ -1171,7 +1171,7 @@
       <div class="field full"><label>Nome completo</label><input class="ps-input" type="text" id="cr-nome" placeholder="Seu nome completo"></div>
       <div class="field full"><label>E-mail</label><input class="ps-input" type="email" id="cr-email" placeholder="voce@email.com"></div>
       <div class="field full"><label>Senha</label><input class="ps-input" type="password" id="cr-senha" placeholder="Crie uma senha (mín. 6 caracteres)"></div>
-      <div class="field full"><label>Código de acesso</label><input class="ps-input" type="text" id="cr-codigo" placeholder="Código fornecido pela equipe interna" autocapitalize="characters"></div>
+      <div class="field full"><label>Código de acesso</label><input class="ps-input" type="text" id="cr-codigo" placeholder="Código fornecido pela equipe interna" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off"></div>
       <p class="field-error" id="cr-error" style="display:none"></p>
       <button class="btn-primary" id="signup-btn">Criar conta</button>
       <p class="login-note">Peça o código de acesso para a equipe interna. Ele define automaticamente se sua conta é de Mentoria ou do Método (curso gravado).</p>
@@ -3206,7 +3206,9 @@ function renderLogin(){
     const nome = document.getElementById('cr-nome').value.trim();
     const email = document.getElementById('cr-email').value.trim();
     const senha = document.getElementById('cr-senha').value;
-    const codigo = document.getElementById('cr-codigo').value.trim().toUpperCase();
+    /* Normaliza o código como o banco faz: sem acentos (o teclado do iPhone troca METODO por MÉTODO),
+       sem espaços nem pontuação, em maiúsculas. */
+    const codigo = document.getElementById('cr-codigo').value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9-]/g,'').toUpperCase();
     const errEl = document.getElementById('cr-error');
     errEl.style.color = 'var(--danger)';
     errEl.style.display='none';
