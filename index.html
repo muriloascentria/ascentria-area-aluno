@@ -3408,24 +3408,25 @@ function setRole(role){
      a equipe interna troca para o modo "Aluno" (pelo botão aqui em cima, ou clicando em "Abrir" na
      Visão Geral) — exatamente como o aluno vê a própria conta hoje. Para quem realmente é aluno,
      currentRole nunca sai de 'aluno', então esses itens continuam sempre visíveis para ele.
-     Um aluno do curso gravado (tier 'curso' — sem mentoria individual) tem acesso só a Aulas e Comunidade,
-     mesmo no modo "Aluno": os itens de mentoria individual (Dashboard, Painel do Método, Sessões, Metas,
+     Um aluno do curso gravado (tier 'curso' — sem mentoria individual) tem acesso a Aulas, Comunidade e
+     Dashboard, mesmo no modo "Aluno": os itens de mentoria individual (Painel do Método, Sessões, Metas,
      Ranking, Prontuários, e o próprio Início) ficam escondidos também aí. getViewingTier() resolve pro
      tier de quem está sendo visto — a própria conta, ou o mentorado selecionado pela equipe interna. */
   const viewingTier = getViewingTier();
   const isCursoView = role==='aluno' && viewingTier==='curso';
-  ['inicio','dashboard','ranking','painel','sessoes','metas'].forEach(v=>{
+  ['inicio','ranking','painel','sessoes','metas'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   });
-  ['aulas','comunidade'].forEach(v=>{
+  /* Dashboard (progresso no Método, item a item) é liberado também pro aluno do Curso Gravado. */
+  ['aulas','comunidade','dashboard'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = role==='aluno' ? 'flex' : 'none';
   });
   document.getElementById('nav-prontuarios').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   /* Os rótulos "Meu Método" e "Minha Área" só fazem sentido junto dos itens que eles agrupam — some junto
      com eles (modo Equipe Interna, ou aluno do Curso Gravado, que não tem mentoria individual). */
-  document.getElementById('nav-group-metodo').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
+  document.getElementById('nav-group-metodo').style.display = role==='aluno' ? 'flex' : 'none';
   document.getElementById('nav-group-individual').style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   /* Aluno do Curso Gravado (Método) continua vendo "Agenda ao Vivo" no menu, mas com um cadeado —
      ao clicar, a página inteira abre em modo bloqueado (ver renderAgenda), explicando o motivo. */
@@ -3447,7 +3448,7 @@ function setRole(role){
   renderProfile();
   updateNotifBadge();
   if(role==='aluno' && ['interno','conteudo','visaogeral','vendas','clientes','financeiro'].includes(currentView)){ goTo(isCursoView? 'aulas' : 'inicio'); }
-  if(role==='aluno' && isCursoView && ['inicio','dashboard','ranking','painel','sessoes','metas'].includes(currentView)){ goTo('aulas'); }
+  if(role==='aluno' && isCursoView && ['inicio','ranking','painel','sessoes','metas'].includes(currentView)){ goTo('aulas'); }
   if(role==='staff' && ['inicio','aulas','comunidade','ranking','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('visaogeral'); }
 }
 
