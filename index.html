@@ -4972,6 +4972,9 @@ function renderMateriais(){
 
 /* ================= VIEW: DASHBOARD (compartilhado aluno + equipe) ================= */
 function renderDashboard(){
+  /* Aluno do Curso Gravado (Método) tem o Dashboard, mas não o Painel do Método — o botão ganha cadeado
+     e, se abrir, renderPainel mostra a tela de bloqueio. */
+  const painelBloqueado = currentRole==='aluno' && getViewingTier()==='curso';
   const s = getStudent(currentStudentId);
   const overall = overallProgress(s);
   document.getElementById('view-dashboard').innerHTML = `
@@ -5001,7 +5004,10 @@ function renderDashboard(){
     </div>
 
     <h2 class="section-title">${icon('compass')} Continue no Painel do Método</h2>
-    <button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>
+    ${painelBloqueado
+      ? `<button class="btn-accent" id="goto-painel" style="display:inline-flex;align-items:center;gap:8px;opacity:.85" title="Exclusivo para mentorados da Mentoria Essência">${icon('lock','tiny')} Abrir Painel do Método</button>
+         <p class="section-sub" style="margin-top:8px">${icon('lock','tiny')} O Painel do Método é exclusivo para mentorados da Mentoria Essência.</p>`
+      : `<button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>`}
   `;
   document.getElementById('goto-painel').addEventListener('click',()=>goTo('painel'));
   document.querySelectorAll('.module-bar-row[data-mod]').forEach(el=>{
@@ -5178,6 +5184,17 @@ function quadrantFilledCount(q,s){
 function renderPainel(){
   const s = getStudent(currentStudentId);
   const el = document.getElementById('view-painel');
+  if(currentRole==='aluno' && getViewingTier()==='curso'){
+    el.innerHTML = `
+      <div class="locked-view">
+        <div class="locked-icon">${icon('lock')}</div>
+        <h2>Painel do Método bloqueado</h2>
+        <p>O Painel do Método — o espaço de trabalho nos 4 pilares do negócio — é exclusivo para mentorados da Mentoria Essência. Fale com a equipe e conheça as condições para migrar seu acesso.</p>
+        <button class="btn-accent" id="painel-voltar-dash" style="margin-top:18px">Voltar ao Dashboard</button>
+      </div>`;
+    document.getElementById('painel-voltar-dash').addEventListener('click', ()=>goTo('dashboard'));
+    return;
+  }
   if(!panelQuadrantId){
     el.innerHTML = `
       <p class="section-sub">Espaço de trabalho do Método Essência, organizado nos 4 pilares do negócio — visível para você e para a equipe interna.</p>
