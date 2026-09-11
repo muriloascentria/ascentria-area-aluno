@@ -1093,6 +1093,8 @@
   .empty-state{text-align:center;padding:40px 20px;color:var(--text-mute);font-size:13px;}
 
   .locked-view{text-align:center;padding:64px 24px;max-width:460px;margin:24px auto 0;}
+  .agenda-card.agenda-locked{opacity:.55;}
+  .agenda-card.agenda-locked .meta .icon{width:11px;height:11px;vertical-align:-1px;}
   .locked-view .locked-icon{width:64px;height:64px;border-radius:50%;background:var(--individual-soft);color:var(--individual);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
   .locked-view .locked-icon .icon{width:28px;height:28px;}
   .locked-view h2{font-size:18px;margin:0 0 10px;color:var(--text);}
@@ -2172,7 +2174,7 @@ function nomeAlunoTag(id){
 }
 function alunoSelectOpts(current){
   return `<option value="">— Sem aluno vinculado —</option>` +
-    alunosParaVinculo().map(s=>`<option value="${s.id}" ${current===s.id?'selected':''}>${escapeHtml(s.name)}${s.tier==='curso'?' (Curso)':''}</option>`).join('');
+    alunosParaVinculo().map(s=>`<option value="${s.id}" ${current===s.id?'selected':''}>${escapeHtml(s.name)}${s.tier==='curso'? (s.bonus? ' (Método + Bônus)' : ' (Curso)') : ''}</option>`).join('');
 }
 /* Sugestões de aluno por semelhança de nome — só SUGERE; quem confirma é a pessoa. Os nomes de lead
    no registro de vendas são descritivos ("Enfermeira Fulana e esposo"), então casar sozinho erraria. */
@@ -2318,7 +2320,7 @@ function renderAniversarioCanto(){
           ${initialsAvatar(a.initials, a.color, 34, a.avatarUrl)}
           <div class="aniv-info">
             <div class="aniv-nome">${escapeHtml(a.nome)}</div>
-            <div class="aniv-sub">${a.idade? 'Fazendo '+a.idade+' anos' : 'Hoje é o dia dela'}${equipe? ' · '+(a.tier==='curso'?'Curso':'Mentoria') : ''}</div>
+            <div class="aniv-sub">${a.idade? 'Fazendo '+a.idade+' anos' : 'Hoje é o dia dela'}${equipe? ' · '+tierLabel(a) : ''}</div>
           </div>
         </div>`).join('')}
     </div>
@@ -2433,6 +2435,25 @@ function actingAuthorId(){
 /* Audiência (tier) do aluno sendo visualizado agora — o próprio aluno logado, ou o mentorado selecionado
    pela equipe interna ao "ver como aluno". Usada pra separar o que é do "Curso" (aulas gravadas, liberadas
    aos poucos, com comunidade própria) do que é da mentoria completa ("mentorado", como sempre foi). */
+/* Perfil "Método + Bônus" de quem está sendo visto (própria conta ou aluno selecionado pela equipe). */
+function isBonusView(){
+  const s = getStudent(currentStudentId);
+  if(s) return s.tier==='curso' && !!s.bonus;
+  return !!(currentUserProfile && currentUserProfile.tier==='curso' && currentUserProfile.bonus);
+}
+/* Regra do Bônus: só os encontros da mentoria de terça (2) e sexta (5) ficam liberados. */
+const BONUS_DIAS_LIBERADOS = [2,5];
+function liveSessionLiberadaBonus(l){
+  if(l.studentId!=null) return true;
+  const [y,m,d] = String(l._eventDate||'').split('-').map(Number);
+  if(!y) return false;
+  return BONUS_DIAS_LIBERADOS.includes(new Date(y, m-1, d).getDay());
+}
+function tierLabel(s){
+  if(!s) return '';
+  if(s.tier==='curso') return s.bonus ? 'Método + Bônus' : 'Método';
+  return 'Mentoria';
+}
 function getViewingTier(){
   // No modo "Equipe Interna" (currentRole==='staff'), a equipe não está vendo como um aluno específico —
   // segue a aba de comunidade que ela mesma escolheu (currentCommunityAudience). Já no modo "Aluno" —
@@ -2469,6 +2490,9 @@ function mapProfileRow(p){
     /* 'mentorado' (acesso completo, como sempre foi) ou 'curso' (aluno do curso gravado — só Aulas e uma
        Comunidade própria, com liberação sequencial das aulas conforme vai assistindo). */
     tier: p.tier || 'mentorado',
+    /* 'Método + Bônus': aluno do curso (tier 'curso') que também participa dos encontros ao vivo da
+       mentoria de terça (Plantão de Dúvidas) e sexta (Consultório Simulado). Só muda a Agenda. */
+    bonus: !!p.bonus,
     cadastro:{
       nomeCompleto: sc.nome_completo || p.name || '',
       email: sc.email || '',
@@ -2506,7 +2530,7 @@ async function bootstrapData(){
 
   const me = profiles.find(p=>p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
-  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado'} : null;
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus} : null;
 
   /* Papel 'vendas' (vendedora do time): acesso restrito ao Registro de Sessões 1:1 e nada mais.
      Carrega só essa lista — nenhum dado de aluno, comunidade, aulas, clientes ou financeiro chega ao
@@ -2988,22 +3012,22 @@ function syncClienteDelete(id){
 /* ---- Códigos de acesso (Criar conta) ---- */
 function mapAccessCodeRow(row){
   return {
-    id: row.id, code: row.code, tier: row.tier, label: row.label || '',
+    id: row.id, code: row.code, tier: row.tier, bonus: !!row.bonus, label: row.label || '',
     usedBy: row.used_by || null, usedAt: row.used_at || null, createdAt: row.created_at || '',
   };
 }
 function accessCodeAlphabet(){ return 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; } // sem 0/O/1/I, evita confusão na hora de digitar
-function generateAccessCodeString(tier){
+function generateAccessCodeString(tier, bonus){
   const abc = accessCodeAlphabet();
   let rand = '';
   for(let i=0;i<6;i++) rand += abc[Math.floor(Math.random()*abc.length)];
-  return (tier==='curso' ? 'METODO-' : 'MENTOR-') + rand;
+  return (tier==='curso' ? (bonus ? 'BONUS-' : 'METODO-') : 'MENTOR-') + rand;
 }
 /* Gera e grava um código novo, tentando de novo em caso (raríssimo) de colisão com um já existente. */
-async function syncAccessCodeGenerate(tier, label){
+async function syncAccessCodeGenerate(tier, label, bonus){
   for(let tries=0; tries<5; tries++){
-    const code = generateAccessCodeString(tier);
-    const { data, error } = await sb.from('access_codes').insert({ code, tier, label: label || null, created_by: currentUser.id }).select().single();
+    const code = generateAccessCodeString(tier, bonus);
+    const { data, error } = await sb.from('access_codes').insert({ code, tier, bonus: !!bonus, label: label || null, created_by: currentUser.id }).select().single();
     if(!error) return data;
     if(!/duplicate|unique/i.test(error.message||'')) throw error;
   }
@@ -3054,8 +3078,8 @@ function syncFinLancamentoUpdate(id, fields){ syncNow(sb.from('fin_lancamentos')
 function syncFinLancamentoDelete(id){ syncNow(sb.from('fin_lancamentos').delete().eq('id', id)); }
 /* Muda um aluno entre 'mentorado' (acesso completo) e 'curso' (curso gravado, só Aulas + comunidade
    própria) — ver Visão Geral, onde a equipe interna faz essa troca. */
-function syncStudentTierUpdate(id, tier){
-  syncNow(sb.from('profiles').update({tier}).eq('id', id));
+function syncStudentTierUpdate(id, tier, bonus){
+  syncNow(sb.from('profiles').update({tier, bonus: !!bonus}).eq('id', id));
 }
 /* Códigos de acesso (Criar conta): a validação em si é sempre feita no banco (validate_access_code
    antes do signUp, redeem_access_code depois de logado) — nunca no cliente. O único papel deste
@@ -3459,7 +3483,7 @@ function setRole(role){
   const agendaBtn = document.querySelector('.nav-item[data-view="agenda"]');
   if(agendaBtn){
     const [agIc, agLabel] = NAV_LABELS.agenda;
-    agendaBtn.innerHTML = isCursoView
+    agendaBtn.innerHTML = (isCursoView && !isBonusView())
       ? `${icon(agIc)}<span>${agLabel}</span><span style="margin-left:auto;display:flex" title="Disponível apenas para mentorados da Mentoria Essência">${icon('lock','tiny')}</span>`
       : `${icon(agIc)}<span>${agLabel}</span>`;
   }
@@ -3504,7 +3528,7 @@ function renderProfile(){
   opts.innerHTML = STUDENTS.map(st=>`
     <button class="opt" data-id="${st.id}">
       ${initialsAvatar(st.initials,st.color,24,st.avatarUrl)}
-      <span>${st.name}${st.tier==='curso'? ' <span style="color:var(--text-mute);font-weight:400;font-size:11px">(Curso)</span>' : ''}</span>
+      <span>${st.name}${st.tier==='curso'? ` <span style="color:var(--text-mute);font-weight:400;font-size:11px">(${st.bonus? 'Método + Bônus' : 'Curso'})</span>` : ''}</span>
     </button>
   `).join('');
   opts.querySelectorAll('.opt').forEach(el=>{
@@ -4916,7 +4940,8 @@ function gcalUrl(title, details){
 function renderAgenda(){
   /* Aluno do Curso Gravado (Método) não tem encontros ao vivo — a aba continua no menu (com um
      cadeado), mas ao abrir mostra uma tela de bloqueio explicando o motivo, em vez da lista vazia. */
-  if(currentRole==='aluno' && getViewingTier()==='curso'){
+  const bonusView = currentRole==='aluno' && isBonusView();
+  if(currentRole==='aluno' && getViewingTier()==='curso' && !bonusView){
     document.getElementById('view-agenda').innerHTML = `
       <div class="locked-view">
         <div class="locked-icon">${icon('lock')}</div>
@@ -4935,6 +4960,7 @@ function renderAgenda(){
   const visible = LIVE_SESSIONS.filter(l=>{
     if(l.studentId!=null) return l.studentId===currentStudentId;
     if(currentRole==='staff') return true;
+    if(bonusView) return l.audience==='mentorado'; // Método + Bônus vê a agenda da mentoria (com cadeado fora de terça/sexta)
     return l.audience===getViewingTier();
   });
   /* Ordena sempre pela data (e horário, quando informado) — não pela ordem em que foram cadastrados —
@@ -4954,6 +4980,18 @@ function renderAgenda(){
   ];
   const card = (l)=>{
     const watched = WATCHED_LIVE.has(l.id);
+    const bloqueado = bonusView && !liveSessionLiberadaBonus(l);
+    if(bloqueado){
+      return `
+    <div class="agenda-card ${l.type==='past'?'past':''} agenda-locked" title="Exclusivo para mentorados da Mentoria Essência">
+      <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
+      <div class="agenda-info">
+        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}</div>
+        <div class="meta">${l.time} — <span style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle">${icon('lock','tiny')} Exclusivo para mentorados da Mentoria Essência</span></div>
+      </div>
+      <span class="btn-outline disabled" style="display:inline-flex;align-items:center;gap:6px">${icon('lock','tiny')} Bloqueado</span>
+    </div>`;
+    }
     return `
     <div class="agenda-card ${l.type==='past'?'past':''} ${watched?'watched':''}">
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
@@ -4977,7 +5015,9 @@ function renderAgenda(){
     return `<h4 class="ps-h" style="margin-top:18px">${g.label}</h4><div class="agenda-list">${items.map(card).join('')}</div>`;
   }).join('');
   document.getElementById('view-agenda').innerHTML = `
-    <p class="section-sub">Encontros coletivos e individuais com os mentores.</p>
+    <p class="section-sub">${bonusView
+      ? 'Como aluno do Método + Bônus, você participa dos encontros ao vivo da mentoria de <strong>terça-feira</strong> (Plantão de Dúvidas) e <strong>sexta-feira</strong> (Consultório Simulado). Os demais encontros aparecem com cadeado — são exclusivos da Mentoria Essência.'
+      : 'Encontros coletivos e individuais com os mentores.'}</p>
     <h2 class="section-title">${icon('calendar')} Próximos encontros</h2>
     <div class="agenda-list">${upcoming.map(card).join('') || '<p class="section-sub">Nenhum encontro agendado no momento.</p>'}</div>
     <h2 class="section-title">${icon('video')} Gravações anteriores</h2>
@@ -6873,7 +6913,7 @@ function exportAcompanhamentoPDF(s){
         <div>
           <div class="cat">Acompanhamento completo do mentorado</div>
           <h1>${escapeHtml(s.name)}</h1>
-          <div class="cat" style="text-transform:none">${escapeHtml((s.tier==='curso'?'Curso Gravado':'Mentoria Método Essência'))} · Documento gerado em ${geradoEm}</div>
+          <div class="cat" style="text-transform:none">${escapeHtml((s.tier==='curso'? (s.bonus? 'Curso Gravado + Bônus' : 'Curso Gravado') : 'Mentoria Método Essência'))} · Documento gerado em ${geradoEm}</div>
         </div>
       </div>
 
@@ -8459,9 +8499,11 @@ function nextCourseLessonFor(s){
   return nextId ? getCourse(nextId) : null;
 }
 function tierSelectHtml(s){
+  const atual = s.tier==='curso' ? (s.bonus ? 'curso_bonus' : 'curso') : 'mentorado';
   return `<select class="ps-input" style="padding:6px 8px;font-size:12px" data-tier-select="${s.id}">
-    <option value="mentorado" ${s.tier!=='curso'?'selected':''}>Mentorado</option>
-    <option value="curso" ${s.tier==='curso'?'selected':''}>Aluno do Curso</option>
+    <option value="mentorado" ${atual==='mentorado'?'selected':''}>Mentorado</option>
+    <option value="curso" ${atual==='curso'?'selected':''}>Método (curso)</option>
+    <option value="curso_bonus" ${atual==='curso_bonus'?'selected':''}>Método + Bônus</option>
   </select>`;
 }
 function bindTierSelects(root, afterChange){
@@ -8469,8 +8511,9 @@ function bindTierSelects(root, afterChange){
     sel.addEventListener('change',()=>{
       const s = getStudent(sel.dataset.tierSelect);
       if(!s) return;
-      s.tier = sel.value;
-      syncStudentTierUpdate(s.id, sel.value);
+      s.tier = sel.value==='mentorado' ? 'mentorado' : 'curso';
+      s.bonus = sel.value==='curso_bonus';
+      syncStudentTierUpdate(s.id, s.tier, s.bonus);
       afterChange();
     });
   });
@@ -8569,6 +8612,7 @@ function renderVisaoGeral(){
         <select class="ps-input" id="new-code-tier">
           <option value="mentorado">Mentoria (mentorado)</option>
           <option value="curso">Método (curso gravado)</option>
+          <option value="curso_bonus">Método + Bônus (curso + encontros de terça e sexta)</option>
         </select>
       </div>
       <div class="field full"><label>Identificação (opcional)</label><input class="ps-input" type="text" id="new-code-label" placeholder="Ex.: nome de quem vai usar, ou turma"></div>
@@ -8584,7 +8628,7 @@ function renderVisaoGeral(){
             return `
             <tr>
               <td style="font-family:monospace;font-weight:600;white-space:nowrap">${escapeHtml(c.code)}</td>
-              <td><span class="resp-pill">${c.tier==='curso'?'Método':'Mentoria'}</span></td>
+              <td><span class="resp-pill">${c.tier==='curso'? (c.bonus? 'Método + Bônus' : 'Método') : 'Mentoria'}</span></td>
               <td>${escapeHtml(c.label||'—')}</td>
               <td>${used ? `<span class="pill replay">Usado por ${escapeHtml(usedPerson)}</span>` : '<span class="pill live">Disponível</span>'}</td>
               <td>
@@ -8614,12 +8658,14 @@ function renderVisaoGeral(){
   document.getElementById('backup-btn').addEventListener('click', exportarBackup);
   document.getElementById('fotos-btn').addEventListener('click', otimizarFotosExistentes);
   document.getElementById('gen-code-btn').addEventListener('click', async ()=>{
-    const tier = document.getElementById('new-code-tier').value;
+    const escolha = document.getElementById('new-code-tier').value;
+    const tier = escolha==='mentorado' ? 'mentorado' : 'curso';
+    const bonus = escolha==='curso_bonus';
     const label = document.getElementById('new-code-label').value.trim();
     const btn = document.getElementById('gen-code-btn');
     btn.disabled = true;
     try{
-      const row = await syncAccessCodeGenerate(tier, label);
+      const row = await syncAccessCodeGenerate(tier, label, bonus);
       ACCESS_CODES.unshift(mapAccessCodeRow(row));
       renderVisaoGeral();
     }catch(e){ console.error(e); btn.disabled = false; }
