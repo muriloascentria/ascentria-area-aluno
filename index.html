@@ -5056,8 +5056,7 @@ function renderDashboard(){
 
     <h2 class="section-title">${icon('compass')} Continue no Painel do Método</h2>
     ${painelBloqueado
-      ? `<button class="btn-accent" id="goto-painel" style="display:inline-flex;align-items:center;gap:8px;opacity:.85" title="Exclusivo para mentorados da Mentoria Essência">${icon('lock','tiny')} Abrir Painel do Método</button>
-         <p class="section-sub" style="margin-top:8px">${icon('lock','tiny')} O Painel do Método é exclusivo para mentorados da Mentoria Essência.</p>`
+      ? `<button class="btn-accent" id="goto-painel" style="display:inline-flex;align-items:center;gap:8px;opacity:.85" title="Exclusivo para mentorados da Mentoria Essência">${icon('lock','tiny')} Abrir Painel do Método</button>`
       : `<button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>`}
   `;
   document.getElementById('goto-painel').addEventListener('click',()=>goTo('painel'));
