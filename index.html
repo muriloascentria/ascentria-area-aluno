@@ -526,6 +526,14 @@
   .staff-tag{display:inline-block;font-size:9.5px;font-weight:800;color:var(--accent-2);background:var(--accent-soft);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle;text-transform:uppercase;letter-spacing:.02em;}
   .post.post-unseen{border-color:var(--accent-2);box-shadow:0 0 0 1px var(--accent-2);}
   .post-text{font-size:13.5px;line-height:1.55;color:var(--text);margin-bottom:12px;}
+  .mention{color:var(--accent-2);font-weight:700;background:var(--accent-soft);padding:0 4px;border-radius:5px;}
+  .mention-wrap{position:relative;flex:1;min-width:0;}
+  .mention-wrap>input,.mention-wrap>textarea{width:100%;box-sizing:border-box;}
+  .mention-menu{position:absolute;left:0;right:0;top:100%;z-index:60;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 10px 28px rgba(0,0,0,.35);max-height:220px;overflow:auto;margin-top:4px;}
+  .mention-item{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13px;cursor:pointer;color:var(--text);}
+  .mention-item:hover,.mention-item.active{background:var(--bg-elev);}
+  .mention-item .mention-sub{margin-left:auto;font-size:11px;color:var(--text-mute);}
+  .mention-item .avatar{flex-shrink:0;}
   .post-actions{display:flex;gap:18px;}
   .post-action{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);}
   .post-action:hover{color:var(--accent-2);}
@@ -1983,9 +1991,10 @@ function mapPostRow(p){
   return {
     id:p.id, authorId:p.author_id, type:p.type, time:timeAgo(p.created_at), text:p.text,
     courseId:p.course_id||null, audience:p.audience||'mentorado', notifyAuthor:!!p.notify_author,
+    mentions:p.mentions||[], mentionAll:!!p.mention_all,
     likes: p.likes_count || 0,   // contador mantido por gatilho no banco (ver community_likes_recount)
     liked: MEUS_LIKES.has(p.id),
-    comments:(p.community_comments||[]).map(c=>({id:c.id, authorId:c.author_id, text:c.text, replyTo:c.reply_to_comment_id||null, notifyAuthor:!!c.notify_author})),
+    comments:(p.community_comments||[]).map(c=>({id:c.id, authorId:c.author_id, text:c.text, replyTo:c.reply_to_comment_id||null, notifyAuthor:!!c.notify_author, mentions:c.mentions||[], mentionAll:!!c.mention_all})),
   };
 }
 /* Junta linhas novas ao que já está na memória sem duplicar — o mesmo post pode chegar por mais de um
@@ -2048,8 +2057,11 @@ async function refreshPendencias(){
   updateNotifBadge();
 }
 function pendenciasDoSino(){
-  if(currentRole==='staff') return PENDENCIAS.filter(x=>x.motivo==='duvida');
-  return PENDENCIAS.filter(x=>x.motivo==='resposta');
+  if(currentRole==='staff') return PENDENCIAS.filter(x=>x.motivo==='duvida' || x.motivo==='mencao');
+  return PENDENCIAS.filter(x=>x.motivo==='resposta' || x.motivo==='mencao');
+}
+function fuiMencionadoEm(postId){
+  return PENDENCIAS.some(x=>x.motivo==='mencao' && String(x.post_id)===String(postId));
 }
 
 let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstrapData)
@@ -2340,7 +2352,9 @@ function renderAniversarioCanto(){
     setTimeout(()=>{
       const ta = document.getElementById('new-post');
       if(ta){
-        ta.value = 'Feliz aniversário, ' + lista.map(a=>primeiroNome(a.nome)).join(' e ') + '! 🎉';
+        // Já entra com a pessoa marcada (@Nome Completo), então ela recebe o aviso no sininho.
+        lista.forEach(a=>presetMention(ta, {id:a.id, name:a.nome}));
+        ta.value = 'Feliz aniversário, ' + lista.map(a=>'@'+a.nome).join(' e ') + '! 🎉';
         ta.focus();
         ta.scrollIntoView({behavior:'smooth', block:'center'});
       }
@@ -2754,13 +2768,105 @@ function syncPanelDataNow(sid, topicId, data){
 function syncPanelOverride(sid, topicId, filled){
   syncNow(sb.from('panel_overrides').upsert({student_id:sid, topic_id:topicId, filled}));
 }
-async function createCommunityPost(authorId, type, text, courseId, audience){
-  const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text, course_id:courseId||null, audience:audience||'mentorado'}).select().single();
+async function createCommunityPost(authorId, type, text, courseId, audience, mencoes){
+  const m = mencoes || {mentions:[], mentionAll:false};
+  const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text, course_id:courseId||null, audience:audience||'mentorado', mentions:m.mentions||[], mention_all:!!m.mentionAll}).select().single();
   if(error) throw error;
   return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, courseId:data.course_id||null, audience:data.audience||'mentorado', notifyAuthor:false, likes:0, liked:false, comments:[]};
 }
 /* Liga os botões "Sobre a aula: X — abrir aula" de qualquer lista de posts renderizada, para abrir
    direto o player+comentários daquela aula, sem precisar navegar manualmente até "Aulas". */
+/* ---- Menções (@Nome / @todos) nos compositores da comunidade ----
+   Ao digitar "@", abre uma lista com as pessoas daquela comunidade (alunos do público + equipe
+   interna) e a opção "@todos". Escolher insere "@Nome Completo" no texto e guarda o id; ao publicar,
+   extractMentions() confere quais nomes ainda estão no texto e manda os ids junto. */
+const MENTION_STATE = new WeakMap();
+function mentionCandidates(audience){
+  const lista = [];
+  lista.push({id:'*', name:'todos', sub:'avisa toda a comunidade'});
+  Object.values(PEOPLE).forEach(pe=>{
+    if(pe.role==='vendas') return;
+    if(pe.role==='aluno'){
+      const st = getStudent(pe.id);
+      if(st && (st.tier||'mentorado')!==audience) return;
+    }
+    lista.push({id:pe.id, name:pe.name, sub: pe.role==='staff'? 'Equipe interna' : '', person:pe});
+  });
+  return lista;
+}
+function normTxt(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function attachMentions(el, getAudience){
+  if(!el || el.dataset.mentionsReady) return;
+  el.dataset.mentionsReady = '1';
+  if(!MENTION_STATE.has(el)) MENTION_STATE.set(el, new Map());
+  const wrap = document.createElement('div');
+  wrap.className = 'mention-wrap';
+  el.parentNode.insertBefore(wrap, el);
+  wrap.appendChild(el);
+  const menu = document.createElement('div');
+  menu.className = 'mention-menu';
+  menu.hidden = true;
+  wrap.appendChild(menu);
+  let itens = [], ativo = 0, inicio = -1;
+  const fechar = ()=>{ menu.hidden = true; itens = []; inicio = -1; };
+  const inserir = (it)=>{
+    const v = el.value, pos = el.selectionStart;
+    const antes = v.slice(0, inicio), depois = v.slice(pos);
+    const txt = '@' + it.name + ' ';
+    el.value = antes + txt + depois;
+    const novoPos = antes.length + txt.length;
+    el.setSelectionRange(novoPos, novoPos);
+    if(it.id!=='*') MENTION_STATE.get(el).set(it.name, it.id);
+    fechar();
+    el.focus();
+  };
+  const desenhar = ()=>{
+    menu.innerHTML = itens.map((it,i)=>`<div class="mention-item ${i===ativo?'active':''}" data-mi="${i}">
+      ${it.person? initialsAvatar(it.person.initials, it.person.color, 22, it.person.avatarUrl) : `<span class="avatar" style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-size:11px;font-weight:700">@</span>`}
+      <span>@${escapeHtml(it.name)}</span>${it.sub? `<span class="mention-sub">${escapeHtml(it.sub)}</span>` : ''}</div>`).join('');
+    menu.querySelectorAll('[data-mi]').forEach(d=>{
+      d.addEventListener('mousedown', e=>{ e.preventDefault(); inserir(itens[+d.dataset.mi]); });
+    });
+    menu.hidden = !itens.length;
+    const a = menu.querySelector('.active'); if(a) a.scrollIntoView({block:'nearest'});
+  };
+  const atualizar = ()=>{
+    const pos = el.selectionStart;
+    const antes = el.value.slice(0, pos);
+    const m = antes.match(/(^|[\s(])@([^@\n]{0,40})$/);
+    if(!m){ fechar(); return; }
+    inicio = pos - m[2].length - 1;
+    const q = normTxt(m[2]);
+    const aud = (typeof getAudience==='function' ? getAudience() : getAudience) || getViewingTier();
+    itens = mentionCandidates(aud).filter(it=> !q || normTxt(it.name).includes(q)).slice(0, 8);
+    ativo = 0;
+    desenhar();
+  };
+  el.addEventListener('input', atualizar);
+  el.addEventListener('click', atualizar);
+  el.addEventListener('keydown', e=>{
+    if(menu.hidden || !itens.length) return;
+    if(e.key==='ArrowDown'){ e.preventDefault(); ativo = (ativo+1)%itens.length; desenhar(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); ativo = (ativo-1+itens.length)%itens.length; desenhar(); }
+    else if(e.key==='Enter' || e.key==='Tab'){ e.preventDefault(); e.stopImmediatePropagation(); inserir(itens[ativo]); }
+    else if(e.key==='Escape'){ fechar(); }
+  }, true);
+  el.addEventListener('blur', ()=> setTimeout(fechar, 150));
+}
+/* Ids das pessoas cujo @Nome ainda está no texto, e se há @todos. */
+function extractMentions(el){
+  const st = (el && MENTION_STATE.get(el)) || new Map();
+  const text = el ? el.value : '';
+  const mentions = [...st.entries()].filter(([name])=>text.includes('@'+name)).map(([,id])=>id);
+  const mentionAll = /(^|[\s(])@todos\b/i.test(text);
+  return { mentions: [...new Set(mentions)], mentionAll };
+}
+/* Pré-carrega uma menção num compositor (ex.: parabéns de aniversário já marcando a pessoa). */
+function presetMention(el, person){
+  if(!el || !person) return;
+  if(!MENTION_STATE.has(el)) MENTION_STATE.set(el, new Map());
+  MENTION_STATE.get(el).set(person.name, person.id);
+}
 function bindOpenCourseTags(root){
   root.querySelectorAll('[data-open-course]').forEach(el=>{
     el.addEventListener('click',(e)=>{ e.stopPropagation(); openCourseModal(el.dataset.openCourse); });
@@ -2813,12 +2919,16 @@ function markVisiblePostsSeen(posts){
         estePost = true;
       }
     });
+    if(fuiMencionadoEm(p.id)){
+      syncNow(sb.rpc('marcar_mencoes_vistas', {p_post_id: p.id}));
+      vistos.add(String(p.id)); changed = true;
+    }
     if(estePost){ vistos.add(String(p.id)); changed = true; }
   });
   if(changed){
     // Tira da lista do sininho na hora. A gravação no banco é assíncrona, então recalcular pela RPC
     // agora poderia trazer o estado antigo de volta e o sino piscaria sozinho.
-    PENDENCIAS = PENDENCIAS.filter(x=>!(x.motivo==='resposta' && vistos.has(String(x.post_id))));
+    PENDENCIAS = PENDENCIAS.filter(x=>!((x.motivo==='resposta' || x.motivo==='mencao') && vistos.has(String(x.post_id))));
     updateNotifBadge();
   }
 }
@@ -2826,8 +2936,9 @@ function syncCommunityLike(postId, sid, liked){
   if(liked) syncNow(sb.from('community_likes').upsert({post_id:postId, student_id:sid}));
   else syncNow(sb.from('community_likes').delete().eq('post_id',postId).eq('student_id',sid));
 }
-async function syncCommunityComment(postId, authorId, text, replyToCommentId){
-  const { data, error } = await sb.from('community_comments').insert({post_id:postId, author_id:authorId, text, reply_to_comment_id: replyToCommentId||null}).select().single();
+async function syncCommunityComment(postId, authorId, text, replyToCommentId, mencoes){
+  const m = mencoes || {mentions:[], mentionAll:false};
+  const { data, error } = await sb.from('community_comments').insert({post_id:postId, author_id:authorId, text, reply_to_comment_id: replyToCommentId||null, mentions:m.mentions||[], mention_all:!!m.mentionAll}).select().single();
   if(error) throw error;
   return data.id;
 }
@@ -4092,6 +4203,7 @@ function bindCourseComments(c){
   modalEl.querySelectorAll('#cm-type-select [data-cm-type]').forEach(btn=>{
     btn.addEventListener('click',()=>{ selectedCoursePostType = btn.dataset.cmType; openCourseModal(c.id); });
   });
+  attachMentions(modalEl.querySelector('#cm-new-post'), ()=>getViewingTier());
   const postBtn = modalEl.querySelector('#cm-post-btn');
   if(postBtn){
     postBtn.addEventListener('click', async ()=>{
@@ -4099,7 +4211,7 @@ function bindCourseComments(c){
       if(!ta.value.trim()) return;
       postBtn.disabled = true;
       try{
-        const post = await createCommunityPost(actingAuthorId(), selectedCoursePostType, ta.value.trim(), c.id, getViewingTier());
+        const post = await createCommunityPost(actingAuthorId(), selectedCoursePostType, ta.value.trim(), c.id, getViewingTier(), extractMentions(ta));
         COMMUNITY_POSTS.unshift(post);
         refreshPendencias();
         openCourseModal(c.id);
@@ -4128,8 +4240,9 @@ function bindCourseComments(c){
       const rt = replyTargets[pid];
       btn.disabled = true;
       try{
-        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text, rt? rt.commentId : null);
-        p.comments.push({id:commentId, authorId:actingAuthorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false});
+        const menc = extractMentions(input);
+        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text, rt? rt.commentId : null, menc);
+        p.comments.push({id:commentId, authorId:actingAuthorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false, mentions:menc.mentions, mentionAll:menc.mentionAll});
         maybeNotifyPostAuthor(p);
         maybeNotifyCommentAuthor(p, rt? rt.commentId : null);
         delete replyTargets[pid];
@@ -4139,6 +4252,7 @@ function bindCourseComments(c){
     };
     btn.addEventListener('click',send);
     const input = modalEl.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
+    attachMentions(input, ()=>getViewingTier());
     input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
   });
   modalEl.querySelectorAll('[data-reply-comment]').forEach(btn=>{
@@ -4646,7 +4760,7 @@ function postHtml(p,compact,showCourseTag){
   const isMine = p.authorId===actingAuthorId();
   const canDeletePost = isMine || iAmStaff;
   return `
-    <div class="post post-border-${t.css}${(isMine && p.notifyAuthor)?' post-unseen':''}">
+    <div class="post post-border-${t.css}${((isMine && p.notifyAuthor) || fuiMencionadoEm(p.id))?' post-unseen':''}">
       <div class="post-head">
         ${initialsAvatar(author.initials,author.color,undefined,author.avatarUrl)}
         <div class="who"><div class="name">${author.name}${nameTag(author)}</div><div class="time">${p.time}</div></div>
@@ -4655,7 +4769,8 @@ function postHtml(p,compact,showCourseTag){
       </div>
       ${course? `<button type="button" class="post-course-tag" data-open-course="${course.id}">${icon('film','tiny')} Sobre a aula: <b>${course.title}</b> — abrir aula</button>` : ''}
       ${(isMine && p.notifyAuthor)? `<div class="staff-note new-reply">${icon('bell','tiny')} Nova resposta da equipe interna!</div>` : ''}
-      <div class="post-text">${linkify(p.text)}</div>
+      ${fuiMencionadoEm(p.id)? `<div class="staff-note new-reply">${icon('bell','tiny')} Você foi mencionado(a) nesta publicação.</div>` : ''}
+      <div class="post-text">${linkify(p.text, p)}</div>
       ${p.type==='duvida'? (answered
         ? `<div class="staff-note answered">${icon('check','tiny')} Respondida pela equipe interna.</div>`
         : `<div class="staff-note">${icon('bell','tiny')} Equipe interna notificada — vamos responder em breve.</div>`) : ''}
@@ -4671,7 +4786,7 @@ function postHtml(p,compact,showCourseTag){
             const replySrc = c.replyTo? p.comments.find(x=>x.id==c.replyTo) : null;
             const replySrcAuthor = replySrc? getPerson(replySrc.authorId) : null;
             const commentUnseen = c.authorId===actingAuthorId() && c.notifyAuthor;
-            return `<div class="comment${commentUnseen?' comment-unseen':''}">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div class="comment-body">${replySrcAuthor? `<div class="comment-reply-tag">${icon('reply','tiny')} respondendo a <b>${escapeHtml(replySrcAuthor.name)}</b></div>` : ''}<b>${a.name}${nameTag(a)}</b>${linkify(c.text)}<div class="comment-actions">${replyAuthor? `<button type="button" class="comment-reply-btn" data-reply-comment="${c.id}" data-reply-post="${p.id}" data-reply-name="${escapeAttr(a.name)}">Responder</button>` : ''}${commentUnseen? `<span class="comment-new-badge">${icon('bell','tiny')} Nova resposta</span>` : ''}</div></div>${canDeleteComment? `<button type="button" class="comment-del-btn" data-del-comment="${c.id}" title="Excluir comentário">${icon('trash','tiny')}</button>` : ''}</div>`;
+            return `<div class="comment${commentUnseen?' comment-unseen':''}">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div class="comment-body">${replySrcAuthor? `<div class="comment-reply-tag">${icon('reply','tiny')} respondendo a <b>${escapeHtml(replySrcAuthor.name)}</b></div>` : ''}<b>${a.name}${nameTag(a)}</b>${linkify(c.text, c)}<div class="comment-actions">${replyAuthor? `<button type="button" class="comment-reply-btn" data-reply-comment="${c.id}" data-reply-post="${p.id}" data-reply-name="${escapeAttr(a.name)}">Responder</button>` : ''}${commentUnseen? `<span class="comment-new-badge">${icon('bell','tiny')} Nova resposta</span>` : ''}</div></div>${canDeleteComment? `<button type="button" class="comment-del-btn" data-del-comment="${c.id}" title="Excluir comentário">${icon('trash','tiny')}</button>` : ''}</div>`;
           }).join('')}
           ${replyAuthor? `
           <div class="comment-composer-wrap">
@@ -4771,6 +4886,7 @@ function renderComunidade(){
       if(currentCommunityAudience===alvo && currentView==='comunidade') renderComunidade();
     });
   }
+  attachMentions(root.querySelector('#new-post'), ()=>currentCommunityAudience);
   const postBtn = root.querySelector('#post-btn');
   if(postBtn){
     postBtn.addEventListener('click', async ()=>{
@@ -4783,7 +4899,7 @@ function renderComunidade(){
       }
       postBtn.disabled = true;
       try{
-        const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim(), null, currentCommunityAudience);
+        const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim(), null, currentCommunityAudience, extractMentions(ta));
         COMMUNITY_POSTS.unshift(post);
         if(post.type==='apresentacao' && post.authorId===actingAuthorId()) EU_JA_APRESENTEI = true;
         refreshPendencias();
@@ -4813,8 +4929,9 @@ function renderComunidade(){
       const rt = replyTargets[pid];
       btn.disabled = true;
       try{
-        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text, rt? rt.commentId : null);
-        p.comments.push({id:commentId, authorId:actingAuthorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false});
+        const menc = extractMentions(input);
+        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text, rt? rt.commentId : null, menc);
+        p.comments.push({id:commentId, authorId:actingAuthorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false, mentions:menc.mentions, mentionAll:menc.mentionAll});
         maybeNotifyPostAuthor(p);
         maybeNotifyCommentAuthor(p, rt? rt.commentId : null);
         delete replyTargets[pid];
@@ -4824,6 +4941,7 @@ function renderComunidade(){
     };
     btn.addEventListener('click',send);
     const input = root.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
+    attachMentions(input, ()=>{ const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.commentSend); return p? p.audience : currentCommunityAudience; });
     input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
   });
   root.querySelectorAll('[data-reply-comment]').forEach(btn=>{
@@ -5486,15 +5604,26 @@ function confirmDelete(msg){
   return window.confirm(msg || 'Tem certeza que deseja excluir? Essa ação não pode ser desfeita.');
 }
 /* Converte URLs "https://..."/"http://..." dentro de um texto em links clicáveis, escapando o resto do texto com segurança. */
-function linkify(text){
+function linkify(text, item){
   /* Preserva quebras de linha digitadas (enter) — sem isso, o HTML colapsa tudo numa linha só ao exibir. */
-  const escaped = escapeHtml(text).replace(/\n/g, '<br>');
-  return escaped.replace(/(https?:\/\/[^\s<]+)/g, (url)=>{
+  let escaped = escapeHtml(text).replace(/\n/g, '<br>');
+  escaped = escaped.replace(/(https?:\/\/[^\s<]+)/g, (url)=>{
     const m = url.match(/[).,;:!?]+$/);
     const trail = m ? m[0] : '';
     const clean = trail ? url.slice(0, -trail.length) : url;
     return `<a href="${clean}" target="_blank" rel="noopener">${clean}</a>${trail}`;
   });
+  /* Menções: destaca @todos e o @Nome de cada pessoa registrada na publicação/comentário. */
+  if(item){
+    if(item.mentionAll) escaped = escaped.replace(/(^|[\s>(])@todos\b/gi, (m0, pre)=>`${pre}<span class="mention">@todos</span>`);
+    (item.mentions||[]).forEach(id=>{
+      const pe = getPerson(id);
+      if(!pe) return;
+      const nomeEsc = escapeHtml(pe.name).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      escaped = escaped.replace(new RegExp('@'+nomeEsc, 'g'), `<span class="mention">@${escapeHtml(pe.name)}</span>`);
+    });
+  }
+  return escaped;
 }
 function getTopicData(sid, topicId){
   const key = sid+':'+topicId;
