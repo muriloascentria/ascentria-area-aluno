@@ -9676,7 +9676,7 @@ function renderFinLancamentos(container){
         ${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}" title="${escapeAttr(l.descricao||'')}">
           <td style="white-space:nowrap">${formatDateBR(finDataEfetiva(l))}</td>
           <td>${escapeHtml((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome || '—')}</td>
-          <td>${l.tipo==='receber'? (escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>') : '<span style="color:var(--text-mute)">—</span>'}</td>
+          <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
           <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
           <td><span class="pill pago">${icon('check','tiny')} Pago</span></td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
@@ -9784,7 +9784,7 @@ function exportFinanceiroPDF(){
       return `<tr>
         <td>${formatDateBR(finDataEfetiva(l))}</td>
         <td>${escapeHtml(catName(l.categoriaId))}</td>
-        <td>${l.tipo==='receber'? escapeHtml(finPagadorNome(l)||'—') : '—'}</td>
+        <td>${escapeHtml(finPagadorNome(l)||'—')}</td>
         <td>${escapeHtml(l.descricao||'—')}</td>
         <td>${l.tipo==='receber'? 'Receita' : 'Despesa'}</td>
         <td>${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
@@ -9841,7 +9841,7 @@ function renderFinCadastroSimples(container, kind){
     <h2 class="section-title">${icon('folder')} ${cfg.title}</h2>
     <div style="margin:6px 0 14px"><button class="btn-accent" id="fin-cad-abrir">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>
     <div class="table-wrap"><table class="check-table">
-      <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th><th title="Recebimentos nesta categoria só salvam com o vínculo informado">Vínculo</th>':''}<th>Em uso</th><th></th></tr></thead>
+      <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th><th title="Lançamentos nesta categoria só salvam com o vínculo informado">Vínculo</th>':''}<th>Em uso</th><th></th></tr></thead>
       <tbody>
         ${cfg.list.map(item=>`<tr>
           <td>${escapeHtml(item.nome)}</td>
@@ -9895,13 +9895,13 @@ function openFinCadastroEditModal(kind, id){
             <option value="receita" ${item.tipo==='receita'?'selected':''}>Só Receita</option>
             <option value="despesa" ${item.tipo==='despesa'?'selected':''}>Só Despesa</option>
           </select>
-          <label class="ps-label">Vínculo obrigatório nos recebimentos</label>
+          <label class="ps-label">Vínculo obrigatório nos lançamentos</label>
           <select class="ps-input" id="fce-vinculo">
             <option value="" ${!item.exigeAluno && !item.exigeCliente?'selected':''}>Nenhum</option>
             <option value="aluno" ${item.exigeAluno?'selected':''}>Aluno (Mentoria / Método)</option>
             <option value="cliente" ${item.exigeCliente?'selected':''}>Cliente do Registro de Clientes</option>
           </select>
-          <p class="section-sub" style="margin:6px 0 0;font-size:11.5px">Só vale para recebimentos — pagamentos (saídas) nunca exigem vínculo.</p>
+          <p class="section-sub" style="margin:6px 0 0;font-size:11.5px">Vale para recebimentos e pagamentos desta categoria (ex.: repasses exigem o cliente de origem).</p>
         ` : ''}
       </div>
       <div class="modal-actions">
@@ -9975,8 +9975,10 @@ function openFinLancamentoModal(tipo, existingId){
   };
   /* Categoria marcada como "exige aluno" (recebimento de aluno do Método): o menu de alunos aparece e
      o salvamento fica bloqueado enquanto estiver vazio. Lançamentos antigos ficam sem aluno. */
-  const categoriaExigeAluno = ()=> tipo==='receber' && !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeAluno;
-  const categoriaExigeCliente = ()=> tipo==='receber' && !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeCliente;
+  /* A categoria decide se o lançamento exige aluno ou cliente — vale tanto para recebimentos quanto para
+     pagamentos (ex.: "Repasse Sandra Bublitz" é uma saída, mas precisa dizer de qual cliente é o repasse). */
+  const categoriaExigeAluno = ()=> !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeAluno;
+  const categoriaExigeCliente = ()=> !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeCliente;
 
   function addInterval(dateStr, quando){
     const [y,m,d] = dateStr.split('-').map(Number);
@@ -10181,12 +10183,12 @@ function openFinLancamentoModal(tipo, existingId){
         return;
       }
       if(categoriaExigeAluno() && !draft.studentId){
-        alert('Esta categoria é de recebimento de aluno: selecione o aluno antes de salvar.');
+        alert('Esta categoria exige um aluno: selecione o aluno antes de salvar.');
         const el = document.getElementById('fl-aluno'); if(el) el.focus();
         return;
       }
       if(categoriaExigeCliente() && !draft.clienteId){
-        alert('Esta categoria é de recebimento de cliente: selecione o cliente antes de salvar.');
+        alert('Esta categoria exige um cliente do Registro de Clientes: selecione o cliente antes de salvar.');
         const el = document.getElementById('fl-cliente'); if(el) el.focus();
         return;
       }
