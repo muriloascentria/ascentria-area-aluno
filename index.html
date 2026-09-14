@@ -9670,15 +9670,15 @@ function renderFinLancamentos(container){
     const nomeConta = (opcoes.find(o=>o.id===contaAtual)||{}).nome || '—';
     bodyHtml = `
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Data</th><th>Categoria</th><th>Cliente</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
+        <thead><tr><th>Data</th><th>Categoria</th><th>Cliente</th><th>Descrição</th><th>Tipo</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
         <tbody>
         <tr class="fin-saldo-anterior"><td style="white-space:nowrap">${String(new Date(finView.year, finView.month, 1).getDate()).padStart(2,'0')}/${String(finView.month+1).padStart(2,'0')}/${finView.year}</td><td colspan="5" style="color:var(--text-mute)">Saldo anterior (até ${MESES_LONGO[(finView.month+11)%12]}${finView.month===0? '/'+(finView.year-1) : ''})</td><td class="cf-saldo ${saldoAnterior<0?'neg':''}" style="text-align:right;font-weight:700">${formatBRL(saldoAnterior)}</td></tr>
         ${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}" title="${escapeAttr(l.descricao||'')}">
           <td style="white-space:nowrap">${formatDateBR(finDataEfetiva(l))}</td>
           <td>${escapeHtml((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome || '—')}</td>
           <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
+          <td>${escapeHtml(l.descricao||'—')}</td>
           <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
-          <td><span class="pill pago">${icon('check','tiny')} Pago</span></td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
           <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
         </tr>`).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
