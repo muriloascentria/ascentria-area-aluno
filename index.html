@@ -2671,7 +2671,7 @@ async function bootstrapData(){
     // Financeiro interno da Ascentria — igual às listas acima, só pra equipe interna.
     FIN_CATEGORIAS.length = 0;
     const { data: fcRows } = await sb.from('fin_categorias').select('*').order('nome');
-    (fcRows||[]).forEach(r=>FIN_CATEGORIAS.push({id:r.id, nome:r.nome, tipo:r.tipo, exigeAluno:!!r.exige_aluno}));
+    (fcRows||[]).forEach(r=>FIN_CATEGORIAS.push({id:r.id, nome:r.nome, tipo:r.tipo, exigeAluno:!!r.exige_aluno, exigeCliente:!!r.exige_cliente}));
     FIN_CONTAS.length = 0;
     const { data: fcoRows } = await sb.from('fin_contas').select('*').order('nome');
     (fcoRows||[]).forEach(r=>FIN_CONTAS.push({id:r.id, nome:r.nome}));
@@ -3157,19 +3157,29 @@ function mapFinLancamentoRow(r){
     grupoId: r.grupo_id || null, parcelaNum: r.parcela_num || null, parcelaTotal: r.parcela_total || null,
     repeteModo: r.repete_modo || null,
     studentId: r.student_id || null, // aluno pagador (obrigatório quando a categoria exige)
+    clienteId: r.cliente_id || null, // cliente do Registro de Clientes (quando a categoria exige cliente)
     createdAt: r.created_at || '', // ordem de lançamento no sistema (desempate do extrato)
   };
 }
 /* Desempate quando a data é a mesma: mantém a ordem em que foi lançado no sistema (e, numa série de
    parcelas criada de uma vez, a ordem das parcelas). Sem isto, lançamentos do mesmo dia apareciam
    no extrato numa ordem aleatória. */
+function finPagadorNome(l){
+  if(l.studentId){ const n = nomeAlunoTag(l.studentId); if(n) return n; }
+  if(l.clienteId){ const c = CLIENTES_REGISTRO.find(x=>String(x.id)===String(l.clienteId)); if(c) return c.nome; }
+  return '';
+}
+function clienteSelectOpts(current){
+  return `<option value="">— Selecione o cliente —</option>` +
+    CLIENTES_REGISTRO.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(c=>`<option value="${c.id}" ${String(current)===String(c.id)?'selected':''}>${escapeHtml(c.nome)}</option>`).join('');
+}
 function finOrdemLancamento(a, b){
   const ca = a.createdAt||'', cb = b.createdAt||'';
   if(ca!==cb) return ca<cb? -1 : 1;
   return (a.parcelaNum||0) - (b.parcelaNum||0);
 }
-async function syncFinCategoriaInsert(nome, tipo, exigeAluno){
-  const { data, error } = await sb.from('fin_categorias').insert({ nome, tipo, exige_aluno: !!exigeAluno }).select().single();
+async function syncFinCategoriaInsert(nome, tipo, exigeAluno, exigeCliente){
+  const { data, error } = await sb.from('fin_categorias').insert({ nome, tipo, exige_aluno: !!exigeAluno, exige_cliente: !!exigeCliente }).select().single();
   if(error) throw error;
   return data;
 }
@@ -8017,7 +8027,7 @@ let vendasFiltroResultado = 'todos';
 let vendasBusca = '';
 let clientesBusca = '';
 let clientesOrdem = 'nome'; // 'nome' (A–Z) ou 'recentes'
-const CLIENTES_TAG_OPTS = ['Paciente Murilo','Paciente Sandra','Paciente Diego','Paciente Carmem','Mentoria Essência','Método Essência','Pós-Graduação'];
+const CLIENTES_TAG_OPTS = ['Paciente Murilo','Paciente Sandra','Paciente Diego','Paciente Carmem','Mentoria Essência','Método Essência','Pós-Graduação','Constelação'];
 const VENDAS_VENDEDOR_OPTS = ['Carmem','Carmem e Diego','Diego','Viviane'];
 const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
 const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'];
@@ -9555,6 +9565,12 @@ function finValorEfetivo(l){
 /* Indicadores do topo do Financeiro. "A receber/a pagar no mês" são só os que ainda estão em aberto
    (é o que sobra nas abas). "Faturado" é receita já recebida, contada pelo dia do pagamento — mesma
    régra da aba Faturamento, pra os números baterem entre as duas telas. */
+/* Soma de tudo já efetivado (pago) numa conta antes do 1º dia do mês — o "saldo anterior" do extrato. */
+function finSaldoAnterior(ehDaConta, year, month){
+  const inicio = `${year}-${String(month+1).padStart(2,'0')}-01`;
+  return FIN_LANCAMENTOS.filter(l=>l.pagou && ehDaConta(l) && (finDataEfetiva(l)||'') < inicio)
+    .reduce((s,l)=> s + (l.tipo==='pagar'? -finValorEfetivo(l) : finValorEfetivo(l)), 0);
+}
 function computeFinResumo(year, month){
   let aReceber=0, aPagar=0, faturadoMes=0, faturadoAno=0, pagoMes=0;
   FIN_LANCAMENTOS.forEach(l=>{
@@ -9636,11 +9652,14 @@ function renderFinLancamentos(container){
         ${opcoes.map(o=>`<button type="button" class="cf-month-btn ${o.id===contaAtual?'active':''}" data-finconta="${escapeAttr(o.id)}">${icon('money','tiny')} ${escapeHtml(o.nome)}</button>`).join('')}
       </div>` : '';
 
-    const daConta = pagos.filter(l=> contaAtual==='__sem__'
+    const ehDaConta = (l)=> contaAtual==='__sem__'
         ? (!l.contaId || !FIN_CONTAS.some(c=>c.id===l.contaId))
-        : l.contaId===contaAtual)
-      .sort(byEfetivaAsc);
-    let saldo = 0;
+        : l.contaId===contaAtual;
+    const daConta = pagos.filter(ehDaConta).sort(byEfetivaAsc);
+    /* Saldo anterior: tudo que já foi efetivado nesta conta antes do 1º dia do mês — assim o mês
+       começa de onde o anterior parou, como no extrato do banco. */
+    const saldoAnterior = finSaldoAnterior(ehDaConta, finView.year, finView.month);
+    let saldo = saldoAnterior;
     const rows = daConta.map(l=>{
       const v = finValorEfetivo(l);
       saldo += (l.tipo==='pagar'? -v : v);
@@ -9651,18 +9670,20 @@ function renderFinLancamentos(container){
     const nomeConta = (opcoes.find(o=>o.id===contaAtual)||{}).nome || '—';
     bodyHtml = `
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
-        <tbody>${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}">
+        <thead><tr><th>Data</th><th>Categoria</th><th>Cliente</th><th>Tipo</th><th>Situação</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
+        <tbody>
+        <tr class="fin-saldo-anterior"><td style="white-space:nowrap">${String(new Date(finView.year, finView.month, 1).getDate()).padStart(2,'0')}/${String(finView.month+1).padStart(2,'0')}/${finView.year}</td><td colspan="5" style="color:var(--text-mute)">Saldo anterior (até ${MESES_LONGO[(finView.month+11)%12]}${finView.month===0? '/'+(finView.year-1) : ''})</td><td class="cf-saldo ${saldoAnterior<0?'neg':''}" style="text-align:right;font-weight:700">${formatBRL(saldoAnterior)}</td></tr>
+        ${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}" title="${escapeAttr(l.descricao||'')}">
           <td style="white-space:nowrap">${formatDateBR(finDataEfetiva(l))}</td>
-          <td>${escapeHtml(l.descricao||'—')}</td>
           <td>${escapeHtml((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome || '—')}</td>
+          <td>${l.tipo==='receber'? (escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>') : '<span style="color:var(--text-mute)">—</span>'}</td>
           <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
           <td><span class="pill pago">${icon('check','tiny')} Pago</span></td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
           <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
         </tr>`).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
       </table></div>
-      <div class="cf-total">Entradas: <strong>${formatBRL(entradas)}</strong> · Saídas: <strong class="neg">${formatBRL(saidas)}</strong> · Saldo do mês em ${escapeHtml(nomeConta)}: <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
+      <div class="cf-total">Saldo anterior: <strong>${formatBRL(saldoAnterior)}</strong> · Entradas: <strong>${formatBRL(entradas)}</strong> · Saídas: <strong class="neg">${formatBRL(saidas)}</strong> · Saldo final em ${escapeHtml(nomeConta)}: <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
     `;
   }
 
@@ -9750,26 +9771,29 @@ function exportFinanceiroPDF(){
     /* Extrato da conta bancária aberta na tela, só com o que já foi efetivado. */
     const pagos = FIN_LANCAMENTOS.filter(l=>l.pagou && finNoMes(finDataEfetiva(l), finView.year, finView.month));
     const semConta = (l)=> !l.contaId || !FIN_CONTAS.some(c=>c.id===l.contaId);
-    const list = pagos.filter(l=> finExtratoConta==='__sem__' ? semConta(l) : l.contaId===finExtratoConta).sort(byEfetivaAsc);
+    const ehDaConta = (l)=> finExtratoConta==='__sem__' ? semConta(l) : l.contaId===finExtratoConta;
+    const list = pagos.filter(ehDaConta).sort(byEfetivaAsc);
     const nomeConta = finExtratoConta==='__sem__' ? 'Sem conta' : contaName(finExtratoConta);
     titulo = `Extrato — ${nomeConta}`;
-    let saldo = 0;
-    theadHtml = '<tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Saldo</th></tr>';
-    rowsHtml = list.map(l=>{
+    const saldoAnterior = finSaldoAnterior(ehDaConta, finView.year, finView.month);
+    let saldo = saldoAnterior;
+    theadHtml = '<tr><th>Data</th><th>Categoria</th><th>Cliente</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Saldo</th></tr>';
+    rowsHtml = `<tr><td>01/${String(finView.month+1).padStart(2,'0')}/${finView.year}</td><td colspan="5"><em>Saldo anterior</em></td><td><strong>${formatBRL(saldoAnterior)}</strong></td></tr>` + list.map(l=>{
       const v = finValorEfetivo(l);
       saldo += (l.tipo==='pagar'? -v : v);
       return `<tr>
         <td>${formatDateBR(finDataEfetiva(l))}</td>
-        <td>${escapeHtml(l.descricao||'—')}</td>
         <td>${escapeHtml(catName(l.categoriaId))}</td>
+        <td>${l.tipo==='receber'? escapeHtml(finPagadorNome(l)||'—') : '—'}</td>
+        <td>${escapeHtml(l.descricao||'—')}</td>
         <td>${l.tipo==='receber'? 'Receita' : 'Despesa'}</td>
         <td>${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
         <td>${formatBRL(saldo)}</td>
       </tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;color:#999;">Nenhuma movimentação neste mês.</td></tr>`;
+    }).join('');
     const entradas = list.filter(l=>l.tipo==='receber').reduce((s,l)=>s+finValorEfetivo(l),0);
     const saidas = list.filter(l=>l.tipo==='pagar').reduce((s,l)=>s+finValorEfetivo(l),0);
-    totalHtml = `<div class="total">Entradas: <strong>${formatBRL(entradas)}</strong> &nbsp;·&nbsp; Saídas: <strong>${formatBRL(saidas)}</strong> &nbsp;·&nbsp; Saldo do mês: <strong>${formatBRL(saldo)}</strong></div>`;
+    totalHtml = `<div class="total">Saldo anterior: <strong>${formatBRL(saldoAnterior)}</strong> &nbsp;·&nbsp; Entradas: <strong>${formatBRL(entradas)}</strong> &nbsp;·&nbsp; Saídas: <strong>${formatBRL(saidas)}</strong> &nbsp;·&nbsp; Saldo final: <strong>${formatBRL(saldo)}</strong></div>`;
   }
 
   win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo} — ${mesAno} — Ascentria</title>
@@ -9817,11 +9841,11 @@ function renderFinCadastroSimples(container, kind){
     <h2 class="section-title">${icon('folder')} ${cfg.title}</h2>
     <div style="margin:6px 0 14px"><button class="btn-accent" id="fin-cad-abrir">${icon('plus','ps-plus')} ${cfg.addLabel}</button></div>
     <div class="table-wrap"><table class="check-table">
-      <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th><th title="Lançamentos nesta categoria só salvam com o aluno informado">Exige aluno</th>':''}<th>Em uso</th><th></th></tr></thead>
+      <thead><tr><th>Nome</th>${kind==='categorias'?'<th>Tipo</th><th title="Recebimentos nesta categoria só salvam com o vínculo informado">Vínculo</th>':''}<th>Em uso</th><th></th></tr></thead>
       <tbody>
         ${cfg.list.map(item=>`<tr>
           <td>${escapeHtml(item.nome)}</td>
-          ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td><td>${item.exigeAluno? '<span class="resp-pill">Sim</span>' : '<span style="color:var(--text-mute)">Não</span>'}</td>` : ''}
+          ${kind==='categorias'? `<td>${item.tipo==='ambos'?'Receita e Despesa':(item.tipo==='receita'?'Receita':'Despesa')}</td><td>${item.exigeAluno? '<span class="resp-pill">Aluno</span>' : (item.exigeCliente? '<span class="resp-pill">Cliente</span>' : '<span style="color:var(--text-mute)">—</span>')}</td>` : ''}
           <td>${inUseCount(item.id)}x</td>
           <td style="white-space:nowrap"><button class="btn-mini" data-fin-cad-edit="${item.id}">${icon('edit','tiny')} Editar</button> <button class="btn-mini danger" data-fin-cad-del="${item.id}">${icon('trash')} Remover</button></td>
         </tr>`).join('') || `<tr><td colspan="${colspan}" style="color:var(--text-mute)">Nada cadastrado ainda.</td></tr>`}
@@ -9871,7 +9895,13 @@ function openFinCadastroEditModal(kind, id){
             <option value="receita" ${item.tipo==='receita'?'selected':''}>Só Receita</option>
             <option value="despesa" ${item.tipo==='despesa'?'selected':''}>Só Despesa</option>
           </select>
-          <label class="ps-label" style="display:flex;align-items:center;gap:6px;margin-top:12px;text-transform:none;font-size:12.5px"><input type="checkbox" id="fce-exige" ${item.exigeAluno?'checked':''}> Exige aluno (recebimento de aluno do Método)</label>
+          <label class="ps-label">Vínculo obrigatório nos recebimentos</label>
+          <select class="ps-input" id="fce-vinculo">
+            <option value="" ${!item.exigeAluno && !item.exigeCliente?'selected':''}>Nenhum</option>
+            <option value="aluno" ${item.exigeAluno?'selected':''}>Aluno (Mentoria / Método)</option>
+            <option value="cliente" ${item.exigeCliente?'selected':''}>Cliente do Registro de Clientes</option>
+          </select>
+          <p class="section-sub" style="margin:6px 0 0;font-size:11.5px">Só vale para recebimentos — pagamentos (saídas) nunca exigem vínculo.</p>
         ` : ''}
       </div>
       <div class="modal-actions">
@@ -9892,8 +9922,9 @@ function openFinCadastroEditModal(kind, id){
       try{
         let row;
         if(kind==='categorias'){
-          row = await syncFinCategoriaInsert(nome, document.getElementById('fce-tipo').value, document.getElementById('fce-exige').checked);
-          FIN_CATEGORIAS.push({id:row.id, nome:row.nome, tipo:row.tipo, exigeAluno:!!row.exige_aluno});
+          const vinc = document.getElementById('fce-vinculo').value;
+          row = await syncFinCategoriaInsert(nome, document.getElementById('fce-tipo').value, vinc==='aluno', vinc==='cliente');
+          FIN_CATEGORIAS.push({id:row.id, nome:row.nome, tipo:row.tipo, exigeAluno:!!row.exige_aluno, exigeCliente:!!row.exige_cliente});
         } else if(kind==='contas'){
           row = await syncFinContaInsert(nome);
           FIN_CONTAS.push({id:row.id, nome:row.nome});
@@ -9909,8 +9940,10 @@ function openFinCadastroEditModal(kind, id){
     item.nome = nome;
     if(kind==='categorias'){
       item.tipo = document.getElementById('fce-tipo').value;
-      item.exigeAluno = document.getElementById('fce-exige').checked;
-      syncFinCategoriaUpdate(item.id, { nome: item.nome, tipo: item.tipo, exige_aluno: item.exigeAluno });
+      const vinc = document.getElementById('fce-vinculo').value;
+      item.exigeAluno = vinc==='aluno';
+      item.exigeCliente = vinc==='cliente';
+      syncFinCategoriaUpdate(item.id, { nome: item.nome, tipo: item.tipo, exige_aluno: item.exigeAluno, exige_cliente: item.exigeCliente });
     } else if(kind==='contas'){
       syncFinContaUpdate(item.id, { nome: item.nome });
     } else {
@@ -9932,17 +9965,18 @@ function openFinLancamentoModal(tipo, existingId){
     contaId: editing.contaId, formaId: editing.formaId, valor: editing.valor,
     pagou: editing.pagou, diaPagamento: editing.diaPagamento || today,
     valorPago: editing.valorPago!=null? editing.valorPago : editing.valor,
-    studentId: editing.studentId || '',
+    studentId: editing.studentId || '', clienteId: editing.clienteId || '',
     repetir:false, quando:'mensal', ocorrencias:1, modo:'parcelar', ocorrenciasList:[],
   } : {
     categoriaId:'', descricao:'', dataVencimento: today, contaId:'', formaId:'', valor:'',
     pagou:false, diaPagamento: today, valorPago:'',
-    studentId:'',
+    studentId:'', clienteId:'',
     repetir:false, quando:'mensal', ocorrencias:1, modo:'parcelar', ocorrenciasList:[],
   };
   /* Categoria marcada como "exige aluno" (recebimento de aluno do Método): o menu de alunos aparece e
      o salvamento fica bloqueado enquanto estiver vazio. Lançamentos antigos ficam sem aluno. */
-  const categoriaExigeAluno = ()=> !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeAluno;
+  const categoriaExigeAluno = ()=> tipo==='receber' && !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeAluno;
+  const categoriaExigeCliente = ()=> tipo==='receber' && !!(FIN_CATEGORIAS.find(c=>c.id===draft.categoriaId)||{}).exigeCliente;
 
   function addInterval(dateStr, quando){
     const [y,m,d] = dateStr.split('-').map(Number);
@@ -9988,6 +10022,9 @@ function openFinLancamentoModal(tipo, existingId){
         </div>
         ${categoriaExigeAluno()? `<div><label class="ps-label">Aluno *</label>
           <select class="ps-input" id="fl-aluno">${alunoSelectOpts(draft.studentId)}</select>
+        </div>` : ''}
+        ${categoriaExigeCliente()? `<div><label class="ps-label">Cliente *</label>
+          <select class="ps-input" id="fl-cliente">${clienteSelectOpts(draft.clienteId)}</select>
         </div>` : ''}
         <div><label class="ps-label">Descrição *</label><input class="ps-input" id="fl-descricao" value="${escapeAttr(draft.descricao)}"></div>
         <div><label class="ps-label">Data Vencimento *</label><input class="ps-input" type="date" id="fl-vencimento" value="${escapeAttr(draft.dataVencimento)}"></div>
@@ -10072,12 +10109,14 @@ function openFinLancamentoModal(tipo, existingId){
   }
   function bindModalEvents(){
     document.getElementById('fl-categoria').addEventListener('change', e=>{
-      const antes = categoriaExigeAluno();
+      const antes = categoriaExigeAluno()+'|'+categoriaExigeCliente();
       draft.categoriaId = e.target.value;
-      if(antes !== categoriaExigeAluno()) renderModal(); // mostra/esconde o menu de alunos
+      if(antes !== categoriaExigeAluno()+'|'+categoriaExigeCliente()) renderModal(); // mostra/esconde o menu de alunos/clientes
     });
     const alunoEl = document.getElementById('fl-aluno');
     if(alunoEl) alunoEl.addEventListener('change', e=>{ draft.studentId = e.target.value; });
+    const clienteEl = document.getElementById('fl-cliente');
+    if(clienteEl) clienteEl.addEventListener('change', e=>{ draft.clienteId = e.target.value; });
     document.getElementById('fl-descricao').addEventListener('input', e=>{ draft.descricao = e.target.value; });
     document.getElementById('fl-vencimento').addEventListener('change', e=>{
       draft.dataVencimento = e.target.value;
@@ -10146,7 +10185,13 @@ function openFinLancamentoModal(tipo, existingId){
         const el = document.getElementById('fl-aluno'); if(el) el.focus();
         return;
       }
+      if(categoriaExigeCliente() && !draft.clienteId){
+        alert('Esta categoria é de recebimento de cliente: selecione o cliente antes de salvar.');
+        const el = document.getElementById('fl-cliente'); if(el) el.focus();
+        return;
+      }
       const studentId = categoriaExigeAluno() ? draft.studentId : (draft.studentId || null);
+      const clienteId = categoriaExigeCliente() ? draft.clienteId : (draft.clienteId || null);
       const saveBtn = document.getElementById('fl-save');
       saveBtn.disabled = true;
       try{
@@ -10157,19 +10202,20 @@ function openFinLancamentoModal(tipo, existingId){
             pagou: draft.pagou, dia_pagamento: draft.pagou? (draft.diaPagamento||null) : null,
             valor_pago: draft.pagou? (parseFloat(draft.valorPago)||0) : null,
             student_id: studentId || null,
+            cliente_id: clienteId || null,
           };
           syncFinLancamentoUpdate(editing.id, fields);
           Object.assign(editing, {
             categoriaId: fields.categoria_id, descricao: fields.descricao, dataVencimento: fields.data_vencimento,
             contaId: fields.conta_id, formaId: fields.forma_id, valor: fields.valor,
             pagou: fields.pagou, diaPagamento: fields.dia_pagamento||'', valorPago: fields.valor_pago,
-            studentId: fields.student_id,
+            studentId: fields.student_id, clienteId: fields.cliente_id,
           });
           /* Parcelas de um mesmo grupo: o aluno vale pra série inteira, então propaga pras irmãs. */
           if(editing.grupoId){
-            FIN_LANCAMENTOS.filter(l=>l.grupoId===editing.grupoId && l.id!==editing.id && l.studentId!==fields.student_id).forEach(l=>{
-              l.studentId = fields.student_id;
-              syncFinLancamentoUpdate(l.id, { student_id: fields.student_id });
+            FIN_LANCAMENTOS.filter(l=>l.grupoId===editing.grupoId && l.id!==editing.id && (l.studentId!==fields.student_id || l.clienteId!==fields.cliente_id)).forEach(l=>{
+              l.studentId = fields.student_id; l.clienteId = fields.cliente_id;
+              syncFinLancamentoUpdate(l.id, { student_id: fields.student_id, cliente_id: fields.cliente_id });
             });
           }
         } else if(draft.repetir && draft.ocorrenciasList.length>1){
@@ -10183,6 +10229,7 @@ function openFinLancamentoModal(tipo, existingId){
             valor_pago: i===0 && draft.pagou? (parseFloat(draft.valorPago)||0) : null,
             grupo_id: grupoId, parcela_num: i+1, parcela_total: n, repete_modo: draft.modo,
             student_id: studentId || null, // o aluno vai em TODAS as parcelas do grupo
+            cliente_id: clienteId || null,
             created_by: currentUser.id,
           }));
           const inserted = await syncFinLancamentoInsertMany(rowsToInsert);
@@ -10194,6 +10241,7 @@ function openFinLancamentoModal(tipo, existingId){
             pagou: draft.pagou, dia_pagamento: draft.pagou? (draft.diaPagamento||null) : null,
             valor_pago: draft.pagou? (parseFloat(draft.valorPago)||0) : null,
             student_id: studentId || null,
+            cliente_id: clienteId || null,
             created_by: currentUser.id,
           };
           const inserted = await syncFinLancamentoInsertMany([row]);
