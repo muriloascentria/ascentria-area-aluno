@@ -2679,7 +2679,7 @@ async function bootstrapData(){
     const { data: ffRows } = await sb.from('fin_formas').select('*').order('nome');
     (ffRows||[]).forEach(r=>FIN_FORMAS.push({id:r.id, nome:r.nome}));
     FIN_LANCAMENTOS.length = 0;
-    const { data: flRows } = await sb.from('fin_lancamentos').select('*').order('data_vencimento');
+    const { data: flRows } = await sb.from('fin_lancamentos').select('*').order('data_vencimento').order('created_at').order('parcela_num');
     (flRows||[]).forEach(r=>FIN_LANCAMENTOS.push(mapFinLancamentoRow(r)));
   }
 
@@ -3157,7 +3157,16 @@ function mapFinLancamentoRow(r){
     grupoId: r.grupo_id || null, parcelaNum: r.parcela_num || null, parcelaTotal: r.parcela_total || null,
     repeteModo: r.repete_modo || null,
     studentId: r.student_id || null, // aluno pagador (obrigatório quando a categoria exige)
+    createdAt: r.created_at || '', // ordem de lançamento no sistema (desempate do extrato)
   };
+}
+/* Desempate quando a data é a mesma: mantém a ordem em que foi lançado no sistema (e, numa série de
+   parcelas criada de uma vez, a ordem das parcelas). Sem isto, lançamentos do mesmo dia apareciam
+   no extrato numa ordem aleatória. */
+function finOrdemLancamento(a, b){
+  const ca = a.createdAt||'', cb = b.createdAt||'';
+  if(ca!==cb) return ca<cb? -1 : 1;
+  return (a.parcelaNum||0) - (b.parcelaNum||0);
 }
 async function syncFinCategoriaInsert(nome, tipo, exigeAluno){
   const { data, error } = await sb.from('fin_categorias').insert({ nome, tipo, exige_aluno: !!exigeAluno }).select().single();
@@ -9568,10 +9577,10 @@ function computeFinResumo(year, month){
   return {aReceber, aPagar, faturadoMes, faturadoAno, pagoMes};
 }
 function renderFinLancamentos(container){
-  const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : 0);
+  const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b));
   const byEfetivaAsc = (a,b)=>{
     const da=finDataEfetiva(a), db=finDataEfetiva(b);
-    return da<db? -1 : (da>db? 1 : 0);
+    return da<db? -1 : (da>db? 1 : finOrdemLancamento(a,b));
   };
   /* Contas a Receber / a Pagar mostram SÓ o que ainda está em aberto. Assim que o lançamento é marcado
      como pago ele sai da aba e passa a viver no extrato da conta bancária que recebeu/pagou. */
@@ -9709,8 +9718,8 @@ function renderFinLancamentos(container){
 /* PDF do mês/aba selecionados em Lançamentos (Contas a Receber, Contas a Pagar ou Extrato) — com a
    logo da Ascentria (empresa), não a do Método Essência usada nos PDFs do Painel do Método. */
 function exportFinanceiroPDF(){
-  const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : 0);
-  const byEfetivaAsc = (a,b)=>{ const da=finDataEfetiva(a), db=finDataEfetiva(b); return da<db? -1 : (da>db? 1 : 0); };
+  const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b));
+  const byEfetivaAsc = (a,b)=>{ const da=finDataEfetiva(a), db=finDataEfetiva(b); return da<db? -1 : (da>db? 1 : finOrdemLancamento(a,b)); };
   const win = window.open('', '_blank');
   if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
   const mesAno = `${MESES_LONGO[finView.month]}/${finView.year}`;
