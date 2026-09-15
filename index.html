@@ -2507,6 +2507,8 @@ function mapProfileRow(p){
     /* 'Método + Bônus': aluno do curso (tier 'curso') que também participa dos encontros ao vivo da
        mentoria de terça (Plantão de Dúvidas) e sexta (Consultório Simulado). Só muda a Agenda. */
     bonus: !!p.bonus,
+    /* Aluno do curso com TODAS as aulas liberadas de uma vez (sem o bloqueio sequencial) — a equipe liga na Visão Geral. */
+    aulasLiberadas: !!p.aulas_liberadas,
     cadastro:{
       nomeCompleto: sc.nome_completo || p.name || '',
       email: sc.email || '',
@@ -2544,7 +2546,7 @@ async function bootstrapData(){
 
   const me = profiles.find(p=>p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
-  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus} : null;
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, aulasLiberadas:!!me.aulas_liberadas} : null;
 
   /* Papel 'vendas' (vendedora do time): acesso restrito ao Registro de Sessões 1:1 e nada mais.
      Carrega só essa lista — nenhum dado de aluno, comunidade, aulas, clientes ou financeiro chega ao
@@ -4046,6 +4048,7 @@ function orderedCourseIds(){
 function isLessonLocked(courseId, student){
   if(currentRole==='staff') return false; // equipe interna nunca é bloqueada por aulas travadas
   if(!student || student.tier!=='curso') return false;
+  if(student.aulasLiberadas) return false; // liberação total dada pela equipe
   const order = orderedCourseIds();
   const idx = order.indexOf(courseId);
   if(idx<=0) return false;
@@ -8729,7 +8732,7 @@ function renderVisaoGeral(){
     <p class="section-sub" style="margin-top:-6px">Sem mentoria individual — só acesso às Aulas (liberadas uma a uma, conforme vai assistindo) e a uma comunidade própria, separada da dos mentorados.</p>
     <div class="table-wrap">
       <table class="check-table vg-table">
-        <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th title="Ligado: todas as aulas abertas de uma vez, sem a liberação sequencial">Todas as aulas</th><th></th></tr></thead>
         <tbody>
           ${cursoAlunos.map(s=>{
             const pct = courseCompletionPct(s);
@@ -8748,9 +8751,10 @@ function renderVisaoGeral(){
                 </td>
                 <td>${next? escapeHtml(next.title) : '<span style="color:var(--text-mute)">Curso concluído</span>'}</td>
                 <td style="min-width:140px">${tierSelectHtml(s)}</td>
+                <td><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" data-aulas-liberadas="${s.id}" ${s.aulasLiberadas?'checked':''}> ${s.aulasLiberadas? 'Liberadas' : 'Sequencial'}</label></td>
                 <td><button class="btn-mini" data-open-staff="${s.id}">${icon('idcard')} Abrir</button></td>
               </tr>`;
-          }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum aluno do curso ainda.</td></tr>`}
+          }).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nenhum aluno do curso ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -8857,6 +8861,15 @@ function renderVisaoGeral(){
     });
   });
   bindTierSelects(document.getElementById('view-visaogeral'), renderVisaoGeral);
+  document.querySelectorAll('[data-aulas-liberadas]').forEach(chk=>{
+    chk.addEventListener('change',()=>{
+      const s = getStudent(chk.dataset.aulasLiberadas);
+      if(!s) return;
+      s.aulasLiberadas = chk.checked;
+      syncNow(sb.from('profiles').update({aulas_liberadas: s.aulasLiberadas}).eq('id', s.id));
+      renderVisaoGeral();
+    });
+  });
 }
 
 /* ================= VIEW: REGISTRO DE CLIENTES (somente equipe interna) =================
