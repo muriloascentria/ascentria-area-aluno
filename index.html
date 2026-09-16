@@ -607,6 +607,20 @@
   .pill.pago .icon{width:10px;height:10px;stroke:var(--success);}
   .pill.receita{background:var(--success-soft);color:var(--success);white-space:nowrap;}
   .pill.despesa{background:var(--individual-soft);color:var(--individual);white-space:nowrap;}
+  /* Treinamento Time: X vermelho / check verde por pessoa */
+  .treino-mark{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-weight:800;font-size:14px;}
+  .treino-mark.ok{background:var(--success-soft);color:var(--success);}
+  .treino-mark.no{background:rgba(220,60,60,.12);color:var(--danger);}
+  .treino-mark .icon{width:14px;height:14px;}
+  .treino-col{text-align:center;white-space:nowrap;}
+  .treino-pessoa{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-top:10px;}
+  .treino-pessoa.locked{opacity:.75;}
+  .treino-pessoa .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:700;}
+  .treino-pessoa .hd .icon{width:14px;height:14px;color:var(--text-mute);}
+  .treino-pessoa textarea{min-height:110px;}
+  .treino-pessoa .txt{white-space:pre-wrap;font-size:13px;color:var(--text);}
+  .treino-pessoa .vazio{font-size:12.5px;color:var(--text-mute);font-style:italic;}
+  .treino-video{aspect-ratio:16/9;width:100%;border:0;border-radius:var(--radius);background:#000;margin:10px 0 4px;}
   /* Anexos do Financeiro (boleto/nota a pagar e comprovante depois do pagamento) */
   .fin-anexos{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:120px;}
   .fin-anexo-chip{display:inline-flex;align-items:center;gap:4px;max-width:150px;font-size:10.5px;font-weight:700;padding:2px 6px 2px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2,rgba(128,128,128,.12));color:var(--text);cursor:pointer;line-height:1.5;}
@@ -1236,6 +1250,7 @@
     <button class="nav-item restrict" id="nav-analise" data-view="analise" style="display:none"></button>
     <button class="nav-item restrict" id="nav-clientes" data-view="clientes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-treinamento" data-view="treinamento" style="display:none"></button>
 
     <div class="sidebar-footer">
       <button class="nav-item" id="logout-btn"></button>
@@ -1301,6 +1316,7 @@
       <div class="view" id="view-analise"></div>
       <div class="view" id="view-clientes"></div>
       <div class="view" id="view-financeiro"></div>
+      <div class="view" id="view-treinamento"></div>
     </div>
   </div>
 </div>
@@ -1376,9 +1392,10 @@ const NAV_LABELS = {
   analise:['chart','Análise Sessões 1:1'],
   clientes:['idcard','Registro de Clientes'],
   financeiro:['money','Financeiro'],
+  treinamento:['play','Treinamento Time'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -2090,6 +2107,20 @@ let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/vis
    Só carregado/visível pra equipe interna, ver bootstrapData e renderFinanceiro. */
 let FIN_CATEGORIAS = [], FIN_CONTAS = [], FIN_FORMAS = [], FIN_LANCAMENTOS = [];
 let FIN_ANEXOS = []; // {id, lancamentoId, tipo:'documento'|'comprovante', nome, path, mime, tamanho, createdAt}
+/* ---- Treinamento Time (equipe interna) ----
+   Toda aula cadastrada em Gerenciar Conteúdo cujo título tem a palavra "REC" entra automaticamente na
+   aba Treinamento Time (e continua normal na aba Aulas dos alunos). Cada pessoa abaixo tem uma coluna
+   com X (não assistiu/registrou) ou ✓ (registrou os aprendizados). O id é o da conta (perfil) da pessoa —
+   só ela consegue escrever no próprio espaço; o banco também garante isso (RLS). Ordem alfabética. */
+const TREINO_TIME = [
+  {nome:'Adriana', id:'4703b11a-7061-4d49-857c-9a571d43bb76'},
+  {nome:'Carmem',  id:'3ac4f0c3-4db3-4f98-b9b8-c021da4db519'},
+  {nome:'Diego',   id:'8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc'},
+  {nome:'Sandra',  id:'a29026ae-d252-4456-bb26-eec09ba778c4'},
+  {nome:'Viviane', id:'e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'},
+];
+const TREINO_REGEX = /(^|[^A-Za-zÀ-ú])REC([^A-Za-zÀ-ú]|$)/i;
+let TREINO_REGISTROS = []; // {courseId, userId, aprendizados, assistiuEm, updatedAt}
 let finSubView = 'lancamentos'; // 'lancamentos' | 'faturamento' | 'categorias' | 'contas' | 'formas'
 let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
 let finExtratoConta = null; // id da conta bancária cujo extrato está aberto (null = primeira da lista)
@@ -2577,6 +2608,11 @@ async function bootstrapData(){
     (anRows||[]).forEach(r=>ANALISE_SESSOES.push(mapAnaliseRow(r)));
     PEOPLE = {};
     if(me) PEOPLE[me.id] = {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, role:me.role};
+    /* Treinamento Time: a vendedora só enxerga (por política do banco) as aulas com "REC" e os registros do time. */
+    COURSES.length = 0;
+    const { data: recRows } = await sb.from('courses').select('*').ilike('title','%REC%').order('mod_id').order('order_index');
+    (recRows||[]).forEach(c=>COURSES.push({id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration||'—', tint:[c.tint1||'#8d916f', c.tint2||'#bec6b1'], desc:c.description||'', videoLink:c.video_link||'', materiais:[]}));
+    await carregarTreinamentoRegistros();
     currentStudentId = null;
     return;
   }
@@ -2702,6 +2738,7 @@ async function bootstrapData(){
     FIN_ANEXOS.length = 0;
     const { data: faRows } = await sb.from('fin_anexos').select('*').order('created_at');
     (faRows||[]).forEach(r=>FIN_ANEXOS.push(mapFinAnexoRow(r)));
+    await carregarTreinamentoRegistros();
   }
 
   STUDENT_POINTS = {};
@@ -3693,7 +3730,7 @@ function setRoleVendas(){
   document.getElementById('role-toggle').style.display = 'none';
   document.querySelectorAll('.nav-item[data-view]').forEach(el=>{ el.style.display = 'none'; });
   document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
-  ['nav-vendas','nav-analise'].forEach(id=>{
+  ['nav-vendas','nav-analise','nav-treinamento'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = 'flex';
   });
@@ -3703,7 +3740,7 @@ function setRoleVendas(){
   document.getElementById('profile-options').style.display = 'none';
   document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados</span>`;
   renderProfile();
-  if(!['vendas','analise'].includes(currentView)) goTo('vendas');
+  if(!['vendas','analise','treinamento'].includes(currentView)) goTo('vendas');
 }
 function setRole(role){
   if(currentUserRole==='vendas'){ setRoleVendas(); return; }
@@ -3727,6 +3764,7 @@ function setRole(role){
   document.getElementById('nav-clientes').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-analise').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-financeiro').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
@@ -3830,7 +3868,7 @@ function goTo(view){
   /* Trava final: a vendedora só abre o Registro de Sessões 1:1. Os outros itens já estão escondidos
      do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
-  if(currentUserRole==='vendas' && !['vendas','analise'].includes(view)) view = 'vendas';
+  if(currentUserRole==='vendas' && !['vendas','analise','treinamento'].includes(view)) view = 'vendas';
   currentView = view;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -3849,7 +3887,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro};
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -9751,6 +9789,101 @@ function computeFinResumo(year, month){
     }
   });
   return {aReceber, aPagar, faturadoMes, faturadoAno, pagoMes};
+}
+/* ================= TREINAMENTO TIME ================= */
+async function carregarTreinamentoRegistros(){
+  TREINO_REGISTROS.length = 0;
+  const { data, error } = await sb.from('treinamento_registros').select('*');
+  if(error){ console.warn('treinamento_registros', error); return; }
+  (data||[]).forEach(r=>TREINO_REGISTROS.push({courseId:r.course_id, userId:r.user_id, aprendizados:r.aprendizados||'', assistiuEm:r.assistiu_em, updatedAt:r.updated_at}));
+}
+function aulasTreinamento(){
+  return COURSES.filter(c=>TREINO_REGEX.test(c.title||''));
+}
+function treinoRegistro(courseId, userId){
+  return TREINO_REGISTROS.find(r=>r.courseId===courseId && r.userId===userId) || null;
+}
+function treinoMarkHtml(courseId, userId){
+  const r = treinoRegistro(courseId, userId);
+  const ok = !!(r && r.aprendizados.trim());
+  return ok
+    ? `<span class="treino-mark ok" title="Assistiu e registrou os aprendizados em ${formatDateBR((r.updatedAt||r.assistiuEm||'').slice(0,10))}">${icon('tick')}</span>`
+    : `<span class="treino-mark no" title="Ainda não registrou">✕</span>`;
+}
+function renderTreinamento(){
+  const el = document.getElementById('view-treinamento');
+  const aulas = aulasTreinamento();
+  const eu = currentUser ? currentUser.id : null;
+  const souDoTime = TREINO_TIME.some(p=>p.id===eu);
+  el.innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Aulas com <strong>REC</strong> no título entram aqui automaticamente; cada pessoa registra os próprios aprendizados depois de assistir.</div>
+    <h2 class="section-title">${icon('play')} Treinamento Time</h2>
+    <p class="section-sub">${aulas.length} aula(s) de treinamento. ${souDoTime? 'Clique em <strong>Abrir</strong> para assistir e registrar o que você aprendeu — o seu X vira ✓ quando salvar.' : 'Clique em <strong>Abrir</strong> para assistir e ver os registros do time.'}</p>
+    <div class="table-wrap"><table class="ps-table">
+      <thead><tr><th>Aula</th><th>Assistir</th>${TREINO_TIME.map(p=>`<th class="treino-col">${escapeHtml(p.nome)}</th>`).join('')}<th></th></tr></thead>
+      <tbody>
+        ${aulas.map(c=>`<tr>
+          <td><strong>${escapeHtml(c.title)}</strong><br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(c.cat||'')}${c.duration && c.duration!=='—'? ' · '+escapeHtml(c.duration) : ''}</span></td>
+          <td>${c.videoLink? `<a class="btn-outline" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px" href="${escapeAttr(c.videoLink)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Link da aula</a>` : '<span style="color:var(--text-mute)">sem link</span>'}</td>
+          ${TREINO_TIME.map(p=>`<td class="treino-col">${treinoMarkHtml(c.id, p.id)}</td>`).join('')}
+          <td style="text-align:right"><button type="button" class="btn-accent" style="padding:6px 14px;font-size:12px" data-treino-abrir="${escapeAttr(c.id)}">Abrir</button></td>
+        </tr>`).join('') || `<tr><td colspan="${3+TREINO_TIME.length}" style="color:var(--text-mute)">Nenhuma aula de treinamento ainda. Em Gerenciar Conteúdo, cadastre a aula com a palavra <strong>REC</strong> no título e ela aparece aqui.</td></tr>`}
+      </tbody>
+    </table></div>
+  `;
+  el.querySelectorAll('[data-treino-abrir]').forEach(b=>b.addEventListener('click',()=>openTreinamentoModal(b.dataset.treinoAbrir)));
+}
+function openTreinamentoModal(courseId){
+  const c = getCourse(courseId); if(!c) return;
+  const eu = currentUser ? currentUser.id : null;
+  const yt = youtubeId(c.videoLink||'');
+  const draft = { texto: (treinoRegistro(courseId, eu)||{}).aprendizados || '' };
+  function body(){
+    return `
+      <div class="modal-body form-modal">
+        <div class="cat">Treinamento Time</div>
+        <h3>${escapeHtml(c.title)}</h3>
+        ${yt ? `<iframe class="treino-video" src="https://www.youtube.com/embed/${yt}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>` : ''}
+        ${c.videoLink ? `<p style="margin:4px 0 10px"><a class="btn-outline" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px" href="${escapeAttr(c.videoLink)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir a aula em outra aba</a></p>` : '<p class="section-sub">Esta aula ainda não tem link de vídeo.</p>'}
+        ${c.desc ? `<p class="section-sub" style="margin-bottom:10px">${escapeHtml(c.desc)}</p>` : ''}
+        <h4 style="margin:12px 0 2px">Aprendizados do time</h4>
+        <p class="section-sub" style="margin:0 0 6px;font-size:12px">Cada pessoa escreve só no próprio espaço; os demais ficam bloqueados.</p>
+        ${TREINO_TIME.map(p=>{
+          const r = treinoRegistro(courseId, p.id);
+          const meu = p.id===eu;
+          const ok = !!(r && r.aprendizados.trim());
+          return `<div class="treino-pessoa ${meu?'':'locked'}">
+            <div class="hd">${treinoMarkHtml(courseId, p.id)} ${escapeHtml(p.nome)} ${meu? '<span class="resp-pill">você</span>' : icon('lock')}</div>
+            ${meu
+              ? `<textarea class="ps-input" id="treino-texto" placeholder="O que você aprendeu com esta aula? Registre aqui os pontos principais e como vai aplicar.">${escapeHtml(draft.texto)}</textarea>`
+              : (ok ? `<div class="txt">${escapeHtml(r.aprendizados)}</div>` : `<div class="vazio">Ainda não registrou.</div>`)}
+          </div>`;
+        }).join('')}
+        ${TREINO_TIME.some(p=>p.id===eu) ? '' : `<p class="section-sub" style="margin-top:10px;font-size:12px">Sua conta não está entre as colunas deste treinamento, por isso não há espaço para registrar.</p>`}
+        <div class="modal-actions" style="margin-top:14px">
+          ${TREINO_TIME.some(p=>p.id===eu) ? `<button class="btn-accent" id="treino-salvar">Salvar</button>` : ''}
+          <button class="btn-outline" id="treino-fechar">Fechar</button>
+        </div>
+      </div>`;
+  }
+  document.getElementById('modal').innerHTML = body();
+  document.getElementById('modal-backdrop').classList.add('open');
+  const ta = document.getElementById('treino-texto');
+  if(ta) ta.addEventListener('input', e=>{ draft.texto = e.target.value; });
+  document.getElementById('treino-fechar').addEventListener('click', closeModal);
+  const salvar = document.getElementById('treino-salvar');
+  if(salvar) salvar.addEventListener('click', async ()=>{
+    const texto = (draft.texto||'').trim();
+    if(!texto){ alert('Escreva os seus aprendizados antes de salvar — é isso que marca a aula como assistida.'); return; }
+    salvar.disabled = true; salvar.textContent = 'Salvando…';
+    const agora = new Date().toISOString();
+    const { error } = await sb.from('treinamento_registros').upsert({course_id:courseId, user_id:eu, aprendizados:texto, updated_at:agora}, {onConflict:'course_id,user_id'});
+    if(error){ console.error('treinamento salvar', error); alert('Não foi possível salvar: '+(error.message||'')); salvar.disabled=false; salvar.textContent='Salvar'; return; }
+    const r = treinoRegistro(courseId, eu);
+    if(r){ r.aprendizados = texto; r.updatedAt = agora; } else TREINO_REGISTROS.push({courseId, userId:eu, aprendizados:texto, assistiuEm:agora, updatedAt:agora});
+    closeModal();
+    renderTreinamento();
+  });
 }
 function renderFinLancamentos(container){
   const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b));
