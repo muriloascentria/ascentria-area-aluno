@@ -9625,7 +9625,8 @@ function renderFinLancamentos(container){
     const parcelaTxt = l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—';
     return `<tr data-fllinha="${l.id}">
       <td style="white-space:nowrap">${formatDateBR(l.dataVencimento)}</td>
-      <td>${escapeHtml(l.descricao||'—')}${l.studentId && nomeAlunoTag(l.studentId)? ` <span class="aluno-tag">${icon('idcard','tiny')} ${escapeHtml(nomeAlunoTag(l.studentId))}</span>` : ''}<br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(cat? cat.nome : '—')}</span></td>
+      <td>${escapeHtml(l.descricao||'—')}<br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(cat? cat.nome : '—')}</span></td>
+      <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
       <td>${escapeHtml(conta? conta.nome : '—')}</td>
       <td>${escapeHtml(forma? forma.nome : '—')}</td>
       <td style="text-align:center">${parcelaTxt}</td>
@@ -9643,8 +9644,8 @@ function renderFinLancamentos(container){
         <button type="button" class="btn-accent" data-flnew="${finTab}">${icon('plus','ps-plus')} ${finTab==='receber'?'Novo Recebimento':'Novo Pagamento'}</button>
       </div>
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Conta</th><th>Forma</th><th>Parcela</th><th style="text-align:right">Valor</th></tr></thead>
-        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">Nada em aberto em ${MESES_LONGO[finView.month]}/${finView.year} — o que já foi ${finTab==='receber'?'recebido':'pago'} está no Extrato.</td></tr>`}</tbody>
+        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Cliente</th><th>Conta</th><th>Forma</th><th>Parcela</th><th style="text-align:right">Valor</th></tr></thead>
+        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">Nada em aberto em ${MESES_LONGO[finView.month]}/${finView.year} — o que já foi ${finTab==='receber'?'recebido':'pago'} está no Extrato.</td></tr>`}</tbody>
       </table></div>
       <div class="cf-total">Total ${finTab==='receber'?'a receber':'a pagar'} em aberto: <strong>${formatBRL(total)}</strong></div>
     `;
@@ -9769,16 +9770,17 @@ function exportFinanceiroPDF(){
       .sort(byVencAsc);
     titulo = finTab==='receber'? 'Contas a Receber (em aberto)' : 'Contas a Pagar (em aberto)';
     const total = list.reduce((s,l)=>s+l.valor,0);
-    theadHtml = '<tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Conta</th><th>Forma</th><th>Parcela</th><th>Valor</th></tr>';
+    theadHtml = '<tr><th>Vencimento</th><th>Descrição</th><th>Cliente</th><th>Categoria</th><th>Conta</th><th>Forma</th><th>Parcela</th><th>Valor</th></tr>';
     rowsHtml = list.map(l=>`<tr>
       <td>${formatDateBR(l.dataVencimento)}</td>
-      <td>${escapeHtml(l.descricao||'—')}${l.studentId && nomeAlunoTag(l.studentId)? ' — '+escapeHtml(nomeAlunoTag(l.studentId)) : ''}</td>
+      <td>${escapeHtml(l.descricao||'—')}</td>
+      <td>${escapeHtml(finPagadorNome(l)||'—')}</td>
       <td>${escapeHtml(catName(l.categoriaId))}</td>
       <td>${escapeHtml(contaName(l.contaId))}</td>
       <td>${escapeHtml(formaName(l.formaId))}</td>
       <td>${l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—'}</td>
       <td>${formatBRL(l.valor)}</td>
-    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:#999;">Nada em aberto neste mês.</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;color:#999;">Nada em aberto neste mês.</td></tr>`;
     totalHtml = `<div class="total">Total ${finTab==='receber'?'a receber':'a pagar'} em aberto: <strong>${formatBRL(total)}</strong></div>`;
   } else {
     /* Extrato da conta bancária aberta na tela, só com o que já foi efetivado. */
