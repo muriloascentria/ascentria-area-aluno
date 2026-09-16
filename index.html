@@ -607,6 +607,19 @@
   .pill.pago .icon{width:10px;height:10px;stroke:var(--success);}
   .pill.receita{background:var(--success-soft);color:var(--success);white-space:nowrap;}
   .pill.despesa{background:var(--individual-soft);color:var(--individual);white-space:nowrap;}
+  /* Anexos do Financeiro (boleto/nota a pagar e comprovante depois do pagamento) */
+  .fin-anexos{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:120px;}
+  .fin-anexo-chip{display:inline-flex;align-items:center;gap:4px;max-width:150px;font-size:10.5px;font-weight:700;padding:2px 6px 2px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2,rgba(128,128,128,.12));color:var(--text);cursor:pointer;line-height:1.5;}
+  .fin-anexo-chip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fin-anexo-chip.comprovante{background:var(--success-soft);color:var(--success);border-color:transparent;}
+  .fin-anexo-chip .icon{width:12px;height:12px;flex:none;}
+  .fin-anexo-del{border:0;background:transparent;color:inherit;opacity:.6;cursor:pointer;font-size:12px;line-height:1;padding:0 0 0 2px;}
+  .fin-anexo-del:hover{opacity:1;color:var(--danger);}
+  .fin-anexo-add{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;border:1px dashed var(--border);color:var(--text-mute);cursor:pointer;white-space:nowrap;}
+  .fin-anexo-add:hover{color:var(--accent);border-color:var(--accent);}
+  .fin-anexo-add.comprovante{color:var(--success);}
+  .fin-anexo-add .icon{width:11px;height:11px;}
+  .fin-anexo-add.busy{opacity:.5;pointer-events:none;}
 
   /* Materials */
   .materials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
@@ -1306,6 +1319,8 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ================= ICONS ================= */
 const ICONS = {
+  paperclip:'<path d="M21 12.5l-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.3-8.3"/>',
+  file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
   film:'<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M16 3v18M2 8h6M16 8h6M2 16h6M16 16h6"/>',
   users:'<circle cx="9" cy="8" r="3"/><path d="M2.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M15.8 20c.1-2.3 1.3-3.9 3.2-4.6"/>',
@@ -2074,6 +2089,7 @@ let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/vis
    totalmente separado do Fluxo Financeiro que cada mentorado preenche no próprio Painel do Método.
    Só carregado/visível pra equipe interna, ver bootstrapData e renderFinanceiro. */
 let FIN_CATEGORIAS = [], FIN_CONTAS = [], FIN_FORMAS = [], FIN_LANCAMENTOS = [];
+let FIN_ANEXOS = []; // {id, lancamentoId, tipo:'documento'|'comprovante', nome, path, mime, tamanho, createdAt}
 let finSubView = 'lancamentos'; // 'lancamentos' | 'faturamento' | 'categorias' | 'contas' | 'formas'
 let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
 let finExtratoConta = null; // id da conta bancária cujo extrato está aberto (null = primeira da lista)
@@ -2683,6 +2699,9 @@ async function bootstrapData(){
     FIN_LANCAMENTOS.length = 0;
     const { data: flRows } = await sb.from('fin_lancamentos').select('*').order('data_vencimento').order('created_at').order('parcela_num');
     (flRows||[]).forEach(r=>FIN_LANCAMENTOS.push(mapFinLancamentoRow(r)));
+    FIN_ANEXOS.length = 0;
+    const { data: faRows } = await sb.from('fin_anexos').select('*').order('created_at');
+    (faRows||[]).forEach(r=>FIN_ANEXOS.push(mapFinAnexoRow(r)));
   }
 
   STUDENT_POINTS = {};
@@ -3170,6 +3189,134 @@ function finPagadorNome(l){
   if(l.studentId){ const n = nomeAlunoTag(l.studentId); if(n) return n; }
   if(l.clienteId){ const c = CLIENTES_REGISTRO.find(x=>String(x.id)===String(l.clienteId)); if(c) return c.nome; }
   return '';
+}
+/* ---- Anexos dos lançamentos (Storage privado "fin-anexos" + tabela fin_anexos, só equipe) ----
+   'documento'  = boleto/nota/fatura anexada ANTES do pagamento (fica na aba Contas a Pagar/Receber);
+   'comprovante' = comprovante/nota fiscal anexado DEPOIS (aparece no Extrato). Os arquivos entram
+   automaticamente como anexos no PDF gerado em "Gerar PDF". */
+function mapFinAnexoRow(r){
+  return {id:r.id, lancamentoId:r.lancamento_id, tipo:r.tipo, nome:r.nome, path:r.path, mime:r.mime||'', tamanho:r.tamanho||0, createdAt:r.created_at};
+}
+function anexosDoLancamento(lancamentoId, tipo){
+  return FIN_ANEXOS.filter(a=>a.lancamentoId===lancamentoId && (!tipo || a.tipo===tipo));
+}
+async function finAnexoUpload(lancamentoId, tipo, file){
+  if(!file) return null;
+  const ok = /^application\/pdf$|^image\/(jpeg|png|webp)$/.test(file.type||'');
+  if(!ok){ alert('Anexe um PDF (ou uma imagem JPG/PNG).'); return null; }
+  if(file.size > 15*1024*1024){ alert('Arquivo muito grande — o limite é 15 MB.'); return null; }
+  const safe = (file.name||'arquivo').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._-]+/g,'_').slice(-80);
+  const path = `${lancamentoId}/${tipo}-${Date.now()}-${safe}`;
+  const { error: upErr } = await sb.storage.from('fin-anexos').upload(path, file, {upsert:false, contentType:file.type||'application/octet-stream'});
+  if(upErr){ console.error('finAnexoUpload storage', upErr); alert('Não foi possível enviar o arquivo: '+(upErr.message||'')); return null; }
+  const { data, error } = await sb.from('fin_anexos').insert({lancamento_id:lancamentoId, tipo, nome:file.name||safe, path, mime:file.type||null, tamanho:file.size||null, created_by: currentUser? currentUser.id : null}).select('*').single();
+  if(error){ console.error('finAnexoUpload insert', error); alert('O arquivo subiu mas não foi possível registrá-lo: '+(error.message||'')); return null; }
+  const a = mapFinAnexoRow(data); FIN_ANEXOS.push(a); return a;
+}
+async function finAnexoAbrir(a){
+  const w = window.open('', '_blank');
+  const { data, error } = await sb.storage.from('fin-anexos').createSignedUrl(a.path, 3600);
+  if(error || !data){ if(w) w.close(); console.error('finAnexoAbrir', error); alert('Não foi possível abrir o anexo.'); return; }
+  if(w) w.location.href = data.signedUrl; else window.open(data.signedUrl, '_blank');
+}
+async function finAnexoExcluir(a){
+  if(!confirm(`Excluir o anexo "${a.nome}"?`)) return false;
+  const { error } = await sb.from('fin_anexos').delete().eq('id', a.id);
+  if(error){ console.error('finAnexoExcluir', error); alert('Não foi possível excluir o anexo.'); return false; }
+  const { error: stErr } = await sb.storage.from('fin-anexos').remove([a.path]);
+  if(stErr) console.warn('finAnexoExcluir storage', stErr);
+  const i = FIN_ANEXOS.findIndex(x=>x.id===a.id); if(i>=0) FIN_ANEXOS.splice(i,1);
+  return true;
+}
+/* Célula/bloco de anexos de um lançamento. tipos = quais tipos podem ser anexados aqui. */
+function finAnexosHtml(l, tipos){
+  const podeEditar = currentUserRole==='staff';
+  const chips = FIN_ANEXOS.filter(a=>a.lancamentoId===l.id && tipos.includes(a.tipo)).map(a=>`
+    <span class="fin-anexo-chip ${a.tipo}" title="${escapeAttr((a.tipo==='comprovante'?'Comprovante: ':'Documento: ')+a.nome)}">
+      <button type="button" style="all:unset;display:inline-flex;align-items:center;gap:4px;cursor:pointer;max-width:120px" data-fa-open="${a.id}">${icon(a.tipo==='comprovante'?'tick':'file')}<span class="nm">${escapeHtml(a.nome)}</span></button>
+      ${podeEditar? `<button type="button" class="fin-anexo-del" data-fa-del="${a.id}" title="Excluir anexo">×</button>` : ''}
+    </span>`).join('');
+  const adds = podeEditar ? tipos.map(t=>`
+    <label class="fin-anexo-add ${t}" title="${t==='comprovante'?'Anexar comprovante / nota fiscal do pagamento (PDF)':'Anexar boleto / nota / fatura para pagar (PDF)'}">${icon('paperclip')} ${t==='comprovante'?'Comprovante':'PDF'}
+      <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-fa-add="${l.id}" data-fa-tipo="${t}" hidden>
+    </label>`).join('') : '';
+  return `<div class="fin-anexos" data-fa-cell="${l.id}">${chips}${adds}</div>`;
+}
+function bindFinAnexos(root, onChange){
+  root.querySelectorAll('[data-fa-cell]').forEach(cell=>{ cell.addEventListener('click', e=>e.stopPropagation()); });
+  root.querySelectorAll('[data-fa-open]').forEach(b=>{
+    b.addEventListener('click', e=>{ e.stopPropagation(); const a = FIN_ANEXOS.find(x=>x.id===b.dataset.faOpen); if(a) finAnexoAbrir(a); });
+  });
+  root.querySelectorAll('[data-fa-del]').forEach(b=>{
+    b.addEventListener('click', async e=>{ e.stopPropagation(); const a = FIN_ANEXOS.find(x=>x.id===b.dataset.faDel); if(a && await finAnexoExcluir(a)) onChange(); });
+  });
+  root.querySelectorAll('[data-fa-add]').forEach(inp=>{
+    inp.addEventListener('click', e=>e.stopPropagation());
+    inp.addEventListener('change', async e=>{
+      e.stopPropagation();
+      const file = inp.files && inp.files[0]; if(!file) return;
+      const lbl = inp.closest('label'); if(lbl) lbl.classList.add('busy');
+      const a = await finAnexoUpload(inp.dataset.faAdd, inp.dataset.faTipo, file);
+      if(lbl) lbl.classList.remove('busy');
+      inp.value = '';
+      if(a) onChange();
+    });
+  });
+}
+/* Renderiza os anexos dos lançamentos listados como páginas do PDF impresso (PDF → imagens via pdf.js;
+   imagens entram direto). Devolve o HTML da seção "Anexos" ou '' se não houver nada. */
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((resolve,reject)=>{
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    sc.onload = ()=>{ try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; }catch(e){} resolve(window.pdfjsLib); };
+    sc.onerror = ()=>reject(new Error('pdf.js não carregou'));
+    document.head.appendChild(sc);
+  });
+}
+async function finAnexosParaImpressao(lancamentos, tipos, onProgress){
+  const itens = [];
+  lancamentos.forEach(l=>{ FIN_ANEXOS.filter(a=>a.lancamentoId===l.id && tipos.includes(a.tipo)).forEach(a=>itens.push({l,a})); });
+  if(!itens.length) return '';
+  let pdfjs = null;
+  if(itens.some(({a})=>/pdf/i.test(a.mime) || /\.pdf$/i.test(a.nome))){
+    try{ pdfjs = await loadPdfJs(); }catch(e){ console.warn(e); }
+  }
+  const blocos = [];
+  for(let i=0;i<itens.length;i++){
+    const {l,a} = itens[i];
+    if(onProgress) onProgress(i+1, itens.length, a.nome);
+    const cab = `<div class="anexo-cab"><strong>${a.tipo==='comprovante'?'Comprovante':'Documento'}</strong> · ${escapeHtml(a.nome)}<br><span>${formatDateBR(a.tipo==='comprovante'? finDataEfetiva(l) : l.dataVencimento)} — ${escapeHtml(l.descricao||'—')}${finPagadorNome(l)? ' — '+escapeHtml(finPagadorNome(l)) : ''} — ${formatBRL(a.tipo==='comprovante'? finValorEfetivo(l) : l.valor)}</span></div>`;
+    let corpo = '';
+    try{
+      const { data: blob, error } = await sb.storage.from('fin-anexos').download(a.path);
+      if(error || !blob) throw error || new Error('download vazio');
+      const ehPdf = /pdf/i.test(blob.type||a.mime) || /\.pdf$/i.test(a.nome);
+      if(ehPdf){
+        if(!pdfjs) throw new Error('pdf.js indisponível');
+        const buf = await blob.arrayBuffer();
+        const doc = await pdfjs.getDocument({data:buf}).promise;
+        const n = Math.min(doc.numPages, 30);
+        for(let pg=1; pg<=n; pg++){
+          const page = await doc.getPage(pg);
+          const vp = page.getViewport({scale:1.5});
+          const cv = document.createElement('canvas'); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+          await page.render({canvasContext: cv.getContext('2d'), viewport: vp}).promise;
+          corpo += `<img class="anexo-pag" src="${cv.toDataURL('image/jpeg', 0.85)}" alt="${escapeAttr(a.nome)} — página ${pg}">`;
+        }
+        if(doc.numPages > n) corpo += `<p class="anexo-aviso">(${doc.numPages-n} página(s) além da 30ª não impressa(s))</p>`;
+      } else {
+        const dataUrl = await new Promise((res,rej)=>{ const fr = new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
+        corpo = `<img class="anexo-pag" src="${dataUrl}" alt="${escapeAttr(a.nome)}">`;
+      }
+    }catch(e){
+      console.warn('anexo não renderizado', a, e);
+      corpo = `<p class="anexo-aviso">Não foi possível incluir este anexo na impressão (abra-o pelo sistema).</p>`;
+    }
+    blocos.push(`<section class="anexo">${cab}${corpo}</section>`);
+  }
+  return `<h2 class="anexos-titulo">Anexos (${itens.length})</h2>${blocos.join('')}`;
 }
 function clienteSelectOpts(current){
   return `<option value="">— Selecione o cliente —</option>` +
@@ -9630,6 +9777,7 @@ function renderFinLancamentos(container){
       <td>${escapeHtml(conta? conta.nome : '—')}</td>
       <td>${escapeHtml(forma? forma.nome : '—')}</td>
       <td style="text-align:center">${parcelaTxt}</td>
+      <td>${finAnexosHtml(l, ['documento'])}</td>
       <td style="text-align:right;font-weight:600;white-space:nowrap">${formatBRL(l.valor)}</td>
     </tr>`;
   };
@@ -9644,8 +9792,8 @@ function renderFinLancamentos(container){
         <button type="button" class="btn-accent" data-flnew="${finTab}">${icon('plus','ps-plus')} ${finTab==='receber'?'Novo Recebimento':'Novo Pagamento'}</button>
       </div>
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Cliente</th><th>Conta</th><th>Forma</th><th>Parcela</th><th style="text-align:right">Valor</th></tr></thead>
-        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">Nada em aberto em ${MESES_LONGO[finView.month]}/${finView.year} — o que já foi ${finTab==='receber'?'recebido':'pago'} está no Extrato.</td></tr>`}</tbody>
+        <thead><tr><th>Vencimento</th><th>Descrição</th><th>Cliente</th><th>Conta</th><th>Forma</th><th>Parcela</th><th title="Boleto / nota / fatura para pagar">Anexos</th><th style="text-align:right">Valor</th></tr></thead>
+        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nada em aberto em ${MESES_LONGO[finView.month]}/${finView.year} — o que já foi ${finTab==='receber'?'recebido':'pago'} está no Extrato.</td></tr>`}</tbody>
       </table></div>
       <div class="cf-total">Total ${finTab==='receber'?'a receber':'a pagar'} em aberto: <strong>${formatBRL(total)}</strong></div>
     `;
@@ -9684,18 +9832,19 @@ function renderFinLancamentos(container){
     const nomeConta = (opcoes.find(o=>o.id===contaAtual)||{}).nome || '—';
     bodyHtml = `
       <div class="table-wrap"><table class="ps-table">
-        <thead><tr><th>Data</th><th>Categoria</th><th>Cliente</th><th>Descrição</th><th>Tipo</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
+        <thead><tr><th>Data</th><th>Categoria</th><th>Cliente</th><th>Descrição</th><th>Tipo</th><th title="Documento pago e comprovante / nota fiscal">Anexos</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
         <tbody>
-        <tr class="fin-saldo-anterior"><td style="white-space:nowrap">${String(new Date(finView.year, finView.month, 1).getDate()).padStart(2,'0')}/${String(finView.month+1).padStart(2,'0')}/${finView.year}</td><td colspan="5" style="color:var(--text-mute)">Saldo anterior (até ${MESES_LONGO[(finView.month+11)%12]}${finView.month===0? '/'+(finView.year-1) : ''})</td><td class="cf-saldo ${saldoAnterior<0?'neg':''}" style="text-align:right;font-weight:700">${formatBRL(saldoAnterior)}</td></tr>
+        <tr class="fin-saldo-anterior"><td style="white-space:nowrap">${String(new Date(finView.year, finView.month, 1).getDate()).padStart(2,'0')}/${String(finView.month+1).padStart(2,'0')}/${finView.year}</td><td colspan="6" style="color:var(--text-mute)">Saldo anterior (até ${MESES_LONGO[(finView.month+11)%12]}${finView.month===0? '/'+(finView.year-1) : ''})</td><td class="cf-saldo ${saldoAnterior<0?'neg':''}" style="text-align:right;font-weight:700">${formatBRL(saldoAnterior)}</td></tr>
         ${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}" title="${escapeAttr(l.descricao||'')}">
           <td style="white-space:nowrap">${formatDateBR(finDataEfetiva(l))}</td>
           <td>${escapeHtml((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome || '—')}</td>
           <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
           <td>${escapeHtml(l.descricao||'—')}</td>
           <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
+          <td>${finAnexosHtml(l, ['documento','comprovante'])}</td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
           <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
-        </tr>`).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
+        </tr>`).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
       </table></div>
       <div class="cf-total">Saldo anterior: <strong>${formatBRL(saldoAnterior)}</strong> · Entradas: <strong>${formatBRL(entradas)}</strong> · Saídas: <strong class="neg">${formatBRL(saidas)}</strong> · Saldo final em ${escapeHtml(nomeConta)}: <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
     `;
@@ -9747,12 +9896,13 @@ function renderFinLancamentos(container){
     tr.style.cursor = 'pointer';
     tr.addEventListener('click',()=>{ openFinLancamentoModal(FIN_LANCAMENTOS.find(l=>l.id===tr.dataset.fllinha).tipo, tr.dataset.fllinha); });
   });
+  bindFinAnexos(container, ()=>renderFinanceiro());
   const pdfBtn = document.getElementById('fin-pdf-btn');
   if(pdfBtn) pdfBtn.addEventListener('click', exportFinanceiroPDF);
 }
 /* PDF do mês/aba selecionados em Lançamentos (Contas a Receber, Contas a Pagar ou Extrato) — com a
    logo da Ascentria (empresa), não a do Método Essência usada nos PDFs do Painel do Método. */
-function exportFinanceiroPDF(){
+async function exportFinanceiroPDF(){
   const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b));
   const byEfetivaAsc = (a,b)=>{ const da=finDataEfetiva(a), db=finDataEfetiva(b); return da<db? -1 : (da>db? 1 : finOrdemLancamento(a,b)); };
   const win = window.open('', '_blank');
@@ -9762,12 +9912,13 @@ function exportFinanceiroPDF(){
   const formaName = (id)=> (FIN_FORMAS.find(f=>f.id===id)||{}).nome || '—';
   const contaName = (id)=> (FIN_CONTAS.find(c=>c.id===id)||{}).nome || '—';
 
-  let titulo, theadHtml, rowsHtml, totalHtml;
+  let titulo, theadHtml, rowsHtml, totalHtml, anexosLista, anexosTipos;
   if(finTab==='receber' || finTab==='pagar'){
     /* Mesmo recorte da tela: só o que continua em aberto. */
     const list = FIN_LANCAMENTOS
       .filter(l=>l.tipo===finTab && !l.pagou && finNoMes(l.dataVencimento, finView.year, finView.month))
       .sort(byVencAsc);
+    anexosLista = list; anexosTipos = ['documento'];
     titulo = finTab==='receber'? 'Contas a Receber (em aberto)' : 'Contas a Pagar (em aberto)';
     const total = list.reduce((s,l)=>s+l.valor,0);
     theadHtml = '<tr><th>Vencimento</th><th>Descrição</th><th>Cliente</th><th>Categoria</th><th>Conta</th><th>Forma</th><th>Parcela</th><th>Valor</th></tr>';
@@ -9788,6 +9939,7 @@ function exportFinanceiroPDF(){
     const semConta = (l)=> !l.contaId || !FIN_CONTAS.some(c=>c.id===l.contaId);
     const ehDaConta = (l)=> finExtratoConta==='__sem__' ? semConta(l) : l.contaId===finExtratoConta;
     const list = pagos.filter(ehDaConta).sort(byEfetivaAsc);
+    anexosLista = list; anexosTipos = ['documento','comprovante'];
     const nomeConta = finExtratoConta==='__sem__' ? 'Sem conta' : contaName(finExtratoConta);
     titulo = `Extrato — ${nomeConta}`;
     const saldoAnterior = finSaldoAnterior(ehDaConta, finView.year, finView.month);
@@ -9811,10 +9963,26 @@ function exportFinanceiroPDF(){
     totalHtml = `<div class="total">Saldo anterior: <strong>${formatBRL(saldoAnterior)}</strong> &nbsp;·&nbsp; Entradas: <strong>${formatBRL(entradas)}</strong> &nbsp;·&nbsp; Saídas: <strong>${formatBRL(saidas)}</strong> &nbsp;·&nbsp; Saldo final: <strong>${formatBRL(saldo)}</strong></div>`;
   }
 
+  /* Anexos (boletos, notas, comprovantes) viram páginas no fim do PDF. Enquanto baixa/renderiza, a aba
+     mostra o andamento — a janela já foi aberta no clique pra não cair no bloqueio de pop-up. */
+  win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Gerando PDF…</title></head><body style="font-family:Arial,sans-serif;padding:40px;color:#444"><h2 style="margin:0 0 8px">Gerando PDF…</h2><p id="prog">Preparando anexos.</p></body></html>');
+  win.document.close();
+  let anexosHtml = '';
+  try{
+    anexosHtml = await finAnexosParaImpressao(anexosLista, anexosTipos, (i,n,nome)=>{ try{ const el = win.document.getElementById('prog'); if(el) el.textContent = `Incluindo anexo ${i} de ${n}: ${nome}`; }catch(e){} });
+  }catch(e){ console.warn('anexos na impressão', e); }
+  win.document.open();
   win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo} — ${mesAno} — Ascentria</title>
     <style>
       @page{ margin:24mm 16mm; }
       body{ font-family:Arial,Helvetica,sans-serif; color:#1a1a1a; margin:0; padding:0 4mm; }
+      .anexos-titulo{ page-break-before:always; font-size:18px; margin:0 0 12px; border-bottom:2px solid #8d916f; padding-bottom:8px; }
+      .anexo{ page-break-inside:avoid; margin-bottom:18px; }
+      .anexo + .anexo{ page-break-before:always; }
+      .anexo-cab{ font-size:12px; margin-bottom:8px; }
+      .anexo-cab span{ color:#666; }
+      .anexo-pag{ display:block; width:100%; max-height:245mm; object-fit:contain; border:1px solid #ddd; margin-bottom:8px; page-break-inside:avoid; }
+      .anexo-aviso{ font-size:11px; color:#999; font-style:italic; }
       .pdf-header{ display:flex; align-items:center; gap:16px; border-bottom:2px solid #8d916f; padding-bottom:14px; margin-bottom:20px; }
       .pdf-header img{ display:block; }
       .pdf-header .cat{ font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#666; }
@@ -9832,10 +10000,11 @@ function exportFinanceiroPDF(){
       </div>
       <table><thead>${theadHtml}</thead><tbody>${rowsHtml}</tbody></table>
       ${totalHtml}
+      ${anexosHtml}
     </body></html>`);
   win.document.close();
   win.onload = ()=>{ win.focus(); win.print(); };
-  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 900);
 }
 /* Cadastros compartilhados usados nos lançamentos — Categoria, Conta (bancária) e Forma de Pagamento.
    Apagar um item não apaga os lançamentos que já usavam ele (a referência só fica em branco). */
@@ -10112,6 +10281,13 @@ function openFinLancamentoModal(tipo, existingId){
         ` : ''}
       </div>` : ''}
 
+      ${editing? `
+      <div class="ps-section" style="margin-top:14px">
+        <label class="ps-label">Anexos ${icon('paperclip','tiny')}</label>
+        <p class="section-sub" style="margin:2px 0 8px;font-size:12px">Boleto, nota ou fatura para pagar; depois de pago, o comprovante / nota fiscal. Todos entram automaticamente no PDF do mês.</p>
+        ${finAnexosHtml(editing, editing.pagou? ['documento','comprovante'] : ['documento'])}
+      </div>` : ''}
+
       <div class="modal-actions fin-modal-actions">
         <button class="btn-accent" id="fl-save">Salvar</button>
         ${editing? `<button class="btn-outline" id="fl-delete" style="color:var(--danger);border-color:var(--danger)">Excluir</button>` : ''}
@@ -10123,6 +10299,7 @@ function openFinLancamentoModal(tipo, existingId){
   function renderModal(){
     document.getElementById('modal').innerHTML = `<div class="modal-body form-modal">${bodyHtml()}</div>`;
     bindModalEvents();
+    if(editing) bindFinAnexos(document.getElementById('modal'), ()=>{ renderModal(); renderFinanceiro(); });
   }
   function bindModalEvents(){
     document.getElementById('fl-categoria').addEventListener('change', e=>{
