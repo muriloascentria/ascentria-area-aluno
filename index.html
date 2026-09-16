@@ -3265,15 +3265,18 @@ async function finAnexoExcluir(a){
   const i = FIN_ANEXOS.findIndex(x=>x.id===a.id); if(i>=0) FIN_ANEXOS.splice(i,1);
   return true;
 }
-/* Célula/bloco de anexos de um lançamento. tipos = quais tipos podem ser anexados aqui. */
-function finAnexosHtml(l, tipos){
+/* Célula/bloco de anexos de um lançamento. tipos = quais tipos aparecem aqui; tiposAdd = quais podem ser
+   anexados nesta tela (um único arquivo por tipo: depois de anexado, o espaço some até ser excluído). */
+function finAnexosHtml(l, tipos, tiposAdd){
   const podeEditar = currentUserRole==='staff';
+  const jaTem = (t)=> FIN_ANEXOS.some(a=>a.lancamentoId===l.id && a.tipo===t);
+  const adicionaveis = (tiposAdd||tipos).filter(t=>!jaTem(t));
   const chips = FIN_ANEXOS.filter(a=>a.lancamentoId===l.id && tipos.includes(a.tipo)).map(a=>`
     <span class="fin-anexo-chip ${a.tipo}" title="${escapeAttr((a.tipo==='comprovante'?'Comprovante: ':'Documento: ')+a.nome)}">
       <button type="button" style="all:unset;display:inline-flex;align-items:center;gap:4px;cursor:pointer;max-width:120px" data-fa-open="${a.id}">${icon(a.tipo==='comprovante'?'tick':'file')}<span class="nm">${escapeHtml(a.nome)}</span></button>
       ${podeEditar? `<button type="button" class="fin-anexo-del" data-fa-del="${a.id}" title="Excluir anexo">×</button>` : ''}
     </span>`).join('');
-  const adds = podeEditar ? tipos.map(t=>`
+  const adds = podeEditar ? adicionaveis.map(t=>`
     <label class="fin-anexo-add ${t}" title="${t==='comprovante'?'Anexar comprovante / nota fiscal do pagamento (PDF)':'Anexar boleto / nota / fatura para pagar (PDF)'}">${icon('paperclip')} ${t==='comprovante'?'Comprovante':'PDF'}
       <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-fa-add="${l.id}" data-fa-tipo="${t}" hidden>
     </label>`).join('') : '';
@@ -9974,7 +9977,7 @@ function renderFinLancamentos(container){
           <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
           <td>${escapeHtml(l.descricao||'—')}</td>
           <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
-          <td>${finAnexosHtml(l, ['documento','comprovante'])}</td>
+          <td>${finAnexosHtml(l, ['documento','comprovante'], ['comprovante'])}</td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
           <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
         </tr>`).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
@@ -10417,8 +10420,8 @@ function openFinLancamentoModal(tipo, existingId){
       ${editing? `
       <div class="ps-section" style="margin-top:14px">
         <label class="ps-label">Anexos ${icon('paperclip','tiny')}</label>
-        <p class="section-sub" style="margin:2px 0 8px;font-size:12px">Boleto, nota ou fatura para pagar; depois de pago, o comprovante / nota fiscal. Todos entram automaticamente no PDF do mês.</p>
-        ${finAnexosHtml(editing, editing.pagou? ['documento','comprovante'] : ['documento'])}
+        <p class="section-sub" style="margin:2px 0 8px;font-size:12px">Um PDF para pagar (boleto, nota ou fatura) e, depois de pago, um comprovante / nota fiscal. Os dois entram automaticamente no PDF do mês.</p>
+        ${finAnexosHtml(editing, ['documento','comprovante'], editing.pagou? ['comprovante'] : ['documento'])}
       </div>` : ''}
 
       <div class="modal-actions fin-modal-actions">
