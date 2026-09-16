@@ -853,6 +853,26 @@
   .an-wpp a{display:inline-block;line-height:1.45;vertical-align:top;}
   .an-table .vendas-actions-cell{white-space:nowrap;}
   .an-ap-list{margin-top:5px;font-size:11.5px;color:var(--text-dim);line-height:1.5;}
+  /* Análise Sessões 1:1 — visual enxuto: só ✓/✕ por analista, detalhes ficam no "Abrir" */
+  .an-table{min-width:860px;}
+  .an-table thead th{font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);padding:10px 10px;}
+  .an-table tbody td{padding:11px 10px;vertical-align:middle;}
+  .an-table tbody tr:hover td{background:var(--bg-elev);}
+  .an-table .an-lead{font-weight:700;}
+  .an-table .an-sub{display:block;font-size:11px;color:var(--text-mute);font-weight:500;margin-top:2px;}
+  .an-table .an-col-mark{text-align:center;}
+  .an-links{display:flex;flex-wrap:wrap;gap:4px;}
+  .an-links .link-btn{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:2px 8px;border:1px solid var(--border);border-radius:12px;white-space:nowrap;}
+  .an-links .link-btn .icon{width:11px;height:11px;}
+  .an-table .vendas-actions-cell{white-space:nowrap;text-align:right;}
+  .an-table .btn-abrir{padding:6px 14px;font-size:12px;}
+  .an-pessoa{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-top:10px;}
+  .an-pessoa.locked{opacity:.8;}
+  .an-pessoa .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:700;}
+  .an-pessoa .hd .icon{width:14px;height:14px;color:var(--text-mute);}
+  .an-pessoa .txt{white-space:pre-wrap;font-size:13px;color:var(--text);margin-top:4px;}
+  .an-pessoa .vazio{font-size:12.5px;color:var(--text-mute);font-style:italic;}
+  .an-pessoa .num{font-size:10.5px;font-weight:800;color:var(--text-mute);margin-top:6px;}
   .an-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
   .an-clamp.expanded{display:block;-webkit-line-clamp:unset;overflow:visible;}
   .fin-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;}
@@ -2116,6 +2136,7 @@ const TREINO_TIME = [
   {nome:'Adriana', id:'4703b11a-7061-4d49-857c-9a571d43bb76'},
   {nome:'Carmem',  id:'3ac4f0c3-4db3-4f98-b9b8-c021da4db519'},
   {nome:'Diego',   id:'8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc'},
+  {nome:'Mariane', id:'b01a4425-1ba8-4703-9c40-3301a0de7249'},
   {nome:'Sandra',  id:'a29026ae-d252-4456-bb26-eec09ba778c4'},
   {nome:'Viviane', id:'e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'},
 ];
@@ -3082,7 +3103,7 @@ function syncMaterialDelete(id){
 function mapAnaliseRow(r){
   return {
     id:r.id, vendaSessaoId:r.venda_sessao_id||null, leadNome:r.lead_nome||'', dataVenda:r.data_venda||'',
-    linkVideo:r.link_video||'', linkAnalise:r.link_analise||'',
+    linkVideo:r.link_video||'', linkAnalise:r.link_analise||'', whatsapp:r.whatsapp||'',
     diegoAssistiu:!!r.diego_assistiu, diegoAp1:r.diego_aprendizado1||'', diegoAp2:r.diego_aprendizado2||'',
     carmemAssistiu:!!r.carmem_assistiu, carmemAp1:r.carmem_aprendizado1||'', carmemAp2:r.carmem_aprendizado2||'',
     vivianeAssistiu:!!r.viviane_assistiu, vivianeAp1:r.viviane_aprendizado1||'', vivianeAp2:r.viviane_aprendizado2||'',
@@ -8591,21 +8612,31 @@ function openEditVendaModal(id){
    mesmo modal (botão "Analisar"), que é como o trabalho realmente acontece: a sessão é registrada
    primeiro e a análise vem em outro momento. */
 const ANALISE_VENDEDORAS = [
-  {key:'diego',   nome:'Diego',   assistiu:'diegoAssistiu',   campoAssistiu:'diego_assistiu',
+  {key:'diego',   nome:'Diego',   userId:'8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc', assistiu:'diegoAssistiu',   campoAssistiu:'diego_assistiu',
    ap:['diegoAp1','diegoAp2'],    campoAp:['diego_aprendizado1','diego_aprendizado2']},
-  {key:'carmem',  nome:'Carmem',  assistiu:'carmemAssistiu',  campoAssistiu:'carmem_assistiu',
+  {key:'carmem',  nome:'Carmem',  userId:'3ac4f0c3-4db3-4f98-b9b8-c021da4db519', assistiu:'carmemAssistiu',  campoAssistiu:'carmem_assistiu',
    ap:['carmemAp1','carmemAp2'],  campoAp:['carmem_aprendizado1','carmem_aprendizado2']},
-  {key:'viviane', nome:'Viviane', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu',
+  {key:'viviane', nome:'Viviane', userId:'e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu',
    ap:['vivianeAp1','vivianeAp2'], campoAp:['viviane_aprendizado1','viviane_aprendizado2']},
-  {key:'adriana', nome:'Adriana', assistiu:'adrianaAssistiu', campoAssistiu:'adriana_assistiu',
+  {key:'adriana', nome:'Adriana', userId:'4703b11a-7061-4d49-857c-9a571d43bb76', assistiu:'adrianaAssistiu', campoAssistiu:'adriana_assistiu',
    ap:['adrianaAp1','adrianaAp2'], campoAp:['adriana_aprendizado1','adriana_aprendizado2']},
 ];
 function analiseLinkCell(url, rotulo){
   const u = String(url||'').trim();
   if(!u) return '<span style="color:var(--text-mute)">—</span>';
   return /^https?:\/\//i.test(u)
-    ? `<a class="link-btn" href="${escapeAttr(u)}" target="_blank" rel="noopener">${escapeHtml(rotulo)}</a>`
+    ? `<a class="link-btn" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} ${escapeHtml(rotulo)}</a>`
     : escapeHtml(u);
+}
+function analiseFeita(a, v){
+  /* "Realizado" = assistiu e registrou pelo menos um aprendizado. */
+  const marcados = [a[v.ap[0]], a[v.ap[1]]].map(t=>String(t||'').trim()).filter(Boolean);
+  return !!a[v.assistiu] && marcados.length>0;
+}
+function analiseMarkHtml(a, v){
+  return analiseFeita(a, v)
+    ? `<span class="treino-mark ok" title="${escapeAttr(v.nome)} analisou e registrou">${icon('tick')}</span>`
+    : `<span class="treino-mark no" title="${escapeAttr(v.nome)} ainda não analisou">✕</span>`;
 }
 function analiseAprendizadosCell(a, v){
   const marcados = [a[v.ap[0]], a[v.ap[1]]].map(t=>String(t||'').trim()).filter(Boolean);
@@ -8636,7 +8667,7 @@ function renderAnalise(){
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cada sessão registrada em "Registro de Sessões 1:1" entra aqui automaticamente.</div>
 
     <h2 class="section-title">${icon('chart')} Análise Sessões 1:1</h2>
-    <p class="section-sub" style="margin-top:-6px">A tabela é só de leitura. Clique em "Analisar" na linha para anexar o link da análise e registrar os aprendizados.</p>
+    <p class="section-sub" style="margin-top:-6px">✓ = analisou e registrou · ✕ = ainda não. Clique em <strong>Abrir</strong> para ver os links e registrar a sua análise — cada pessoa só escreve no próprio espaço.</p>
     <div class="add-form" style="margin-bottom:14px">
       <div class="field full"><label>Buscar por lead ou WhatsApp</label>
         <input class="ps-input" type="text" id="analise-busca" value="${escapeAttr(analiseBusca)}" placeholder="Digite o nome do lead">
@@ -8646,31 +8677,30 @@ function renderAnalise(){
 
     <div class="table-wrap"><table class="check-table an-table">
       <colgroup>
-        <col style="width:15%"><col style="width:9%"><col style="width:8%"><col style="width:11%">
-        ${ANALISE_VENDEDORAS.map(()=>'<col style="width:13%">').join('')}
-        <col style="width:9%">
+        <col style="width:24%"><col style="width:13%"><col style="width:19%">
+        ${ANALISE_VENDEDORAS.map(()=>'<col style="width:8%">').join('')}
+        <col style="width:12%">
       </colgroup>
       <thead><tr>
-        <th>Lead</th><th>WhatsApp</th><th>Data</th><th>Links</th>
-        ${ANALISE_VENDEDORAS.map(v=>`<th>${v.nome}</th>`).join('')}
+        <th>Lead</th><th>WhatsApp</th><th>Links</th>
+        ${ANALISE_VENDEDORAS.map(v=>`<th class="an-col-mark">${escapeHtml(v.nome)}</th>`).join('')}
         <th></th>
       </tr></thead>
       <tbody>
         ${lista.map(a=>`<tr>
-          <td style="font-weight:600">${escapeHtml(a.leadNome||'—')}${a.vendaSessaoId? '' : '<br><span class="an-manual">manual</span>'}</td>
+          <td><span class="an-lead">${escapeHtml(a.leadNome||'—')}</span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
           <td class="an-wpp">${whatsappCell(a.whatsapp)}</td>
-          <td style="white-space:nowrap">${escapeHtml(a.dataVenda||'—')}</td>
-          <td class="an-links">
-            ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo da venda') : ''}
-            ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise do Diego') : ''}
+          <td><div class="an-links">
+            ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo') : ''}
+            ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : ''}
             ${!(a.linkVideo||'').trim() && !(a.linkAnalise||'').trim()? '<span style="color:var(--text-mute)">—</span>' : ''}
-          </td>
-          ${ANALISE_VENDEDORAS.map(v=>`<td class="an-vend">${analiseAprendizadosCell(a,v)}</td>`).join('')}
+          </div></td>
+          ${ANALISE_VENDEDORAS.map(v=>`<td class="an-col-mark">${analiseMarkHtml(a,v)}</td>`).join('')}
           <td class="vendas-actions-cell">
-            <button class="btn-mini" data-an-edit="${a.id}" title="Analisar">${icon('edit','tiny')} Analisar</button>
-            <button class="btn-mini icon-only danger" data-an-del="${a.id}" title="Remover da planilha">${icon('trash','tiny')}</button>
+            <button class="btn-accent btn-abrir" data-an-edit="${a.id}">Abrir</button>
+            ${currentUserRole==='staff'? `<button class="btn-mini icon-only danger" data-an-del="${a.id}" title="Remover da planilha" style="margin-left:6px">${icon('trash','tiny')}</button>` : ''}
           </td>
-        </tr>`).join('') || `<tr><td colspan="${5+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse termo.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
+        </tr>`).join('') || `<tr><td colspan="${4+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse termo.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
       </tbody>
     </table></div>
   `;
@@ -8680,15 +8710,6 @@ function renderAnalise(){
   buscaEl.addEventListener('change', ()=>renderAnalise());
   buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter') renderAnalise(); });
 
-  /* Mostra o "Ver mais" só onde o texto de fato não coube nas 3 linhas. */
-  document.querySelectorAll('#view-analise [data-anclamp-toggle]').forEach(btn=>{
-    const alvo = document.querySelector(`#view-analise [data-anclamp="${btn.dataset.anclampToggle}"]`);
-    if(!alvo) return;
-    if(alvo.scrollHeight > alvo.clientHeight + 1) btn.style.display = 'block';
-    btn.addEventListener('click', ()=>{
-      btn.textContent = alvo.classList.toggle('expanded') ? 'Ver menos' : 'Ver mais';
-    });
-  });
   document.querySelectorAll('#view-analise [data-an-edit]').forEach(btn=>{
     btn.addEventListener('click',()=>openAnaliseModal(btn.dataset.anEdit));
   });
@@ -8724,10 +8745,16 @@ function renderAnalise(){
 function openAnaliseModal(id){
   const a = ANALISE_SESSOES.find(x=>x.id===id);
   if(!a) return;
+  const eu = currentUser ? currentUser.id : null;
+  const podeLead = currentUserRole==='staff';            // dados do lead e links: equipe interna
+  const minha = ANALISE_VENDEDORAS.find(v=>v.userId===eu) || null; // minha coluna de análise (se eu for analista)
+  const ro = podeLead ? '' : 'readonly disabled';
+  const linha = (label, val)=> `<div style="margin-top:4px"><span class="ps-label" style="display:inline">${label}:</span> ${val? escapeHtml(val) : '<span style="color:var(--text-mute)">—</span>'}</div>`;
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
       <div class="cat">Análise Sessões 1:1</div>
       <h3>${escapeHtml(a.leadNome || 'Novo lead')}</h3>
+      ${podeLead ? `
       <div class="ps-section">
         <label class="ps-label">Lead</label>
         <input class="ps-input" type="text" id="an-lead" value="${escapeAttr(a.leadNome)}" placeholder="Nome do lead">
@@ -8737,45 +8764,63 @@ function openAnaliseModal(id){
         <input class="ps-input" type="text" id="an-data" value="${escapeAttr(a.dataVenda)}" placeholder="dd/mm/aaaa">
         <label class="ps-label">Link do vídeo da venda</label>
         <input class="ps-input" type="text" id="an-video" value="${escapeAttr(a.linkVideo)}" placeholder="https://...">
-        <label class="ps-label">Link da análise (Diego)</label>
+        <label class="ps-label">Link da análise</label>
         <input class="ps-input" type="text" id="an-analise" value="${escapeAttr(a.linkAnalise)}" placeholder="https://...">
-      </div>
-      ${ANALISE_VENDEDORAS.map(v=>`
-      <div class="ps-section">
-        <h4 class="ps-h">${v.nome}</h4>
-        <label class="ps-label" style="display:flex;align-items:center;gap:8px;margin-top:2px">
-          <input type="checkbox" id="an-${v.key}-assistiu" ${a[v.assistiu]?'checked':''}> Já assistiu a análise
-        </label>
-        <label class="ps-label">1</label>
-        <textarea class="ps-input" id="an-${v.key}-ap1" rows="2">${escapeHtml(a[v.ap[0]]||'')}</textarea>
-        <label class="ps-label">2</label>
-        <textarea class="ps-input" id="an-${v.key}-ap2" rows="2">${escapeHtml(a[v.ap[1]]||'')}</textarea>
-      </div>`).join('')}
+      </div>` : `
+      <div class="ps-section" style="font-size:13px">
+        ${linha('WhatsApp', a.whatsapp)}
+        ${linha('Data da venda', a.dataVenda)}
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" class="an-links">
+          ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo da venda') : ''}
+          ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : ''}
+        </div>
+      </div>`}
+      <h4 style="margin:14px 0 2px">Análises</h4>
+      <p class="section-sub" style="margin:0 0 4px;font-size:12px">Cada pessoa registra só no próprio espaço; os demais ficam bloqueados.</p>
+      ${ANALISE_VENDEDORAS.map(v=>{
+        const meu = minha && minha.key===v.key;
+        const t1 = String(a[v.ap[0]]||'').trim(), t2 = String(a[v.ap[1]]||'').trim();
+        return `<div class="an-pessoa ${meu?'':'locked'}">
+          <div class="hd">${analiseMarkHtml(a, v)} ${escapeHtml(v.nome)} ${meu? '<span class="resp-pill">você</span>' : icon('lock')}</div>
+          ${meu ? `
+            <label class="ps-label" style="display:flex;align-items:center;gap:8px;margin-top:2px">
+              <input type="checkbox" id="an-${v.key}-assistiu" ${a[v.assistiu]?'checked':''}> Já assisti a análise
+            </label>
+            <label class="ps-label">1</label>
+            <textarea class="ps-input" id="an-${v.key}-ap1" rows="2" placeholder="Primeiro ponto que você tirou desta sessão">${escapeHtml(a[v.ap[0]]||'')}</textarea>
+            <label class="ps-label">2</label>
+            <textarea class="ps-input" id="an-${v.key}-ap2" rows="2" placeholder="Segundo ponto">${escapeHtml(a[v.ap[1]]||'')}</textarea>`
+          : (t1||t2 ? `${t1? `<div class="num">1</div><div class="txt">${escapeHtml(t1)}</div>` : ''}${t2? `<div class="num">2</div><div class="txt">${escapeHtml(t2)}</div>` : ''}` : `<div class="vazio">${a[v.assistiu]? 'Assistiu, mas ainda não registrou.' : 'Ainda não analisou.'}</div>`)}
+        </div>`;
+      }).join('')}
       <div class="modal-actions">
-        <button class="btn-accent" id="an-save">Salvar alterações</button>
+        ${(podeLead || minha) ? `<button class="btn-accent" id="an-save">Salvar</button>` : ''}
         <button class="btn-outline" id="modal-close-2">Fechar</button>
       </div>
     </div>`;
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('modal-close-2').addEventListener('click', closeModal);
-  document.getElementById('an-save').addEventListener('click', ()=>{
-    a.leadNome = document.getElementById('an-lead').value.trim();
-    a.whatsapp = document.getElementById('an-whatsapp').value.trim();
-    a.dataVenda = document.getElementById('an-data').value.trim();
-    a.linkVideo = document.getElementById('an-video').value.trim();
-    a.linkAnalise = document.getElementById('an-analise').value.trim();
-    const campos = {
-      lead_nome: a.leadNome, whatsapp: a.whatsapp, data_venda: a.dataVenda,
-      link_video: a.linkVideo, link_analise: a.linkAnalise,
-    };
-    ANALISE_VENDEDORAS.forEach(v=>{
+  const saveBtn = document.getElementById('an-save');
+  if(saveBtn) saveBtn.addEventListener('click', ()=>{
+    const campos = {};
+    if(podeLead){
+      a.leadNome = document.getElementById('an-lead').value.trim();
+      a.whatsapp = document.getElementById('an-whatsapp').value.trim();
+      a.dataVenda = document.getElementById('an-data').value.trim();
+      a.linkVideo = document.getElementById('an-video').value.trim();
+      a.linkAnalise = document.getElementById('an-analise').value.trim();
+      Object.assign(campos, { lead_nome: a.leadNome, whatsapp: a.whatsapp, data_venda: a.dataVenda, link_video: a.linkVideo, link_analise: a.linkAnalise });
+    }
+    if(minha){
+      const v = minha;
       a[v.assistiu] = document.getElementById(`an-${v.key}-assistiu`).checked;
       a[v.ap[0]] = document.getElementById(`an-${v.key}-ap1`).value.trim();
       a[v.ap[1]] = document.getElementById(`an-${v.key}-ap2`).value.trim();
       campos[v.campoAssistiu] = a[v.assistiu];
       campos[v.campoAp[0]] = a[v.ap[0]];
       campos[v.campoAp[1]] = a[v.ap[1]];
-    });
+    }
+    /* Só o que esta pessoa pode alterar vai para o banco — e o banco confere de novo (gatilho analise_sessoes_guard). */
     syncAnaliseUpdateNow(a.id, campos);
     closeModal();
     renderAnalise();
