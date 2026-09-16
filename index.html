@@ -3086,6 +3086,7 @@ function mapAnaliseRow(r){
     diegoAssistiu:!!r.diego_assistiu, diegoAp1:r.diego_aprendizado1||'', diegoAp2:r.diego_aprendizado2||'',
     carmemAssistiu:!!r.carmem_assistiu, carmemAp1:r.carmem_aprendizado1||'', carmemAp2:r.carmem_aprendizado2||'',
     vivianeAssistiu:!!r.viviane_assistiu, vivianeAp1:r.viviane_aprendizado1||'', vivianeAp2:r.viviane_aprendizado2||'',
+    adrianaAssistiu:!!r.adriana_assistiu, adrianaAp1:r.adriana_aprendizado1||'', adrianaAp2:r.adriana_aprendizado2||'',
     ordem:r.ordem, createdAt:r.created_at,
   };
 }
@@ -7303,7 +7304,7 @@ function exportAcompanhamentoPDF(s){
       ${vendas.length? vendas.map(v=>{
         const an = analiseDaVenda(v.id);
         const aprend = an ? [
-          ['Diego', an.diegoAp1, an.diegoAp2], ['Carmem', an.carmemAp1, an.carmemAp2], ['Viviane', an.vivianeAp1, an.vivianeAp2],
+          ['Diego', an.diegoAp1, an.diegoAp2], ['Carmem', an.carmemAp1, an.carmemAp2], ['Viviane', an.vivianeAp1, an.vivianeAp2], ['Adriana', an.adrianaAp1, an.adrianaAp2],
         ].filter(x=>x[1]||x[2]) : [];
         return `
         <div class="cols" style="margin-bottom:8px">
@@ -7323,7 +7324,7 @@ function exportAcompanhamentoPDF(s){
           </table></div>
         </div>
         ${aprend.length? `<table class="grade" style="margin-bottom:10px">
-          <thead><tr><th style="width:16%">Análise 1:1</th><th>Aprendizado 1</th><th>Aprendizado 2</th></tr></thead>
+          <thead><tr><th style="width:16%">Análise 1:1</th><th>1</th><th>2</th></tr></thead>
           <tbody>${aprend.map(x=>`<tr><td>${escapeHtml(x[0])}</td><td>${escapeHtml(x[1]||'—')}</td><td>${escapeHtml(x[2]||'—')}</td></tr>`).join('')}</tbody>
         </table>` : ''}`;
       }).join('') : '<p class="vazio">Nenhuma sessão de venda vinculada a este aluno. O vínculo é feito em Registro de Sessões 1:1 → Editar → Aluno vinculado.</p>'}
@@ -8596,6 +8597,8 @@ const ANALISE_VENDEDORAS = [
    ap:['carmemAp1','carmemAp2'],  campoAp:['carmem_aprendizado1','carmem_aprendizado2']},
   {key:'viviane', nome:'Viviane', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu',
    ap:['vivianeAp1','vivianeAp2'], campoAp:['viviane_aprendizado1','viviane_aprendizado2']},
+  {key:'adriana', nome:'Adriana', assistiu:'adrianaAssistiu', campoAssistiu:'adriana_assistiu',
+   ap:['adrianaAp1','adrianaAp2'], campoAp:['adriana_aprendizado1','adriana_aprendizado2']},
 ];
 function analiseLinkCell(url, rotulo){
   const u = String(url||'').trim();
@@ -8644,12 +8647,12 @@ function renderAnalise(){
     <div class="table-wrap"><table class="check-table an-table">
       <colgroup>
         <col style="width:15%"><col style="width:9%"><col style="width:8%"><col style="width:11%">
-        ${ANALISE_VENDEDORAS.map(()=>'<col style="width:16%">').join('')}
+        ${ANALISE_VENDEDORAS.map(()=>'<col style="width:13%">').join('')}
         <col style="width:9%">
       </colgroup>
       <thead><tr>
         <th>Lead</th><th>WhatsApp</th><th>Data</th><th>Links</th>
-        ${ANALISE_VENDEDORAS.map(v=>`<th>Aprendizados ${v.nome}</th>`).join('')}
+        ${ANALISE_VENDEDORAS.map(v=>`<th>${v.nome}</th>`).join('')}
         <th></th>
       </tr></thead>
       <tbody>
@@ -8739,13 +8742,13 @@ function openAnaliseModal(id){
       </div>
       ${ANALISE_VENDEDORAS.map(v=>`
       <div class="ps-section">
-        <h4 class="ps-h">Aprendizados ${v.nome}</h4>
+        <h4 class="ps-h">${v.nome}</h4>
         <label class="ps-label" style="display:flex;align-items:center;gap:8px;margin-top:2px">
           <input type="checkbox" id="an-${v.key}-assistiu" ${a[v.assistiu]?'checked':''}> Já assistiu a análise
         </label>
-        <label class="ps-label">Aprendizado 1</label>
+        <label class="ps-label">1</label>
         <textarea class="ps-input" id="an-${v.key}-ap1" rows="2">${escapeHtml(a[v.ap[0]]||'')}</textarea>
-        <label class="ps-label">Aprendizado 2</label>
+        <label class="ps-label">2</label>
         <textarea class="ps-input" id="an-${v.key}-ap2" rows="2">${escapeHtml(a[v.ap[1]]||'')}</textarea>
       </div>`).join('')}
       <div class="modal-actions">
