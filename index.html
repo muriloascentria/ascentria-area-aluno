@@ -10717,8 +10717,30 @@ function openFinLancamentoModal(tipo, existingId){
             conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(draft.valor)||0,
             student_id: studentId || null, cliente_id: clienteId || null,
           };
+          /* Vencimento: se a data desta parcela mudou, as outras parcelas escolhidas acompanham. Em séries
+             mensais (ou mais longas) muda o dia do mês e desloca os meses; em séries semanais/quinzenais
+             desloca a mesma quantidade de dias. */
+          const parseD = (d)=>{ const [y,m,dd] = String(d||'').split('-').map(Number); return {y,m,d:dd}; };
+          const fmtD = (y,m,d)=>{ const dias = new Date(y, m, 0).getDate(); return `${y}-${String(m).padStart(2,'0')}-${String(Math.min(d,dias)).padStart(2,'0')}`; };
+          const diasEntre = (a,b)=> Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000);
+          const vencMudou = draft.dataVencimento !== editing.dataVencimento;
+          let novaData = null;
+          if(vencMudou){
+            const ordenadas = irmas().slice().sort((a,b)=>(a.parcelaNum||0)-(b.parcelaNum||0));
+            const gaps = ordenadas.slice(1).map((l,i)=>diasEntre(ordenadas[i].dataVencimento, l.dataVencimento)).filter(g=>g>0);
+            const mediana = gaps.length ? gaps.sort((a,b)=>a-b)[Math.floor(gaps.length/2)] : 30;
+            const antiga = parseD(editing.dataVencimento), nova = parseD(draft.dataVencimento);
+            if(mediana >= 25){
+              const deslocMeses = (nova.y*12+nova.m) - (antiga.y*12+antiga.m);
+              novaData = (l)=>{ const o = parseD(l.dataVencimento); const tot = o.y*12 + (o.m-1) + deslocMeses; return fmtD(Math.floor(tot/12), (tot%12)+1, nova.d); };
+            } else {
+              const deslocDias = diasEntre(editing.dataVencimento, draft.dataVencimento);
+              novaData = (l)=>{ const dt = new Date(l.dataVencimento+'T00:00:00'); dt.setDate(dt.getDate()+deslocDias); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; };
+            }
+          }
           alvosPorEscopo(escopo).forEach(l=>{
             const f = Object.assign({}, comuns);
+            if(l.id!==editing.id && novaData){ f.data_vencimento = novaData(l); }
             if(l.id===editing.id){
               f.data_vencimento = draft.dataVencimento; f.pagou = draft.pagou;
               f.dia_pagamento = draft.pagou? (draft.diaPagamento||null) : null;
@@ -10730,8 +10752,9 @@ function openFinLancamentoModal(tipo, existingId){
             Object.assign(l, {
               categoriaId: f.categoria_id, descricao: f.descricao, contaId: f.conta_id, formaId: f.forma_id, valor: f.valor,
               studentId: f.student_id, clienteId: f.cliente_id,
-              ...(f.data_vencimento!==undefined ? {dataVencimento: f.data_vencimento, pagou: f.pagou, diaPagamento: f.dia_pagamento||'', valorPago: f.valor_pago} : {}),
-              ...(f.valor_pago!==undefined && f.data_vencimento===undefined ? {valorPago: f.valor_pago} : {}),
+              ...(f.data_vencimento!==undefined ? {dataVencimento: f.data_vencimento} : {}),
+              ...(f.pagou!==undefined ? {pagou: f.pagou, diaPagamento: f.dia_pagamento||'', valorPago: f.valor_pago} : {}),
+              ...(f.valor_pago!==undefined && f.pagou===undefined ? {valorPago: f.valor_pago} : {}),
             });
           });
         } else if(editing){
