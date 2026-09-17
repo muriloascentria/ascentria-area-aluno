@@ -2699,7 +2699,7 @@ async function bootstrapData(){
       id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration || '—',
       tint:[c.tint1 || '#8d916f', c.tint2 || '#bec6b1'],
       desc:c.description || '', videoLink:c.video_link || '',
-      materiais:(c.course_materials||[]).map(m=>({title:m.title, link:m.link, _id:m.id})),
+      materiais:(c.course_materials||[]).map(m=>({title:m.title, link:m.link, somenteCurso:!!m.somente_curso, _id:m.id})),
     });
   });
 
@@ -3082,7 +3082,7 @@ async function syncCourseUpdate(course){
   if(error) throw error;
   await sb.from('course_materials').delete().eq('course_id', course.id);
   if(course.materiais.length){
-    const { error: merr } = await sb.from('course_materials').insert(course.materiais.map(m=>({course_id:course.id, title:m.title, link:m.link})));
+    const { error: merr } = await sb.from('course_materials').insert(course.materiais.map(m=>({course_id:course.id, title:m.title, link:m.link, somente_curso:!!m.somenteCurso})));
     if(merr) throw merr;
   }
 }
@@ -4323,7 +4323,8 @@ function openCourseModal(id){
   const pct = s ? (s.courseProgress[id]||0) : 0;
   const done = pct===100;
   const yt = youtubeId(c.videoLink);
-  const materiais = c.materiais || [];
+  /* Materiais marcados como "Só Método" aparecem apenas para alunos do curso gravado (não para mentorados). */
+  const materiais = (c.materiais || []).filter(m=>!m.somenteCurso || getViewingTier()==='curso');
   /* Aluno do Curso Gravado só pode marcar a aula como concluída depois de assistir MIN_WATCH_PCT dela —
      é isso que libera a aula seguinte na sequência. Só dá pra medir isso em vídeo do YouTube embutido
      (o player avisa o progresso); aula sem vídeo embutido não tem como ser medida, então segue liberada
@@ -7970,6 +7971,7 @@ function openEditCourseModal(courseId){
             <div class="ps-row">
               <input class="ps-input" data-mat-title="${i}" value="${escapeAttr(m.title)}" placeholder="Título do material">
               <input class="ps-input" data-mat-link="${i}" value="${escapeAttr(m.link)}" placeholder="Link do Google Drive">
+              <label class="ps-label" style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;margin:0" title="Visível só para alunos do Método (curso gravado); mentorados não veem"><input type="checkbox" data-mat-curso="${i}" ${m.somenteCurso?'checked':''}> Só Método</label>
               <button class="ps-remove" data-mat-remove="${i}">${icon('x')}</button>
             </div>
           `).join('')}
@@ -7992,7 +7994,7 @@ function openEditCourseModal(courseId){
       document.getElementById('edit-course-link-error').style.display = 'none';
     });
     document.getElementById('edit-course-mat-add').addEventListener('click', ()=>{
-      c.materiais.push({title:'', link:''});
+      c.materiais.push({title:'', link:'', somenteCurso:false});
       renderModal();
     });
     document.querySelectorAll('[data-mat-remove]').forEach(btn=>{
@@ -8003,6 +8005,9 @@ function openEditCourseModal(courseId){
     });
     document.querySelectorAll('[data-mat-link]').forEach(inp=>{
       inp.addEventListener('input', ()=>{ c.materiais[+inp.dataset.matLink].link = inp.value; });
+    });
+    document.querySelectorAll('[data-mat-curso]').forEach(inp=>{
+      inp.addEventListener('change', ()=>{ c.materiais[+inp.dataset.matCurso].somenteCurso = inp.checked; });
     });
     document.getElementById('edit-course-save').addEventListener('click', async ()=>{
       const title = (c.title||'').trim();
