@@ -607,6 +607,16 @@
   .pill.pago .icon{width:10px;height:10px;stroke:var(--success);}
   .pill.receita{background:var(--success-soft);color:var(--success);white-space:nowrap;}
   .pill.despesa{background:var(--individual-soft);color:var(--individual);white-space:nowrap;}
+  /* Busca do Financeiro */
+  .fin-busca{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 4px;}
+  .fin-busca .ps-input{margin:0;}
+  .fin-busca input.ps-input{flex:1;min-width:220px;}
+  .fin-busca select.ps-input{width:auto;min-width:160px;}
+  .fin-busca-info{font-size:12px;color:var(--text-mute);margin:6px 0 10px;}
+  .fin-busca-info strong{color:var(--text);}
+  .app-confirm-card .app-confirm-opts{display:flex;flex-direction:column;gap:8px;margin:14px 0 6px;}
+  .app-confirm-card .app-confirm-opts button{text-align:left;padding:10px 14px;}
+  .app-confirm-card .app-confirm-opts button small{display:block;font-weight:400;color:var(--text-mute);margin-top:2px;}
   /* Treinamento Time: X vermelho / check verde por pessoa */
   .treino-mark{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-weight:800;font-size:14px;}
   .treino-mark.ok{background:var(--success-soft);color:var(--success);}
@@ -2147,6 +2157,7 @@ let finSubView = 'lancamentos'; // 'lancamentos' | 'faturamento' | 'categorias' 
 let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
 let finExtratoConta = null; // id da conta bancária cujo extrato está aberto (null = primeira da lista)
 let finView = { year: new Date().getFullYear(), month: new Date().getMonth() };
+let finBusca = { texto:'', periodo:'mes' }; // busca no Financeiro: periodo 'mes' | 'ano' | 'todos'
 let finFatChartYear = null; // ano selecionado no gráfico do Faturamento interno (Financeiro > Faturamento)
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
@@ -4651,6 +4662,31 @@ function showAppConfirm(message, opts){
     wrap.querySelector('#app-confirm-ok').addEventListener('click', ()=>cleanup(true));
     wrap.querySelector('#app-confirm-cancel').addEventListener('click', ()=>cleanup(false));
     wrap.addEventListener('click', (e)=>{ if(e.target===wrap) cleanup(false); });
+  });
+}
+
+/* Escolha com várias opções (ex.: alterar só esta parcela / esta e as próximas / todas). Resolve com o
+   valor da opção escolhida ou null se cancelar. */
+function showAppEscolha(titulo, mensagem, opcoes, cancelLabel){
+  return new Promise(resolve=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'app-confirm-backdrop';
+    wrap.innerHTML = `
+      <div class="app-confirm-card">
+        <h4>${escapeHtml(titulo)}</h4>
+        <p>${escapeHtml(mensagem)}</p>
+        <div class="app-confirm-opts">
+          ${opcoes.map(o=>`<button type="button" class="${o.destaque?'btn-accent':'btn-outline'}" data-escolha="${escapeAttr(o.valor)}">${escapeHtml(o.rotulo)}${o.detalhe? `<small>${escapeHtml(o.detalhe)}</small>` : ''}</button>`).join('')}
+        </div>
+        <div class="app-confirm-actions">
+          <button type="button" class="btn-outline" id="app-escolha-cancel">${escapeHtml(cancelLabel||'Cancelar')}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const cleanup = (r)=>{ wrap.remove(); resolve(r); };
+    wrap.querySelectorAll('[data-escolha]').forEach(b=>b.addEventListener('click', ()=>cleanup(b.dataset.escolha)));
+    wrap.querySelector('#app-escolha-cancel').addEventListener('click', ()=>cleanup(null));
+    wrap.addEventListener('click', (e)=>{ if(e.target===wrap) cleanup(null); });
   });
 }
 
@@ -9877,14 +9913,13 @@ function renderTreinamento(){
     <h2 class="section-title">${icon('play')} Treinamento Time</h2>
     <p class="section-sub">${aulas.length} aula(s) de treinamento. ${souDoTime? 'Clique em <strong>Abrir</strong> para assistir e registrar o que você aprendeu — o seu X vira ✓ quando salvar.' : 'Clique em <strong>Abrir</strong> para assistir e ver os registros do time.'}</p>
     <div class="table-wrap"><table class="ps-table">
-      <thead><tr><th>Aula</th><th>Assistir</th>${TREINO_TIME.map(p=>`<th class="treino-col">${escapeHtml(p.nome)}</th>`).join('')}<th></th></tr></thead>
+      <thead><tr><th>Aula</th>${TREINO_TIME.map(p=>`<th class="treino-col">${escapeHtml(p.nome)}</th>`).join('')}<th></th></tr></thead>
       <tbody>
         ${aulas.map(c=>`<tr>
           <td><strong>${escapeHtml(c.title)}</strong><br><span style="color:var(--text-mute);font-size:11.5px">${escapeHtml(c.cat||'')}${c.duration && c.duration!=='—'? ' · '+escapeHtml(c.duration) : ''}</span></td>
-          <td>${c.videoLink? `<a class="btn-outline" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px" href="${escapeAttr(c.videoLink)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Link da aula</a>` : '<span style="color:var(--text-mute)">sem link</span>'}</td>
           ${TREINO_TIME.map(p=>`<td class="treino-col">${treinoMarkHtml(c.id, p.id)}</td>`).join('')}
           <td style="text-align:right"><button type="button" class="btn-accent" style="padding:6px 14px;font-size:12px" data-treino-abrir="${escapeAttr(c.id)}">Abrir</button></td>
-        </tr>`).join('') || `<tr><td colspan="${3+TREINO_TIME.length}" style="color:var(--text-mute)">Nenhuma aula de treinamento ainda. Em Gerenciar Conteúdo, cadastre a aula com a palavra <strong>REC</strong> no título e ela aparece aqui.</td></tr>`}
+        </tr>`).join('') || `<tr><td colspan="${2+TREINO_TIME.length}" style="color:var(--text-mute)">Nenhuma aula de treinamento ainda. Em Gerenciar Conteúdo, cadastre a aula com a palavra <strong>REC</strong> no título e ela aparece aqui.</td></tr>`}
       </tbody>
     </table></div>
   `;
@@ -9941,6 +9976,47 @@ function openTreinamentoModal(courseId){
     closeModal();
     renderTreinamento();
   });
+}
+/* Busca do Financeiro: procura por cliente/aluno, descrição ou categoria em TODOS os lançamentos
+   (pagos, em aberto e futuros), com o período limitado ao mês selecionado, ao ano ou a tudo. */
+function finBuscaResultados(){
+  const q = normTxt(finBusca.texto).trim();
+  if(!q) return [];
+  const catName = (id)=> (FIN_CATEGORIAS.find(c=>c.id===id)||{}).nome || '';
+  const noPeriodo = (l)=>{
+    if(finBusca.periodo==='todos') return true;
+    const d = l.dataVencimento || '';
+    const [y,m] = d.split('-').map(Number);
+    if(finBusca.periodo==='ano') return y===finView.year;
+    return y===finView.year && (m-1)===finView.month;
+  };
+  return FIN_LANCAMENTOS
+    .filter(l=> noPeriodo(l) && [finPagadorNome(l), l.descricao, catName(l.categoriaId)].some(t=>normTxt(t).includes(q)))
+    .sort((a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b)));
+}
+function finBuscaHtml(){
+  const lista = finBuscaResultados();
+  const catName = (id)=> (FIN_CATEGORIAS.find(c=>c.id===id)||{}).nome || '—';
+  const pago = lista.filter(l=>l.pagou), aberto = lista.filter(l=>!l.pagou);
+  const soma = (arr, tipo)=> arr.filter(l=>l.tipo===tipo).reduce((s,l)=>s+(l.pagou? finValorEfetivo(l) : l.valor),0);
+  const periodoTxt = finBusca.periodo==='todos' ? 'todos os meses' : (finBusca.periodo==='ano' ? `o ano de ${finView.year}` : `${MESES_LONGO[finView.month]}/${finView.year}`);
+  return `
+    <div class="fin-busca-info">${lista.length} lançamento(s) para <strong>"${escapeHtml(finBusca.texto.trim())}"</strong> em ${periodoTxt} · Recebido: <strong>${formatBRL(soma(pago,'receber'))}</strong> · A receber: <strong>${formatBRL(soma(aberto,'receber'))}</strong> · Pago: <strong>${formatBRL(soma(pago,'pagar'))}</strong> · A pagar: <strong>${formatBRL(soma(aberto,'pagar'))}</strong></div>
+    <div class="table-wrap"><table class="ps-table">
+      <thead><tr><th>Vencimento</th><th>Categoria</th><th>Cliente</th><th>Descrição</th><th>Tipo</th><th>Parcela</th><th>Situação</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+        ${lista.map(l=>`<tr data-fllinha="${l.id}">
+          <td style="white-space:nowrap">${formatDateBR(l.dataVencimento)}</td>
+          <td>${escapeHtml(catName(l.categoriaId))}</td>
+          <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
+          <td>${escapeHtml(l.descricao||'—')}</td>
+          <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
+          <td style="text-align:center">${l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—'}</td>
+          <td style="white-space:nowrap">${l.pagou? `<span class="pill pago">${icon('check','tiny')} ${l.tipo==='receber'?'Recebido':'Pago'} ${formatDateBR(finDataEfetiva(l))}</span>` : '<span class="pill replay">Em aberto</span>'}</td>
+          <td style="text-align:right;font-weight:600;white-space:nowrap">${formatBRL(l.pagou? finValorEfetivo(l) : l.valor)}</td>
+        </tr>`).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nada encontrado. Tente outro termo ou amplie o período para "Todos os meses".</td></tr>`}
+      </tbody>
+    </table></div>`;
 }
 function renderFinLancamentos(container){
   const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b));
@@ -10040,6 +10116,7 @@ function renderFinLancamentos(container){
     `;
   }
 
+  const buscando = !!finBusca.texto.trim();
   container.innerHTML = `
     <div class="fin-resumo">
       <div class="fin-resumo-card"><div class="label">A receber em ${MESES_LONGO[finView.month]}</div><div class="value">${formatBRL(resumo.aReceber)}</div><div class="hint">ainda em aberto</div></div>
@@ -10055,6 +10132,16 @@ function renderFinLancamentos(container){
         ${MESES_LONGO.map((m,i)=>`<button type="button" class="cf-month-btn ${i===finView.month?'active':''}" data-finmonth="${i}">${m.slice(0,3)}</button>`).join('')}
       </div>
     </div>
+    <div class="fin-busca">
+      <input class="ps-input" type="text" id="fin-busca-texto" value="${escapeAttr(finBusca.texto)}" placeholder="Buscar por cliente, descrição ou categoria…">
+      <select class="ps-input" id="fin-busca-periodo" title="Período da busca">
+        <option value="mes" ${finBusca.periodo==='mes'?'selected':''}>Mês selecionado</option>
+        <option value="ano" ${finBusca.periodo==='ano'?'selected':''}>Ano selecionado</option>
+        <option value="todos" ${finBusca.periodo==='todos'?'selected':''}>Todos os meses</option>
+      </select>
+      ${finBusca.texto.trim()? `<button type="button" class="btn-outline" id="fin-busca-limpar">${icon('x','tiny')} Limpar</button>` : ''}
+    </div>
+    ${buscando? '' : `
     <div class="community-filters" style="justify-content:space-between;align-items:center">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="cf-month-btn ${finTab==='receber'?'active':''}" data-fintab="receber">Contas a Receber</button>
@@ -10063,9 +10150,20 @@ function renderFinLancamentos(container){
       </div>
       <button type="button" class="btn-outline" id="fin-pdf-btn">${icon('download','ps-plus')} Gerar PDF</button>
     </div>
-    ${subAbasExtrato}
-    ${bodyHtml}
+    ${subAbasExtrato}`}
+    ${buscando? finBuscaHtml() : bodyHtml}
   `;
+  const buscaEl = document.getElementById('fin-busca-texto');
+  let buscaTimer = null;
+  buscaEl.addEventListener('input', e=>{
+    finBusca.texto = e.target.value;
+    clearTimeout(buscaTimer);
+    buscaTimer = setTimeout(()=>{ const pos = buscaEl.selectionStart; renderFinanceiro(); const el = document.getElementById('fin-busca-texto'); if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(err){} } }, 350);
+  });
+  buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ clearTimeout(buscaTimer); renderFinanceiro(); } });
+  document.getElementById('fin-busca-periodo').addEventListener('change', e=>{ finBusca.periodo = e.target.value; renderFinanceiro(); });
+  const limparEl = document.getElementById('fin-busca-limpar');
+  if(limparEl) limparEl.addEventListener('click', ()=>{ finBusca.texto=''; renderFinanceiro(); });
   document.querySelectorAll('[data-finconta]').forEach(btn=>{
     btn.addEventListener('click',()=>{ finExtratoConta = btn.dataset.finconta; renderFinanceiro(); });
   });
@@ -10389,6 +10487,7 @@ function openFinLancamentoModal(tipo, existingId){
     return `
       <div class="cat">${tipoLabel}</div>
       <h3>${editing? 'Editar lançamento' : (tipo==='receber'? 'Novo Recebimento' : 'Novo Pagamento')}</h3>
+      ${editing && editing.grupoId && editing.parcelaTotal>1 ? `<p class="section-sub" style="margin:-4px 0 10px;font-size:12px">${icon('drag','tiny')} Parcela <strong>${editing.parcelaNum} de ${editing.parcelaTotal}</strong> de uma recorrência — ao salvar ou excluir, você escolhe se vale só para esta parcela, para esta e as próximas, ou para todas.</p>` : ''}
       <div class="ps-section fin-form-grid">
         <div><label class="ps-label">Categoria *</label>
           <select class="ps-input" id="fl-categoria">
@@ -10549,12 +10648,36 @@ function openFinLancamentoModal(tipo, existingId){
     }
 
     document.getElementById('fl-cancel').addEventListener('click', closeModal);
+    /* Lançamento que faz parte de uma recorrência (parcelas irmãs no mesmo grupo). */
+    const irmas = ()=> editing && editing.grupoId ? FIN_LANCAMENTOS.filter(l=>l.grupoId===editing.grupoId) : [];
+    const ehRecorrente = ()=> irmas().length > 1;
+    const alvosPorEscopo = (escopo)=>{
+      if(escopo==='todas') return irmas();
+      if(escopo==='proximas') return irmas().filter(l=> (l.parcelaNum||0) >= (editing.parcelaNum||0));
+      return [editing];
+    };
+    const perguntarEscopo = (acao)=> showAppEscolha(
+      acao==='excluir' ? 'Excluir lançamento recorrente' : 'Alterar lançamento recorrente',
+      `Este lançamento é a parcela ${editing.parcelaNum} de ${editing.parcelaTotal}. O que você quer ${acao}?`,
+      [
+        {valor:'uma',      rotulo: acao==='excluir' ? 'Somente esta parcela' : 'Somente esta parcela', detalhe: 'As outras parcelas ficam como estão.'},
+        {valor:'proximas', rotulo: acao==='excluir' ? 'Esta parcela e as próximas' : 'Esta parcela e as próximas', detalhe: `Da parcela ${editing.parcelaNum} até a ${editing.parcelaTotal}.`},
+        {valor:'todas',    rotulo: acao==='excluir' ? 'Todas as parcelas da recorrência' : 'Todas as parcelas da recorrência', detalhe: `As ${editing.parcelaTotal} parcelas, inclusive as já pagas.`, destaque: acao!=='excluir'},
+      ]);
+
     const delBtn = document.getElementById('fl-delete');
-    if(delBtn) delBtn.addEventListener('click', ()=>{
-      if(!confirmDelete('Excluir este lançamento? Essa ação não pode ser desfeita.')) return;
-      syncFinLancamentoDelete(editing.id);
-      const idx = FIN_LANCAMENTOS.findIndex(l=>l.id===editing.id);
-      if(idx>-1) FIN_LANCAMENTOS.splice(idx,1);
+    if(delBtn) delBtn.addEventListener('click', async ()=>{
+      let alvos = [editing];
+      if(ehRecorrente()){
+        const escopo = await perguntarEscopo('excluir');
+        if(!escopo) return;
+        alvos = alvosPorEscopo(escopo);
+      }
+      if(!confirmDelete(alvos.length>1 ? `Excluir ${alvos.length} lançamentos? Essa ação não pode ser desfeita.` : 'Excluir este lançamento? Essa ação não pode ser desfeita.')) return;
+      const ids = alvos.map(l=>l.id);
+      if(ids.length===1) syncFinLancamentoDelete(ids[0]);
+      else syncNow(sb.from('fin_lancamentos').delete().in('id', ids));
+      ids.forEach(id=>{ const idx = FIN_LANCAMENTOS.findIndex(l=>l.id===id); if(idx>-1) FIN_LANCAMENTOS.splice(idx,1); });
       closeModal();
       renderFinanceiro();
     });
@@ -10576,10 +10699,42 @@ function openFinLancamentoModal(tipo, existingId){
       }
       const studentId = categoriaExigeAluno() ? draft.studentId : (draft.studentId || null);
       const clienteId = categoriaExigeCliente() ? draft.clienteId : (draft.clienteId || null);
+      /* Recorrência: escolhe se a alteração vale só para esta parcela, para esta e as próximas ou para todas. */
+      let escopo = 'uma';
+      if(editing && ehRecorrente()){
+        escopo = await perguntarEscopo('alterar');
+        if(!escopo) return;
+      }
       const saveBtn = document.getElementById('fl-save');
       saveBtn.disabled = true;
       try{
-        if(editing){
+        if(editing && escopo!=='uma'){
+          /* Campos comuns da série vão para todas as parcelas escolhidas; vencimento, pagamento e número da
+             parcela continuam individuais. Se uma parcela já paga tinha "valor pago" igual ao valor antigo
+             (preenchido automaticamente), o valor pago acompanha o novo valor. */
+          const comuns = {
+            categoria_id: draft.categoriaId, descricao: draft.descricao.trim(),
+            conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(draft.valor)||0,
+            student_id: studentId || null, cliente_id: clienteId || null,
+          };
+          alvosPorEscopo(escopo).forEach(l=>{
+            const f = Object.assign({}, comuns);
+            if(l.id===editing.id){
+              f.data_vencimento = draft.dataVencimento; f.pagou = draft.pagou;
+              f.dia_pagamento = draft.pagou? (draft.diaPagamento||null) : null;
+              f.valor_pago = draft.pagou? (parseFloat(draft.valorPago)||0) : null;
+            } else if(l.pagou && Number(l.valorPago)===Number(l.valor)){
+              f.valor_pago = comuns.valor;
+            }
+            syncFinLancamentoUpdate(l.id, f);
+            Object.assign(l, {
+              categoriaId: f.categoria_id, descricao: f.descricao, contaId: f.conta_id, formaId: f.forma_id, valor: f.valor,
+              studentId: f.student_id, clienteId: f.cliente_id,
+              ...(f.data_vencimento!==undefined ? {dataVencimento: f.data_vencimento, pagou: f.pagou, diaPagamento: f.dia_pagamento||'', valorPago: f.valor_pago} : {}),
+              ...(f.valor_pago!==undefined && f.data_vencimento===undefined ? {valorPago: f.valor_pago} : {}),
+            });
+          });
+        } else if(editing){
           const fields = {
             categoria_id: draft.categoriaId, descricao: draft.descricao.trim(), data_vencimento: draft.dataVencimento,
             conta_id: draft.contaId, forma_id: draft.formaId, valor: parseFloat(draft.valor)||0,
