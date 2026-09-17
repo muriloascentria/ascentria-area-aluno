@@ -2157,7 +2157,7 @@ let finSubView = 'lancamentos'; // 'lancamentos' | 'faturamento' | 'categorias' 
 let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
 let finExtratoConta = null; // id da conta bancária cujo extrato está aberto (null = primeira da lista)
 let finView = { year: new Date().getFullYear(), month: new Date().getMonth() };
-let finBusca = { texto:'', periodo:'mes' }; // busca no Financeiro: periodo 'mes' | 'ano' | 'todos'
+let finBusca = { texto:'', periodo:'mes', situacao:'todas' }; // busca no Financeiro: periodo 'mes' | 'ano' | 'todos'; situacao 'todas' | 'pago' | 'aberto' | 'vencido'
 let finFatChartYear = null; // ano selecionado no gráfico do Faturamento interno (Financeiro > Faturamento)
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
@@ -9979,9 +9979,15 @@ function openTreinamentoModal(courseId){
 }
 /* Busca do Financeiro: procura por cliente/aluno, descrição ou categoria em TODOS os lançamentos
    (pagos, em aberto e futuros), com o período limitado ao mês selecionado, ao ano ou a tudo. */
+function finBuscaAtiva(){ return !!finBusca.texto.trim() || finBusca.situacao!=='todas'; }
+function finSituacao(l){
+  if(l.pagou) return 'pago';
+  const hoje = new Date(); const h = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+  return (l.dataVencimento && l.dataVencimento < h) ? 'vencido' : 'aberto';
+}
 function finBuscaResultados(){
   const q = normTxt(finBusca.texto).trim();
-  if(!q) return [];
+  if(!finBuscaAtiva()) return [];
   const catName = (id)=> (FIN_CATEGORIAS.find(c=>c.id===id)||{}).nome || '';
   const noPeriodo = (l)=>{
     if(finBusca.periodo==='todos') return true;
@@ -9991,7 +9997,9 @@ function finBuscaResultados(){
     return y===finView.year && (m-1)===finView.month;
   };
   return FIN_LANCAMENTOS
-    .filter(l=> noPeriodo(l) && [finPagadorNome(l), l.descricao, catName(l.categoriaId)].some(t=>normTxt(t).includes(q)))
+    .filter(l=> noPeriodo(l)
+      && (finBusca.situacao==='todas' || finSituacao(l)===finBusca.situacao)
+      && (!q || [finPagadorNome(l), l.descricao, catName(l.categoriaId)].some(t=>normTxt(t).includes(q))))
     .sort((a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b)));
 }
 function finBuscaHtml(){
@@ -10000,8 +10008,9 @@ function finBuscaHtml(){
   const pago = lista.filter(l=>l.pagou), aberto = lista.filter(l=>!l.pagou);
   const soma = (arr, tipo)=> arr.filter(l=>l.tipo===tipo).reduce((s,l)=>s+(l.pagou? finValorEfetivo(l) : l.valor),0);
   const periodoTxt = finBusca.periodo==='todos' ? 'todos os meses' : (finBusca.periodo==='ano' ? `o ano de ${finView.year}` : `${MESES_LONGO[finView.month]}/${finView.year}`);
+  const sitTxt = {pago:'recebidos/pagos', aberto:'a receber/a pagar', vencido:'vencidos'}[finBusca.situacao] || '';
   return `
-    <div class="fin-busca-info">${lista.length} lançamento(s) para <strong>"${escapeHtml(finBusca.texto.trim())}"</strong> em ${periodoTxt} · Recebido: <strong>${formatBRL(soma(pago,'receber'))}</strong> · A receber: <strong>${formatBRL(soma(aberto,'receber'))}</strong> · Pago: <strong>${formatBRL(soma(pago,'pagar'))}</strong> · A pagar: <strong>${formatBRL(soma(aberto,'pagar'))}</strong></div>
+    <div class="fin-busca-info">${lista.length} lançamento(s)${sitTxt? ' '+sitTxt : ''}${finBusca.texto.trim()? ` para <strong>"${escapeHtml(finBusca.texto.trim())}"</strong>` : ''} em ${periodoTxt} · Recebido: <strong>${formatBRL(soma(pago,'receber'))}</strong> · A receber: <strong>${formatBRL(soma(aberto,'receber'))}</strong> · Pago: <strong>${formatBRL(soma(pago,'pagar'))}</strong> · A pagar: <strong>${formatBRL(soma(aberto,'pagar'))}</strong></div>
     <div class="table-wrap"><table class="ps-table">
       <thead><tr><th>Vencimento</th><th>Categoria</th><th>Cliente</th><th>Descrição</th><th>Tipo</th><th>Parcela</th><th>Situação</th><th style="text-align:right">Valor</th></tr></thead>
       <tbody>
@@ -10012,9 +10021,9 @@ function finBuscaHtml(){
           <td>${escapeHtml(l.descricao||'—')}</td>
           <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
           <td style="text-align:center">${l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—'}</td>
-          <td style="white-space:nowrap">${l.pagou? `<span class="pill pago">${icon('check','tiny')} ${l.tipo==='receber'?'Recebido':'Pago'} ${formatDateBR(finDataEfetiva(l))}</span>` : '<span class="pill replay">Em aberto</span>'}</td>
+          <td style="white-space:nowrap">${l.pagou? `<span class="pill pago">${icon('check','tiny')} ${l.tipo==='receber'?'Recebido':'Pago'} ${formatDateBR(finDataEfetiva(l))}</span>` : (finSituacao(l)==='vencido' ? '<span class="pill despesa">Vencido</span>' : `<span class="pill replay">${l.tipo==='receber'?'A receber':'A pagar'}</span>`)}</td>
           <td style="text-align:right;font-weight:600;white-space:nowrap">${formatBRL(l.pagou? finValorEfetivo(l) : l.valor)}</td>
-        </tr>`).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nada encontrado. Tente outro termo ou amplie o período para "Todos os meses".</td></tr>`}
+        </tr>`).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nada encontrado. Tente outro termo, outra situação ou amplie o período para "Todos os meses".</td></tr>`}
       </tbody>
     </table></div>`;
 }
@@ -10116,7 +10125,7 @@ function renderFinLancamentos(container){
     `;
   }
 
-  const buscando = !!finBusca.texto.trim();
+  const buscando = finBuscaAtiva();
   container.innerHTML = `
     <div class="fin-resumo">
       <div class="fin-resumo-card"><div class="label">A receber em ${MESES_LONGO[finView.month]}</div><div class="value">${formatBRL(resumo.aReceber)}</div><div class="hint">ainda em aberto</div></div>
@@ -10139,7 +10148,13 @@ function renderFinLancamentos(container){
         <option value="ano" ${finBusca.periodo==='ano'?'selected':''}>Ano selecionado</option>
         <option value="todos" ${finBusca.periodo==='todos'?'selected':''}>Todos os meses</option>
       </select>
-      ${finBusca.texto.trim()? `<button type="button" class="btn-outline" id="fin-busca-limpar">${icon('x','tiny')} Limpar</button>` : ''}
+      <select class="ps-input" id="fin-busca-situacao" title="Situação">
+        <option value="todas" ${finBusca.situacao==='todas'?'selected':''}>Todas as situações</option>
+        <option value="pago" ${finBusca.situacao==='pago'?'selected':''}>Recebido / Pago</option>
+        <option value="aberto" ${finBusca.situacao==='aberto'?'selected':''}>A receber / A pagar</option>
+        <option value="vencido" ${finBusca.situacao==='vencido'?'selected':''}>Vencido</option>
+      </select>
+      ${finBuscaAtiva()? `<button type="button" class="btn-outline" id="fin-busca-limpar">${icon('x','tiny')} Limpar</button>` : ''}
     </div>
     ${buscando? '' : `
     <div class="community-filters" style="justify-content:space-between;align-items:center">
@@ -10162,8 +10177,9 @@ function renderFinLancamentos(container){
   });
   buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ clearTimeout(buscaTimer); renderFinanceiro(); } });
   document.getElementById('fin-busca-periodo').addEventListener('change', e=>{ finBusca.periodo = e.target.value; renderFinanceiro(); });
+  document.getElementById('fin-busca-situacao').addEventListener('change', e=>{ finBusca.situacao = e.target.value; renderFinanceiro(); });
   const limparEl = document.getElementById('fin-busca-limpar');
-  if(limparEl) limparEl.addEventListener('click', ()=>{ finBusca.texto=''; renderFinanceiro(); });
+  if(limparEl) limparEl.addEventListener('click', ()=>{ finBusca.texto=''; finBusca.situacao='todas'; renderFinanceiro(); });
   document.querySelectorAll('[data-finconta]').forEach(btn=>{
     btn.addEventListener('click',()=>{ finExtratoConta = btn.dataset.finconta; renderFinanceiro(); });
   });
