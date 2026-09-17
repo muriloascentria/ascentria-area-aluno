@@ -8328,6 +8328,7 @@ function renderConteudo(){
 /* ================= VIEW: VENDAS (Registro de Sessões 1:1 — equipe interna) ================= */
 let vendasFiltroVendedor = 'todos';
 let vendasFiltroResultado = 'todos';
+let vendasFiltroMes = 'todos'; // 'todos' ou 'AAAA-MM' (mês da sessão)
 let vendasBusca = '';
 let clientesBusca = '';
 let clientesOrdem = 'nome'; // 'nome' (A–Z) ou 'recentes'
@@ -8415,37 +8416,62 @@ function whatsappCell(num){
     ? `<a class="link-btn" href="${escapeAttr(href)}" target="_blank" rel="noopener">${escapeHtml(txt)}</a>`
     : escapeHtml(txt);
 }
+/* Mês da sessão no formato AAAA-MM: usa a data ISO e, se faltar, tenta a data em texto (dd/mm/aaaa). */
+function vendaMesKey(v){
+  const iso = String(v.dataSessao||'');
+  if(/^\d{4}-\d{2}/.test(iso)) return iso.slice(0,7);
+  const m = String(v.dataTexto||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}` : '';
+}
+function vendaMesLabel(key){
+  const [y,m] = key.split('-').map(Number);
+  const nomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return `${nomes[m-1]||key} ${y}`;
+}
 function renderVendas(){
   const vendedores = Array.from(new Set(VENDA_SESSOES.map(v=>v.vendedor).filter(Boolean))).sort();
   const resultados = Array.from(new Set(VENDA_SESSOES.map(v=>v.resultado).filter(Boolean))).sort();
-  const busca = vendasBusca.trim().toLowerCase();
+  const meses = Array.from(new Set(VENDA_SESSOES.map(vendaMesKey).filter(Boolean))).sort().reverse();
+  const busca = normTxt(vendasBusca).trim();
   const filtradas = VENDA_SESSOES.filter(v=>
     (vendasFiltroVendedor==='todos' || v.vendedor===vendasFiltroVendedor) &&
     (vendasFiltroResultado==='todos' || v.resultado===vendasFiltroResultado) &&
-    (!busca || v.lead.toLowerCase().includes(busca))
+    (vendasFiltroMes==='todos' || vendaMesKey(v)===vendasFiltroMes) &&
+    (!busca || normTxt(v.lead).includes(busca))
   ).slice().sort((a,b)=> (b.numero||0)-(a.numero||0));
 
-  const fechadas = VENDA_SESSOES.filter(v=>v.resultado==='Vendido');
+  /* Indicadores do topo respondem aos filtros: escolheu um vendedor ou um mês, os números passam a
+     ser só daquele recorte (com tudo em "Todos", é o total geral). */
+  const base = filtradas;
+  const filtroAtivo = vendasFiltroVendedor!=='todos' || vendasFiltroResultado!=='todos' || vendasFiltroMes!=='todos' || !!busca;
+  const fechadas = base.filter(v=>v.resultado==='Vendido');
   const faturamento = fechadas.reduce((a,v)=>a+(v.valorNumerico||0),0);
   /* Taxa de fechamento: só considera reuniões que aconteceram (Presença = Show) — um no-show não é
      uma oportunidade de venda perdida por conta do discurso, então não deve puxar a taxa pra baixo. */
-  const showSessoes = VENDA_SESSOES.filter(v=>v.presenca==='Show');
+  const showSessoes = base.filter(v=>v.presenca==='Show');
   const fechadasShow = showSessoes.filter(v=>v.resultado==='Vendido');
   const taxaFechamento = showSessoes.length ? Math.round(fechadasShow.length/showSessoes.length*100) : 0;
-  const noShowSessoes = VENDA_SESSOES.filter(v=>v.presenca==='No-show');
-  const taxaNoShow = VENDA_SESSOES.length ? Math.round(noShowSessoes.length/VENDA_SESSOES.length*100) : 0;
-  const indicadores = vendasIndicadores(VENDA_SESSOES);
+  const noShowSessoes = base.filter(v=>v.presenca==='No-show');
+  const taxaNoShow = base.length ? Math.round(noShowSessoes.length/base.length*100) : 0;
+  const indicadores = vendasIndicadores(base);
+  const recorte = [
+    vendasFiltroVendedor!=='todos' ? vendasFiltroVendedor : '',
+    vendasFiltroMes!=='todos' ? vendaMesLabel(vendasFiltroMes) : '',
+    vendasFiltroResultado!=='todos' ? vendasFiltroResultado : '',
+    busca ? `lead "${vendasBusca.trim()}"` : '',
+  ].filter(Boolean).join(' · ');
 
   document.getElementById('view-vendas').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Registro de sessões 1:1 de venda de mentoria, importado da planilha de vendas.</div>
 
     <div class="kpi-row">
-      <div class="kpi-tile"><div class="label">Sessões registradas</div><div class="value">${VENDA_SESSOES.length}</div></div>
+      <div class="kpi-tile"><div class="label">Sessões registradas</div><div class="value">${base.length}</div></div>
       <div class="kpi-tile"><div class="label">Vendas fechadas</div><div class="value">${fechadas.length}</div></div>
       <div class="kpi-tile"><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
       <div class="kpi-tile"><div class="label">Taxa de no-show</div><div class="value">${taxaNoShow}%</div></div>
       <div class="kpi-tile"><div class="label">Faturamento (vendas fechadas)</div><div class="value" style="font-size:16px">${formatBRL(faturamento)}</div></div>
     </div>
+    <p class="kpi-note" style="margin-top:-6px">${filtroAtivo ? `Indicadores do recorte: <strong>${escapeHtml(recorte)}</strong>.` : 'Indicadores de todas as sessões registradas — mudam conforme os filtros abaixo.'}</p>
 
     <h2 class="section-title">${icon('idcard')} Registro de Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
@@ -8460,6 +8486,12 @@ function renderVendas(){
         <select class="ps-input" id="vendas-filtro-resultado">
           <option value="todos">Todos</option>
           ${resultados.map(r=>`<option value="${escapeAttr(r)}" ${vendasFiltroResultado===r?'selected':''}>${escapeHtml(r)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Mês</label>
+        <select class="ps-input" id="vendas-filtro-mes">
+          <option value="todos">Todos</option>
+          ${meses.map(m=>`<option value="${m}" ${vendasFiltroMes===m?'selected':''}>${escapeHtml(vendaMesLabel(m))}</option>`).join('')}
         </select>
       </div>
       <div class="field"><label>Buscar por lead</label><input class="ps-input" type="text" id="vendas-busca" value="${escapeAttr(vendasBusca)}" placeholder="Nome do lead..."></div>
@@ -8537,9 +8569,8 @@ function renderVendas(){
   `;
   document.getElementById('vendas-filtro-vendedor').addEventListener('change', e=>{ vendasFiltroVendedor = e.target.value; renderVendas(); });
   document.getElementById('vendas-filtro-resultado').addEventListener('change', e=>{ vendasFiltroResultado = e.target.value; renderVendas(); });
-  const buscaInp = document.getElementById('vendas-busca');
-  buscaInp.addEventListener('input', ()=>{ vendasBusca = buscaInp.value; });
-  buscaInp.addEventListener('change', ()=>{ vendasBusca = buscaInp.value; renderVendas(); });
+  document.getElementById('vendas-filtro-mes').addEventListener('change', e=>{ vendasFiltroMes = e.target.value; renderVendas(); });
+  bindBuscaInput('vendas-busca', v=>{ vendasBusca = v; }, renderVendas);
   document.getElementById('vendas-pdf-btn').addEventListener('click', ()=> exportVendasPDF(filtradas, indicadores));
   document.querySelectorAll('[data-cc-toggle]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
