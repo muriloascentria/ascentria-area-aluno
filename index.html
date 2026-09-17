@@ -9102,7 +9102,7 @@ function renderVisaoGeral(){
     </div>
 
     <h2 class="section-title" style="margin-top:28px">${icon('idcard')} Códigos de Acesso</h2>
-    <p class="section-sub" style="margin-top:-6px">Gere um código e passe pra pessoa usar na aba "Criar conta". Cada código só pode ser usado uma vez e já define o acesso da conta nova: Mentoria (mentorado) ou Método (curso gravado).</p>
+    <p class="section-sub" style="margin-top:-6px">Gere um código e passe pra pessoa usar na aba "Criar conta". Cada código só pode ser usado uma vez e já define o acesso da conta nova: Mentoria (mentorado) ou Método (curso gravado). Assim que a pessoa se cadastra, o código some desta lista automaticamente.</p>
     <div class="add-form">
       <div class="field"><label>Tipo de acesso</label>
         <select class="ps-input" id="new-code-tier">
@@ -9116,23 +9116,20 @@ function renderVisaoGeral(){
     </div>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Código</th><th>Tipo</th><th>Identificação</th><th>Situação</th><th></th></tr></thead>
+        <thead><tr><th>Código</th><th>Tipo</th><th>Identificação</th><th></th></tr></thead>
         <tbody>
-          ${ACCESS_CODES.map(c=>{
-            const used = !!c.usedBy;
-            const usedPerson = used ? (getPerson(c.usedBy)||{}).name || 'Conta removida' : '';
-            return `
+          ${/* Só os códigos ainda disponíveis: o usado some da lista no momento do cadastro (o banco
+               continua guardando quem usou qual código, em access_codes.used_by). */''}
+          ${ACCESS_CODES.filter(c=>!c.usedBy).map(c=>`
             <tr>
               <td style="font-family:monospace;font-weight:600;white-space:nowrap">${escapeHtml(c.code)}</td>
               <td><span class="resp-pill">${c.tier==='curso'? (c.bonus? 'Método + Bônus' : 'Método') : 'Mentoria'}</span></td>
               <td>${escapeHtml(c.label||'—')}</td>
-              <td>${used ? `<span class="pill replay">Usado por ${escapeHtml(usedPerson)}</span>` : '<span class="pill live">Disponível</span>'}</td>
-              <td>
-                ${!used ? `<button class="btn-mini" data-copy-code="${escapeAttr(c.code)}">${icon('copy')} Copiar</button>
-                <button class="btn-mini danger" data-del-code="${c.id}">${icon('trash')} Remover</button>` : ''}
+              <td style="white-space:nowrap">
+                <button class="btn-mini" data-copy-code="${escapeAttr(c.code)}">${icon('copy')} Copiar</button>
+                <button class="btn-mini danger" data-del-code="${c.id}">${icon('trash')} Remover</button>
               </td>
-            </tr>`;
-          }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum código gerado ainda.</td></tr>`}
+            </tr>`).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum código disponível no momento.</td></tr>`}
         </tbody>
       </table>
     </div>
