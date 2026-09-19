@@ -610,10 +610,11 @@
   /* Barra de busca simples (Aulas, Visão Geral) */
   .busca-bar{display:flex;gap:8px;align-items:center;margin:8px 0 14px;}
   .busca-bar .ps-input{margin:0;flex:1;max-width:460px;}
+  .busca-bar.larga .ps-input{max-width:none;}
   .busca-bar .btn-outline{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
   .busca-info{font-size:12px;color:var(--text-mute);margin:-6px 0 12px;}
   /* Seções recolhíveis da Visão Geral */
-  .vg-sec-head{display:flex;align-items:center;gap:10px;margin-top:28px;cursor:pointer;user-select:none;}
+  .vg-sec-head{display:flex;align-items:center;gap:10px;margin:28px 0 16px;cursor:pointer;user-select:none;}
   .vg-sec-head .section-title{margin:0;}
   .vg-sec-head .qtd{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--bg-elev);color:var(--text-dim);}
   .vg-sec-toggle{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-mute);background:none;border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;}
@@ -1135,6 +1136,7 @@
   /* Add-entry forms (checklist / registro de contatos) */
   .add-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;background:var(--bg-card);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin:14px 0 26px;}
   .add-form .field{display:flex;flex-direction:column;}
+  .add-form .field[hidden]{display:none;}
   .add-form .field.full{grid-column:1/-1;}
   .add-form label{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
   .add-form textarea.ps-input{min-height:38px;}
@@ -2181,7 +2183,7 @@ let ANALISE_SESSOES = []; // Análise Sessões 1:1 — uma linha por sessão reg
 let analiseBusca = '';
 let aulasBusca = '';                       // busca na aba Aulas (título da aula ou nome de material anexado)
 let vgBusca = { mentorados:'', curso:'' }; // busca por nome nas listas da Visão Geral
-let vgAberto = { mentorados:true, curso:true }; // listas da Visão Geral recolhidas/expandidas
+let vgAberto = { mentorados:true, curso:true, codigos:true }; // listas da Visão Geral recolhidas/expandidas
 let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
 let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/visível pra equipe interna, ver bootstrapData
 /* Financeiro interno da Ascentria (equipe interna) — controle de Contas a Receber/Pagar da empresa,
@@ -2254,6 +2256,8 @@ function mapLiveSessionRow(row){
        individuais (studentId preenchido) ignoram isso, sempre visíveis só pro aluno específico. */
     audience: row.audience || 'mentorado',
     linkGravacao: row.link_gravacao || '',
+    modalidade: row.modalidade || 'meet', // reuniões individuais: 'meet' | 'presencial'
+    local: row.local || '',
     /* null = encontro coletivo, visível na Agenda ao Vivo de todos; preenchido = reunião individual
        (agendada de dentro do Acompanhamento Interno de um mentorado específico), visível só pra esse
        aluno e pra equipe interna. */
@@ -2677,7 +2681,7 @@ function mapProfileRow(p){
     },
     checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : []})),
     sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||'',responsavel:x.responsavel||''})),
-    contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
+    contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,tipo:c.tipo||'',responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
     registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
   };
 }
@@ -3128,7 +3132,7 @@ function syncInternalRecordDelete(id){
   syncNow(sb.from('internal_records').delete().eq('id', id));
 }
 async function syncContatoInsert(sid, c){
-  const { data, error } = await sb.from('contatos').insert({student_id:sid, data:c.data, responsavel:c.responsavel, resumo:c.resumo, link_gravacao:c.linkGravacao, link_transcricao:c.linkTranscricao, synced_to_sessions:false}).select().single();
+  const { data, error } = await sb.from('contatos').insert({student_id:sid, data:c.data, tipo:c.tipo||null, responsavel:c.responsavel, resumo:c.resumo, link_gravacao:c.linkGravacao, link_transcricao:c.linkTranscricao, synced_to_sessions:false}).select().single();
   if(error) throw error;
   return data.id;
 }
@@ -3531,6 +3535,8 @@ async function syncLiveSessionInsert(row){
     student_id: row.student_id || null,
     tipo: row.tipo || null,
     audience: row.audience || 'mentorado',
+    modalidade: row.modalidade || null,
+    local: row.local || null,
   }).select().single();
   if(error) throw error;
   return data;
@@ -5407,10 +5413,10 @@ function renderAgenda(){
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
       <div class="agenda-info">
         <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}${watched? '<span class="pill watched">'+icon('check','tiny')+' Assistido</span>' : ''}</div>
-        <div class="meta">${l.time} — ${linkify(l.desc)}</div>
+        <div class="meta">${l.time} — ${linkify(l.desc)}${l.studentId && l.modalidade==='presencial' && l.local ? ` · <strong>Local:</strong> ${escapeHtml(l.local)}` : ''}</div>
       </div>
       ${l.type==='upcoming'
-        ? `<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a>`
+        ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a></div>`
         : `<div class="agenda-actions">
             ${l.linkGravacao
               ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('play','tiny')} Assistir</a>`
@@ -7545,6 +7551,10 @@ function openTarefaAulasModal(s, t){
     renderInterno();
   });
 }
+function contatoTipoLabel(c){
+  const t = c.tipo || (c.linkGravacao || c.linkTranscricao ? 'meet' : '');
+  return t==='meet' ? 'Google Meet' : t==='presencial' ? 'Presencial' : t==='whatsapp' ? 'WhatsApp' : '—';
+}
 function renderInterno(){
   const s = getStudent(currentStudentId);
   const d = s.diagnostico;
@@ -7645,7 +7655,7 @@ function renderInterno(){
     </div>
     </div>
 
-    ${intHead('encontros', 'video', 'Encontros Gravados', s.sessions.length)}
+    ${intHead('encontros', 'video', 'Contatos Registrados', s.sessions.length)}
     ${intBody('encontros')}
     <div class="table-wrap">
       <table class="check-table">
@@ -7658,23 +7668,24 @@ function renderInterno(){
               <td>${sess.linkGravacao? `<a class="btn-mini" href="${escapeAttr(sess.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
               <td>${sess.linkTranscricao? `<a class="btn-mini" href="${escapeAttr(sess.linkTranscricao)}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
             </tr>
-          `).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum encontro registrado ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum contato registrado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
     <p class="kpi-note">Em produção, esta tela sincronizaria automaticamente com a planilha interna da equipe (Google Sheets).</p>
     </div>
 
-    ${intHead('contatos', 'comment', 'Registro de Contatos (Reunião ou WhatsApp)', s.contatos.length)}
+    ${intHead('contatos', 'comment', 'Registro de Contatos', s.contatos.length)}
     ${intBody('contatos')}
-    <p class="section-sub" style="margin-top:2px">Qualquer pessoa da equipe que teve contato com o mentorado — em reunião ou orientação por WhatsApp — pode registrar aqui.</p>
+    <p class="section-sub" style="margin-top:0">Qualquer pessoa da equipe que teve contato com o mentorado — reunião no Google Meet, reunião presencial ou contato por WhatsApp — pode registrar aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Data da Reunião</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th></th></tr></thead>
+        <thead><tr><th>Data</th><th>Tipo</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th></th></tr></thead>
         <tbody id="contatos-tbody">
           ${s.contatos.map(c=>`
             <tr>
               <td style="white-space:nowrap">${c.data}</td>
+              <td style="white-space:nowrap">${contatoTipoLabel(c)}</td>
               <td><span class="resp-pill">${escapeHtml(c.responsavel)}</span></td>
               <td style="min-width:260px">${linkify(c.resumo)}</td>
               <td>${c.linkGravacao? `<a class="btn-mini" href="${escapeAttr(c.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
@@ -7684,50 +7695,67 @@ function renderInterno(){
                 : `<button class="btn-mini" data-sync-session="${c.id}">${icon('upload')} Adicionar às Sessões</button>`}</td>
               <td><button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
     <p class="kpi-note" style="margin-top:6px">Automatize: ao adicionar um registro aqui, use "Adicionar às Sessões" para que ele apareça também em Minhas Sessões 1:1 do aluno. Use "Remover" para tirar de lá se necessário.</p>
     <div class="add-form">
-      <div class="field"><label>Data da reunião</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
+      <div class="field"><label>Tipo de contato</label>
+        <select class="ps-input" id="new-contato-tipo">
+          <option value="meet">Reunião no Google Meet</option>
+          <option value="presencial">Reunião Presencial</option>
+          <option value="whatsapp">Contato por WhatsApp</option>
+        </select>
+      </div>
+      <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
       <div class="field"><label>Responsável</label><select class="ps-input" id="new-contato-resp">${selectOpts(RESPONSAVEL_CONTATO_OPTS, '')}</select></div>
       <div class="field full"><label>Resumo</label><textarea class="ps-input" id="new-contato-resumo" placeholder="O que foi tratado no contato..."></textarea></div>
-      <div class="field"><label>Link da gravação</label><input class="ps-input" type="text" id="new-contato-grav" placeholder="https://..."></div>
-      <div class="field"><label>Link da transcrição</label><input class="ps-input" type="text" id="new-contato-transc" placeholder="https://..."></div>
+      <div class="field" data-contato-so-meet><label>Link da gravação</label><input class="ps-input" type="text" id="new-contato-grav" placeholder="https://..."></div>
+      <div class="field" data-contato-so-meet><label>Link da transcrição</label><input class="ps-input" type="text" id="new-contato-transc" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-contato-btn">${icon('plus')} Adicionar registro</button></div>
     </div>
     </div>
 
-    ${intHead('futuros', 'calendar', 'Registro de Contatos Futuros (Reuniões Agendadas)', futuros.length)}
+    ${intHead('futuros', 'calendar', 'Agendamento de Encontros', futuros.length)}
     ${intBody('futuros')}
-    <p class="section-sub" style="margin-top:2px">Agende aqui a próxima reunião com este mentorado — ao salvar, ela aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
+    <p class="section-sub" style="margin-top:0">Agende aqui o próximo encontro com este mentorado — ao salvar, ele aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Descrição</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
+        <thead><tr><th>Título</th><th>Modalidade</th><th>Data</th><th>Horário / detalhes</th><th>Descrição</th><th>Situação</th><th>Link / Local do encontro</th><th></th></tr></thead>
         <tbody id="contatos-futuros-tbody">
           ${futuros.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
             <tr>
               <td style="min-width:200px">${escapeHtml(l.title)}</td>
+              <td style="white-space:nowrap">${l.modalidade==='presencial' ? 'Presencial' : 'Google Meet'}</td>
               <td style="white-space:nowrap">${l.date}</td>
               <td style="min-width:160px">${escapeHtml(l.time||'—')}</td>
               <td style="min-width:220px">${linkify(l.desc)}</td>
               <td>${l.type==='upcoming'? '<span class="pill live">Próximo</span>' : '<span class="pill replay">Passado</span>'}</td>
-              <td style="min-width:200px"><input class="ps-input" data-live-link="${l.id}" value="${escapeAttr(l.linkGravacao)}" placeholder="https://..."></td>
+              <td style="min-width:200px">${l.modalidade==='presencial'
+                ? `<input class="ps-input" data-live-local="${l.id}" value="${escapeAttr(l.local||'')}" placeholder="Local do encontro">`
+                : `<input class="ps-input" data-live-link="${l.id}" value="${escapeAttr(l.linkGravacao)}" placeholder="https://meet.google.com/...">`}</td>
               <td><button class="btn-mini danger" data-del-contato-futuro="${l.id}">${icon('trash')} Remover</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">Nenhuma reunião futura agendada ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum encontro agendado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
     <div class="add-form">
       <div class="field full"><label>Título</label><input class="ps-input" type="text" id="new-contatofuturo-title" placeholder="Ex.: Sessão 1:1 — ${escapeAttr(s.name)}"></div>
+      <div class="field"><label>Modalidade</label>
+        <select class="ps-input" id="new-contatofuturo-modalidade">
+          <option value="meet">Reunião no Google Meet</option>
+          <option value="presencial">Reunião Presencial</option>
+        </select>
+      </div>
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-contatofuturo-data"></div>
       <div class="field"><label>Horário</label><input class="ps-input" type="time" id="new-contatofuturo-hour"></div>
       <div class="field"><label>Detalhes (opcional)</label><input class="ps-input" type="text" id="new-contatofuturo-timedetail" placeholder="Ex.: Turma 2026.1"></div>
       <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-contatofuturo-desc" placeholder="Pauta da reunião..."></textarea></div>
-      <div class="field full"><label>Link da gravação (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-contatofuturo-link" placeholder="https://..."></div>
-      <div class="actions"><button class="btn-accent" id="add-contatofuturo-btn">${icon('plus')} Agendar reunião</button></div>
+      <div class="field full" id="new-contatofuturo-link-wrap"><label>Link do encontro (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-contatofuturo-link" placeholder="https://meet.google.com/..."></div>
+      <div class="field full" id="new-contatofuturo-local-wrap" hidden><label>Local do encontro</label><input class="ps-input" type="text" id="new-contatofuturo-local" placeholder="Ex.: Consultório Ascentria — Rua ..., 123"></div>
+      <div class="actions"><button class="btn-accent" id="add-contatofuturo-btn">${icon('plus')} Agendar encontro</button></div>
     </div>
     </div>
 
@@ -7877,38 +7905,49 @@ function renderInterno(){
       renderInterno();
     });
   });
+  /* Tipo de contato: só a reunião no Google Meet tem gravação e transcrição. */
+  const contatoTipoSel = document.getElementById('new-contato-tipo');
+  const contatoAjustaCampos = ()=>{ const meet = contatoTipoSel.value==='meet'; document.querySelectorAll('[data-contato-so-meet]').forEach(el=>{ el.hidden = !meet; }); };
+  contatoTipoSel.addEventListener('change', contatoAjustaCampos); contatoAjustaCampos();
   document.getElementById('add-contato-btn').addEventListener('click', async ()=>{
     const data = document.getElementById('new-contato-data').value.trim();
     const responsavel = document.getElementById('new-contato-resp').value.trim();
     const resumo = document.getElementById('new-contato-resumo').value.trim();
     if(!data || !responsavel || !resumo) return;
-    const linkGravacao = document.getElementById('new-contato-grav').value.trim();
-    const linkTranscricao = document.getElementById('new-contato-transc').value.trim();
+    const tipo = contatoTipoSel.value;
+    const linkGravacao = tipo==='meet' ? document.getElementById('new-contato-grav').value.trim() : '';
+    const linkTranscricao = tipo==='meet' ? document.getElementById('new-contato-transc').value.trim() : '';
     const btn = document.getElementById('add-contato-btn');
     btn.disabled = true;
-    const c = {data, responsavel, resumo, linkGravacao, linkTranscricao, syncedToSessions:false, sessionId:null};
+    const c = {data, tipo, responsavel, resumo, linkGravacao, linkTranscricao, syncedToSessions:false, sessionId:null};
     try{
       c.id = await syncContatoInsert(s.id, c);
       s.contatos.push(c);
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
+  /* Modalidade do encontro: Google Meet pede o link; presencial pede o local. */
+  const modSel = document.getElementById('new-contatofuturo-modalidade');
+  const modAjusta = ()=>{ const pres = modSel.value==='presencial'; document.getElementById('new-contatofuturo-link-wrap').hidden = pres; document.getElementById('new-contatofuturo-local-wrap').hidden = !pres; };
+  modSel.addEventListener('change', modAjusta); modAjusta();
   document.getElementById('add-contatofuturo-btn').addEventListener('click', async ()=>{
     const eventDate = document.getElementById('new-contatofuturo-data').value;
     if(!eventDate) return;
+    const modalidade = modSel.value;
+    const local = modalidade==='presencial' ? document.getElementById('new-contatofuturo-local').value.trim() : '';
     const title = document.getElementById('new-contatofuturo-title').value.trim() || `Sessão 1:1 — ${s.name}`;
     const eventHour = document.getElementById('new-contatofuturo-hour').value;
     const timeDetail = document.getElementById('new-contatofuturo-timedetail').value.trim();
     const eventTime = [formatHoraBR(eventHour), timeDetail].filter(Boolean).join(' · ');
     const description = document.getElementById('new-contatofuturo-desc').value.trim();
-    const linkGravacao = document.getElementById('new-contatofuturo-link').value.trim();
+    const linkGravacao = modalidade==='meet' ? document.getElementById('new-contatofuturo-link').value.trim() : '';
     const btn = document.getElementById('add-contatofuturo-btn');
     btn.disabled = true;
     try{
       /* student_id preenchido: essa reunião fica privada, só aparece na Agenda ao Vivo deste mentorado
          (ver renderAgenda) — nunca na de outros alunos. tipo:'individual' — 1h depois do horário
          marcado, sai da Agenda ao Vivo e passa a aparecer em Minhas Sessões 1:1 (ver renderSessoes). */
-      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, event_hour: eventHour||null, description, link_gravacao: linkGravacao||null, student_id:s.id, tipo:'individual'});
+      const row = await syncLiveSessionInsert({title, event_date:eventDate, event_time:eventTime, event_hour: eventHour||null, description, link_gravacao: linkGravacao||null, student_id:s.id, tipo:'individual', modalidade, local: local||null});
       LIVE_SESSIONS.push(mapLiveSessionRow(row));
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
@@ -7919,6 +7958,14 @@ function renderInterno(){
       if(!l) return;
       l.linkGravacao = inp.value.trim();
       syncLiveSessionUpdate(l.id, {link_gravacao: l.linkGravacao || null});
+    });
+  });
+  document.querySelectorAll('#contatos-futuros-tbody [data-live-local]').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const l = LIVE_SESSIONS.find(x=>x.id==inp.dataset.liveLocal);
+      if(!l) return;
+      l.local = inp.value.trim();
+      syncLiveSessionUpdate(l.id, {local: l.local || null});
     });
   });
   document.querySelectorAll('[data-del-contato-futuro]').forEach(btn=>{
@@ -9143,7 +9190,7 @@ function renderVisaoGeral(){
     ${secHead('mentorados','users','Mentorados', mentoradosTodos.length, mentorados.length)}
     <div id="vg-sec-mentorados" style="${vgAberto.mentorados?'':'display:none'}">
     <p class="section-sub" style="margin-top:4px">Clique em "Abrir" para ver a plataforma como esse mentorado vê. O campo "Acesso" muda o aluno para o Curso Gravado (sem mentoria individual, só Aulas e uma comunidade própria).</p>
-    <div class="busca-bar"><input class="ps-input" type="text" id="vg-busca-mentorados" value="${escapeAttr(vgBusca.mentorados)}" placeholder="Buscar mentorado pelo nome…">${vgBusca.mentorados.trim()? `<button type="button" class="btn-outline" data-vg-limpar="mentorados">${icon('x','tiny')} Limpar</button>` : ''}</div>
+    <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-mentorados" value="${escapeAttr(vgBusca.mentorados)}" placeholder="Buscar mentorado pelo nome…">${vgBusca.mentorados.trim()? `<button type="button" class="btn-outline" data-vg-limpar="mentorados">${icon('x','tiny')} Limpar</button>` : ''}</div>
     <div class="table-wrap">
       <table class="check-table vg-table">
         <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
@@ -9181,7 +9228,7 @@ function renderVisaoGeral(){
     ${secHead('curso','film','Alunos do Curso Gravado', cursoTodos.length, cursoAlunos.length)}
     <div id="vg-sec-curso" style="${vgAberto.curso?'':'display:none'}">
     <p class="section-sub" style="margin-top:4px">Sem mentoria individual — só acesso às Aulas (liberadas uma a uma, conforme vai assistindo) e a uma comunidade própria, separada da dos mentorados.</p>
-    <div class="busca-bar"><input class="ps-input" type="text" id="vg-busca-curso" value="${escapeAttr(vgBusca.curso)}" placeholder="Buscar aluno do Método pelo nome…">${vgBusca.curso.trim()? `<button type="button" class="btn-outline" data-vg-limpar="curso">${icon('x','tiny')} Limpar</button>` : ''}</div>
+    <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-curso" value="${escapeAttr(vgBusca.curso)}" placeholder="Buscar aluno do Método pelo nome…">${vgBusca.curso.trim()? `<button type="button" class="btn-outline" data-vg-limpar="curso">${icon('x','tiny')} Limpar</button>` : ''}</div>
     <div class="table-wrap">
       <table class="check-table vg-table">
         <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th title="Ligado: todas as aulas abertas de uma vez, sem a liberação sequencial">Todas as aulas</th><th></th></tr></thead>
@@ -9212,8 +9259,9 @@ function renderVisaoGeral(){
     </div>
     </div>
 
-    <h2 class="section-title" style="margin-top:28px">${icon('idcard')} Códigos de Acesso</h2>
-    <p class="section-sub" style="margin-top:-6px">Gere um código e passe pra pessoa usar na aba "Criar conta". Cada código só pode ser usado uma vez e já define o acesso da conta nova: Mentoria (mentorado) ou Método (curso gravado). Assim que a pessoa se cadastra, o código some desta lista automaticamente.</p>
+    ${secHead('codigos','idcard','Códigos de Acesso', ACCESS_CODES.filter(c=>!c.usedBy).length, ACCESS_CODES.filter(c=>!c.usedBy).length)}
+    <div id="vg-sec-codigos" style="${vgAberto.codigos?'':'display:none'}">
+    <p class="section-sub" style="margin-top:4px">Gere um código e passe pra pessoa usar na aba "Criar conta". Cada código só pode ser usado uma vez e já define o acesso da conta nova: Mentoria (mentorado) ou Método (curso gravado). Assim que a pessoa se cadastra, o código some desta lista automaticamente.</p>
     <div class="add-form">
       <div class="field"><label>Tipo de acesso</label>
         <select class="ps-input" id="new-code-tier">
@@ -9243,6 +9291,7 @@ function renderVisaoGeral(){
             </tr>`).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum código disponível no momento.</td></tr>`}
         </tbody>
       </table>
+    </div>
     </div>
 
     <h2 class="section-title" style="margin-top:28px">${icon('download')} Backup dos Dados</h2>
