@@ -1138,6 +1138,12 @@
   .add-form .field{display:flex;flex-direction:column;}
   .add-form .field[hidden]{display:none;}
   .add-form .field.full{grid-column:1/-1;}
+  /* Formulários do Acompanhamento Interno com colunas fixas, pra cada linha ocupar a largura toda */
+  .add-form.form-tarefa{grid-template-columns:1fr 1fr 2.2fr;}
+  .add-form.form-contato{grid-template-columns:1.3fr .9fr 1fr 1.4fr 1.4fr;}
+  .add-form.form-contato.sem-links{grid-template-columns:1.3fr .9fr 1fr;}
+  .add-form.form-agenda{grid-template-columns:2.2fr 1.3fr 1fr 1fr;}
+  @media (max-width:760px){ .add-form.form-tarefa,.add-form.form-contato,.add-form.form-contato.sem-links,.add-form.form-agenda{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));} }
   .add-form label{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
   .add-form textarea.ps-input{min-height:38px;}
   .add-form .actions{display:flex;}
@@ -7551,6 +7557,12 @@ function openTarefaAulasModal(s, t){
     renderInterno();
   });
 }
+/* Resumo longo na tabela: mostra só o começo e um "Ver resumo" clicável que abre o texto inteiro. */
+function resumoCell(texto, id){
+  const t = String(texto||'');
+  if(t.length<=90) return linkify(t) || '—';
+  return `<div class="cell-collapse" data-cc="${id}">${linkify(t)}</div><button type="button" class="cc-toggle" data-cc-toggle="${id}" data-cc-abrir="Ver resumo" data-cc-fechar="Ocultar resumo">Ver resumo</button>`;
+}
 function contatoTipoLabel(c){
   const t = c.tipo || (c.linkGravacao || c.linkTranscricao ? 'meet' : '');
   return t==='meet' ? 'Google Meet' : t==='presencial' ? 'Presencial' : t==='whatsapp' ? 'WhatsApp' : '—';
@@ -7605,9 +7617,7 @@ function renderInterno(){
 
     <div class="stat-row">
       <div class="stat-card"><div class="label">Progresso do mentorado</div><div class="value individual">${s.progressoMentorado}%</div></div>
-      <div class="stat-card"><div class="label">Progresso do mentor</div><div class="value shared">${s.progressoMentor}%</div></div>
-      <div class="stat-card"><div class="label">Nicho / Subnicho</div><div class="value" style="font-size:13.5px">${d.nicho} — ${d.subnicho}</div></div>
-      <div class="stat-card"><div class="label">Tempo de consultório</div><div class="value" style="font-size:14px">${d.tempoConsultorio}</div></div>
+      <div class="stat-card"><div class="label">Nicho${(d.subnicho||'').trim()? ' / Subnicho' : ''}</div><div class="value" style="font-size:13.5px">${escapeHtml(d.nicho||'—')}${(d.subnicho||'').trim()? ' — '+escapeHtml(d.subnicho) : ''}</div></div>
     </div>
 
     ${intHead('diag', 'idcard', 'Diagnóstico de Abertura', null)}
@@ -7641,13 +7651,13 @@ function renderInterno(){
         </tbody>
       </table>
     </div>
-    <div class="add-form">
+    <div class="add-form form-tarefa">
       <div class="field full"><label>Nova tarefa</label><textarea class="ps-input" id="new-task-tarefa" rows="1" placeholder="Descreva a tarefa..."></textarea></div>
       <div class="field"><label>Responsável</label>
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
       </div>
       <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="new-task-prazo" placeholder="Ex.: 30 ago"></div>
-      <div class="field full"><label>Aulas de apoio (opcional — pode escolher mais de uma; <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
+      <div class="field aulas-apoio"><label>Aulas de apoio (opcional — pode escolher mais de uma; <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
         ${aulaPickHtml([...novaTarefaAulas], 'nt')}
       </div>
       <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
@@ -7686,7 +7696,7 @@ function renderInterno(){
               <td style="white-space:nowrap">${c.data}</td>
               <td style="white-space:nowrap">${contatoTipoLabel(c)}</td>
               <td><span class="resp-pill">${escapeHtml(c.responsavel)}</span></td>
-              <td style="min-width:260px">${linkify(c.resumo)}</td>
+              <td style="min-width:260px">${resumoCell(c.resumo, 'ct-'+c.id)}</td>
               <td>${c.linkGravacao? `<a class="btn-mini" href="${escapeAttr(c.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
               <td>${c.linkTranscricao? `<a class="btn-mini" href="${escapeAttr(c.linkTranscricao)}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
               <td style="white-space:nowrap">${c.syncedToSessions
@@ -7699,7 +7709,7 @@ function renderInterno(){
       </table>
     </div>
     <p class="kpi-note" style="margin-top:6px">Automatize: ao adicionar um registro aqui, use "Adicionar às Sessões" para que ele apareça também em Minhas Sessões 1:1 do aluno. Use "Remover" para tirar de lá se necessário.</p>
-    <div class="add-form">
+    <div class="add-form form-contato" id="form-contato">
       <div class="field"><label>Tipo de contato</label>
         <select class="ps-input" id="new-contato-tipo">
           <option value="meet">Reunião no Google Meet</option>
@@ -7709,9 +7719,9 @@ function renderInterno(){
       </div>
       <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
       <div class="field"><label>Responsável</label><select class="ps-input" id="new-contato-resp">${selectOpts(RESPONSAVEL_CONTATO_OPTS, '')}</select></div>
-      <div class="field full"><label>Resumo</label><textarea class="ps-input" id="new-contato-resumo" placeholder="O que foi tratado no contato..."></textarea></div>
       <div class="field" data-contato-so-meet><label>Link da gravação</label><input class="ps-input" type="text" id="new-contato-grav" placeholder="https://..."></div>
       <div class="field" data-contato-so-meet><label>Link da transcrição</label><input class="ps-input" type="text" id="new-contato-transc" placeholder="https://..."></div>
+      <div class="field full"><label>Resumo</label><textarea class="ps-input" id="new-contato-resumo" placeholder="O que foi tratado no contato..."></textarea></div>
       <div class="actions"><button class="btn-accent" id="add-contato-btn">${icon('plus')} Adicionar registro</button></div>
     </div>
     </div>
@@ -7740,8 +7750,8 @@ function renderInterno(){
         </tbody>
       </table>
     </div>
-    <div class="add-form">
-      <div class="field full"><label>Título</label><input class="ps-input" type="text" id="new-contatofuturo-title" placeholder="Ex.: Sessão 1:1 — ${escapeAttr(s.name)}"></div>
+    <div class="add-form form-agenda">
+      <div class="field titulo-largo"><label>Título</label><input class="ps-input" type="text" id="new-contatofuturo-title" placeholder="Ex.: Sessão 1:1 — ${escapeAttr(s.name)}"></div>
       <div class="field"><label>Modalidade</label>
         <select class="ps-input" id="new-contatofuturo-modalidade">
           <option value="meet">Reunião no Google Meet</option>
@@ -7903,9 +7913,17 @@ function renderInterno(){
       renderInterno();
     });
   });
+  document.querySelectorAll('#view-interno [data-cc-toggle]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const el = document.querySelector(`#view-interno [data-cc="${btn.dataset.ccToggle}"]`);
+      if(!el) return;
+      const aberto = el.classList.toggle('expanded');
+      btn.textContent = aberto ? btn.dataset.ccFechar : btn.dataset.ccAbrir;
+    });
+  });
   /* Tipo de contato: só a reunião no Google Meet tem gravação e transcrição. */
   const contatoTipoSel = document.getElementById('new-contato-tipo');
-  const contatoAjustaCampos = ()=>{ const meet = contatoTipoSel.value==='meet'; document.querySelectorAll('[data-contato-so-meet]').forEach(el=>{ el.hidden = !meet; }); };
+  const contatoAjustaCampos = ()=>{ const meet = contatoTipoSel.value==='meet'; document.querySelectorAll('[data-contato-so-meet]').forEach(el=>{ el.hidden = !meet; }); contatoTipoSel.closest('.add-form').classList.toggle('sem-links', !meet); };
   contatoTipoSel.addEventListener('change', contatoAjustaCampos); contatoAjustaCampos();
   document.getElementById('add-contato-btn').addEventListener('click', async ()=>{
     const data = document.getElementById('new-contato-data').value.trim();
