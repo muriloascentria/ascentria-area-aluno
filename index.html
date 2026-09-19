@@ -1022,6 +1022,8 @@
   .goal-aula.locked{opacity:.55;}
   .aula-pick{display:flex;flex-direction:column;gap:8px;}
   .aula-pick .ps-input{max-width:420px;}
+  .form-tarefa .aula-pick .ps-input{max-width:none;width:100%;}
+  .form-tarefa .field.aulas-apoio .aula-pick{width:100%;}
   .aula-pill-x{background:none;border:none;color:inherit;font-size:14px;line-height:1;padding:0 0 0 4px;cursor:pointer;font-family:inherit;opacity:.85;}
   .aula-pill-x:hover{opacity:1;}
   .aula-pick .mod{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);margin-top:4px;}
@@ -7657,7 +7659,7 @@ function renderInterno(){
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
       </div>
       <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="new-task-prazo" placeholder="Ex.: 30 ago"></div>
-      <div class="field aulas-apoio"><label>Aulas de apoio (opcional — pode escolher mais de uma; <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
+      <div class="field aulas-apoio"><label>Aulas de apoio (opcional · <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
         ${aulaPickHtml([...novaTarefaAulas], 'nt')}
       </div>
       <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
