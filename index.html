@@ -1055,6 +1055,26 @@
   .sec-toggle .sec-resumo{font-size:12px;color:var(--text-mute);font-weight:400;margin-left:auto;padding-left:10px;}
   .sec-corpo[hidden]{display:none;}
   .int-sec-corpo[hidden]{display:none;}
+  /* Seletor de mentorado no topo do Acompanhamento Interno */
+  .aluno-picker{position:relative;margin:0 0 16px;}
+  .aluno-picker-btn{display:flex;align-items:center;gap:12px;width:100%;max-width:520px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;cursor:pointer;color:var(--text);font:inherit;}
+  .aluno-picker-btn:hover{border-color:var(--danger);}
+  .aluno-picker-btn .ap-nome{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+  .aluno-picker-btn .ap-nome strong{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .aluno-picker-btn .ap-nome small{font-size:11.5px;color:var(--text-mute);}
+  .aluno-picker-btn > .icon{width:16px;height:16px;color:var(--text-mute);flex-shrink:0;}
+  .aluno-picker-btn[aria-expanded="true"] > .icon{transform:rotate(180deg);}
+  .aluno-picker-menu{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:100%;max-width:520px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,.35);padding:10px;}
+  .aluno-picker-menu[hidden]{display:none;}
+  .aluno-picker-menu .ps-input{margin:0 0 8px;}
+  .aluno-picker-lista{max-height:min(48vh,380px);overflow-y:auto;overscroll-behavior:contain;}
+  .ap-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 8px;border-radius:8px;background:none;border:none;color:var(--text);font:inherit;font-size:13px;cursor:pointer;}
+  .ap-item:hover,.ap-item.atual{background:var(--bg-card);}
+  .ap-item > span{display:flex;flex-direction:column;flex:1;min-width:0;}
+  .ap-item > span small{font-size:11px;color:var(--text-mute);}
+  .ap-item > .icon{color:var(--success);width:14px;height:14px;}
+  .ap-item[hidden]{display:none;}
+  .ap-vazio{padding:10px 8px;font-size:12.5px;color:var(--text-mute);font-style:italic;}
   .diag-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:22px;}
   .diag-panel .ps-section:first-of-type .ps-h{margin-top:0;}
   .field-error{color:var(--danger);font-size:11.5px;margin:-6px 0 10px;}
@@ -1322,6 +1342,7 @@
         <div class="role-toggle" id="role-toggle">
           <button data-role="aluno">Aluno</button>
           <button data-role="staff">Equipe Interna</button>
+          <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem">Visualização Consultora</button>
         </div>
         <button class="icon-btn" id="notif-btn" title="Notificações">
           <span class="dot-alert" id="notif-dot"></span>
@@ -1343,9 +1364,8 @@
               <button type="button" data-tema="claro"></button>
               <button type="button" data-tema="escuro"></button>
             </div>
-            <div class="dropdown-divider"></div>
-            <div class="label" id="profile-dropdown-label">Visualizar como (demo)</div>
-            <div id="profile-options"></div>
+            <div class="label" id="profile-dropdown-label" style="display:none">Visualizar como (demo)</div>
+            <div id="profile-options" style="display:none"></div>
           </div>
         </div>
       </div>
@@ -2241,6 +2261,11 @@ let MATERIALS = []; // populado em runtime a partir do Supabase (ver bootstrapDa
 
 /* ================= STATE ================= */
 let currentStudentId = null;
+/* Conta com direito ao botão "Visualização Consultora" (modo que imita o que as vendedoras veem). */
+const CONSULTORA_PREVIEW_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3']; // Murilo
+/* Equipe interna de verdade E fora do modo "Visualização Consultora": é o que libera os poderes que
+   as vendedoras não têm (dados do lead, vínculo com aluno, excluir análise, anexos do financeiro). */
+function staffPleno(){ return currentUserRole==='staff' && currentRole!=='consultora'; }
 let currentRole = 'aluno';
 let currentView = 'inicio';
 let panelQuadrantId = null;
@@ -3336,7 +3361,7 @@ async function finAnexoExcluir(a){
 /* Célula/bloco de anexos de um lançamento. tipos = quais tipos aparecem aqui; tiposAdd = quais podem ser
    anexados nesta tela (um único arquivo por tipo: depois de anexado, o espaço some até ser excluído). */
 function finAnexosHtml(l, tipos, tiposAdd){
-  const podeEditar = currentUserRole==='staff';
+  const podeEditar = staffPleno();
   const jaTem = (t)=> FIN_ANEXOS.some(a=>a.lancamentoId===l.id && a.tipo===t);
   const adicionaveis = (tiposAdd||tipos).filter(t=>!jaTem(t));
   const chips = FIN_ANEXOS.filter(a=>a.lancamentoId===l.id && tipos.includes(a.tipo)).map(a=>`
@@ -3817,11 +3842,28 @@ function setRole(role){
   if(currentUserRole==='vendas'){ setRoleVendas(); return; }
   currentRole = role;
   document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
+  document.getElementById('role-consultora').style.display = (currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id)) ? '' : 'none';
   document.querySelectorAll('#role-toggle [data-role]').forEach(b=>{
     const active = b.dataset.role===role;
     b.classList.toggle('active', active);
-    b.classList.toggle('staff-active', active && role==='staff');
+    b.classList.toggle('staff-active', active && (role==='staff' || role==='consultora'));
   });
+  /* "Visualização Consultora": a barra lateral e as telas ficam iguais às das vendedoras (Registro de
+     Sessões 1:1, Análise Sessões 1:1 e Treinamento Time), mas o botão lá em cima continua pra voltar. */
+  if(role==='consultora'){
+    document.querySelectorAll('.nav-item[data-view]').forEach(el=>{ el.style.display = 'none'; });
+    document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
+    ['nav-vendas','nav-analise','nav-treinamento'].forEach(id=>{ document.getElementById(id).style.display = 'flex'; });
+    document.getElementById('staff-group-label').style.display = 'flex';
+    document.getElementById('nav-prontuarios').style.display = 'none';
+    document.getElementById('profile-dropdown-label').style.display = 'none';
+    document.getElementById('profile-options').style.display = 'none';
+    document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`;
+    renderProfile();
+    updateNotifBadge();
+    if(!['vendas','analise','treinamento'].includes(currentView)) goTo('vendas'); else renderCurrentView();
+    return;
+  }
   /* Os itens da equipe interna ficam disponíveis o tempo todo para quem é da equipe — inclusive
      enquanto ela está vendo a plataforma como um aluno. Assim, abrir um aluno (pelo "Abrir" da Visão
      Geral ou pelo nome no menu de perfil) não fecha a parte interna: os dois lados convivem na barra
@@ -3885,12 +3927,11 @@ function setRole(role){
       ? `${icon(agIc)}<span>${agLabel}</span><span style="margin-left:auto;display:flex" title="Disponível apenas para mentorados da Mentoria Essência">${icon('lock','tiny')}</span>`
       : `${icon(agIc)}<span>${agLabel}</span>`;
   }
-  /* O seletor de alunos continua no menu de perfil mesmo no modo "Aluno", pra equipe pular de um
-     mentorado pro outro sem ter que voltar pro modo Equipe Interna a cada troca. */
-  document.getElementById('profile-dropdown-label').style.display = staffNav ? 'flex' : 'none';
-  document.getElementById('profile-options').style.display = staffNav ? 'block' : 'none';
-  document.getElementById('profile-dropdown-label').textContent = 'Ver dados de (equipe interna)';
-  document.getElementById('open-cadastro').innerHTML = role==='staff'
+  /* A escolha do mentorado saiu do menu da foto: agora fica no topo do Acompanhamento Interno (com
+     busca e fotos). O menu da foto mostra só o que é da própria pessoa da equipe. */
+  document.getElementById('profile-dropdown-label').style.display = 'none';
+  document.getElementById('profile-options').style.display = 'none';
+  document.getElementById('open-cadastro').innerHTML = (role==='staff')
     ? `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`
     : `${icon('idcard')}<span>${currentUserRole==='staff'? 'Dados do Aluno Selecionado' : 'Meus Dados Cadastrais'}</span>`;
   renderProfile();
@@ -3910,7 +3951,6 @@ function renderProfile(){
     : (getStudent(currentStudentId) || currentUserProfile);
   if(!s){
     document.getElementById('profile-name').textContent = '';
-    document.getElementById('profile-options').innerHTML = '<div class="label" style="padding:8px 10px">Nenhum mentorado cadastrado ainda.</div>';
     return;
   }
   const pa = document.getElementById('profile-avatar');
@@ -3922,25 +3962,7 @@ function renderProfile(){
     pa.style.backgroundImage = ''; pa.textContent = s.initials;
   }
   document.getElementById('profile-name').textContent = s.name.split(' ')[0];
-  const opts = document.getElementById('profile-options');
-  opts.innerHTML = STUDENTS.map(st=>`
-    <button class="opt" data-id="${st.id}">
-      ${initialsAvatar(st.initials,st.color,24,st.avatarUrl)}
-      <span>${st.name}${st.tier==='curso'? ` <span style="color:var(--text-mute);font-weight:400;font-size:11px">(${st.bonus? 'Método + Bônus' : 'Curso'})</span>` : ''}</span>
-    </button>
-  `).join('');
-  opts.querySelectorAll('.opt').forEach(el=>{
-    el.addEventListener('click',()=>{
-      /* Escolher um aluno aqui já abre a área dele (modo "Aluno"), sem precisar mexer no botão lá em
-         cima — igual ao "Abrir" da Visão Geral. Os itens da equipe interna seguem na barra lateral;
-         só o botão "Equipe Interna" lá em cima é que volta pro modo exclusivo da equipe. */
-      currentStudentId = el.dataset.id;
-      panelQuadrantId = null;
-      document.getElementById('profile-dropdown').classList.remove('open');
-      if(currentUserRole==='staff') setRole('aluno');
-      else { renderProfile(); renderCurrentView(); }
-    });
-  });
+  document.getElementById('profile-options').innerHTML = '';
 }
 
 function goTo(view){
@@ -7526,6 +7548,30 @@ function renderInterno(){
   const answers = getInternalAnswers(s.id, internoDiagTab);
   const editing = getInternalEditing(s.id, internoDiagTab);
   const aberto = getInternoAberto();
+  /* Seletor de mentorado (no lugar da lista que ficava no menu da foto): ordem alfabética, com foto,
+     e uma busca por nome pra achar rápido. Escolher abre o acompanhamento da pessoa aqui mesmo. */
+  const alunosOrdenados = STUDENTS.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  const tierLabel = (st)=> st.tier==='curso' ? (st.bonus? 'Método + Bônus' : 'Método') : 'Mentoria';
+  const alunoPickerHtml = `
+    <div class="aluno-picker" id="aluno-picker">
+      <button type="button" class="aluno-picker-btn" id="aluno-picker-btn" aria-expanded="false">
+        ${initialsAvatar(s.initials, s.color, 36, s.avatarUrl)}
+        <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${tierLabel(s)} · ${alunosOrdenados.length} aluno${alunosOrdenados.length===1?'':'s'} — clique para trocar</small></span>
+        ${icon('down')}
+      </button>
+      <div class="aluno-picker-menu" id="aluno-picker-menu" hidden>
+        <input class="ps-input" type="text" id="aluno-picker-busca" placeholder="Buscar pelo nome..." autocomplete="off">
+        <div class="aluno-picker-lista" id="aluno-picker-lista">
+          ${alunosOrdenados.map(st=>`
+            <button type="button" class="ap-item ${st.id===s.id?'atual':''}" data-ap-id="${st.id}" data-ap-nome="${escapeAttr(normTxt(st.name+' '+((st.cadastro||{}).nomeCompleto||'')))}">
+              ${initialsAvatar(st.initials, st.color, 28, st.avatarUrl)}
+              <span>${escapeHtml(st.name)}<small>${tierLabel(st)}</small></span>
+              ${st.id===s.id? icon('check','tiny') : ''}
+            </button>`).join('')}
+          <div class="ap-vazio" id="aluno-picker-vazio" hidden>Nenhum aluno com esse nome.</div>
+        </div>
+      </div>
+    </div>`;
   const intHead = (chave, ic, titulo, qtd)=> `
     <div class="vg-sec-head" data-int-toggle="${chave}">
       <h2 class="section-title">${ic? icon(ic)+' ' : ''}${titulo}</h2>
@@ -7536,7 +7582,8 @@ function renderInterno(){
   const futuros = LIVE_SESSIONS.filter(l=>l.studentId===s.id);
   document.getElementById('view-interno').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Dados vindos da planilha "Acompanhamento de Mentorados — Método Essência".</div>
-    <div class="actions" style="margin:-8px 0 16px;display:flex;gap:10px;flex-wrap:wrap">
+    ${alunoPickerHtml}
+    <div class="actions" style="margin:0 0 16px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn-outline" id="edit-aluno-btn">${icon('idcard')} Editar Dados do Aluno</button>
       <button class="btn-outline" id="acomp-pdf-btn">${icon('download')} Gerar Acompanhamento Completo (PDF)</button>
     </div>
@@ -7706,6 +7753,34 @@ function renderInterno(){
     </div>
   `;
   document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
+  /* Seletor de mentorado */
+  {
+    const btn = document.getElementById('aluno-picker-btn');
+    const menu = document.getElementById('aluno-picker-menu');
+    const busca = document.getElementById('aluno-picker-busca');
+    const fechar = ()=>{ menu.hidden = true; btn.setAttribute('aria-expanded','false'); document.removeEventListener('click', foraClick); };
+    const foraClick = (e)=>{ if(!document.getElementById('aluno-picker').contains(e.target)) fechar(); };
+    btn.addEventListener('click', ()=>{
+      if(menu.hidden){ menu.hidden = false; btn.setAttribute('aria-expanded','true'); busca.value=''; filtrar(); setTimeout(()=>{ busca.focus(); document.addEventListener('click', foraClick); },0); }
+      else fechar();
+    });
+    const filtrar = ()=>{
+      const q = normTxt(busca.value).trim();
+      let n = 0;
+      menu.querySelectorAll('.ap-item').forEach(it=>{ const ok = !q || it.dataset.apNome.includes(q); it.hidden = !ok; if(ok) n++; });
+      document.getElementById('aluno-picker-vazio').hidden = n>0;
+    };
+    busca.addEventListener('input', filtrar);
+    busca.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(); if(e.key==='Enter'){ const first = [...menu.querySelectorAll('.ap-item')].find(it=>!it.hidden); if(first) first.click(); } });
+    menu.querySelectorAll('.ap-item').forEach(it=>it.addEventListener('click', ()=>{
+      currentStudentId = it.dataset.apId;
+      panelQuadrantId = null;
+      novaTarefaAulas.clear();
+      fechar();
+      renderInterno();
+      window.scrollTo(0,0);
+    }));
+  }
   /* Recolher/expandir sem re-renderizar a tela: só esconde o corpo e troca o botão, assim o que a
      pessoa estava digitando num formulário da seção não se perde. */
   document.querySelectorAll('#view-interno [data-int-toggle]').forEach(head=>head.addEventListener('click', ()=>{
@@ -8628,7 +8703,7 @@ function openEditVendaModal(id){
   if(!v) return;
   /* A vendedora (papel 'vendas') não enxerga o cadastro de alunos (RLS), então STUDENTS chega vazio
      pra ela e o vínculo só aparece pra equipe interna. */
-  const podeVincular = currentUserRole==='staff' && STUDENTS.length>0;
+  const podeVincular = staffPleno() && STUDENTS.length>0;
   const sugestoes = podeVincular ? sugerirAlunosPorNome(v.lead, 3) : [];
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
@@ -8815,7 +8890,7 @@ function renderAnalise(){
           ${ANALISE_VENDEDORAS.map(v=>`<td class="an-col-mark">${analiseMarkHtml(a,v)}</td>`).join('')}
           <td class="vendas-actions-cell">
             <button class="btn-accent btn-abrir" data-an-edit="${a.id}">Abrir</button>
-            ${currentUserRole==='staff'? `<button class="btn-mini icon-only danger" data-an-del="${a.id}" title="Remover da planilha" style="margin-left:6px">${icon('trash','tiny')}</button>` : ''}
+            ${staffPleno()? `<button class="btn-mini icon-only danger" data-an-del="${a.id}" title="Remover da planilha" style="margin-left:6px">${icon('trash','tiny')}</button>` : ''}
           </td>
         </tr>`).join('') || `<tr><td colspan="${4+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse termo.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
       </tbody>
@@ -8863,7 +8938,7 @@ function openAnaliseModal(id){
   const a = ANALISE_SESSOES.find(x=>x.id===id);
   if(!a) return;
   const eu = currentUser ? currentUser.id : null;
-  const podeLead = currentUserRole==='staff';            // dados do lead e links: equipe interna
+  const podeLead = staffPleno();                          // dados do lead e links: equipe interna (fora da Visualização Consultora)
   const minha = ANALISE_VENDEDORAS.find(v=>v.userId===eu) || null; // minha coluna de análise (se eu for analista)
   const ro = podeLead ? '' : 'readonly disabled';
   /* Analista só enxerga a análise das colegas depois de registrar a sua (o que está salvo, não o
