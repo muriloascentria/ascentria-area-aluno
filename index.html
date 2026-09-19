@@ -7722,7 +7722,7 @@ function renderInterno(){
     <p class="section-sub" style="margin-top:0">Agende aqui o próximo encontro com este mentorado — ao salvar, ele aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Título</th><th>Modalidade</th><th>Data</th><th>Horário / detalhes</th><th>Descrição</th><th>Situação</th><th>Link / Local do encontro</th><th></th></tr></thead>
+        <thead><tr><th>Título</th><th>Modalidade</th><th>Data</th><th>Horário</th><th>Descrição</th><th>Situação</th><th>Link / Local do encontro</th><th></th></tr></thead>
         <tbody id="contatos-futuros-tbody">
           ${futuros.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
             <tr>
@@ -7751,10 +7751,9 @@ function renderInterno(){
       </div>
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-contatofuturo-data"></div>
       <div class="field"><label>Horário</label><input class="ps-input" type="time" id="new-contatofuturo-hour"></div>
-      <div class="field"><label>Detalhes (opcional)</label><input class="ps-input" type="text" id="new-contatofuturo-timedetail" placeholder="Ex.: Turma 2026.1"></div>
-      <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-contatofuturo-desc" placeholder="Pauta da reunião..."></textarea></div>
-      <div class="field full" id="new-contatofuturo-link-wrap"><label>Link do encontro (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-contatofuturo-link" placeholder="https://meet.google.com/..."></div>
+      <div class="field full" id="new-contatofuturo-link-wrap"><label>Link do encontro</label><input class="ps-input" type="text" id="new-contatofuturo-link" placeholder="https://meet.google.com/..."></div>
       <div class="field full" id="new-contatofuturo-local-wrap" hidden><label>Local do encontro</label><input class="ps-input" type="text" id="new-contatofuturo-local" placeholder="Ex.: Consultório Ascentria — Rua ..., 123"></div>
+      <div class="field full"><label>Descrição</label><textarea class="ps-input" id="new-contatofuturo-desc" placeholder="Pauta do encontro..."></textarea></div>
       <div class="actions"><button class="btn-accent" id="add-contatofuturo-btn">${icon('plus')} Agendar encontro</button></div>
     </div>
     </div>
@@ -7937,8 +7936,7 @@ function renderInterno(){
     const local = modalidade==='presencial' ? document.getElementById('new-contatofuturo-local').value.trim() : '';
     const title = document.getElementById('new-contatofuturo-title').value.trim() || `Sessão 1:1 — ${s.name}`;
     const eventHour = document.getElementById('new-contatofuturo-hour').value;
-    const timeDetail = document.getElementById('new-contatofuturo-timedetail').value.trim();
-    const eventTime = [formatHoraBR(eventHour), timeDetail].filter(Boolean).join(' · ');
+    const eventTime = formatHoraBR(eventHour) || '';
     const description = document.getElementById('new-contatofuturo-desc').value.trim();
     const linkGravacao = modalidade==='meet' ? document.getElementById('new-contatofuturo-link').value.trim() : '';
     const btn = document.getElementById('add-contatofuturo-btn');
