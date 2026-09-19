@@ -7595,7 +7595,6 @@ function renderInterno(){
   const intBody = (chave)=> `<div class="int-sec-corpo" id="int-sec-${chave}" ${aberto[chave]? '' : 'hidden'}>`;
   const futuros = LIVE_SESSIONS.filter(l=>l.studentId===s.id);
   document.getElementById('view-interno').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Dados vindos da planilha "Acompanhamento de Mentorados — Método Essência".</div>
     <div class="interno-topo">
       ${alunoPickerHtml}
       <div class="interno-topo-acoes">
@@ -8208,7 +8207,6 @@ function openEditCourseModal(courseId){
 }
 function renderConteudo(){
   document.getElementById('view-conteudo').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. O que for publicado aqui aparece na hora em Aulas e Materiais, para todos os alunos.</div>
 
     <h2 class="section-title">${icon('film')} Aulas</h2>
     <p class="section-sub" style="margin-top:-6px">Arraste pelo ícone ⠿ ou use as setas para reordenar as aulas dentro de cada módulo.</p>
@@ -8431,7 +8429,6 @@ function renderEquipe(){
   const hora = new Date().getHours();
   const saud = hora<12 ? 'Bom dia' : hora<18 ? 'Boa tarde' : 'Boa noite';
   document.getElementById('view-equipe').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna.</div>
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
     <div class="equipe-grid">
@@ -8583,7 +8580,6 @@ function renderVendas(){
   ].filter(Boolean).join(' · ');
 
   document.getElementById('view-vendas').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Registro de sessões 1:1 de venda de mentoria, importado da planilha de vendas.</div>
 
     <div class="kpi-row">
       <div class="kpi-tile"><div class="label">Sessões registradas</div><div class="value">${base.length}</div></div>
@@ -8907,7 +8903,6 @@ function renderAnalise(){
     .sort((a,b)=> (b.ordem||0)-(a.ordem||0) || String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 
   document.getElementById('view-analise').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cada sessão registrada em "Registro de Sessões 1:1" entra aqui automaticamente.</div>
 
     <h2 class="section-title">${icon('chart')} Análise Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">✓ = analisou e registrou · ✕ = ainda não. Clique em <strong>Abrir</strong> para ver os links e registrar a sua análise — cada pessoa só escreve no próprio espaço.</p>
@@ -9174,7 +9169,6 @@ function renderVisaoGeral(){
   const duvidas = PENDENCIAS.filter(x=>x.motivo==='duvida').length;
 
   document.getElementById('view-visaogeral').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Visão consolidada de todos os mentorados do Método Essência.</div>
     ${(()=>{ const a = aniversariantesHoje(null); return a.length? `
     <div class="aniv-banner">${icon('award')}<div>Hoje é aniversário de <strong>${a.map(x=>escapeHtml(x.nome)+(x.idade? ' ('+x.idade+' anos)' : '')).join(', ')}</strong>. Vale uma mensagem do time.</div></div>` : ''; })()}
 
@@ -9381,7 +9375,6 @@ function renderClientes(){
     : String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   const publicUrl = window.location.origin + '/cadastro-cliente.html';
   document.getElementById('view-clientes').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Cadastros enviados pelo formulário público, sem necessidade de login do cliente.</div>
 
     <div class="kpi-row">
       <div class="kpi-tile"><div class="label">Clientes cadastrados</div><div class="value">${CLIENTES_REGISTRO.length}</div></div>
@@ -9949,7 +9942,6 @@ async function confirmClientesImport(rows){
    Método (aquele é pessoal de cada aluno; este é da Ascentria). */
 function renderFinanceiro(){
   document.getElementById('view-financeiro').innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Controle financeiro da Ascentria (não é o Fluxo Financeiro dos mentorados).</div>
     <div class="fin-subtabs">
       <button type="button" class="cf-month-btn ${finSubView==='lancamentos'?'active':''}" data-finsub="lancamentos">Lançamentos</button>
       <button type="button" class="cf-month-btn ${finSubView==='faturamento'?'active':''}" data-finsub="faturamento">Faturamento</button>
@@ -10126,7 +10118,6 @@ function renderTreinamento(){
   const eu = currentUser ? currentUser.id : null;
   const souDoTime = TREINO_TIME.some(p=>p.id===eu);
   el.innerHTML = `
-    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Aulas com <strong>REC</strong> no título entram aqui automaticamente; cada pessoa registra os próprios aprendizados depois de assistir.</div>
     <h2 class="section-title">${icon('play')} Treinamento Time</h2>
     <p class="section-sub">${aulas.length} aula(s) de treinamento. ${souDoTime? 'Clique em <strong>Abrir</strong> para assistir e registrar o que você aprendeu — o seu X vira ✓ quando salvar.' : 'Clique em <strong>Abrir</strong> para assistir e ver os registros do time.'}</p>
     <div class="table-wrap"><table class="ps-table">
