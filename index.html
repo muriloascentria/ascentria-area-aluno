@@ -1054,6 +1054,7 @@
   .sec-toggle:hover .sec-seta{color:var(--text);}
   .sec-toggle .sec-resumo{font-size:12px;color:var(--text-mute);font-weight:400;margin-left:auto;padding-left:10px;}
   .sec-corpo[hidden]{display:none;}
+  .int-sec-corpo[hidden]{display:none;}
   .diag-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:22px;}
   .diag-panel .ps-section:first-of-type .ps-h{margin-top:0;}
   .field-error{color:var(--danger);font-size:11.5px;margin:-6px 0 10px;}
@@ -2247,11 +2248,18 @@ let CHECKLIST_STATE = {}; // in-memory, chave `${studentId}:${moduleId}` -> arra
 let internoDiagTab = 'wispform';
 /* Fica fechado por padrão: a seção é longa e empurrava Checklist e Encontros pra fora da tela.
    A escolha de cada pessoa é lembrada no próprio navegador dela. */
-function getDiagAberto(){
-  try{ return localStorage.getItem('ascentria-diag-aberto')==='1'; }catch(e){ return false; }
+/* Seções recolhíveis do Acompanhamento Interno (mesmo padrão da Visão Geral). O estado fica salvo
+   no navegador, então cada pessoa da equipe mantém as seções do jeito que deixou. */
+const INTERNO_SECOES_PADRAO = {diag:false, checklist:true, encontros:true, contatos:true, futuros:true, internos:true};
+function getInternoAberto(){
+  let salvo = {};
+  try{ salvo = JSON.parse(localStorage.getItem('ascentria-interno-aberto')||'{}') || {}; }catch(e){ salvo = {}; }
+  if(salvo.diag===undefined){ try{ if(localStorage.getItem('ascentria-diag-aberto')==='1') salvo.diag = true; }catch(e){} }
+  return Object.assign({}, INTERNO_SECOES_PADRAO, salvo);
 }
-function setDiagAberto(v){
-  try{ localStorage.setItem('ascentria-diag-aberto', v? '1':'0'); }catch(e){}
+function setInternoAberto(chave, v){
+  const atual = getInternoAberto(); atual[chave] = !!v;
+  try{ localStorage.setItem('ascentria-interno-aberto', JSON.stringify(atual)); }catch(e){}
 }
 let INTERNAL_DIAG = {}; // in-memory, chave `${studentId}:wispform`/`:abertura` -> array de respostas (flat)
 let INTERNAL_DIAG_EDITING = {}; // mesma chave -> array de booleans (true = campo aberto para edição)
@@ -4826,88 +4834,6 @@ async function uploadAvatarFile(file, personId){
   if(updErr) throw updErr;
   if(PEOPLE[personId]) PEOPLE[personId].avatarUrl = url; // mantém a foto em sincronia em posts/comentários já carregados
   return url;
-}
-/* ---- Manutenção: reprocessa as fotos antigas, enviadas antes do redimensionamento correto ----
-   Antes desta correção o sistema só comprimia a foto se ela passasse de 5MB, então uma foto comum de
-   celular (300KB a 2,6MB) subia praticamente inteira e era baixada por todos os alunos a cada visita.
-   Este botão baixa cada foto, reduz para 256px e regrava, apagando o arquivo antigo. Roda uma vez;
-   fotos novas já nascem pequenas. Só a equipe interna executa. */
-function avatarStoragePath(url){
-  const m = String(url||'').match(/\/avatars\/(.+?)(?:\?|$)/);
-  return m ? decodeURIComponent(m[1]) : null;
-}
-async function otimizarFotosExistentes(){
-  const btn = document.getElementById('fotos-btn');
-  const status = document.getElementById('fotos-status');
-  btn.disabled = true;
-  status.className = 'backup-status';
-  status.textContent = 'Lendo as fotos cadastradas...';
-
-  const { data: rows, error } = await sb.from('profiles').select('id, name, avatar_url').not('avatar_url','is',null);
-  if(error){
-    status.className = 'backup-status warn';
-    status.textContent = 'Não foi possível ler os perfis: ' + error.message;
-    btn.disabled = false;
-    return;
-  }
-  const alvos = (rows||[]).filter(r=>r.avatar_url && avatarStoragePath(r.avatar_url));
-  if(!alvos.length){
-    status.className = 'backup-status ok';
-    status.textContent = 'Nenhuma foto para otimizar.';
-    btn.disabled = false;
-    return;
-  }
-
-  let feitas=0, puladas=0, antes=0, depois=0;
-  const falhas=[];
-  for(let i=0;i<alvos.length;i++){
-    const r = alvos[i];
-    status.textContent = `Otimizando ${i+1} de ${alvos.length} — ${r.name||''}...`;
-    try{
-      const pathAntigo = avatarStoragePath(r.avatar_url);
-      const resp = await fetch(r.avatar_url, {cache:'no-store'});
-      if(!resp.ok) throw new Error('HTTP '+resp.status);
-      const blob = await resp.blob();
-      antes += blob.size;
-      // Já está pequena: não gasta processamento nem cria arquivo novo à toa.
-      if(blob.size <= 60*1024){ depois += blob.size; puladas++; continue; }
-      const originalFile = new File([blob], 'foto.jpg', {type: blob.type || 'image/jpeg'});
-      const menor = await resizeImageForUpload(originalFile, AVATAR_ALVO_BYTES, AVATAR_MAX_DIM);
-      // Se por algum motivo não encolheu, não troca — evita piorar.
-      if(menor.size >= blob.size){ depois += blob.size; puladas++; continue; }
-      const novoPath = `${r.id}/${Date.now()}.jpg`;
-      const { error: upErr } = await sb.storage.from('avatars').upload(novoPath, menor, {upsert:true, cacheControl:'31536000', contentType:'image/jpeg'});
-      if(upErr) throw upErr;
-      const { data: pub } = sb.storage.from('avatars').getPublicUrl(novoPath);
-      const { error: updErr } = await sb.from('profiles').update({avatar_url: pub.publicUrl}).eq('id', r.id);
-      if(updErr) throw updErr;
-      if(PEOPLE[r.id]) PEOPLE[r.id].avatarUrl = pub.publicUrl;
-      const st = getStudent(r.id); if(st) st.avatarUrl = pub.publicUrl;
-      if(currentUserProfile && currentUserProfile.id===r.id) currentUserProfile.avatarUrl = pub.publicUrl;
-      // Só apaga o arquivo antigo depois que o novo já está gravado E o perfil já aponta pra ele.
-      if(pathAntigo && pathAntigo !== novoPath){
-        const { error: delErr } = await sb.storage.from('avatars').remove([pathAntigo]);
-        if(delErr) console.warn('Não foi possível apagar a foto antiga', pathAntigo, delErr);
-      }
-      depois += menor.size;
-      feitas++;
-    }catch(e){
-      console.error('Falha ao otimizar foto de', r.name, e);
-      falhas.push((r.name||r.id) + (e && e.message ? (' — '+e.message) : ''));
-    }
-  }
-
-  const mb = n => (n/1024/1024).toFixed(2)+' MB';
-  let msg = `${feitas} foto(s) otimizada(s)` + (puladas? `, ${puladas} já estavam adequadas` : '') + `. De ${mb(antes)} para ${mb(depois)}.`;
-  if(falhas.length){
-    status.className = 'backup-status warn';
-    msg += ` Não foi possível otimizar ${falhas.length}: ${falhas.join('; ')}.`;
-  }else{
-    status.className = 'backup-status ok';
-  }
-  status.textContent = msg;
-  btn.disabled = false;
-  renderCurrentView();
 }
 function wireAvatarUpload(idPrefix, person, onUpdated){
   document.getElementById(idPrefix+'-upload-btn').addEventListener('click', ()=>{
@@ -7580,7 +7506,15 @@ function renderInterno(){
   const groups = internoDiagTab==='wispform' ? WISPFORM_QUESTIONS : DIAGNOSTICO_ABERTURA_QUESTIONS;
   const answers = getInternalAnswers(s.id, internoDiagTab);
   const editing = getInternalEditing(s.id, internoDiagTab);
-  const diagAberto = getDiagAberto();
+  const aberto = getInternoAberto();
+  const intHead = (chave, ic, titulo, qtd)=> `
+    <div class="vg-sec-head" data-int-toggle="${chave}">
+      <h2 class="section-title">${ic? icon(ic)+' ' : ''}${titulo}</h2>
+      ${qtd===null||qtd===undefined ? '' : `<span class="qtd">${qtd}</span>`}
+      <button type="button" class="vg-sec-toggle ${aberto[chave]?'':'fechado'}" title="${aberto[chave]?'Recolher':'Expandir'}">${icon('down')} ${aberto[chave]?'Recolher':'Expandir'}</button>
+    </div>`;
+  const intBody = (chave)=> `<div class="int-sec-corpo" id="int-sec-${chave}" ${aberto[chave]? '' : 'hidden'}>`;
+  const futuros = LIVE_SESSIONS.filter(l=>l.studentId===s.id);
   document.getElementById('view-interno').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Dados vindos da planilha "Acompanhamento de Mentorados — Método Essência".</div>
     <div class="actions" style="margin:-8px 0 16px;display:flex;gap:10px;flex-wrap:wrap">
@@ -7595,12 +7529,8 @@ function renderInterno(){
       <div class="stat-card"><div class="label">Tempo de consultório</div><div class="value" style="font-size:14px">${d.tempoConsultorio}</div></div>
     </div>
 
-    <button class="sec-toggle" id="diag-toggle" aria-expanded="${diagAberto? 'true':'false'}" aria-controls="diag-corpo">
-      <h2 class="section-title">Diagnóstico e Acompanhamento</h2>
-      ${icon('down','sec-seta')}
-      <span class="sec-resumo">${diagAberto? 'ocultar' : 'mostrar'}</span>
-    </button>
-    <div class="sec-corpo" id="diag-corpo" ${diagAberto? '' : 'hidden'}>
+    ${intHead('diag', 'idcard', 'Diagnóstico e Acompanhamento', null)}
+    ${intBody('diag')}
       <p class="section-sub" style="margin-top:2px">Reflete as abas "Respostas Wispform" e "Diagnóstico Abertura" da planilha interna, pergunta a pergunta.</p>
       <div class="community-filters" id="diag-tabs">
         <button class="filter-tab ${internoDiagTab==='wispform'?'active':''}" data-diagtab="wispform">Respostas Wispform</button>
@@ -7609,7 +7539,8 @@ function renderInterno(){
       <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
     </div>
 
-    <h2 class="section-title">Checklist de Acompanhamento</h2>
+    ${intHead('checklist', 'check', 'Checklist de Acompanhamento', s.checklist.length)}
+    ${intBody('checklist')}
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Nº</th><th>Tarefa</th><th>Aulas de apoio</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th><th></th></tr></thead>
@@ -7640,8 +7571,10 @@ function renderInterno(){
       </div>
       <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
     </div>
+    </div>
 
-    <h2 class="section-title">Encontros Gravados</h2>
+    ${intHead('encontros', 'video', 'Encontros Gravados', s.sessions.length)}
+    ${intBody('encontros')}
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Encontro</th><th>Data</th><th>Gravação</th><th>Transcrição</th></tr></thead>
@@ -7658,9 +7591,11 @@ function renderInterno(){
       </table>
     </div>
     <p class="kpi-note">Em produção, esta tela sincronizaria automaticamente com a planilha interna da equipe (Google Sheets).</p>
+    </div>
 
-    <h2 class="section-title">Registro de Contatos (Reunião ou WhatsApp)</h2>
-    <p class="section-sub" style="margin-top:-6px">Qualquer pessoa da equipe que teve contato com o mentorado — em reunião ou orientação por WhatsApp — pode registrar aqui.</p>
+    ${intHead('contatos', 'comment', 'Registro de Contatos (Reunião ou WhatsApp)', s.contatos.length)}
+    ${intBody('contatos')}
+    <p class="section-sub" style="margin-top:2px">Qualquer pessoa da equipe que teve contato com o mentorado — em reunião ou orientação por WhatsApp — pode registrar aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Data da Reunião</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th></th></tr></thead>
@@ -7690,14 +7625,16 @@ function renderInterno(){
       <div class="field"><label>Link da transcrição</label><input class="ps-input" type="text" id="new-contato-transc" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-contato-btn">${icon('plus')} Adicionar registro</button></div>
     </div>
+    </div>
 
-    <h2 class="section-title">${icon('calendar')} Registro de Contatos Futuros (Reuniões Agendadas)</h2>
-    <p class="section-sub" style="margin-top:-6px">Agende aqui a próxima reunião com este mentorado — ao salvar, ela aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
+    ${intHead('futuros', 'calendar', 'Registro de Contatos Futuros (Reuniões Agendadas)', futuros.length)}
+    ${intBody('futuros')}
+    <p class="section-sub" style="margin-top:2px">Agende aqui a próxima reunião com este mentorado — ao salvar, ela aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Título</th><th>Data</th><th>Horário / detalhes</th><th>Descrição</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
         <tbody id="contatos-futuros-tbody">
-          ${LIVE_SESSIONS.filter(l=>l.studentId===s.id).slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
+          ${futuros.slice().sort((a,b)=>a._eventDate<b._eventDate?1:-1).map(l=>`
             <tr>
               <td style="min-width:200px">${escapeHtml(l.title)}</td>
               <td style="white-space:nowrap">${l.date}</td>
@@ -7720,9 +7657,11 @@ function renderInterno(){
       <div class="field full"><label>Link da gravação (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-contatofuturo-link" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-contatofuturo-btn">${icon('plus')} Agendar reunião</button></div>
     </div>
+    </div>
 
-    <h2 class="section-title">${icon('lock')} Registros Internos da Equipe</h2>
-    <div class="wf-warning" style="margin:-6px 0 14px">
+    ${intHead('internos', 'lock', 'Registros Internos da Equipe', s.registrosInternos.length)}
+    ${intBody('internos')}
+    <div class="wf-warning" style="margin:2px 0 14px">
       ${icon('lock')} Estas anotações são 100% internas — o aluno NUNCA verá este conteúdo, em nenhuma tela da plataforma. Use para observações sensíveis, avaliações e sinais de atenção da equipe sobre o mentorado.
     </div>
     <div class="table-wrap">
@@ -7745,17 +7684,22 @@ function renderInterno(){
       <div class="field full"><label>Registro / Análise</label><textarea class="ps-input" id="new-record-texto" placeholder="Observação interna sobre o mentorado..."></textarea></div>
       <div class="actions"><button class="btn-accent" id="add-record-btn">${icon('plus')} Adicionar registro interno</button></div>
     </div>
+    </div>
   `;
   document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
-  document.getElementById('diag-toggle').addEventListener('click',()=>{
-    const corpo = document.getElementById('diag-corpo');
-    const btn = document.getElementById('diag-toggle');
+  /* Recolher/expandir sem re-renderizar a tela: só esconde o corpo e troca o botão, assim o que a
+     pessoa estava digitando num formulário da seção não se perde. */
+  document.querySelectorAll('#view-interno [data-int-toggle]').forEach(head=>head.addEventListener('click', ()=>{
+    const k = head.dataset.intToggle;
+    const corpo = document.getElementById('int-sec-'+k);
     const abrindo = corpo.hidden;
     corpo.hidden = !abrindo;
-    btn.setAttribute('aria-expanded', abrindo? 'true' : 'false');
-    btn.querySelector('.sec-resumo').textContent = abrindo? 'ocultar' : 'mostrar';
-    setDiagAberto(abrindo);
-  });
+    const btn = head.querySelector('.vg-sec-toggle');
+    btn.classList.toggle('fechado', !abrindo);
+    btn.title = abrindo? 'Recolher' : 'Expandir';
+    btn.innerHTML = `${icon('down')} ${abrindo? 'Recolher' : 'Expandir'}`;
+    setInternoAberto(k, abrindo);
+  }));
   document.getElementById('acomp-pdf-btn').addEventListener('click',()=>exportAcompanhamentoPDF(s));
   document.querySelectorAll('#diag-tabs [data-diagtab]').forEach(btn=>{
     btn.addEventListener('click',()=>{ internoDiagTab = btn.dataset.diagtab; renderInterno(); });
@@ -9176,15 +9120,8 @@ function renderVisaoGeral(){
     </div>
     <div id="backup-status" class="backup-status"></div>
 
-    <h2 class="section-title" style="margin-top:28px">${icon('upload')} Otimização de Fotos</h2>
-    <p class="section-sub" style="margin-top:-6px">As fotos de perfil enviadas antes desta correção subiram no tamanho original da câmera — algumas com mais de 2 MB — e são baixadas por <strong>todos</strong> os alunos toda vez que a plataforma abre, mesmo aparecendo num círculo de poucos milímetros. Este botão reduz as fotos antigas e apaga os arquivos grandes. <strong>Rode uma vez só</strong>: as fotos enviadas de agora em diante já nascem no tamanho certo.</p>
-    <div class="cf-actions">
-      <button class="btn-outline" id="fotos-btn">${icon('upload')} Otimizar fotos existentes</button>
-    </div>
-    <div id="fotos-status" class="backup-status"></div>
   `;
   document.getElementById('backup-btn').addEventListener('click', exportarBackup);
-  document.getElementById('fotos-btn').addEventListener('click', otimizarFotosExistentes);
   document.getElementById('gen-code-btn').addEventListener('click', async ()=>{
     const escolha = document.getElementById('new-code-tier').value;
     const tier = escolha==='mentorado' ? 'mentorado' : 'curso';
