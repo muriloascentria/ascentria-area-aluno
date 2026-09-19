@@ -1056,15 +1056,19 @@
   .sec-corpo[hidden]{display:none;}
   .int-sec-corpo[hidden]{display:none;}
   /* Seletor de mentorado no topo do Acompanhamento Interno */
+  .interno-topo{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap;margin:0 0 16px;}
+  .interno-topo .aluno-picker{flex:1 1 360px;margin:0;}
+  .interno-topo-acoes{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;}
+  .interno-topo-acoes .btn-outline,.interno-topo-acoes .btn-accent{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;height:100%;min-height:58px;padding:0 16px;}
   .aluno-picker{position:relative;margin:0 0 16px;}
-  .aluno-picker-btn{display:flex;align-items:center;gap:12px;width:100%;max-width:520px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;cursor:pointer;color:var(--text);font:inherit;}
+  .aluno-picker-btn{display:flex;align-items:center;gap:12px;width:100%;height:100%;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;cursor:pointer;color:var(--text);font:inherit;}
   .aluno-picker-btn:hover{border-color:var(--danger);}
   .aluno-picker-btn .ap-nome{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
   .aluno-picker-btn .ap-nome strong{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .aluno-picker-btn .ap-nome small{font-size:11.5px;color:var(--text-mute);}
   .aluno-picker-btn > .icon{width:16px;height:16px;color:var(--text-mute);flex-shrink:0;}
   .aluno-picker-btn[aria-expanded="true"] > .icon{transform:rotate(180deg);}
-  .aluno-picker-menu{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:100%;max-width:520px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,.35);padding:10px;}
+  .aluno-picker-menu{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:100%;max-width:560px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,.35);padding:10px;}
   .aluno-picker-menu[hidden]{display:none;}
   .aluno-picker-menu .ps-input{margin:0 0 8px;}
   .aluno-picker-lista{max-height:min(48vh,380px);overflow-y:auto;overscroll-behavior:contain;}
@@ -7582,10 +7586,12 @@ function renderInterno(){
   const futuros = LIVE_SESSIONS.filter(l=>l.studentId===s.id);
   document.getElementById('view-interno').innerHTML = `
     <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna. Dados vindos da planilha "Acompanhamento de Mentorados — Método Essência".</div>
-    ${alunoPickerHtml}
-    <div class="actions" style="margin:0 0 16px;display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn-outline" id="edit-aluno-btn">${icon('idcard')} Editar Dados do Aluno</button>
-      <button class="btn-outline" id="acomp-pdf-btn">${icon('download')} Gerar Acompanhamento Completo (PDF)</button>
+    <div class="interno-topo">
+      ${alunoPickerHtml}
+      <div class="interno-topo-acoes">
+        <button class="btn-outline" id="edit-aluno-btn">${icon('idcard')} Editar Dados do Aluno</button>
+        <button class="btn-accent" id="acomp-pdf-btn">${icon('download')} Acompanhamento Completo (PDF)</button>
+      </div>
     </div>
 
     <div class="stat-row">
@@ -7597,10 +7603,10 @@ function renderInterno(){
 
     ${intHead('diag', 'idcard', 'Diagnóstico de Abertura', null)}
     ${intBody('diag')}
-      <p class="section-sub" style="margin-top:2px">Reflete as abas "Respostas Wispform" e "Diagnóstico Abertura" da planilha interna, pergunta a pergunta.</p>
+      <p class="section-sub" style="margin-top:2px">Formulário de Abertura (respondido pelo mentorado) e Formulário Diagnóstico de Abertura (preenchido pela equipe), pergunta a pergunta.</p>
       <div class="community-filters" id="diag-tabs">
-        <button class="filter-tab ${internoDiagTab==='wispform'?'active':''}" data-diagtab="wispform">Respostas Wispform</button>
-        <button class="filter-tab ${internoDiagTab==='abertura'?'active':''}" data-diagtab="abertura">Diagnóstico Abertura</button>
+        <button class="filter-tab ${internoDiagTab==='wispform'?'active':''}" data-diagtab="wispform">Formulário de Abertura</button>
+        <button class="filter-tab ${internoDiagTab==='abertura'?'active':''}" data-diagtab="abertura">Formulário Diagnóstico de Abertura</button>
       </div>
       <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
     </div>
