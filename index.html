@@ -1170,6 +1170,14 @@
   .link-btn:hover{opacity:0.8;}
 
   .empty-state{text-align:center;padding:40px 20px;color:var(--text-mute);font-size:13px;}
+  /* Início da equipe interna: grade de botões grandes, um por área do menu */
+  .equipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:16px;}
+  .equipe-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 18px 16px;cursor:pointer;color:var(--text);font:inherit;transition:border-color .15s,transform .15s,background .15s;}
+  .equipe-card:hover{border-color:var(--danger);transform:translateY(-2px);background:var(--bg-elev);}
+  .equipe-ic{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:rgba(224,82,82,.12);}
+  .equipe-ic .icon{width:20px;height:20px;stroke:var(--danger);color:var(--danger);}
+  .equipe-tit{font-size:14.5px;font-weight:700;}
+  .equipe-desc{font-size:12px;color:var(--text-dim);line-height:1.45;}
 
   .locked-view{text-align:center;padding:64px 24px;max-width:460px;margin:24px auto 0;}
   .agenda-card.agenda-locked{opacity:.55;}
@@ -1267,7 +1275,7 @@
 
     <button class="nav-item" data-view="inicio"></button>
 
-    <div class="nav-group-label">Área Coletiva</div>
+    <div class="nav-group-label" id="nav-group-coletiva">Área Coletiva</div>
     <button class="nav-item" data-view="aulas"></button>
     <button class="nav-item" data-view="comunidade"></button>
     <button class="nav-item" data-view="ranking"></button>
@@ -1287,6 +1295,7 @@
     </a>
 
     <div class="nav-group-label" id="staff-group-label" style="display:none"><svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Equipe Interna</div>
+    <button class="nav-item restrict" id="nav-equipe" data-view="equipe" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
@@ -1361,6 +1370,7 @@
       <div class="view" id="view-clientes"></div>
       <div class="view" id="view-financeiro"></div>
       <div class="view" id="view-treinamento"></div>
+      <div class="view" id="view-equipe"></div>
     </div>
   </div>
 </div>
@@ -1437,6 +1447,7 @@ const NAV_LABELS = {
   clientes:['idcard','Registro de Clientes'],
   financeiro:['money','Financeiro'],
   treinamento:['play','Treinamento Time'],
+  equipe:['home','Início'],
 };
 const BADGE = {
   dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict',
@@ -2827,7 +2838,7 @@ async function enterApp(){
     return;
   }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
-  goTo(currentUserRole==='staff' ? 'visaogeral' : 'inicio');
+  goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
 }
 
 /* ================= SYNC: grava mutações locais de volta no Supabase ================= */
@@ -3817,6 +3828,7 @@ function setRole(role){
      lateral. Quem é aluno de verdade (currentUserRole!=='staff') nunca vê nada disso. */
   const staffNav = currentUserRole==='staff';
   document.getElementById('staff-group-label').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-equipe').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-visaogeral').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-interno').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-conteudo').style.display = staffNav ? 'flex' : 'none';
@@ -3857,6 +3869,13 @@ function setRole(role){
      com eles (modo Equipe Interna, ou aluno do Curso Gravado, que não tem mentoria individual). */
   document.getElementById('nav-group-metodo').style.display = role==='aluno' ? 'flex' : 'none';
   document.getElementById('nav-group-individual').style.display = role==='aluno' ? 'flex' : 'none';
+  /* "Área Coletiva" (Agenda ao Vivo e Materiais) é a experiência do aluno — no modo Equipe Interna some
+     também, junto com o rótulo. A equipe cuida dessas telas por "Gerenciar Conteúdo". */
+  document.getElementById('nav-group-coletiva').style.display = role==='aluno' ? 'flex' : 'none';
+  ['agenda','materiais'].forEach(v=>{
+    const el = document.querySelector(`.nav-item[data-view="${v}"]`);
+    if(el) el.style.display = role==='aluno' ? 'flex' : 'none';
+  });
   /* Aluno do Curso Gravado (Método) continua vendo "Agenda ao Vivo" no menu, mas com um cadeado —
      ao clicar, a página inteira abre em modo bloqueado (ver renderAgenda), explicando o motivo. */
   const agendaBtn = document.querySelector('.nav-item[data-view="agenda"]');
@@ -3878,7 +3897,7 @@ function setRole(role){
   updateNotifBadge();
   if(role==='aluno' && ['interno','conteudo','visaogeral','vendas','clientes','financeiro'].includes(currentView)){ goTo('inicio'); }
   if(role==='aluno' && isCursoView && ['ranking','painel','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
-  if(role==='staff' && ['inicio','aulas','comunidade','ranking','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('visaogeral'); }
+  if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('equipe'); }
 }
 
 function renderProfile(){
@@ -3947,7 +3966,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento};
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -8266,6 +8285,38 @@ function renderConteudo(){
       renderConteudo();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
+}
+
+/* ================= VIEW: INÍCIO DA EQUIPE INTERNA ================= */
+/* Painel de entrada da equipe: um botão grande para cada área do menu lateral (mesma ordem), com uma
+   linha explicando o que tem em cada uma. É onde a equipe cai ao entrar no sistema. */
+const EQUIPE_ATALHOS = [
+  {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
+  {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
+  {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
+  {view:'vendas',     desc:'Sessões 1:1 de venda, indicadores e objeções dos leads.'},
+  {view:'analise',    desc:'Vídeos das vendas e a análise de cada pessoa do time comercial.'},
+  {view:'clientes',   desc:'Cadastro de clientes e pacientes, com TAGs e vínculo com alunos.'},
+  {view:'financeiro', desc:'Extrato, contas a receber e a pagar, faturamento e anexos.'},
+  {view:'treinamento',desc:'Aulas REC do time e o registro de aprendizados de cada pessoa.'},
+];
+function renderEquipe(){
+  const nome = ((currentUserProfile||{}).name||'').split(' ')[0];
+  const hora = new Date().getHours();
+  const saud = hora<12 ? 'Bom dia' : hora<18 ? 'Boa tarde' : 'Boa noite';
+  document.getElementById('view-equipe').innerHTML = `
+    <div class="staff-banner">${icon('lock')} Acesso restrito — visível apenas para a equipe interna.</div>
+    <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
+    <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
+    <div class="equipe-grid">
+      ${EQUIPE_ATALHOS.map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+        <button type="button" class="equipe-card" data-equipe-go="${a.view}">
+          <span class="equipe-ic">${icon(ic)}</span>
+          <span class="equipe-tit">${escapeHtml(label)}</span>
+          <span class="equipe-desc">${escapeHtml(a.desc)}</span>
+        </button>`; }).join('')}
+    </div>`;
+  document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
