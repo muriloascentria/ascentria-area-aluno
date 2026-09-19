@@ -8871,6 +8871,9 @@ function openAnaliseModal(id){
   const podeLead = currentUserRole==='staff';            // dados do lead e links: equipe interna
   const minha = ANALISE_VENDEDORAS.find(v=>v.userId===eu) || null; // minha coluna de análise (se eu for analista)
   const ro = podeLead ? '' : 'readonly disabled';
+  /* Analista só enxerga a análise das colegas depois de registrar a sua (o que está salvo, não o
+     que está sendo digitado). Quem não é analista (ex.: gestão) vê tudo. */
+  const podeVerColegas = !minha || analiseFeita(a, minha);
   const linha = (label, val)=> `<div style="margin-top:4px"><span class="ps-label" style="display:inline">${label}:</span> ${val? escapeHtml(val) : '<span style="color:var(--text-mute)">—</span>'}</div>`;
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
@@ -8898,7 +8901,7 @@ function openAnaliseModal(id){
         </div>
       </div>`}
       <h4 style="margin:14px 0 2px">Análises</h4>
-      <p class="section-sub" style="margin:0 0 4px;font-size:12px">Cada pessoa registra só no próprio espaço; os demais ficam bloqueados.</p>
+      <p class="section-sub" style="margin:0 0 4px;font-size:12px">Cada pessoa registra só no próprio espaço; os demais ficam bloqueados.${podeVerColegas ? '' : ' As análises das colegas aparecem depois que você salvar a sua.'}</p>
       ${ANALISE_VENDEDORAS.map(v=>{
         const meu = minha && minha.key===v.key;
         const t1 = String(a[v.ap[0]]||'').trim(), t2 = String(a[v.ap[1]]||'').trim();
@@ -8912,6 +8915,7 @@ function openAnaliseModal(id){
             <textarea class="ps-input" id="an-${v.key}-ap1" rows="2" placeholder="Primeiro ponto que você tirou desta sessão">${escapeHtml(a[v.ap[0]]||'')}</textarea>
             <label class="ps-label">2</label>
             <textarea class="ps-input" id="an-${v.key}-ap2" rows="2" placeholder="Segundo ponto">${escapeHtml(a[v.ap[1]]||'')}</textarea>`
+          : !podeVerColegas ? `<div class="vazio">${analiseFeita(a, v) ? 'Registrou — você verá depois de salvar a sua.' : 'Ainda não analisou.'}</div>`
           : (t1||t2 ? `${t1? `<div class="num">1</div><div class="txt">${escapeHtml(t1)}</div>` : ''}${t2? `<div class="num">2</div><div class="txt">${escapeHtml(t2)}</div>` : ''}` : `<div class="vazio">${a[v.assistiu]? 'Assistiu, mas ainda não registrou.' : 'Ainda não analisou.'}</div>`)}
         </div>`;
       }).join('')}
@@ -10027,6 +10031,11 @@ function openTreinamentoModal(courseId){
   const eu = currentUser ? currentUser.id : null;
   const yt = youtubeId(c.videoLink||'');
   const draft = { texto: (treinoRegistro(courseId, eu)||{}).aprendizados || '' };
+  /* Quem é do time só enxerga o registro dos colegas depois de salvar o seu (evita "copiar" a
+     resposta). Quem não tem coluna (ex.: gestão) vê tudo. Vale o que está salvo, não o rascunho. */
+  const souDoTime = TREINO_TIME.some(p=>p.id===eu);
+  const jaSalvei = !!((treinoRegistro(courseId, eu)||{}).aprendizados||'').trim();
+  const podeVerColegas = !souDoTime || jaSalvei;
   function body(){
     return `
       <div class="modal-body form-modal">
@@ -10036,7 +10045,7 @@ function openTreinamentoModal(courseId){
         ${c.videoLink ? `<p style="margin:4px 0 10px"><a class="btn-outline" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px" href="${escapeAttr(c.videoLink)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir a aula em outra aba</a></p>` : '<p class="section-sub">Esta aula ainda não tem link de vídeo.</p>'}
         ${c.desc ? `<p class="section-sub" style="margin-bottom:10px">${escapeHtml(c.desc)}</p>` : ''}
         <h4 style="margin:12px 0 2px">Aprendizados do time</h4>
-        <p class="section-sub" style="margin:0 0 6px;font-size:12px">Cada pessoa escreve só no próprio espaço; os demais ficam bloqueados.</p>
+        <p class="section-sub" style="margin:0 0 6px;font-size:12px">Cada pessoa escreve só no próprio espaço; os demais ficam bloqueados.${podeVerColegas ? '' : ' Os registros dos colegas aparecem depois que você salvar o seu.'}</p>
         ${TREINO_TIME.map(p=>{
           const r = treinoRegistro(courseId, p.id);
           const meu = p.id===eu;
@@ -10045,7 +10054,8 @@ function openTreinamentoModal(courseId){
             <div class="hd">${treinoMarkHtml(courseId, p.id)} ${escapeHtml(p.nome)} ${meu? '<span class="resp-pill">você</span>' : icon('lock')}</div>
             ${meu
               ? `<textarea class="ps-input" id="treino-texto" placeholder="O que você aprendeu com esta aula? Registre aqui os pontos principais e como vai aplicar.">${escapeHtml(draft.texto)}</textarea>`
-              : (ok ? `<div class="txt">${escapeHtml(r.aprendizados)}</div>` : `<div class="vazio">Ainda não registrou.</div>`)}
+              : (!podeVerColegas ? `<div class="vazio">${ok ? 'Registrou — você verá depois de salvar o seu.' : 'Ainda não registrou.'}</div>`
+                 : ok ? `<div class="txt">${escapeHtml(r.aprendizados)}</div>` : `<div class="vazio">Ainda não registrou.</div>`)}
           </div>`;
         }).join('')}
         ${TREINO_TIME.some(p=>p.id===eu) ? '' : `<p class="section-sub" style="margin-top:10px;font-size:12px">Sua conta não está entre as colunas deste treinamento, por isso não há espaço para registrar.</p>`}
