@@ -1228,6 +1228,7 @@
   .tf-modo{margin-left:auto;display:flex;gap:6px;}
   .tf-modo .filter-tab{display:inline-flex;align-items:center;gap:5px;}
   .tf-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px;}
+  .tf-filtros + .busca-info{margin:14px 0 18px;}
   .tf-filtros .ps-input{margin:0;width:auto;min-width:150px;}
   .tf-filtros .tf-busca{flex:1 1 240px;}
   .tf-periodo{display:inline-flex;gap:6px;align-items:center;}
@@ -1286,7 +1287,7 @@
   .tf-sub{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .tf-sub-bar{width:46px;height:5px;border-radius:3px;background:var(--border);overflow:hidden;display:inline-block;}
   .tf-sub-bar i{display:block;height:100%;background:var(--success);}
-  .tf-status{font:inherit;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);margin-left:auto;cursor:pointer;}
+  .tf-status{font:inherit;font-size:11px;font-weight:700;height:26px;line-height:24px;padding:0 24px 0 10px;border-radius:13px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);margin-left:auto;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a9ba' stroke-width='2.4'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;background-size:11px;}
   .tf-status.em_andamento{color:#2563eb;border-color:rgba(37,99,235,.35);}
   .tf-status.aguardando{color:#d97706;border-color:rgba(217,119,6,.35);}
   .tf-status.concluida{color:var(--success);border-color:rgba(34,197,94,.35);}
@@ -1340,7 +1341,7 @@
   .tf-hist{display:flex;flex-direction:column;gap:4px;font-size:12.5px;}
   .tf-hist[hidden]{display:none;}
   .tf-hist-item small{color:var(--text-mute);margin-right:6px;}
-  .tf-m-acoes{flex-wrap:wrap;gap:8px;}
+  .tf-m-acoes{flex-wrap:wrap;gap:8px;margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
   .tf-m-acoes .danger-text{color:var(--danger);}
   @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} .tf-modo{margin-left:0;} }
   /* Início da equipe interna: grade de botões grandes, um por área do menu */
@@ -2849,6 +2850,24 @@ async function bootstrapData(){
      Carrega só essa lista — nenhum dado de aluno, comunidade, aulas, clientes ou financeiro chega ao
      navegador dela. Isso é conveniência de carregamento; a garantia de verdade está nas políticas do
      banco (is_staff() é false pra ela, então nem pedindo direto na API o resto vem). */
+  /* Papel 'editor' (Editor de Vídeos): só Tarefas e Gerenciar Conteúdo. Carrega aulas, materiais e
+     agenda ao vivo (o que o Gerenciar Conteúdo usa) — nada de alunos, comunidade, clientes ou financeiro. */
+  if(currentUserRole==='editor'){
+    PEOPLE = {};
+    if(me) PEOPLE[me.id] = {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, role:me.role};
+    const [{data:courseRows},{data:materialRows},{data:liveRows}] = await Promise.all([
+      sb.from('courses').select('*, course_materials(*)').order('mod_id').order('order_index'),
+      sb.from('materials').select('*').order('id'),
+      sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
+    ]);
+    COURSES.length = 0;
+    (courseRows||[]).forEach(c=>COURSES.push({ id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration || '—', tint:[c.tint1 || '#8d916f', c.tint2 || '#bec6b1'], desc:c.description || '', videoLink:c.video_link || '', materiais:(c.course_materials||[]).map(m=>({title:m.title, link:m.link, somenteCurso:!!m.somente_curso, _id:m.id})) }));
+    MATERIALS.length = 0; (materialRows||[]).forEach(m=>MATERIALS.push({id:m.id, title:m.title, type:m.type, link:m.link||'', size:m.size||''}));
+    LIVE_SESSIONS.length = 0; (liveRows||[]).forEach(r=>LIVE_SESSIONS.push(mapLiveSessionRow(r)));
+    await tarefasBootstrap();
+    currentStudentId = null;
+    return;
+  }
   if(currentUserRole==='vendas'){
     VENDA_SESSOES.length = 0;
     const { data: vsRows } = await sb.from('venda_sessoes').select('*').order('numero',{ascending:true});
@@ -3017,9 +3036,9 @@ async function enterApp(){
   document.getElementById('app').classList.add('active');
   setupNav();
   renderProfile();
-  if(currentUserRole==='vendas'){
+  if(currentUserRole==='vendas' || currentUserRole==='editor'){
     setRoleVendas();
-    goTo('vendas');
+    goTo('equipe');
     return;
   }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
@@ -3991,25 +4010,25 @@ function updateNotifBadge(){
    Feito por exclusão de propósito — se amanhã surgir um item novo no menu, ele já nasce invisível pra
    ela, em vez de aparecer por esquecimento. */
 function setRoleVendas(){
+  /* Papéis restritos (consultora de vendas e editor de vídeos): esconde tudo e reacende só o que a
+     conta pode abrir (viewsDoPapel), sempre com o Início. Se surgir item novo no menu, ele já nasce
+     invisível pra esses papéis. */
   currentRole = 'staff';
   document.getElementById('role-toggle').style.display = 'none';
   document.querySelectorAll('.nav-item[data-view]').forEach(el=>{ el.style.display = 'none'; });
   document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
-  ['nav-vendas','nav-analise','nav-treinamento'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'flex';
-  });
-  document.getElementById('nav-tarefas').style.display = tarefasSouMembro() ? 'flex' : 'none';
+  const permitidas = viewsDoPapel() || [];
+  permitidas.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'flex'; });
   const grupo = document.getElementById('staff-group-label');
   if(grupo) grupo.style.display = 'flex';
   document.getElementById('profile-dropdown-label').style.display = 'none';
   document.getElementById('profile-options').style.display = 'none';
   document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados</span>`;
   renderProfile();
-  if(!['vendas','analise','treinamento'].includes(currentView)) goTo('vendas');
+  if(!permitidas.includes(currentView)) goTo('equipe');
 }
 function setRole(role){
-  if(currentUserRole==='vendas'){ setRoleVendas(); return; }
+  if(currentUserRole==='vendas' || currentUserRole==='editor'){ setRoleVendas(); return; }
   currentRole = role;
   document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
   document.getElementById('role-consultora').style.display = (currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id)) ? '' : 'none';
@@ -4141,8 +4160,8 @@ function goTo(view){
   /* Trava final: a vendedora só abre o Registro de Sessões 1:1. Os outros itens já estão escondidos
      do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
-  if(currentUserRole==='vendas' && !['vendas','analise','treinamento'].includes(view) && !(view==='tarefas' && tarefasSouMembro())) view = 'vendas';
-  if(view==='tarefas' && !tarefasSouMembro()) view = currentUserRole==='vendas' ? 'vendas' : 'equipe';
+  { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = 'equipe'; }
+  if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   currentView = view;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -8872,7 +8891,7 @@ function tarefasSubquadroHtml(m, lista){
       <div class="tf-membro-hd" data-tf-recolher="${m.userId}">
         <div class="tf-membro-linha">
           ${initialsAvatar(m.initials, m.color, 44, m.avatarUrl)}
-          <div class="tf-membro-nome"><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas':'Equipe interna'))}</small></div>
+          <div class="tf-membro-nome"><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas': m.role==='editor'?'Editor de vídeos':'Equipe interna'))}</small></div>
           <span class="vg-sec-toggle ${rec?'fechado':''}">${icon('down')} ${rec?'Expandir':'Recolher'}</span>
         </div>
         <div class="tf-membro-linha tf-membro-rodape">
@@ -9007,7 +9026,7 @@ function tarefasAdminHtml(){
       <thead><tr><th>Membro</th><th>Função</th><th>Ativo</th><th>Pode delegar</th><th>Administrador</th></tr></thead>
       <tbody>${TAREFAS_EQUIPE.map(m=>`<tr>
         <td><span class="tf-pessoa">${initialsAvatar(m.initials, m.color, 24, m.avatarUrl)}<span>${escapeHtml(m.name)}</span></span></td>
-        <td>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas':'—'))}</td>
+        <td>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas': m.role==='editor'?'Editor de vídeos':'—'))}</td>
         <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="ativo" ${m.ativo?'checked':''} ${m.userId===tarefasEu()?'disabled':''}></td>
         <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="pode_delegar" ${m.pode_delegar?'checked':''}></td>
         <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="admin" ${m.admin?'checked':''} ${m.userId===tarefasEu()?'disabled':''}></td>
@@ -9362,15 +9381,22 @@ const EQUIPE_ATALHOS = [
   {view:'financeiro', desc:'Extrato, contas a receber e a pagar, faturamento e anexos.'},
   {view:'treinamento',desc:'Aulas REC do time e o registro de aprendizados de cada pessoa.'},
 ];
+/* O que cada papel interno pode abrir (a barra lateral e a trava do goTo seguem a mesma lista). */
+function viewsDoPapel(){
+  if(currentUserRole==='vendas') return ['equipe','vendas','analise','treinamento'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(currentUserRole==='editor') return ['equipe','conteudo'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  return null; // equipe interna: tudo
+}
 function renderEquipe(){
   const nome = ((currentUserProfile||{}).name||'').split(' ')[0];
+  const permitidas = viewsDoPapel();
   const hora = new Date().getHours();
   const saud = hora<12 ? 'Bom dia' : hora<18 ? 'Boa tarde' : 'Boa noite';
   document.getElementById('view-equipe').innerHTML = `
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>a.view!=='tarefas' || tarefasSouMembro()).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
@@ -9526,7 +9552,7 @@ function renderVendas(){
       <div class="kpi-tile"><div class="label">Taxa de no-show</div><div class="value">${taxaNoShow}%</div></div>
       <div class="kpi-tile"><div class="label">Faturamento (vendas fechadas)</div><div class="value" style="font-size:16px">${formatBRL(faturamento)}</div></div>
     </div>
-    <p class="kpi-note" style="margin-top:-6px">${filtroAtivo ? `Indicadores do recorte: <strong>${escapeHtml(recorte)}</strong>.` : 'Indicadores de todas as sessões registradas — mudam conforme os filtros abaixo.'}</p>
+    <p class="kpi-note" style="margin:12px 0 22px">${filtroAtivo ? `Indicadores do recorte: <strong>${escapeHtml(recorte)}</strong>.` : 'Indicadores de todas as sessões registradas — mudam conforme os filtros abaixo.'}</p>
 
     <h2 class="section-title">${icon('idcard')} Registro de Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
