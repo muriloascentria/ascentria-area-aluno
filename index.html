@@ -1344,6 +1344,60 @@
   .tf-m-acoes{flex-wrap:wrap;gap:8px;margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
   .tf-m-acoes .danger-text{color:var(--danger);}
   @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} .tf-modo{margin-left:0;} }
+  /* ---- Mensagens ---- */
+  .msg-wrap{display:grid;grid-template-columns:300px 1fr;gap:0;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;height:calc(100vh - 150px);min-height:460px;}
+  .msg-lista{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;}
+  .msg-lista-hd{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--border);}
+  .msg-lista-hd .ps-input{margin:0;flex:1;}
+  .msg-som{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--text-mute);white-space:nowrap;cursor:pointer;}
+  .msg-som .icon{width:12px;height:12px;}
+  .msg-pessoas{overflow-y:auto;flex:1;}
+  .msg-pessoa{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:none;border-bottom:1px solid var(--border);background:none;color:var(--text);font:inherit;cursor:pointer;}
+  .msg-pessoa:hover,.msg-pessoa.ativa{background:var(--bg-card);}
+  .msg-pessoa.nao-lida strong{color:var(--text);}
+  .msg-pessoa-txt{display:flex;flex-direction:column;min-width:0;flex:1;gap:2px;}
+  .msg-pessoa-txt strong{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .msg-pessoa-txt small{font-size:11.5px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .msg-badge{min-width:20px;height:20px;border-radius:10px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;}
+  .msg-quando{font-size:10.5px;color:var(--text-mute);white-space:nowrap;}
+  .msg-conversa{display:flex;flex-direction:column;min-width:0;}
+  .msg-conversa-hd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);}
+  .msg-voltar{display:none;}
+  .msg-corpo{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px;}
+  .msg-dia{align-self:center;font-size:10.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin:8px 0 4px;}
+  .msg-bolha{max-width:72%;align-self:flex-start;background:var(--bg-card);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;}
+  .msg-bolha.minha{align-self:flex-end;background:rgba(141,145,111,.22);border-color:transparent;border-radius:14px 14px 4px 14px;}
+  .msg-txt{font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+  .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
+  .msg-editor{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--border);}
+  .msg-editor .ps-input{margin:0;flex:1;resize:none;min-height:38px;max-height:140px;}
+  .msg-editor .btn-accent{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .msg-vazio{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-mute);text-align:center;padding:30px;}
+  .msg-vazio .icon{width:34px;height:34px;}
+  .msg-vazio p{font-size:14px;color:var(--text-dim);}
+  .msg-vazio small{font-size:12px;max-width:340px;line-height:1.5;}
+  @media (max-width:760px){
+    .msg-wrap{grid-template-columns:1fr;height:calc(100vh - 130px);}
+    .msg-lista.com-conversa{display:none;}
+    .msg-conversa{display:none;} .msg-lista.com-conversa + .msg-conversa{display:flex;}
+    .msg-voltar{display:inline-flex;}
+  }
+  /* janelinhas no canto inferior esquerdo */
+  #msg-popups{position:fixed;left:16px;bottom:16px;z-index:290;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:min(340px,calc(100vw - 32px));}
+  .msg-popup{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.45);padding:10px 12px;animation:msgPop .25s ease-out;}
+  @keyframes msgPop{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+  .msg-popup-hd{display:flex;align-items:center;gap:8px;}
+  .msg-popup-nome{display:flex;flex-direction:column;min-width:0;flex:1;}
+  .msg-popup-nome strong{font-size:13px;}
+  .msg-popup-nome small{font-size:10.5px;color:var(--text-mute);}
+  .msg-popup-hora{font-size:10.5px;color:var(--text-mute);}
+  .msg-popup-x{padding:4px;color:var(--text-mute);}
+  .msg-popup-x .icon{width:12px;height:12px;}
+  .msg-popup-txt{font-size:13px;line-height:1.45;margin:8px 0;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow:hidden;}
+  .msg-popup-resp{display:flex;gap:6px;}
+  .msg-popup-resp .ps-input{margin:0;flex:1;padding:6px 10px;font-size:12.5px;}
+  .msg-popup-resp .btn-accent{padding:6px 10px;display:inline-flex;align-items:center;}
+  .msg-popup-abrir{margin-top:6px;font-size:11.5px;font-weight:700;color:var(--accent);text-decoration:underline;padding:0;}
   /* Início da equipe interna: grade de botões grandes, um por área do menu */
   .equipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:16px;}
   .equipe-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 18px 16px;cursor:pointer;color:var(--text);font:inherit;transition:border-color .15s,transform .15s,background .15s;}
@@ -1471,6 +1525,7 @@
     <div class="nav-group-label" id="staff-group-label" style="display:none"><svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Equipe Interna</div>
     <button class="nav-item restrict" id="nav-equipe" data-view="equipe" style="display:none"></button>
     <button class="nav-item restrict" id="nav-tarefas" data-view="tarefas" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-mensagens" data-view="mensagens" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
@@ -1548,6 +1603,7 @@
       <div class="view" id="view-treinamento"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
+      <div class="view" id="view-mensagens"></div>
     </div>
   </div>
 </div>
@@ -1626,9 +1682,10 @@ const NAV_LABELS = {
   treinamento:['play','Treinamento Time'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
+  mensagens:['comment','Mensagens'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -2866,6 +2923,7 @@ async function bootstrapData(){
     MATERIALS.length = 0; (materialRows||[]).forEach(m=>MATERIALS.push({id:m.id, title:m.title, type:m.type, link:m.link||'', size:m.size||''}));
     LIVE_SESSIONS.length = 0; (liveRows||[]).forEach(r=>LIVE_SESSIONS.push(mapLiveSessionRow(r)));
     await tarefasBootstrap();
+    await msgBootstrap();
     currentStudentId = null;
     return;
   }
@@ -2884,6 +2942,7 @@ async function bootstrapData(){
     (recRows||[]).forEach(c=>COURSES.push({id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration||'—', tint:[c.tint1||'#8d916f', c.tint2||'#bec6b1'], desc:c.description||'', videoLink:c.video_link||'', materiais:[]}));
     await carregarTreinamentoRegistros();
     await tarefasBootstrap();
+    await msgBootstrap();
     currentStudentId = null;
     return;
   }
@@ -3029,7 +3088,7 @@ async function bootstrapData(){
   });
 
   currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
-  if(currentUserRole==='staff') await tarefasBootstrap();
+  if(currentUserRole==='staff'){ await tarefasBootstrap(); await msgBootstrap(); }
 }
 
 async function enterApp(){
@@ -3924,6 +3983,10 @@ function setupNav(){
       if(currentView==='tarefas') renderTarefas(); else goTo('tarefas');
       return;
     }
+    if(currentRole!=='aluno' && MSG_NAO_LIDAS.length){
+      msgAbrirConversa(MSG_NAO_LIDAS[MSG_NAO_LIDAS.length-1].de);
+      return;
+    }
     if(currentRole==='staff'){
       // Como comentários feitos dentro de uma aula não aparecem mais no mural da Comunidade, uma dúvida
       // sem resposta registrada numa aula não aparecia lá mesmo depois de clicar no sino — a equipe
@@ -3996,7 +4059,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length : 0;
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + MSG_NAO_LIDAS.length : 0;
   if(currentRole!=='aluno'){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
@@ -4065,6 +4128,7 @@ function setRole(role){
   document.getElementById('staff-group-label').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-equipe').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-tarefas').style.display = (staffNav && tarefasSouMembro()) ? 'flex' : 'none';
+  document.getElementById('nav-mensagens').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-visaogeral').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-interno').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-conteudo').style.display = staffNav ? 'flex' : 'none';
@@ -4183,7 +4247,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe, tarefas:renderTarefas};
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -9370,11 +9434,241 @@ async function tarefaAnexoAbrir(a){
   if(w) w.location.href = data.signedUrl; else window.open(data.signedUrl, '_blank');
 }
 
+/* ================= VIEW: MENSAGENS (messenger interno da equipe) =================
+   Conversas privadas, só texto, entre equipe interna, consultoras e editor. Sem grupos. O banco
+   garante que só os dois participantes leem cada conversa. Mensagens novas chegam em tempo real
+   (Supabase Realtime) e sobem uma janelinha no canto inferior esquerdo — a não ser que a conversa
+   com aquela pessoa já esteja aberta na tela. */
+let MSG_EQUIPE = [];          // quem pode conversar comigo
+let MSG_CONVERSAS = {};       // outroId -> [mensagens] (ordem cronológica)
+let MSG_NAO_LIDAS = [];       // {id, de} das mensagens recebidas ainda não lidas
+let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true };
+try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; }catch(e){}
+
+function msgEu(){ return currentUser ? currentUser.id : null; }
+function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
+function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
+function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
+function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at }; }
+function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de vendas' : p.role==='editor' ? 'Editor de vídeos' : 'Equipe interna'); }
+
+async function msgBootstrap(){
+  if(!msgSouEquipe()) return;
+  try{
+    const [{data:eq},{data:nl}] = await Promise.all([
+      sb.rpc('equipe_interna'),
+      sb.from('mensagens').select('id,de').eq('para', msgEu()).eq('lida', false),
+    ]);
+    MSG_EQUIPE = (eq||[]).filter(p=>p.id!==msgEu()).map(p=>({id:p.id, name:p.name||'', initials:p.initials||'', color:p.color||'#8d916f', avatarUrl:p.avatar_url||null, role:p.role, cargo:p.cargo||''}));
+    MSG_NAO_LIDAS = (nl||[]).map(m=>({id:m.id, de:m.de}));
+  }catch(e){ console.error('msgBootstrap', e); }
+  msgAssinarTempoReal();
+  updateNotifBadge();
+}
+function msgAssinarTempoReal(){
+  if(msgUI.canal || !sb.channel) return;
+  const eu = msgEu();
+  msgUI.canal = sb.channel('mensagens-'+eu)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens', filter:'para=eq.'+eu}, payload=>msgChegou(mapMsgRow(payload.new)))
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens', filter:'de=eq.'+eu}, payload=>msgEnviadaEmOutraAba(mapMsgRow(payload.new)))
+    .subscribe();
+}
+function msgGuardar(m){
+  const outro = m.de===msgEu() ? m.para : m.de;
+  const lista = (MSG_CONVERSAS[outro] = MSG_CONVERSAS[outro]||[]);
+  if(lista.some(x=>x.id===m.id)) return false;
+  lista.push(m); lista.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+  return true;
+}
+function msgEnviadaEmOutraAba(m){ if(msgGuardar(m) && currentView==='mensagens' && msgUI.aberto===m.para) renderMensagens(); }
+async function msgChegou(m){
+  if(!msgGuardar(m)) return;
+  const conversaAberta = currentView==='mensagens' && msgUI.aberto===m.de && document.visibilityState==='visible';
+  if(conversaAberta){
+    MSG_NAO_LIDAS.push({id:m.id, de:m.de}); // entra e sai na hora: só pra marcar como lida no banco
+    renderMensagens();
+    msgMarcarLidas(m.de);
+  } else {
+    MSG_NAO_LIDAS.push({id:m.id, de:m.de});
+    updateNotifBadge();
+    if(currentView==='mensagens') renderMensagens();
+    msgPopup(m);
+  }
+  msgSom();
+}
+async function msgMarcarLidas(outroId){
+  const ids = MSG_NAO_LIDAS.filter(x=>x.de===outroId).map(x=>x.id);
+  if(!ids.length) return;
+  MSG_NAO_LIDAS = MSG_NAO_LIDAS.filter(x=>x.de!==outroId);
+  (MSG_CONVERSAS[outroId]||[]).forEach(m=>{ if(ids.includes(m.id)) m.lida = true; });
+  updateNotifBadge();
+  const { error } = await sb.from('mensagens').update({lida:true}).in('id', ids);
+  if(error) console.error('msgMarcarLidas', error);
+}
+async function msgCarregarConversa(outroId){
+  if(MSG_CONVERSAS[outroId] && MSG_CONVERSAS[outroId]._completa) return;
+  const eu = msgEu();
+  const { data, error } = await sb.from('mensagens').select('*')
+    .or(`and(de.eq.${eu},para.eq.${outroId}),and(de.eq.${outroId},para.eq.${eu})`)
+    .order('created_at',{ascending:false}).limit(200);
+  if(error){ console.error('msgCarregarConversa', error); return; }
+  const lista = (data||[]).map(mapMsgRow).reverse();
+  const atual = MSG_CONVERSAS[outroId]||[];
+  atual.forEach(m=>{ if(!lista.some(x=>x.id===m.id)) lista.push(m); });
+  lista.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+  lista._completa = true;
+  MSG_CONVERSAS[outroId] = lista;
+}
+async function msgEnviar(paraId, texto){
+  texto = (texto||'').trim();
+  if(!texto) return false;
+  if(texto.length>4000){ alert('A mensagem pode ter no máximo 4000 caracteres.'); return false; }
+  if(!msgPessoa(paraId)){ alert('Essa pessoa não está na equipe.'); return false; }
+  const { data, error } = await sb.from('mensagens').insert({de:msgEu(), para:paraId, texto}).select().single();
+  if(error){ console.error('msgEnviar', error); alert('Não foi possível enviar: '+(error.message||'')); return false; }
+  msgGuardar(mapMsgRow(data));
+  return true;
+}
+
+/* ---- som de aviso (gerado no navegador, sem arquivo externo) ---- */
+let msgAudioCtx = null;
+function msgSom(){
+  if(!msgUI.somLigado) return;
+  try{
+    msgAudioCtx = msgAudioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = msgAudioCtx; if(ctx.state==='suspended') ctx.resume();
+    const t0 = ctx.currentTime;
+    [[880,0],[1174,0.13]].forEach(([f,dt])=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, t0+dt); g.gain.exponentialRampToValueAtTime(0.25, t0+dt+0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0+dt+0.22);
+      o.start(t0+dt); o.stop(t0+dt+0.25);
+    });
+  }catch(e){ /* sem áudio disponível */ }
+}
+function msgSetSom(v){ msgUI.somLigado = !!v; try{ localStorage.setItem('ascentria-msg-som', v?'1':'0'); }catch(e){} }
+
+/* ---- janelinha no canto inferior esquerdo (estilo MSN) ---- */
+function msgPopupContainer(){
+  let c = document.getElementById('msg-popups');
+  if(!c){ c = document.createElement('div'); c.id='msg-popups'; document.body.appendChild(c); }
+  return c;
+}
+function msgPopup(m){
+  const p = msgPessoa(m.de); if(!p) return;
+  const c = msgPopupContainer();
+  // uma janela por pessoa: se já tem, só atualiza o texto
+  let el = c.querySelector(`[data-msg-popup="${m.de}"]`);
+  if(el){ el.querySelector('.msg-popup-txt').textContent = m.texto; el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
+  el = document.createElement('div');
+  el.className = 'msg-popup'; el.dataset.msgPopup = m.de;
+  el.innerHTML = `
+    <div class="msg-popup-hd">${initialsAvatar(p.initials, p.color, 30, p.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></div><span class="msg-popup-hora">${tzDataHora(m.createdAt, true).split(' às ')[1]||''}</span><button type="button" class="msg-popup-x" title="Fechar">${icon('x','tiny')}</button></div>
+    <div class="msg-popup-txt"></div>
+    <div class="msg-popup-resp"><input class="ps-input" type="text" placeholder="Responder…" maxlength="4000"><button type="button" class="btn-accent" title="Enviar">${icon('reply','tiny')}</button></div>
+    <button type="button" class="msg-popup-abrir">Abrir conversa</button>`;
+  el.querySelector('.msg-popup-txt').textContent = m.texto;
+  c.appendChild(el);
+  while(c.children.length>3) c.removeChild(c.firstChild);
+  const fechar = ()=>{ clearTimeout(el._timer); el.remove(); };
+  el.querySelector('.msg-popup-x').addEventListener('click', fechar);
+  el.querySelector('.msg-popup-abrir').addEventListener('click', ()=>{ fechar(); msgAbrirConversa(m.de); });
+  const inp = el.querySelector('input'), btn = el.querySelector('.msg-popup-resp button');
+  const responder = async ()=>{ const t = inp.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(m.de, t)){ inp.value=''; msgMarcarLidas(m.de); fechar(); } else btn.disabled = false; };
+  btn.addEventListener('click', responder);
+  inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); responder(); } if(e.key==='Escape') fechar(); });
+  inp.addEventListener('focus', ()=>clearTimeout(el._timer));
+  msgPopupTimer(el);
+}
+function msgPopupTimer(el){ clearTimeout(el._timer); el._timer = setTimeout(()=>{ if(document.activeElement && el.contains(document.activeElement)) { msgPopupTimer(el); return; } el.remove(); }, 25000); }
+function msgAbrirConversa(outroId){
+  msgUI.aberto = outroId;
+  const c = document.getElementById('msg-popups'); if(c){ const el = c.querySelector(`[data-msg-popup="${outroId}"]`); if(el) el.remove(); }
+  if(currentView!=='mensagens') goTo('mensagens'); else renderMensagens();
+}
+
+/* ---- tela ---- */
+function renderMensagens(){
+  const el = document.getElementById('view-mensagens');
+  if(!msgSouEquipe()){ el.innerHTML = '<div class="empty-state">As mensagens são só para a equipe interna.</div>'; return; }
+  const q = normTxt(msgUI.busca).trim();
+  const pessoas = MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
+  const ultima = (id)=>{ const l = MSG_CONVERSAS[id]||[]; return l.length ? l[l.length-1] : null; };
+  const ordenadas = pessoas.slice().sort((a,b)=>{ const ua = ultima(a.id), ub = ultima(b.id); const na = msgNaoLidasDe(a.id), nb = msgNaoLidasDe(b.id); if(!!nb!==!!na) return nb?1:-1; if(ua&&ub) return ub.createdAt.localeCompare(ua.createdAt); if(ua||ub) return ub?1:-1; return a.name.localeCompare(b.name,'pt-BR'); });
+  const outro = msgPessoa(msgUI.aberto);
+  const conversa = outro ? (MSG_CONVERSAS[outro.id]||[]) : [];
+  const taAntes = el.querySelector('#msg-texto');
+  const rascunho = taAntes ? taAntes.value : '';
+  const tinhaFoco = !!taAntes && document.activeElement===taAntes;
+  const eu = msgEu();
+  let diaAnterior = '';
+  const bolhas = conversa.map(m=>{
+    const dia = tzDataHora(m.createdAt).slice(0,10); let sep = '';
+    if(dia!==diaAnterior){ diaAnterior = dia; const hoje = tzDataHora(new Date().toISOString()).slice(0,10); sep = `<div class="msg-dia">${dia===hoje? 'Hoje' : dia}</div>`; }
+    const hora = (tzDataHora(m.createdAt, true).split(' às ')[1])||'';
+    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}"><div class="msg-txt">${linkify(m.texto)}</div><div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="msg-wrap">
+      <aside class="msg-lista ${outro?'com-conversa':''}">
+        <div class="msg-lista-hd">
+          <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="Buscar pessoa…">
+          <label class="msg-som" title="Som ao receber mensagem"><input type="checkbox" id="msg-som" ${msgUI.somLigado?'checked':''}> ${icon('bell','tiny')} Som</label>
+        </div>
+        <div class="msg-pessoas">
+          ${ordenadas.map(p=>{ const u = ultima(p.id), n = msgNaoLidasDe(p.id); return `
+            <button type="button" class="msg-pessoa ${msgUI.aberto===p.id?'ativa':''} ${n?'nao-lida':''}" data-msg-abrir="${p.id}">
+              ${initialsAvatar(p.initials, p.color, 36, p.avatarUrl)}
+              <span class="msg-pessoa-txt"><strong>${escapeHtml(p.name)}</strong><small>${u ? escapeHtml((u.de===eu?'Você: ':'')+u.texto).slice(0,60) : escapeHtml(msgPapelLabel(p))}</small></span>
+              ${n ? `<span class="msg-badge">${n}</span>` : (u ? `<small class="msg-quando">${tzDataCurta(tzDataHora(u.createdAt).split('/').reverse().join('-'))}</small>` : '')}
+            </button>`; }).join('') || '<div class="tf-vazio">Ninguém encontrado.</div>'}
+        </div>
+      </aside>
+      <section class="msg-conversa">
+        ${outro ? `
+          <div class="msg-conversa-hd">
+            <button type="button" class="btn-mini msg-voltar" id="msg-voltar">${icon('back','tiny')}</button>
+            ${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}
+            <div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>
+          </div>
+          <div class="msg-corpo" id="msg-corpo">${bolhas || '<div class="tf-vazio" style="text-align:center;padding:30px">Nenhuma mensagem ainda. Diga oi!</div>'}</div>
+          <div class="msg-editor">
+            <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
+            <button type="button" class="btn-accent" id="msg-enviar">${icon('reply','tiny')} Enviar</button>
+          </div>`
+        : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe para conversar.</p><small>Conversas privadas, só texto. Quem receber vê a mensagem na hora, em qualquer tela.</small></div>`}
+      </section>
+    </div>`;
+  bindBuscaInput('msg-busca', v=>{ msgUI.busca = v; }, renderMensagens);
+  el.querySelector('#msg-som').addEventListener('change', e=>{ msgSetSom(e.target.checked); if(e.target.checked) msgSom(); });
+  el.querySelectorAll('[data-msg-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
+    msgUI.aberto = b.dataset.msgAbrir;
+    renderMensagens();
+    await msgCarregarConversa(msgUI.aberto);
+    msgMarcarLidas(msgUI.aberto);
+    renderMensagens();
+  }));
+  const voltar = el.querySelector('#msg-voltar'); if(voltar) voltar.addEventListener('click', ()=>{ msgUI.aberto = null; renderMensagens(); });
+  if(outro){
+    const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = corpo.scrollHeight;
+    if(!(MSG_CONVERSAS[outro.id]||{})._completa){ msgCarregarConversa(outro.id).then(()=>{ msgMarcarLidas(outro.id); if(msgUI.aberto===outro.id && currentView==='mensagens') renderMensagens(); }); }
+    else msgMarcarLidas(outro.id);
+    const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
+    const enviar = async ()=>{ const t = ta.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(outro.id, t)){ ta.value=''; renderMensagens(); document.getElementById('msg-texto').focus(); } else btn.disabled = false; };
+    btn.addEventListener('click', enviar);
+    ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); enviar(); } });
+    ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
+    if(rascunho){ ta.value = rascunho; ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; }
+    if(tinhaFoco || !rascunho){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }
+}
+
 /* ================= VIEW: INÍCIO DA EQUIPE INTERNA ================= */
 /* Painel de entrada da equipe: um botão grande para cada área do menu lateral (mesma ordem), com uma
    linha explicando o que tem em cada uma. É onde a equipe cai ao entrar no sistema. */
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
+  {view:'mensagens',  desc:'Conversas privadas com a equipe, em tempo real.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
@@ -9388,8 +9682,8 @@ const EQUIPE_ATALHOS = [
 function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
-  if(papel==='vendas') return ['equipe','vendas','analise','treinamento'].concat(tarefasSouMembro()? ['tarefas'] : []);
-  if(papel==='editor') return ['equipe','conteudo'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='editor') return ['equipe','mensagens','conteudo'].concat(tarefasSouMembro()? ['tarefas'] : []);
   return null; // equipe interna: tudo
 }
 function renderEquipe(){
