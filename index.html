@@ -1344,6 +1344,15 @@
   .tf-m-acoes{flex-wrap:wrap;gap:8px;margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
   .tf-m-acoes .danger-text{color:var(--danger);}
   @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} .tf-modo{margin-left:0;} }
+  /* ---- Emojis ---- */
+  .emoji-btn{font-size:18px;line-height:1;padding:4px 6px;border-radius:8px;background:none;border:1px solid transparent;cursor:pointer;flex-shrink:0;filter:grayscale(.2);}
+  .emoji-btn:hover{border-color:var(--border);background:var(--bg-card);filter:none;}
+  #emoji-painel{position:fixed;z-index:320;width:292px;max-height:260px;overflow-y:auto;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.4);padding:8px;display:grid;grid-template-columns:repeat(8,1fr);gap:2px;}
+  #emoji-painel button{font-size:20px;line-height:1;padding:5px 0;border-radius:8px;background:none;border:none;cursor:pointer;}
+  #emoji-painel button:hover{background:var(--bg-card);transform:scale(1.15);}
+  .composer-footer .emoji-btn{margin-left:auto;margin-right:6px;}
+  .comment-composer .emoji-btn{padding:2px 4px;font-size:16px;}
+  .msg-popup-resp .emoji-btn{padding:2px 4px;font-size:16px;}
   /* ---- Mensagens ---- */
   .msg-wrap{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;height:calc(100vh - 150px);min-height:460px;}
   .msg-lista{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
@@ -4799,6 +4808,7 @@ function courseCommentsHtml(c){
             <div class="type-select" id="cm-type-select">
               ${Object.keys(POST_TYPES).filter(k=>k!=='apresentacao').map(k=>`<button class="type-pill tag-${POST_TYPES[k].css} ${selectedCoursePostType===k?'active':''}" data-cm-type="${k}">${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`).join('')}
             </div>
+            <button type="button" class="emoji-btn" data-emoji-for="#cm-new-post" title="Emoji">😊</button>
             <button class="btn-accent" id="cm-post-btn">Publicar</button>
           </div>
         </div>
@@ -5347,6 +5357,7 @@ function postHtml(p,compact,showCourseTag){
             <div class="comment-composer">
               ${initialsAvatar(replyAuthor.initials,replyAuthor.color,22,replyAuthor.avatarUrl)}
               <input type="text" placeholder="${replyTargets[p.id]? 'Responder a '+escapeAttr(replyTargets[p.id].name)+'...' : 'Escreva um comentário...'}" data-comment-input="${p.id}">
+              <button type="button" class="emoji-btn" title="Emoji">😊</button>
               <button class="btn-mini" data-comment-send="${p.id}">Enviar</button>
             </div>
           </div>` : ''}
@@ -5403,6 +5414,7 @@ function renderComunidade(){
               return `<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}" ${disabled?'disabled title="Você já publicou sua apresentação — exclua a anterior pra postar uma nova."':''}>${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`;
             }).join('')}
           </div>
+          <button type="button" class="emoji-btn" data-emoji-for="#new-post" title="Emoji">😊</button>
           <button class="btn-accent" id="post-btn">Publicar</button>
         </div>
       </div>
@@ -9442,6 +9454,38 @@ async function tarefaAnexoAbrir(a){
   if(w) w.location.href = data.signedUrl; else window.open(data.signedUrl, '_blank');
 }
 
+/* ================= EMOJIS (seletor simples, clássico) =================
+   Botão 😊 ao lado de qualquer campo de texto: abre um painel com os emojis mais usados e insere no
+   ponto do cursor. Usado no chat, na comunidade e nos comentários das aulas. */
+const EMOJIS_CLASSICOS = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😍','🥰','😘','😋','😎','🤩','🥳','😏','😌','😴','🤔','🤗','🤭','😬','😮','😲','😳','🥺','😢','😭','😤','😠','🙄','😷','🤒','🤯','😱','😐','👍','👎','👏','🙌','🙏','🤝','💪','👋','✌️','🤞','👌','☝️','❤️','🧡','💛','💚','💙','💜','🖤','💔','✨','🔥','⭐','🎉','🎯','✅','❌','⚠️','💡','📌','📅','📝','💬','🚀','☕','🍀'];
+function emojiInserir(campo, emoji){
+  if(!campo) return;
+  const ini = campo.selectionStart ?? campo.value.length, fim = campo.selectionEnd ?? campo.value.length;
+  campo.value = campo.value.slice(0,ini) + emoji + campo.value.slice(fim);
+  const pos = ini + emoji.length;
+  campo.focus(); try{ campo.setSelectionRange(pos,pos); }catch(e){}
+  campo.dispatchEvent(new Event('input', {bubbles:true}));
+}
+function emojiFechar(){ const p = document.getElementById('emoji-painel'); if(p) p.remove(); document.removeEventListener('click', emojiForaClick); }
+function emojiForaClick(e){ const p = document.getElementById('emoji-painel'); if(p && !p.contains(e.target) && !e.target.closest('.emoji-btn')) emojiFechar(); }
+function emojiAbrir(btn){
+  const alvo = btn.dataset.emojiFor ? document.querySelector(btn.dataset.emojiFor) : (btn.previousElementSibling && /^(INPUT|TEXTAREA)$/.test(btn.previousElementSibling.tagName) ? btn.previousElementSibling : null);
+  if(!alvo) return;
+  const jaAberto = document.getElementById('emoji-painel');
+  if(jaAberto){ const mesmo = jaAberto._btn===btn; emojiFechar(); if(mesmo) return; }
+  const p = document.createElement('div'); p.id = 'emoji-painel'; p._btn = btn;
+  p.innerHTML = EMOJIS_CLASSICOS.map(e=>`<button type="button" data-emoji="${e}">${e}</button>`).join('');
+  document.body.appendChild(p);
+  const r = btn.getBoundingClientRect(), pw = 292, ph = p.offsetHeight || 240;
+  let left = Math.min(Math.max(8, r.left), window.innerWidth - pw - 8);
+  let top = r.top - ph - 8; if(top < 8) top = Math.min(r.bottom + 8, window.innerHeight - ph - 8);
+  p.style.left = left+'px'; p.style.top = top+'px';
+  p.querySelectorAll('[data-emoji]').forEach(b=>b.addEventListener('click', ()=>{ emojiInserir(alvo, b.dataset.emoji); }));
+  setTimeout(()=>document.addEventListener('click', emojiForaClick), 0);
+}
+document.addEventListener('click', e=>{ const b = e.target.closest('.emoji-btn'); if(b){ e.preventDefault(); e.stopPropagation(); emojiAbrir(b); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') emojiFechar(); });
+
 /* ================= VIEW: MENSAGENS (messenger interno da equipe) =================
    Conversas privadas, só texto, entre equipe interna, consultoras e editor. Sem grupos. O banco
    garante que só os dois participantes leem cada conversa. Mensagens novas chegam em tempo real
@@ -9601,7 +9645,7 @@ function msgPopup(m){
   el.innerHTML = `
     <div class="msg-popup-hd">${initialsAvatar(p.initials, p.color, 30, p.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></div><span class="msg-popup-hora">${tzDataHora(m.createdAt, true).split(' às ')[1]||''}</span><button type="button" class="msg-popup-x" title="Fechar">${icon('x','tiny')}</button></div>
     <div class="msg-popup-txt"></div>
-    <div class="msg-popup-resp"><input class="ps-input" type="text" placeholder="Responder…" maxlength="4000"><button type="button" class="btn-accent" title="Enviar">${icon('reply','tiny')}</button></div>
+    <div class="msg-popup-resp"><input class="ps-input" type="text" placeholder="Responder…" maxlength="4000"><button type="button" class="emoji-btn" title="Emoji">😊</button><button type="button" class="btn-accent" title="Enviar">${icon('reply','tiny')}</button></div>
     <button type="button" class="msg-popup-abrir">Abrir conversa</button>`;
   el.querySelector('.msg-popup-txt').textContent = m.texto;
   c.appendChild(el);
@@ -9676,6 +9720,7 @@ function renderMensagens(){
           <div class="msg-corpo" id="msg-corpo">${bolhas || '<div class="tf-vazio" style="text-align:center;padding:30px">Nenhuma mensagem ainda. Diga oi!</div>'}</div>
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
+            <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
             <button type="button" class="btn-accent" id="msg-enviar">${icon('reply','tiny')} Enviar</button>
           </div>`
         : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe para conversar.</p><small>Conversas privadas, só texto. Quem receber vê a mensagem na hora, em qualquer tela.</small></div>`}
