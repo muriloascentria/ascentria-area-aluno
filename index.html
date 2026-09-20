@@ -1206,6 +1206,141 @@
   .link-btn:hover{opacity:0.8;}
 
   .empty-state{text-align:center;padding:40px 20px;color:var(--text-mute);font-size:13px;}
+  /* ---- Tarefas (equipe interna) ---- */
+  .tf-topo{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px;}
+  .tf-topo-acoes{display:flex;gap:10px;align-items:center;padding-top:6px;}
+  .tf-topo-acoes .btn-accent,.tf-topo-acoes .btn-outline{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}
+  .tf-sino span{font-weight:800;}
+  .tf-sino.tem{border-color:var(--danger);color:var(--danger);}
+  .tf-kpi-atr .value{color:var(--danger);}
+  .tf-notifs{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin:-6px 0 16px;}
+  .tf-notifs-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .tf-notifs-hd strong{display:inline-flex;align-items:center;gap:6px;}
+  .tf-notif{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 6px;border:none;border-bottom:1px solid var(--border);background:none;color:var(--text);font:inherit;font-size:13px;cursor:pointer;}
+  .tf-notif:last-child{border-bottom:none;}
+  .tf-notif:hover{background:var(--bg-elev);}
+  .tf-notif small{margin-left:auto;color:var(--text-mute);white-space:nowrap;font-size:11px;}
+  .tf-notif-tipo{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+  .tf-notif-tipo.atrasada,.tf-notif-tipo.mencao{background:var(--danger);}
+  .tf-notif-tipo.vence_em_breve,.tf-notif-tipo.prazo{background:#f59e0b;}
+  .tf-notif-tipo.concluida{background:var(--success);}
+  .tf-abas{align-items:center;}
+  .tf-modo{margin-left:auto;display:flex;gap:6px;}
+  .tf-modo .filter-tab{display:inline-flex;align-items:center;gap:5px;}
+  .tf-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px;}
+  .tf-filtros .ps-input{margin:0;width:auto;min-width:150px;}
+  .tf-filtros .tf-busca{flex:1 1 240px;}
+  .tf-periodo{display:inline-flex;gap:6px;align-items:center;}
+  .tf-periodo .ps-input{min-width:120px;}
+  .tf-filtros .btn-outline{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+  .tf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+  .tf-kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start;}
+  .tf-coluna{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:10px;}
+  .tf-coluna.fechadas{opacity:.8;}
+  .tf-coluna-hd{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);display:flex;align-items:center;gap:8px;margin:2px 4px 10px;}
+  .tf-coluna-hd .qtd,.tf-h .qtd{font-size:11px;font-weight:700;padding:1px 8px;border-radius:12px;background:var(--bg-card);color:var(--text-dim);}
+  .tf-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;align-items:start;}
+  .tf-membro{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .tf-membro-hd{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);}
+  .tf-membro.recolhido .tf-membro-hd{border-bottom:none;}
+  .tf-membro-nome{display:flex;flex-direction:column;min-width:0;flex:1;}
+  .tf-membro-nome strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tf-membro-nome small{font-size:11px;color:var(--text-mute);}
+  .tf-membro-nums{display:flex;gap:10px;font-size:11px;color:var(--text-mute);white-space:nowrap;}
+  .tf-membro-nums b{color:var(--text);font-size:13px;}
+  .tf-membro-nums .atr b{color:var(--danger);}
+  .tf-membro-nums .ok b{color:var(--success);}
+  .tf-membro-hd .vg-sec-toggle{margin-left:0;}
+  .tf-nova-para{border:1px solid var(--border);border-radius:50%;width:26px;height:26px;justify-content:center;padding:0;}
+  .tf-membro-corpo{padding:10px;display:flex;flex-direction:column;gap:8px;max-height:520px;overflow-y:auto;}
+  .tf-membro-corpo[hidden]{display:none;}
+  .tf-card{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s,transform .15s;}
+  .tf-card:hover{border-color:var(--accent);transform:translateY(-1px);}
+  .tf-card.atrasada{border-left-color:var(--danger);}
+  .tf-card.urgente{border-left-color:#f59e0b;}
+  .tf-card.fechada{opacity:.65;}
+  .tf-card.fechada .tf-card-titulo{text-decoration:line-through;}
+  .tf-card + .tf-card{margin-top:8px;}
+  .tf-card-topo{display:flex;align-items:flex-start;gap:8px;}
+  .tf-card-titulo{flex:1;font-size:13.5px;font-weight:700;line-height:1.35;min-width:0;word-break:break-word;}
+  .tf-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--text-mute);background:none;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;color:transparent;padding:0;margin-top:1px;}
+  .tf-check .icon{width:11px;height:11px;stroke:currentColor;}
+  .tf-check:hover{border-color:var(--success);color:var(--success);}
+  .tf-check.ok{background:var(--success);border-color:var(--success);color:#fff;}
+  .tf-check:disabled{opacity:.5;cursor:default;}
+  .tf-card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--text-dim);}
+  .tf-pessoa{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .tf-avatar-vazio{width:18px;height:18px;border-radius:50%;background:var(--border);display:inline-block;}
+  .tf-prazo{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+  .tf-prazo .icon{width:12px;height:12px;}
+  .tf-prazo.atrasada{color:var(--danger);font-weight:700;}
+  .tf-prazo.hoje{color:#f59e0b;font-weight:700;}
+  .tf-prazo.vazio{color:var(--text-mute);}
+  .tf-prio{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:10px;white-space:nowrap;}
+  .tf-prio.baixa{background:var(--bg-elev);color:var(--text-mute);}
+  .tf-prio.media{background:rgba(141,145,111,.18);color:var(--accent);}
+  .tf-prio.alta{background:rgba(245,158,11,.16);color:#d97706;}
+  .tf-prio.urgente{background:var(--danger-soft);color:var(--danger);}
+  .tf-sub{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .tf-sub-bar{width:46px;height:5px;border-radius:3px;background:var(--border);overflow:hidden;display:inline-block;}
+  .tf-sub-bar i{display:block;height:100%;background:var(--success);}
+  .tf-status{font:inherit;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);margin-left:auto;cursor:pointer;}
+  .tf-status.em_andamento{color:#2563eb;border-color:rgba(37,99,235,.35);}
+  .tf-status.aguardando{color:#d97706;border-color:rgba(217,119,6,.35);}
+  .tf-status.concluida{color:var(--success);border-color:rgba(34,197,94,.35);}
+  .tf-status.cancelada{color:var(--text-mute);text-decoration:line-through;}
+  .tf-status:disabled{cursor:default;opacity:.7;}
+  .tf-card-sinais{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .tf-sinal{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:10px;}
+  .tf-sinal.atrasada{background:var(--danger-soft);color:var(--danger);}
+  .tf-sinal.hoje{background:rgba(245,158,11,.16);color:#d97706;}
+  .tf-sinal.urgente{background:var(--danger);color:#fff;}
+  .tf-sinal.nova{background:rgba(37,99,235,.16);color:#2563eb;}
+  .tf-sinal.atualizada{background:var(--success-soft);color:var(--success);}
+  .tf-vazio{font-size:12.5px;color:var(--text-mute);font-style:italic;padding:8px 4px;}
+  .tf-tabela tr[data-tf-abrir]{cursor:pointer;}
+  .tf-tabela tr[data-tf-abrir]:hover td{background:var(--bg-elev);}
+  .tf-tabela .tf-status{margin-left:0;}
+  .tf-linha-atrasada td:nth-child(2) strong{color:var(--danger);}
+  /* modal */
+  .modal:has(.tf-modal){max-width:760px;}
+  .tf-titulo{font-size:17px;font-weight:700;margin:8px 0 4px;}
+  .tf-m-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px;margin:10px 0 6px;}
+  .tf-m-grid .ps-label{margin-top:0;}
+  .tf-h{display:flex;align-items:center;gap:8px;font-size:13px;margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--border);}
+  .tf-h .icon{width:14px;height:14px;}
+  .tf-h-toggle{cursor:pointer;user-select:none;}
+  .tf-subs{display:flex;flex-direction:column;gap:4px;}
+  .tf-sub-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 2px;}
+  .tf-sub-item.ok span{text-decoration:line-through;color:var(--text-mute);}
+  .tf-sub-item span{flex:1;}
+  .tf-sub-add{display:flex;gap:8px;margin-top:8px;}
+  .tf-sub-add .ps-input{margin:0;flex:1;}
+  .tf-sub-add .btn-outline{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+  .tf-anexos{display:flex;flex-direction:column;gap:6px;}
+  .tf-anexo{display:flex;align-items:center;gap:10px;font-size:13px;}
+  .tf-anexo small{color:var(--text-mute);}
+  .tf-upload{display:inline-flex;align-items:center;gap:6px;cursor:pointer;align-self:flex-start;margin-top:6px;}
+  .tf-coms{display:flex;flex-direction:column;gap:10px;}
+  .tf-com{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:8px 12px;}
+  .tf-com-hd{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:4px;}
+  .tf-com-hd small{color:var(--text-mute);}
+  .tf-com-hd .danger{margin-left:auto;}
+  .tf-com-txt{font-size:13px;white-space:pre-wrap;line-height:1.5;}
+  .tf-mencao{color:var(--accent);font-weight:700;}
+  .tf-com-add{position:relative;margin-top:10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;}
+  .tf-com-add .ps-input{margin:0;width:100%;}
+  .tf-com-add .btn-outline{display:inline-flex;align-items:center;gap:6px;}
+  .tf-mencoes{position:absolute;left:0;top:calc(100% - 44px);z-index:5;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:2px;box-shadow:0 10px 24px rgba(0,0,0,.3);}
+  .tf-mencoes[hidden]{display:none;}
+  .tf-mencoes button{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--text);font:inherit;font-size:13px;padding:6px 8px;border-radius:6px;cursor:pointer;text-align:left;}
+  .tf-mencoes button:hover{background:var(--bg-card);}
+  .tf-hist{display:flex;flex-direction:column;gap:4px;font-size:12.5px;}
+  .tf-hist[hidden]{display:none;}
+  .tf-hist-item small{color:var(--text-mute);margin-right:6px;}
+  .tf-m-acoes{flex-wrap:wrap;gap:8px;}
+  .tf-m-acoes .danger-text{color:var(--danger);}
+  @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-nums{display:none;} .tf-modo{margin-left:0;} }
   /* Início da equipe interna: grade de botões grandes, um por área do menu */
   .equipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:16px;}
   .equipe-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 18px 16px;cursor:pointer;color:var(--text);font:inherit;transition:border-color .15s,transform .15s,background .15s;}
@@ -1332,6 +1467,7 @@
 
     <div class="nav-group-label" id="staff-group-label" style="display:none"><svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Equipe Interna</div>
     <button class="nav-item restrict" id="nav-equipe" data-view="equipe" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-tarefas" data-view="tarefas" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
@@ -1407,6 +1543,7 @@
       <div class="view" id="view-financeiro"></div>
       <div class="view" id="view-treinamento"></div>
       <div class="view" id="view-equipe"></div>
+      <div class="view" id="view-tarefas"></div>
     </div>
   </div>
 </div>
@@ -1484,9 +1621,10 @@ const NAV_LABELS = {
   financeiro:['money','Financeiro'],
   treinamento:['play','Treinamento Time'],
   equipe:['home','Início'],
+  tarefas:['check','Tarefas'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -2723,6 +2861,7 @@ async function bootstrapData(){
     const { data: recRows } = await sb.from('courses').select('*').ilike('title','%REC%').order('mod_id').order('order_index');
     (recRows||[]).forEach(c=>COURSES.push({id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration||'—', tint:[c.tint1||'#8d916f', c.tint2||'#bec6b1'], desc:c.description||'', videoLink:c.video_link||'', materiais:[]}));
     await carregarTreinamentoRegistros();
+    await tarefasBootstrap();
     currentStudentId = null;
     return;
   }
@@ -2868,6 +3007,7 @@ async function bootstrapData(){
   });
 
   currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
+  if(currentUserRole==='staff') await tarefasBootstrap();
 }
 
 async function enterApp(){
@@ -3756,6 +3896,12 @@ function setupNav(){
     openSetNewPasswordModal('change');
   });
   document.getElementById('notif-btn').addEventListener('click',()=>{
+    /* Avisos do módulo Tarefas têm prioridade no sino: abre a tela com o painel de notificações. */
+    if((currentRole==='staff' || currentRole==='consultora') && tarefasNaoLidas().length){
+      tarefasUI.notifsAberto = true;
+      if(currentView==='tarefas') renderTarefas(); else goTo('tarefas');
+      return;
+    }
     if(currentRole==='staff'){
       // Como comentários feitos dentro de uma aula não aparecem mais no mural da Comunidade, uma dúvida
       // sem resposta registrada numa aula não aparecia lá mesmo depois de clicar no sino — a equipe
@@ -3828,10 +3974,11 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  if(currentRole==='staff'){
+  const tf = (currentRole==='staff' || currentRole==='consultora') ? tarefasNaoLidas().length : 0;
+  if(currentRole==='staff' || currentRole==='consultora'){
     dot.style.display = 'none';
-    badge.style.display = pend.length>0 ? 'flex' : 'none';
-    badge.textContent = pend.length;
+    badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
+    badge.textContent = pend.length+tf;
   } else {
     dot.style.display = pend.length>0 ? 'block' : 'none';
     badge.style.display = 'none';
@@ -3850,6 +3997,7 @@ function setRoleVendas(){
     const el = document.getElementById(id);
     if(el) el.style.display = 'flex';
   });
+  document.getElementById('nav-tarefas').style.display = tarefasSouMembro() ? 'flex' : 'none';
   const grupo = document.getElementById('staff-group-label');
   if(grupo) grupo.style.display = 'flex';
   document.getElementById('profile-dropdown-label').style.display = 'none';
@@ -3874,6 +4022,7 @@ function setRole(role){
     document.querySelectorAll('.nav-item[data-view]').forEach(el=>{ el.style.display = 'none'; });
     document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
     ['nav-vendas','nav-analise','nav-treinamento'].forEach(id=>{ document.getElementById(id).style.display = 'flex'; });
+    document.getElementById('nav-tarefas').style.display = tarefasSouMembro() ? 'flex' : 'none';
     document.getElementById('staff-group-label').style.display = 'flex';
     document.getElementById('nav-prontuarios').style.display = 'none';
     document.getElementById('profile-dropdown-label').style.display = 'none';
@@ -3881,7 +4030,7 @@ function setRole(role){
     document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`;
     renderProfile();
     updateNotifBadge();
-    if(!['vendas','analise','treinamento'].includes(currentView)) goTo('vendas'); else renderCurrentView();
+    if(!['vendas','analise','treinamento','tarefas'].includes(currentView)) goTo('vendas'); else renderCurrentView();
     return;
   }
   /* Os itens da equipe interna ficam disponíveis o tempo todo para quem é da equipe — inclusive
@@ -3891,6 +4040,7 @@ function setRole(role){
   const staffNav = currentUserRole==='staff';
   document.getElementById('staff-group-label').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-equipe').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-tarefas').style.display = (staffNav && tarefasSouMembro()) ? 'flex' : 'none';
   document.getElementById('nav-visaogeral').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-interno').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-conteudo').style.display = staffNav ? 'flex' : 'none';
@@ -3989,7 +4139,8 @@ function goTo(view){
   /* Trava final: a vendedora só abre o Registro de Sessões 1:1. Os outros itens já estão escondidos
      do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
-  if(currentUserRole==='vendas' && !['vendas','analise','treinamento'].includes(view)) view = 'vendas';
+  if(currentUserRole==='vendas' && !['vendas','analise','treinamento'].includes(view) && !(view==='tarefas' && tarefasSouMembro())) view = 'vendas';
+  if(view==='tarefas' && !tarefasSouMembro()) view = currentUserRole==='vendas' ? 'vendas' : 'equipe';
   currentView = view;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -4008,7 +4159,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe};
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe, tarefas:renderTarefas};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -8435,10 +8586,767 @@ function renderConteudo(){
   });
 }
 
+/* ================= VIEW: TAREFAS (gestão de tarefas da equipe interna) =================
+   Quem entra: membros ativos de tarefas_membros (equipe interna; consultoras só se o administrador
+   liberar). Tudo que é regra de permissão vale também no banco (RLS + gatilhos) — aqui a tela só
+   esconde o que a pessoa não pode fazer. Datas/horários sempre em America/Sao_Paulo. */
+let TAREFAS = [];            // tarefas abertas + (quando pedido) concluídas/canceladas carregadas
+let TAREFAS_SUB = {};        // tarefa_id -> [{id,titulo,concluida,...}]
+let TAREFAS_EQUIPE = [];     // membros (tarefas_equipe())
+let TAREFAS_NOTIFS = [];     // minhas notificações não lidas
+let TAREFAS_ACESSO_ANTERIOR = null; // ultimo_acesso_em antes desta visita (pra "atualizada desde o último acesso")
+const TAREFAS_TOQUEI = new Set();  // tarefas que eu mesmo alterei nesta sessão (não marcam "Atualizada")
+let tarefasUI = {
+  aba:'minhas', modo:'quadro', busca:'',
+  filtros:{ responsavel:'todos', criador:'todos', status:'abertas', prioridade:'todas', prazo:'todos', periodoTipo:'criacao', de:'', ate:'' },
+  ordem:'prazo', recolhidos:{}, notifsAberto:false, carregado:false, carregando:false,
+  concluidasPagina:0, concluidasFim:false, membroMobile:'',
+};
+const TAREFAS_STATUS = { pendente:'Pendente', em_andamento:'Em andamento', aguardando:'Aguardando', concluida:'Concluída', cancelada:'Cancelada' };
+const TAREFAS_PRIO = { baixa:'Baixa', media:'Média', alta:'Alta', urgente:'Urgente' };
+const TAREFAS_PRIO_ORDEM = { urgente:0, alta:1, media:2, baixa:3 };
+const TAREFAS_PAGINA = 50;
+
+function tzHojeISO(){
+  // "hoje" no fuso do sistema (America/Sao_Paulo), em AAAA-MM-DD
+  const p = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const g = k=>p.find(x=>x.type===k).value;
+  return `${g('year')}-${g('month')}-${g('day')}`;
+}
+function tzDataHora(iso, comHora){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return new Intl.DateTimeFormat('pt-BR', Object.assign({timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}, comHora? {hour:'2-digit',minute:'2-digit'} : {})).format(d).replace(',', ' às');
+}
+function tzDataCurta(isoDate){
+  if(!isoDate) return '';
+  const [y,m,d] = String(isoDate).slice(0,10).split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+function tarefasMembro(id){ return TAREFAS_EQUIPE.find(m=>m.userId===id) || null; }
+function tarefasMembroAtivo(id){ const m = tarefasMembro(id); return !!(m && m.ativo); }
+function tarefasEu(){ return currentUser ? currentUser.id : null; }
+function tarefasMeuMembro(){ return tarefasMembro(tarefasEu()); }
+function tarefasSouMembro(){ const m = tarefasMeuMembro(); return !!(m && m.ativo); }
+function tarefasSouAdmin(){ const m = tarefasMeuMembro(); return !!(m && m.ativo && m.admin); }
+function tarefasPossoDelegar(){ const m = tarefasMeuMembro(); return !!(m && m.ativo && (m.pode_delegar || m.admin)); }
+function tarefasSouDono(t){ return tarefasSouAdmin() || t.criadorId===tarefasEu(); }
+function tarefasPossoEditar(t){ return !t.excluida && (tarefasSouDono(t) || t.responsavelId===tarefasEu()); }
+function tarefaAberta(t){ return !t.excluida && t.status!=='concluida' && t.status!=='cancelada'; }
+function tarefaAtrasada(t){ return tarefaAberta(t) && !!t.prazoData && t.prazoData < tzHojeISO(); }
+function tarefaVenceHoje(t){ return tarefaAberta(t) && t.prazoData===tzHojeISO(); }
+function tarefaNova(t){ // recém-atribuída a mim (últimas 48h, por outra pessoa) ou com aviso de atribuição ainda não lido
+  const eu = tarefasEu();
+  if(t.responsavelId!==eu) return false;
+  if(TAREFAS_NOTIFS.some(n=>n.tarefaId===t.id && n.tipo==='atribuida')) return true;
+  return t.criadorId!==eu && (Date.now()-new Date(t.createdAt).getTime()) < 48*3600*1000;
+}
+function tarefaAtualizada(t){ // mexeram nela depois do meu último acesso (e não fui eu, nesta sessão)
+  return !!TAREFAS_ACESSO_ANTERIOR && t.updatedAt > TAREFAS_ACESSO_ANTERIOR && tarefaAberta(t) && !TAREFAS_TOQUEI.has(t.id);
+}
+function mapTarefaRow(r){
+  return { id:r.id, titulo:r.titulo||'', descricao:r.descricao||'', responsavelId:r.responsavel_id, criadorId:r.criador_id,
+    prazoData:r.prazo_data||'', prazoHora:r.prazo_hora||'', prioridade:r.prioridade||'media', status:r.status||'pendente',
+    concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null, excluida:!!r.excluida, excluidaEm:r.excluida_em||null,
+    createdAt:r.created_at, updatedAt:r.updated_at };
+}
+function mapTarefaMembroRow(r){
+  return { userId:r.user_id, name:r.name||'', initials:r.initials||'', color:r.color||'#8d916f', avatarUrl:r.avatar_url||null, role:r.role,
+    cargo:r.cargo||'', ativo:!!r.ativo, admin:!!r.admin, pode_delegar:!!r.pode_delegar, email_notif:!!r.email_notif, ultimoAcessoEm:r.ultimo_acesso_em||null };
+}
+function tarefasNaoLidas(){ return TAREFAS_NOTIFS.filter(n=>!n.lida); }
+
+/* ---- carregamento ---- */
+async function carregarTarefasEquipe(){
+  try{
+    const { data, error } = await sb.rpc('tarefas_equipe');
+    if(error) throw error;
+    TAREFAS_EQUIPE = (data||[]).map(mapTarefaMembroRow);
+  }catch(e){ console.error('tarefas_equipe', e); TAREFAS_EQUIPE = []; }
+}
+async function carregarTarefasNotifs(){
+  if(!tarefasSouMembro()) { TAREFAS_NOTIFS = []; return; }
+  try{
+    const { data, error } = await sb.from('tarefas_notificacoes').select('*').eq('lida', false).order('created_at',{ascending:false}).limit(100);
+    if(error) throw error;
+    TAREFAS_NOTIFS = (data||[]).map(n=>({id:n.id, tarefaId:n.tarefa_id, tipo:n.tipo, texto:n.texto, lida:!!n.lida, createdAt:n.created_at}));
+  }catch(e){ console.error('tarefas_notificacoes', e); }
+  updateNotifBadge();
+}
+/* Chamado no bootstrap (equipe + sino). As tarefas em si só vêm quando a tela abre. */
+async function tarefasBootstrap(){
+  await carregarTarefasEquipe();
+  if(!tarefasSouMembro()) return;
+  const meu = tarefasMeuMembro();
+  TAREFAS_ACESSO_ANTERIOR = meu ? meu.ultimoAcessoEm : null;
+  try{ await sb.rpc('tarefas_gerar_alertas'); }catch(e){ console.error('tarefas_gerar_alertas', e); }
+  await carregarTarefasNotifs();
+}
+async function carregarTarefas(){
+  if(tarefasUI.carregando) return;
+  tarefasUI.carregando = true;
+  try{
+    await carregarTarefasEquipe();
+    const [{data:abertas, error:e1}] = await Promise.all([
+      sb.from('tarefas').select('*').eq('excluida', false).not('status','in','("concluida","cancelada")').order('created_at',{ascending:false}),
+    ]);
+    if(e1) throw e1;
+    TAREFAS = (abertas||[]).map(mapTarefaRow);
+    tarefasUI.concluidasPagina = 0; tarefasUI.concluidasFim = false;
+    await carregarSubtarefasDe(TAREFAS.map(t=>t.id));
+    await carregarTarefasNotifs();
+    tarefasUI.carregado = true;
+  }catch(e){ console.error('carregarTarefas', e); }
+  tarefasUI.carregando = false;
+}
+async function carregarSubtarefasDe(ids){
+  if(!ids.length) return;
+  const { data } = await sb.from('tarefas_subtarefas').select('*').in('tarefa_id', ids).order('ordem').order('created_at');
+  ids.forEach(id=>{ TAREFAS_SUB[id] = []; });
+  (data||[]).forEach(s=>{ (TAREFAS_SUB[s.tarefa_id] = TAREFAS_SUB[s.tarefa_id]||[]).push({id:s.id, tarefaId:s.tarefa_id, titulo:s.titulo, concluida:!!s.concluida, concluidaEm:s.concluida_em, concluidaPor:s.concluida_por, ordem:s.ordem}); });
+}
+/* Histórico de concluídas/canceladas: carregamento progressivo, 50 por vez. */
+async function carregarTarefasConcluidas(mais){
+  if(!mais){ TAREFAS = TAREFAS.filter(t=>tarefaAberta(t)); tarefasUI.concluidasPagina = 0; tarefasUI.concluidasFim = false; }
+  const de = tarefasUI.concluidasPagina*TAREFAS_PAGINA, ate = de+TAREFAS_PAGINA-1;
+  const { data, error } = await sb.from('tarefas').select('*').eq('excluida', false).in('status',['concluida','cancelada']).order('concluida_em',{ascending:false, nullsFirst:false}).order('updated_at',{ascending:false}).range(de, ate);
+  if(error){ console.error(error); return; }
+  const novas = (data||[]).map(mapTarefaRow).filter(t=>!TAREFAS.some(x=>x.id===t.id));
+  TAREFAS.push(...novas);
+  await carregarSubtarefasDe(novas.map(t=>t.id));
+  tarefasUI.concluidasPagina++;
+  if((data||[]).length < TAREFAS_PAGINA) tarefasUI.concluidasFim = true;
+}
+async function recarregarTarefa(id){
+  TAREFAS_TOQUEI.add(id);
+  const { data } = await sb.from('tarefas').select('*').eq('id', id).maybeSingle();
+  if(!data) return null;
+  const t = mapTarefaRow(data);
+  const i = TAREFAS.findIndex(x=>x.id===id);
+  if(i>=0) TAREFAS[i] = t; else TAREFAS.push(t);
+  await carregarSubtarefasDe([id]);
+  return t;
+}
+
+/* ---- filtros / listas ---- */
+function tarefasBase(){
+  const eu = tarefasEu();
+  let lista = TAREFAS.filter(t=>!t.excluida);
+  if(tarefasUI.aba==='minhas') lista = lista.filter(t=>t.responsavelId===eu);
+  else if(tarefasUI.aba==='delegadas') lista = lista.filter(t=>t.criadorId===eu && t.responsavelId!==eu);
+  else if(tarefasUI.aba==='concluidas') lista = lista.filter(t=>t.status==='concluida' || t.status==='cancelada');
+  return lista;
+}
+function tarefasFiltradas(){
+  const f = tarefasUI.filtros, q = normTxt(tarefasUI.busca).trim(), hoje = tzHojeISO();
+  let lista = tarefasBase();
+  if(tarefasUI.aba!=='concluidas'){
+    if(f.status==='abertas') lista = lista.filter(tarefaAberta);
+    else if(f.status!=='todas') lista = lista.filter(t=>t.status===f.status);
+  } else if(f.status!=='abertas' && f.status!=='todas') lista = lista.filter(t=>t.status===f.status);
+  if(f.responsavel!=='todos') lista = lista.filter(t=>t.responsavelId===f.responsavel);
+  if(f.criador!=='todos') lista = lista.filter(t=>t.criadorId===f.criador);
+  if(f.prioridade!=='todas') lista = lista.filter(t=>t.prioridade===f.prioridade);
+  if(f.prazo==='atrasadas') lista = lista.filter(tarefaAtrasada);
+  else if(f.prazo==='hoje') lista = lista.filter(t=>t.prazoData===hoje);
+  else if(f.prazo==='semana'){ const lim = new Date(hoje+'T12:00:00'); lim.setDate(lim.getDate()+7); const limIso = lim.toISOString().slice(0,10); lista = lista.filter(t=>t.prazoData && t.prazoData>=hoje && t.prazoData<=limIso); }
+  else if(f.prazo==='sem'){ lista = lista.filter(t=>!t.prazoData); }
+  if(f.de || f.ate){
+    const campo = f.periodoTipo==='conclusao' ? 'concluidaEm' : 'createdAt';
+    lista = lista.filter(t=>{ const v = t[campo]; if(!v) return false; const d = String(v).slice(0,10); return (!f.de || d>=f.de) && (!f.ate || d<=f.ate); });
+  }
+  if(q) lista = lista.filter(t=>normTxt(t.titulo).includes(q) || normTxt(t.descricao).includes(q));
+  return tarefasOrdenar(lista);
+}
+function tarefasOrdenar(lista){
+  const o = tarefasUI.ordem;
+  return lista.slice().sort((a,b)=>{
+    if(o==='prazo'){ const pa = a.prazoData||'9999-99-99', pb = b.prazoData||'9999-99-99'; return pa.localeCompare(pb) || (a.prazoHora||'').localeCompare(b.prazoHora||'') || TAREFAS_PRIO_ORDEM[a.prioridade]-TAREFAS_PRIO_ORDEM[b.prioridade]; }
+    if(o==='prioridade'){ return TAREFAS_PRIO_ORDEM[a.prioridade]-TAREFAS_PRIO_ORDEM[b.prioridade] || (a.prazoData||'9999').localeCompare(b.prazoData||'9999'); }
+    if(o==='criacao'){ return (b.createdAt||'').localeCompare(a.createdAt||''); }
+    return (b.updatedAt||'').localeCompare(a.updatedAt||''); // atualização
+  });
+}
+function tarefasFiltroAtivo(){
+  const f = tarefasUI.filtros;
+  return !!(tarefasUI.busca.trim() || f.responsavel!=='todos' || f.criador!=='todos' || f.status!=='abertas' || f.prioridade!=='todas' || f.prazo!=='todos' || f.de || f.ate);
+}
+
+/* ---- pedaços de HTML ---- */
+function tarefaPessoaHtml(id, tam){
+  const m = tarefasMembro(id) || getPerson(id);
+  if(!m) return `<span class="tf-pessoa"><span class="tf-avatar-vazio"></span><span>—</span></span>`;
+  return `<span class="tf-pessoa">${initialsAvatar(m.initials, m.color, tam||20, m.avatarUrl)}<span>${escapeHtml((m.name||'').split(' ')[0])}</span></span>`;
+}
+function tarefaPrioHtml(p){ return `<span class="tf-prio ${p}">${TAREFAS_PRIO[p]||p}</span>`; }
+function tarefaStatusSelect(t){
+  const pode = tarefasPossoEditar(t);
+  const opts = Object.entries(TAREFAS_STATUS).filter(([k])=> k!=='cancelada' || tarefasSouDono(t) || t.status==='cancelada');
+  return `<select class="tf-status ${t.status}" data-tf-status="${t.id}" ${pode?'':'disabled'} title="${pode?'Alterar situação':'Só o responsável ou quem criou altera'}">${opts.map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select>`;
+}
+function tarefaPrazoHtml(t){
+  if(!t.prazoData) return `<span class="tf-prazo vazio">${icon('calendar','tiny')} sem prazo</span>`;
+  const cls = tarefaAtrasada(t) ? 'atrasada' : tarefaVenceHoje(t) ? 'hoje' : '';
+  return `<span class="tf-prazo ${cls}">${icon('calendar','tiny')} ${tzDataCurta(t.prazoData)}${t.prazoHora? ' '+t.prazoHora.replace(':','h') : ''}</span>`;
+}
+function tarefaSubProgresso(t){
+  const subs = TAREFAS_SUB[t.id]||[];
+  if(!subs.length) return '';
+  const ok = subs.filter(s=>s.concluida).length;
+  return `<span class="tf-sub" title="Subtarefas concluídas"><span class="tf-sub-bar"><i style="width:${Math.round(ok/subs.length*100)}%"></i></span>${ok}/${subs.length}</span>`;
+}
+function tarefaSinais(t){
+  const s = [];
+  if(tarefaAtrasada(t)) s.push('<span class="tf-sinal atrasada">Atrasada</span>');
+  else if(tarefaVenceHoje(t)) s.push('<span class="tf-sinal hoje">Vence hoje</span>');
+  if(t.prioridade==='urgente' && tarefaAberta(t)) s.push('<span class="tf-sinal urgente">Urgente</span>');
+  if(tarefaNova(t)) s.push('<span class="tf-sinal nova">Nova</span>');
+  else if(tarefaAtualizada(t)) s.push('<span class="tf-sinal atualizada">Atualizada</span>');
+  return s.join('');
+}
+function tarefaCardHtml(t, opts){
+  const o = opts||{};
+  const cls = ['tf-card', tarefaAtrasada(t)?'atrasada':'', t.prioridade==='urgente'&&tarefaAberta(t)?'urgente':'', tarefaAberta(t)?'':'fechada'].filter(Boolean).join(' ');
+  return `
+    <div class="${cls}" data-tf-abrir="${t.id}">
+      <div class="tf-card-topo">
+        <button type="button" class="tf-check ${t.status==='concluida'?'ok':''}" data-tf-concluir="${t.id}" title="${t.status==='concluida'?'Reabrir':'Concluir'}" ${tarefasPossoEditar(t)?'':'disabled'}>${icon('check','tiny')}</button>
+        <div class="tf-card-titulo">${escapeHtml(t.titulo)}</div>
+        ${tarefaPrioHtml(t.prioridade)}
+      </div>
+      <div class="tf-card-meta">
+        ${o.semResponsavel ? '' : tarefaPessoaHtml(t.responsavelId, 18)}
+        ${tarefaPrazoHtml(t)}
+        ${tarefaSubProgresso(t)}
+        ${tarefaStatusSelect(t)}
+      </div>
+      ${tarefaSinais(t) ? `<div class="tf-card-sinais">${tarefaSinais(t)}</div>` : ''}
+    </div>`;
+}
+function tarefaLinhaHtml(t){
+  return `
+    <tr class="${tarefaAtrasada(t)?'tf-linha-atrasada':''}" data-tf-abrir="${t.id}">
+      <td><button type="button" class="tf-check ${t.status==='concluida'?'ok':''}" data-tf-concluir="${t.id}" ${tarefasPossoEditar(t)?'':'disabled'}>${icon('check','tiny')}</button></td>
+      <td style="min-width:220px"><strong>${escapeHtml(t.titulo)}</strong>${tarefaSinais(t)? `<div class="tf-card-sinais">${tarefaSinais(t)}</div>` : ''}</td>
+      <td>${tarefaPessoaHtml(t.responsavelId, 20)}</td>
+      <td>${tarefaPessoaHtml(t.criadorId, 20)}</td>
+      <td style="white-space:nowrap">${tarefaPrazoHtml(t)}</td>
+      <td>${tarefaPrioHtml(t.prioridade)}</td>
+      <td>${tarefaStatusSelect(t)}</td>
+      <td>${tarefaSubProgresso(t) || '—'}</td>
+      <td style="white-space:nowrap;color:var(--text-mute)">${tzDataHora(t.updatedAt, true)}</td>
+    </tr>`;
+}
+function tarefasTabelaHtml(lista){
+  return `
+    <div class="table-wrap">
+      <table class="check-table tf-tabela">
+        <thead><tr><th></th><th>Tarefa</th><th>Responsável</th><th>Criada por</th><th>Prazo</th><th>Prioridade</th><th>Situação</th><th>Subtarefas</th><th>Atualizada</th></tr></thead>
+        <tbody>${lista.map(tarefaLinhaHtml).join('') || `<tr><td colspan="9" style="color:var(--text-mute)">Nenhuma tarefa encontrada.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+function tarefasKanbanHtml(lista){
+  const cols = [['pendente','Pendente'],['em_andamento','Em andamento'],['aguardando','Aguardando']];
+  const fechadas = lista.filter(t=>!tarefaAberta(t));
+  return `
+    <div class="tf-kanban">
+      ${cols.map(([k,label])=>{ const its = lista.filter(t=>t.status===k); return `
+        <div class="tf-coluna">
+          <div class="tf-coluna-hd">${label} <span class="qtd">${its.length}</span></div>
+          ${its.map(t=>tarefaCardHtml(t)).join('') || '<div class="tf-vazio">Nada aqui.</div>'}
+        </div>`; }).join('')}
+      ${fechadas.length ? `<div class="tf-coluna fechadas"><div class="tf-coluna-hd">Concluídas / canceladas <span class="qtd">${fechadas.length}</span></div>${fechadas.map(t=>tarefaCardHtml(t)).join('')}</div>` : ''}
+    </div>`;
+}
+function tarefasSubquadroHtml(m, lista){
+  const minhas = lista.filter(t=>t.responsavelId===m.userId);
+  const todas = TAREFAS.filter(t=>t.responsavelId===m.userId && !t.excluida);
+  const pend = todas.filter(tarefaAberta).length, atr = todas.filter(tarefaAtrasada).length, conc = todas.filter(t=>t.status==='concluida').length;
+  const rec = !!tarefasUI.recolhidos[m.userId];
+  return `
+    <div class="tf-membro ${rec?'recolhido':''}" id="tf-membro-${m.userId}">
+      <div class="tf-membro-hd" data-tf-recolher="${m.userId}">
+        ${initialsAvatar(m.initials, m.color, 40, m.avatarUrl)}
+        <div class="tf-membro-nome"><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas':'Equipe interna'))}${m.admin?' · admin':''}</small></div>
+        <div class="tf-membro-nums">
+          <span title="Pendentes"><b>${pend}</b> pendente${pend===1?'':'s'}</span>
+          <span class="${atr?'atr':''}" title="Atrasadas"><b>${atr}</b> atrasada${atr===1?'':'s'}</span>
+          <span class="ok" title="Concluídas"><b>${conc}</b> concluída${conc===1?'':'s'}</span>
+        </div>
+        <button type="button" class="btn-mini tf-nova-para" data-tf-nova-para="${m.userId}" title="Nova tarefa para ${escapeAttr(m.name.split(' ')[0])}">${icon('plus','tiny')}</button>
+        <span class="vg-sec-toggle ${rec?'fechado':''}">${icon('down')} ${rec?'Expandir':'Recolher'}</span>
+      </div>
+      <div class="tf-membro-corpo" ${rec?'hidden':''}>
+        ${minhas.map(t=>tarefaCardHtml(t,{semResponsavel:true})).join('') || `<div class="tf-vazio">${tarefasFiltroAtivo()? 'Nenhuma tarefa com esses filtros.' : 'Nenhuma tarefa pendente.'}</div>`}
+      </div>
+    </div>`;
+}
+function tarefasNotifPanelHtml(){
+  const ns = tarefasNaoLidas();
+  return `
+    <div class="tf-notifs" id="tf-notifs">
+      <div class="tf-notifs-hd"><strong>${icon('bell')} Notificações</strong>${ns.length? `<button type="button" class="btn-mini" id="tf-notifs-limpar">Marcar todas como lidas</button>` : ''}</div>
+      ${ns.length ? ns.map(n=>`<button type="button" class="tf-notif" data-tf-notif="${n.id}" data-tf-notif-tarefa="${n.tarefaId||''}">
+          <span class="tf-notif-tipo ${n.tipo}"></span><span class="tf-notif-txt">${escapeHtml(n.texto)}</span><small>${tzDataHora(n.createdAt, true)}</small></button>`).join('')
+        : '<div class="tf-vazio">Nenhuma notificação nova.</div>'}
+    </div>`;
+}
+
+/* ---- render principal ---- */
+function renderTarefas(){
+  const el = document.getElementById('view-tarefas');
+  if(!tarefasSouMembro()){
+    el.innerHTML = `<div class="empty-state">${icon('lock')} Sua conta ainda não está liberada para o módulo de Tarefas. Peça a um administrador para ativar o seu acesso.</div>`;
+    return;
+  }
+  if(!tarefasUI.carregado){
+    el.innerHTML = `<div class="empty-state">Carregando tarefas…</div>`;
+    carregarTarefas().then(renderTarefas);
+    return;
+  }
+  const f = tarefasUI.filtros;
+  const ativos = TAREFAS_EQUIPE.filter(m=>m.ativo);
+  const lista = tarefasFiltradas();
+  const eu = tarefasEu();
+  const minhasAbertas = TAREFAS.filter(t=>t.responsavelId===eu && tarefaAberta(t));
+  const kpis = { pend:minhasAbertas.length, atr:minhasAbertas.filter(tarefaAtrasada).length, hoje:minhasAbertas.filter(tarefaVenceHoje).length, deleg:TAREFAS.filter(t=>t.criadorId===eu && t.responsavelId!==eu && tarefaAberta(t)).length };
+  const abas = [['minhas','Minhas tarefas'],['delegadas','Delegadas por mim'],['equipe','Quadro da equipe'],['concluidas','Concluídas']];
+  const selPessoas = (id, atual, rotuloTodos)=> `<select class="ps-input" id="${id}"><option value="todos">${rotuloTodos}</option>${TAREFAS_EQUIPE.map(m=>`<option value="${m.userId}" ${atual===m.userId?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select>`;
+  const mobile = window.innerWidth < 720;
+  let corpo = '';
+  if(tarefasUI.aba==='equipe' && tarefasUI.modo==='quadro'){
+    if(mobile){
+      const sel = tarefasUI.membroMobile && ativos.some(m=>m.userId===tarefasUI.membroMobile) ? tarefasUI.membroMobile : (ativos[0]||{}).userId;
+      corpo = `<div class="field" style="margin-bottom:12px"><label class="ps-label">Membro</label><select class="ps-input" id="tf-membro-mobile">${ativos.map(m=>`<option value="${m.userId}" ${m.userId===sel?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select></div>` + (ativos.filter(m=>m.userId===sel).map(m=>tarefasSubquadroHtml(m, lista)).join(''));
+    } else corpo = `<div class="tf-board">${ativos.map(m=>tarefasSubquadroHtml(m, lista)).join('')}</div>`;
+  } else if(tarefasUI.aba==='concluidas'){
+    corpo = tarefasUI.modo==='quadro' ? `<div class="tf-grid">${lista.map(t=>tarefaCardHtml(t)).join('') || '<div class="tf-vazio">Nenhuma tarefa concluída ainda.</div>'}</div>` : tarefasTabelaHtml(lista);
+    corpo += tarefasUI.concluidasFim ? '' : `<div style="margin-top:12px"><button type="button" class="btn-outline" id="tf-mais-concluidas">Carregar mais</button></div>`;
+  } else {
+    corpo = tarefasUI.modo==='quadro' ? tarefasKanbanHtml(lista) : tarefasTabelaHtml(lista);
+  }
+  el.innerHTML = `
+    <div class="tf-topo">
+      <div class="kpi-row" style="flex:1">
+        <div class="kpi-tile"><div class="label">Minhas pendentes</div><div class="value">${kpis.pend}</div></div>
+        <div class="kpi-tile ${kpis.atr?'tf-kpi-atr':''}"><div class="label">Atrasadas</div><div class="value">${kpis.atr}</div></div>
+        <div class="kpi-tile"><div class="label">Vencem hoje</div><div class="value">${kpis.hoje}</div></div>
+        <div class="kpi-tile"><div class="label">Delegadas em aberto</div><div class="value">${kpis.deleg}</div></div>
+      </div>
+      <div class="tf-topo-acoes">
+        <button type="button" class="btn-outline tf-sino ${tarefasNaoLidas().length?'tem':''}" id="tf-notifs-btn">${icon('bell')} <span>${tarefasNaoLidas().length}</span></button>
+        <button type="button" class="btn-accent" id="tf-nova">${icon('plus')} Nova tarefa</button>
+      </div>
+    </div>
+    ${tarefasUI.notifsAberto ? tarefasNotifPanelHtml() : ''}
+
+    <div class="community-filters tf-abas">
+      ${abas.map(([k,v])=>`<button type="button" class="filter-tab ${tarefasUI.aba===k?'active':''}" data-tf-aba="${k}">${v}</button>`).join('')}
+      <span class="tf-modo">
+        <button type="button" class="filter-tab ${tarefasUI.modo==='quadro'?'active':''}" data-tf-modo="quadro" title="Quadro">${icon('chart','tiny')} Quadro</button>
+        <button type="button" class="filter-tab ${tarefasUI.modo==='lista'?'active':''}" data-tf-modo="lista" title="Lista">${icon('folder','tiny')} Lista</button>
+      </span>
+    </div>
+
+    <div class="tf-filtros">
+      <input class="ps-input tf-busca" type="text" id="tf-busca" value="${escapeAttr(tarefasUI.busca)}" placeholder="Buscar por título ou descrição…">
+      ${selPessoas('tf-f-resp', f.responsavel, 'Responsável: todos')}
+      ${selPessoas('tf-f-criador', f.criador, 'Criada por: todos')}
+      <select class="ps-input" id="tf-f-status">
+        <option value="abertas" ${f.status==='abertas'?'selected':''}>Situação: abertas</option>
+        ${Object.entries(TAREFAS_STATUS).map(([k,v])=>`<option value="${k}" ${f.status===k?'selected':''}>${v}</option>`).join('')}
+        <option value="todas" ${f.status==='todas'?'selected':''}>Todas as situações</option>
+      </select>
+      <select class="ps-input" id="tf-f-prio"><option value="todas">Prioridade: todas</option>${Object.entries(TAREFAS_PRIO).map(([k,v])=>`<option value="${k}" ${f.prioridade===k?'selected':''}>${v}</option>`).join('')}</select>
+      <select class="ps-input" id="tf-f-prazo">
+        <option value="todos" ${f.prazo==='todos'?'selected':''}>Prazo: todos</option>
+        <option value="atrasadas" ${f.prazo==='atrasadas'?'selected':''}>Atrasadas</option>
+        <option value="hoje" ${f.prazo==='hoje'?'selected':''}>Vencem hoje</option>
+        <option value="semana" ${f.prazo==='semana'?'selected':''}>Próximos 7 dias</option>
+        <option value="sem" ${f.prazo==='sem'?'selected':''}>Sem prazo</option>
+      </select>
+      <span class="tf-periodo">
+        <select class="ps-input" id="tf-f-periodo-tipo"><option value="criacao" ${f.periodoTipo==='criacao'?'selected':''}>Criação</option><option value="conclusao" ${f.periodoTipo==='conclusao'?'selected':''}>Conclusão</option></select>
+        <input class="ps-input" type="date" id="tf-f-de" value="${escapeAttr(f.de)}" title="De">
+        <input class="ps-input" type="date" id="tf-f-ate" value="${escapeAttr(f.ate)}" title="Até">
+      </span>
+      <select class="ps-input" id="tf-ordem">
+        <option value="prazo" ${tarefasUI.ordem==='prazo'?'selected':''}>Ordenar: prazo</option>
+        <option value="prioridade" ${tarefasUI.ordem==='prioridade'?'selected':''}>Ordenar: prioridade</option>
+        <option value="criacao" ${tarefasUI.ordem==='criacao'?'selected':''}>Ordenar: mais recentes</option>
+        <option value="atualizacao" ${tarefasUI.ordem==='atualizacao'?'selected':''}>Ordenar: atualização</option>
+      </select>
+      ${tarefasFiltroAtivo() ? `<button type="button" class="btn-outline" id="tf-limpar">${icon('x','tiny')} Limpar</button>` : ''}
+    </div>
+    <p class="busca-info">${lista.length} tarefa${lista.length===1?'':'s'}${tarefasFiltroAtivo()?' com esses filtros':''}${tarefasUI.aba!=='concluidas' && f.status==='abertas' ? ' · concluídas ficam na aba "Concluídas"' : ''}</p>
+
+    ${corpo}
+
+    ${tarefasSouAdmin() ? tarefasAdminHtml() : ''}
+  `;
+  bindTarefas(el);
+}
+function tarefasAdminHtml(){
+  return `
+    <div class="vg-sec-head" data-tf-recolher="__admin" style="margin-top:34px">
+      <h2 class="section-title">${icon('lock')} Membros do módulo</h2>
+      <span class="qtd">${TAREFAS_EQUIPE.filter(m=>m.ativo).length} de ${TAREFAS_EQUIPE.length}</span>
+      <button type="button" class="vg-sec-toggle ${tarefasUI.recolhidos.__admin?'fechado':''}">${icon('down')} ${tarefasUI.recolhidos.__admin?'Expandir':'Recolher'}</button>
+    </div>
+    <div ${tarefasUI.recolhidos.__admin?'hidden':''}>
+    <p class="section-sub" style="margin-top:0">Quem pode usar o módulo e o que pode fazer. Todo membro interno novo entra aqui automaticamente (equipe já ativa; consultoras desativadas até você liberar). A função vem de "Meus Dados" de cada pessoa.</p>
+    <div class="table-wrap"><table class="check-table">
+      <thead><tr><th>Membro</th><th>Função</th><th>Ativo</th><th>Pode delegar</th><th>Administrador</th></tr></thead>
+      <tbody>${TAREFAS_EQUIPE.map(m=>`<tr>
+        <td><span class="tf-pessoa">${initialsAvatar(m.initials, m.color, 24, m.avatarUrl)}<span>${escapeHtml(m.name)}</span></span></td>
+        <td>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas':'—'))}</td>
+        <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="ativo" ${m.ativo?'checked':''} ${m.userId===tarefasEu()?'disabled':''}></td>
+        <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="pode_delegar" ${m.pode_delegar?'checked':''}></td>
+        <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="admin" ${m.admin?'checked':''} ${m.userId===tarefasEu()?'disabled':''}></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    </div>`;
+}
+function bindTarefas(el){
+  el.querySelectorAll('[data-tf-aba]').forEach(b=>b.addEventListener('click', async ()=>{
+    tarefasUI.aba = b.dataset.tfAba;
+    if(tarefasUI.aba==='concluidas'){ tarefasUI.filtros.status='todas'; await carregarTarefasConcluidas(false); }
+    else if(tarefasUI.filtros.status==='todas') tarefasUI.filtros.status='abertas';
+    renderTarefas();
+  }));
+  el.querySelectorAll('[data-tf-modo]').forEach(b=>b.addEventListener('click', ()=>{ tarefasUI.modo = b.dataset.tfModo; renderTarefas(); }));
+  bindBuscaInput('tf-busca', v=>{ tarefasUI.busca = v; }, renderTarefas);
+  const f = tarefasUI.filtros;
+  const on = (id, fn)=>{ const x = el.querySelector('#'+id); if(x) x.addEventListener('change', e=>{ fn(e.target.value); renderTarefas(); }); };
+  on('tf-f-resp', v=>{ f.responsavel=v; }); on('tf-f-criador', v=>{ f.criador=v; }); on('tf-f-status', v=>{ f.status=v; });
+  on('tf-f-prio', v=>{ f.prioridade=v; }); on('tf-f-prazo', v=>{ f.prazo=v; }); on('tf-f-periodo-tipo', v=>{ f.periodoTipo=v; });
+  on('tf-f-de', v=>{ f.de=v; }); on('tf-f-ate', v=>{ f.ate=v; }); on('tf-ordem', v=>{ tarefasUI.ordem=v; });
+  on('tf-membro-mobile', v=>{ tarefasUI.membroMobile=v; });
+  const limpar = el.querySelector('#tf-limpar'); if(limpar) limpar.addEventListener('click', ()=>{ tarefasUI.busca=''; Object.assign(f,{responsavel:'todos',criador:'todos',status: tarefasUI.aba==='concluidas'?'todas':'abertas',prioridade:'todas',prazo:'todos',de:'',ate:''}); renderTarefas(); });
+  el.querySelector('#tf-nova').addEventListener('click', ()=>openTarefaModal(null));
+  el.querySelectorAll('[data-tf-nova-para]').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); openTarefaModal(null, {responsavelId:b.dataset.tfNovaPara}); }));
+  el.querySelector('#tf-notifs-btn').addEventListener('click', ()=>{ tarefasUI.notifsAberto = !tarefasUI.notifsAberto; renderTarefas(); });
+  const limparN = el.querySelector('#tf-notifs-limpar'); if(limparN) limparN.addEventListener('click', async ()=>{ await tarefasMarcarLidas(tarefasNaoLidas().map(n=>n.id)); renderTarefas(); });
+  el.querySelectorAll('[data-tf-notif]').forEach(b=>b.addEventListener('click', async ()=>{ await tarefasMarcarLidas([+b.dataset.tfNotif]); if(b.dataset.tfNotifTarefa) openTarefaModal(b.dataset.tfNotifTarefa); else renderTarefas(); }));
+  el.querySelectorAll('[data-tf-recolher]').forEach(h=>h.addEventListener('click', e=>{ if(e.target.closest('[data-tf-nova-para]')) return; const k = h.dataset.tfRecolher; tarefasUI.recolhidos[k] = !tarefasUI.recolhidos[k]; renderTarefas(); }));
+  el.querySelectorAll('[data-tf-abrir]').forEach(c=>c.addEventListener('click', e=>{ if(e.target.closest('select,button,input,a')) return; openTarefaModal(c.dataset.tfAbrir); }));
+  el.querySelectorAll('[data-tf-status]').forEach(s=>s.addEventListener('change', async ()=>{ await tarefaMudarStatus(s.dataset.tfStatus, s.value); renderTarefas(); }));
+  el.querySelectorAll('[data-tf-concluir]').forEach(b=>b.addEventListener('click', async e=>{ e.stopPropagation(); const t = TAREFAS.find(x=>x.id===b.dataset.tfConcluir); if(!t) return; await tarefaMudarStatus(t.id, t.status==='concluida' ? 'pendente' : 'concluida'); renderTarefas(); }));
+  const mais = el.querySelector('#tf-mais-concluidas'); if(mais) mais.addEventListener('click', async ()=>{ mais.disabled = true; await carregarTarefasConcluidas(true); renderTarefas(); });
+  el.querySelectorAll('[data-tf-membro]').forEach(cb=>cb.addEventListener('change', async ()=>{
+    const campo = cb.dataset.campo, valor = cb.checked;
+    const { error } = await sb.from('tarefas_membros').update({[campo]: valor}).eq('user_id', cb.dataset.tfMembro);
+    if(error){ alert('Não foi possível salvar: '+error.message); cb.checked = !valor; return; }
+    const m = tarefasMembro(cb.dataset.tfMembro); if(m) m[campo] = valor;
+    renderTarefas();
+  }));
+}
+async function tarefasMarcarLidas(ids){
+  if(!ids.length) return;
+  const { error } = await sb.from('tarefas_notificacoes').update({lida:true}).in('id', ids);
+  if(error){ console.error(error); return; }
+  TAREFAS_NOTIFS = TAREFAS_NOTIFS.filter(n=>!ids.includes(n.id));
+  updateNotifBadge();
+}
+async function tarefaMudarStatus(id, status){
+  const t = TAREFAS.find(x=>x.id===id);
+  if(!t || t.status===status) return;
+  const { error } = await sb.from('tarefas').update({status}).eq('id', id);
+  if(error){ alert('Não foi possível alterar a situação: '+(error.message||'')); return; }
+  await recarregarTarefa(id);
+}
+
+/* ---- modal da tarefa (nova / detalhes) ---- */
+async function openTarefaModal(id, defaults){
+  const nova = !id;
+  const eu = tarefasEu();
+  let t = nova
+    ? { id:null, titulo:'', descricao:'', responsavelId:(defaults&&defaults.responsavelId)||eu, criadorId:eu, prazoData:'', prazoHora:'', prioridade:'media', status:'pendente', createdAt:null, updatedAt:null, excluida:false }
+    : (TAREFAS.find(x=>x.id===id) || await recarregarTarefa(id));
+  if(!t){ alert('Tarefa não encontrada.'); return; }
+  const modal = document.getElementById('modal');
+  document.getElementById('modal-backdrop').classList.add('open');
+  modal.innerHTML = `<div class="modal-body form-modal"><p class="desc">Carregando…</p></div>`;
+  let coms = [], anexos = [], hist = [];
+  if(!nova){
+    const [c, a, h] = await Promise.all([
+      sb.from('tarefas_comentarios').select('*').eq('tarefa_id', id).order('created_at'),
+      sb.from('tarefas_anexos').select('*').eq('tarefa_id', id).order('created_at'),
+      sb.from('tarefas_historico').select('*').eq('tarefa_id', id).order('id'),
+    ]);
+    coms = c.data||[]; anexos = a.data||[]; hist = h.data||[];
+    // avisos desta tarefa ficam lidos ao abrir
+    const meus = TAREFAS_NOTIFS.filter(n=>n.tarefaId===id).map(n=>n.id);
+    if(meus.length) tarefasMarcarLidas(meus);
+  }
+  const dono = nova ? true : tarefasSouDono(t);
+  const podeEditar = nova ? true : tarefasPossoEditar(t);
+  const podeDelegarAgora = tarefasPossoDelegar();
+  const ativos = TAREFAS_EQUIPE.filter(m=>m.ativo || m.userId===t.responsavelId);
+  const subs = nova ? [] : (TAREFAS_SUB[t.id]||[]);
+  const ro = (ok)=> ok ? '' : 'disabled';
+  const draftNovoSubs = []; // subtarefas digitadas antes de salvar a tarefa nova
+  const histLabel = (h)=>{
+    const d = h.detalhe||{}; const nome = (id)=>{ const m = tarefasMembro(id)||getPerson(id); return m? m.name.split(' ')[0] : '—'; };
+    const st = k=>TAREFAS_STATUS[k]||k, pr = k=>TAREFAS_PRIO[k]||k;
+    switch(h.acao){
+      case 'criada': return `criou a tarefa para ${nome(d.responsavel)}`;
+      case 'responsavel': return `passou a responsabilidade de ${nome(d.de)} para ${nome(d.para)}`;
+      case 'prazo': return `alterou o prazo de ${d.de? tzDataCurta(d.de)+(d.de_hora?' '+d.de_hora:'') : 'sem prazo'} para ${d.para? tzDataCurta(d.para)+(d.para_hora?' '+d.para_hora:'') : 'sem prazo'}`;
+      case 'prioridade': return `mudou a prioridade de ${pr(d.de)} para ${pr(d.para)}`;
+      case 'status': return `mudou a situação de ${st(d.de)} para ${st(d.para)}`;
+      case 'concluida': return 'concluiu a tarefa';
+      case 'reaberta': return 'reabriu a tarefa';
+      case 'cancelada': return 'cancelou a tarefa';
+      case 'editada': return d.titulo_de!==d.titulo_para ? `alterou o título para "${d.titulo_para}"` : 'editou a descrição';
+      case 'excluida': return 'excluiu a tarefa';
+      case 'comentario': return `comentou: "${d.resumo||''}"`;
+      case 'subtarefa_criada': return `adicionou a subtarefa "${d.titulo}"`;
+      case 'subtarefa_concluida': return `concluiu a subtarefa "${d.titulo}"`;
+      case 'subtarefa_reaberta': return `reabriu a subtarefa "${d.titulo}"`;
+      case 'anexo': return `anexou "${d.nome}"`;
+      default: return h.acao;
+    }
+  };
+  function body(){
+    return `
+    <div class="modal-body form-modal tf-modal">
+      <div class="cat">Tarefas${nova?'':' · criada por '+escapeHtml((tarefasMembro(t.criadorId)||getPerson(t.criadorId)||{name:'—'}).name.split(' ')[0])+' em '+tzDataHora(t.createdAt, true)}</div>
+      <input class="ps-input tf-titulo" type="text" id="tf-m-titulo" value="${escapeAttr(t.titulo)}" placeholder="Título da tarefa *" ${ro(dono)} maxlength="200">
+      ${nova ? '' : `<div class="tf-card-sinais" style="margin:6px 0 0">${tarefaSinais(t)}</div>`}
+      <div class="tf-m-grid">
+        <div><label class="ps-label">Responsável *</label>
+          <select class="ps-input" id="tf-m-resp" ${ro(dono && (podeDelegarAgora || nova))}>${ativos.map(m=>`<option value="${m.userId}" ${t.responsavelId===m.userId?'selected':''} ${(!podeDelegarAgora && m.userId!==eu && m.userId!==t.responsavelId)?'disabled':''}>${escapeHtml(m.name)}</option>`).join('')}</select></div>
+        <div><label class="ps-label">Prioridade</label>
+          <select class="ps-input" id="tf-m-prio" ${ro(dono)}>${Object.entries(TAREFAS_PRIO).map(([k,v])=>`<option value="${k}" ${t.prioridade===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div><label class="ps-label">Prazo</label><input class="ps-input" type="date" id="tf-m-data" value="${escapeAttr(t.prazoData)}" ${ro(dono)}></div>
+        <div><label class="ps-label">Horário (opcional)</label><input class="ps-input" type="time" id="tf-m-hora" value="${escapeAttr(t.prazoHora)}" ${ro(dono)}></div>
+        <div><label class="ps-label">Situação</label>
+          <select class="ps-input" id="tf-m-status" ${ro(podeEditar)}>${Object.entries(TAREFAS_STATUS).filter(([k])=>k!=='cancelada' || dono || t.status==='cancelada').map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        ${t.concluidaEm ? `<div><label class="ps-label">Concluída</label><div style="font-size:13px;padding-top:8px">${tzDataHora(t.concluidaEm, true)} por ${escapeHtml((tarefasMembro(t.concluidaPor)||getPerson(t.concluidaPor)||{name:'—'}).name.split(' ')[0])}</div></div>` : ''}
+      </div>
+      <label class="ps-label">Descrição</label>
+      <textarea class="ps-input" id="tf-m-desc" rows="3" placeholder="Detalhes, contexto, links…" ${ro(dono)}>${escapeHtml(t.descricao)}</textarea>
+
+      <h4 class="tf-h">${icon('check','tiny')} Subtarefas ${subs.length? `<span class="qtd">${subs.filter(s=>s.concluida).length}/${subs.length}</span>` : ''}</h4>
+      <div class="tf-subs" id="tf-subs">
+        ${(nova ? draftNovoSubs.map((s,i)=>({id:'d'+i, titulo:s, concluida:false})) : subs).map(s=>`
+          <div class="tf-sub-item ${s.concluida?'ok':''}">
+            <input type="checkbox" data-tf-sub="${s.id}" ${s.concluida?'checked':''} ${ro(podeEditar)}>
+            <span>${escapeHtml(s.titulo)}</span>
+            ${podeEditar ? `<button type="button" class="btn-mini icon-only danger" data-tf-sub-del="${s.id}" title="Remover">${icon('x','tiny')}</button>` : ''}
+          </div>`).join('') || '<div class="tf-vazio">Nenhuma subtarefa.</div>'}
+      </div>
+      ${podeEditar ? `<div class="tf-sub-add"><input class="ps-input" type="text" id="tf-sub-novo" placeholder="Nova subtarefa… (Enter para adicionar)" maxlength="200"><button type="button" class="btn-outline" id="tf-sub-add">${icon('plus','tiny')} Adicionar</button></div>` : ''}
+
+      ${nova ? '' : `
+      <h4 class="tf-h">${icon('paperclip','tiny')} Anexos ${anexos.length? `<span class="qtd">${anexos.length}</span>` : ''}</h4>
+      <div class="tf-anexos">
+        ${anexos.map(a=>`<div class="tf-anexo"><button type="button" class="btn-mini" data-tf-anexo-abrir="${a.id}">${icon('file','tiny')} ${escapeHtml(a.nome)}</button><small>${escapeHtml((tarefasMembro(a.autor_id)||{name:'—'}).name.split(' ')[0])} · ${tzDataHora(a.created_at)}</small>${(a.autor_id===eu || tarefasSouAdmin()) ? `<button type="button" class="btn-mini icon-only danger" data-tf-anexo-del="${a.id}" title="Excluir">${icon('trash','tiny')}</button>` : ''}</div>`).join('') || '<div class="tf-vazio">Nenhum anexo.</div>'}
+        ${podeEditar ? `<label class="btn-outline tf-upload">${icon('upload','tiny')} Anexar arquivo<input type="file" id="tf-anexo-file" hidden multiple></label>` : ''}
+      </div>
+
+      <h4 class="tf-h">${icon('comment','tiny')} Comentários ${coms.length? `<span class="qtd">${coms.length}</span>` : ''}</h4>
+      <div class="tf-coms">
+        ${coms.map(c=>`<div class="tf-com"><div class="tf-com-hd">${tarefaPessoaHtml(c.autor_id, 20)}<small>${tzDataHora(c.created_at, true)}</small>${(c.autor_id===eu || tarefasSouAdmin()) ? `<button type="button" class="btn-mini icon-only danger" data-tf-com-del="${c.id}" title="Excluir">${icon('trash','tiny')}</button>` : ''}</div><div class="tf-com-txt">${tarefaMencoesHtml(c.texto)}</div></div>`).join('') || '<div class="tf-vazio">Nenhum comentário ainda.</div>'}
+      </div>
+      ${t.excluida ? '' : `<div class="tf-com-add">
+        <textarea class="ps-input" id="tf-com-texto" rows="2" placeholder="Escreva um comentário… use @nome para mencionar alguém"></textarea>
+        <div class="tf-mencoes" id="tf-mencoes" hidden></div>
+        <button type="button" class="btn-outline" id="tf-com-add">${icon('reply','tiny')} Comentar</button>
+      </div>`}
+
+      <h4 class="tf-h tf-h-toggle" id="tf-hist-toggle">${icon('down','tiny')} Histórico <span class="qtd">${hist.length}</span></h4>
+      <div class="tf-hist" id="tf-hist" hidden>
+        ${hist.map(h=>`<div class="tf-hist-item"><small>${tzDataHora(h.created_at, true)}</small> <strong>${escapeHtml((tarefasMembro(h.user_id)||getPerson(h.user_id)||{name:'Sistema'}).name.split(' ')[0])}</strong> ${escapeHtml(histLabel(h))}</div>`).join('')}
+      </div>`}
+
+      <div class="modal-actions tf-m-acoes">
+        ${nova ? `<button class="btn-accent" id="tf-m-salvar">Criar tarefa</button>` : `
+          ${(dono) ? `<button class="btn-accent" id="tf-m-salvar">Salvar</button>` : (podeEditar ? `<button class="btn-accent" id="tf-m-salvar">Salvar situação</button>` : '')}
+          ${podeEditar && t.status!=='concluida' && !t.excluida ? `<button class="btn-outline" id="tf-m-concluir">${icon('check','tiny')} Concluir</button>` : ''}
+          ${podeEditar && t.status==='concluida' ? `<button class="btn-outline" id="tf-m-reabrir">Reabrir</button>` : ''}
+          ${tarefasSouMembro() && !t.excluida ? `<button class="btn-outline" id="tf-m-duplicar">${icon('copy','tiny')} Duplicar</button>` : ''}
+          ${dono && t.status!=='cancelada' && !t.excluida ? `<button class="btn-outline" id="tf-m-cancelar">Cancelar tarefa</button>` : ''}
+          ${dono && !t.excluida ? `<button class="btn-outline danger-text" id="tf-m-excluir">${icon('trash','tiny')} Excluir</button>` : ''}
+        `}
+        <button class="btn-outline" id="tf-m-fechar">Fechar</button>
+      </div>
+    </div>`;
+  }
+  modal.innerHTML = body();
+  const $ = s=>modal.querySelector(s);
+  $('#tf-m-fechar').addEventListener('click', closeModal);
+  const lerForm = ()=>({
+    titulo: $('#tf-m-titulo').value.trim(), descricao: $('#tf-m-desc').value.trim(), responsavel_id: $('#tf-m-resp').value,
+    prioridade: $('#tf-m-prio').value, prazo_data: $('#tf-m-data').value || null, prazo_hora: $('#tf-m-hora').value || null, status: $('#tf-m-status').value,
+  });
+  const validar = (v)=>{
+    if(!v.titulo){ alert('Informe o título da tarefa.'); $('#tf-m-titulo').focus(); return false; }
+    if(v.titulo.length>200){ alert('O título pode ter no máximo 200 caracteres.'); return false; }
+    if(!v.responsavel_id || !tarefasMembroAtivo(v.responsavel_id)){ alert('Escolha um responsável ativo.'); return false; }
+    if(v.responsavel_id!==eu && !podeDelegarAgora && (nova || v.responsavel_id!==t.responsavelId)){ alert('Sua conta não tem permissão para delegar tarefas a outras pessoas.'); return false; }
+    if(v.prazo_hora && !v.prazo_data){ alert('Para informar um horário, informe também a data do prazo.'); return false; }
+    return true;
+  };
+  const salvar = $('#tf-m-salvar');
+  if(salvar) salvar.addEventListener('click', async ()=>{
+    const v = lerForm();
+    if(!validar(v)) return;
+    salvar.disabled = true;
+    try{
+      if(nova){
+        const { data, error } = await sb.from('tarefas').insert(Object.assign(v, {criador_id: eu})).select().single();
+        if(error) throw error;
+        if(draftNovoSubs.length){
+          const { error: e2 } = await sb.from('tarefas_subtarefas').insert(draftNovoSubs.map((s,i)=>({tarefa_id:data.id, titulo:s, ordem:i})));
+          if(e2) throw e2;
+        }
+        await recarregarTarefa(data.id);
+        closeModal(); renderTarefas();
+      } else {
+        const payload = dono ? v : { status: v.status };
+        const { error } = await sb.from('tarefas').update(payload).eq('id', t.id);
+        if(error) throw error;
+        await recarregarTarefa(t.id);
+        closeModal(); renderTarefas();
+      }
+    }catch(e){ console.error(e); alert('Não foi possível salvar: '+(e.message||'')); salvar.disabled = false; }
+  });
+  // subtarefas
+  const subInput = $('#tf-sub-novo');
+  const addSub = async ()=>{
+    const titulo = (subInput.value||'').trim(); if(!titulo) return;
+    if(nova){ draftNovoSubs.push(titulo); subInput.value=''; modal.innerHTML = body(); rebind(); return; }
+    const { error } = await sb.from('tarefas_subtarefas').insert({tarefa_id:t.id, titulo, ordem:(TAREFAS_SUB[t.id]||[]).length});
+    if(error){ alert('Não foi possível adicionar: '+error.message); return; }
+    await recarregarTarefa(t.id); openTarefaModal(t.id);
+  };
+  function rebind(){ // usado só na tarefa nova (subtarefas em rascunho): guarda o que foi digitado antes de redesenhar
+    const guardar = ()=>{ const v = lerForm(); t.titulo=v.titulo; t.descricao=v.descricao; t.responsavelId=v.responsavel_id; t.prioridade=v.prioridade; t.prazoData=v.prazo_data||''; t.prazoHora=v.prazo_hora||''; t.status=v.status; };
+    const redesenhar = ()=>{ guardar(); modal.innerHTML = body(); rebind(); };
+    const f = $('#tf-m-fechar'); if(f && !f.dataset.ok){ f.dataset.ok='1'; f.addEventListener('click', closeModal); }
+    const s = $('#tf-m-salvar'); if(s && s!==salvar) s.addEventListener('click', ()=>salvar.click());
+    const inp = $('#tf-sub-novo'); if(inp){ inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); const v=inp.value.trim(); if(v){ draftNovoSubs.push(v); redesenhar(); } } }); $('#tf-sub-add').addEventListener('click', ()=>{ const v=inp.value.trim(); if(v){ draftNovoSubs.push(v); redesenhar(); } }); }
+    modal.querySelectorAll('[data-tf-sub-del]').forEach(b=>b.addEventListener('click', ()=>{ draftNovoSubs.splice(+b.dataset.tfSubDel.slice(1),1); redesenhar(); }));
+  }
+  if(nova){ rebind(); return; }
+  if(subInput){ subInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addSub(); } }); $('#tf-sub-add').addEventListener('click', addSub); }
+  modal.querySelectorAll('[data-tf-sub]').forEach(cb=>cb.addEventListener('change', async ()=>{
+    const { error } = await sb.from('tarefas_subtarefas').update({concluida: cb.checked}).eq('id', cb.dataset.tfSub);
+    if(error){ alert('Não foi possível atualizar: '+error.message); cb.checked = !cb.checked; return; }
+    await recarregarTarefa(t.id); openTarefaModal(t.id);
+  }));
+  modal.querySelectorAll('[data-tf-sub-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const { error } = await sb.from('tarefas_subtarefas').delete().eq('id', b.dataset.tfSubDel);
+    if(error){ alert('Não foi possível remover: '+error.message); return; }
+    await recarregarTarefa(t.id); openTarefaModal(t.id);
+  }));
+  // anexos
+  const fileInp = $('#tf-anexo-file');
+  if(fileInp) fileInp.addEventListener('change', async ()=>{
+    for(const file of Array.from(fileInp.files||[])){ await tarefaAnexoUpload(t.id, file); }
+    await recarregarTarefa(t.id); openTarefaModal(t.id);
+  });
+  modal.querySelectorAll('[data-tf-anexo-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const a = anexos.find(x=>x.id===b.dataset.tfAnexoAbrir); if(a) tarefaAnexoAbrir(a); }));
+  modal.querySelectorAll('[data-tf-anexo-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const a = anexos.find(x=>x.id===b.dataset.tfAnexoDel); if(!a) return;
+    if(!(await showAppConfirm(`Excluir o anexo "${a.nome}"?`, {title:'Excluir anexo', confirmLabel:'Excluir'}))) return;
+    await sb.storage.from('tarefas-anexos').remove([a.path]);
+    const { error } = await sb.from('tarefas_anexos').delete().eq('id', a.id);
+    if(error){ alert('Não foi possível excluir: '+error.message); return; }
+    openTarefaModal(t.id);
+  }));
+  // comentários + menções
+  const comTxt = $('#tf-com-texto');
+  if(comTxt){
+    tarefaBindMencoes(comTxt, $('#tf-mencoes'));
+    $('#tf-com-add').addEventListener('click', async ()=>{
+      const texto = comTxt.value.trim(); if(!texto) return;
+      if(texto.length>4000){ alert('O comentário pode ter no máximo 4000 caracteres.'); return; }
+      const mencoes = tarefaExtrairMencoes(texto);
+      const { error } = await sb.from('tarefas_comentarios').insert({tarefa_id:t.id, autor_id:eu, texto, mencoes});
+      if(error){ alert('Não foi possível comentar: '+error.message); return; }
+      await recarregarTarefa(t.id); openTarefaModal(t.id);
+    });
+  }
+  modal.querySelectorAll('[data-tf-com-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!(await showAppConfirm('Excluir este comentário?', {title:'Excluir comentário', confirmLabel:'Excluir'}))) return;
+    const { error } = await sb.from('tarefas_comentarios').delete().eq('id', b.dataset.tfComDel);
+    if(error){ alert('Não foi possível excluir: '+error.message); return; }
+    openTarefaModal(t.id);
+  }));
+  // histórico
+  $('#tf-hist-toggle').addEventListener('click', ()=>{ const h = $('#tf-hist'); h.hidden = !h.hidden; });
+  // ações
+  const acao = async (payload, msg)=>{ const { error } = await sb.from('tarefas').update(payload).eq('id', t.id); if(error){ alert((msg||'Não foi possível')+': '+error.message); return false; } await recarregarTarefa(t.id); return true; };
+  const b1 = $('#tf-m-concluir'); if(b1) b1.addEventListener('click', async ()=>{ if(await acao({status:'concluida'})){ closeModal(); renderTarefas(); } });
+  const b2 = $('#tf-m-reabrir'); if(b2) b2.addEventListener('click', async ()=>{ if(await acao({status:'pendente'})){ closeModal(); renderTarefas(); } });
+  const b3 = $('#tf-m-cancelar'); if(b3) b3.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Cancelar esta tarefa? Ela sai das pendências e fica no histórico.', {title:'Cancelar tarefa', confirmLabel:'Cancelar tarefa', cancelLabel:'Voltar'}))) return; if(await acao({status:'cancelada'})){ closeModal(); renderTarefas(); } });
+  const b4 = $('#tf-m-excluir'); if(b4) b4.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Excluir esta tarefa? Ela some das listas, mas o registro fica guardado para auditoria.', {title:'Excluir tarefa', confirmLabel:'Excluir', cancelLabel:'Voltar'}))) return; if(await acao({excluida:true})){ TAREFAS = TAREFAS.filter(x=>x.id!==t.id); closeModal(); renderTarefas(); } });
+  const b5 = $('#tf-m-duplicar'); if(b5) b5.addEventListener('click', async ()=>{
+    const v = { titulo: (t.titulo+' (cópia)').slice(0,200), descricao:t.descricao||null, responsavel_id: (tarefasPossoDelegar()||t.responsavelId===eu) ? t.responsavelId : eu, prioridade:t.prioridade, prazo_data:t.prazoData||null, prazo_hora:t.prazoHora||null, criador_id:eu };
+    const { data, error } = await sb.from('tarefas').insert(v).select().single();
+    if(error){ alert('Não foi possível duplicar: '+error.message); return; }
+    const subsT = (TAREFAS_SUB[t.id]||[]);
+    if(subsT.length) await sb.from('tarefas_subtarefas').insert(subsT.map((s,i)=>({tarefa_id:data.id, titulo:s.titulo, ordem:i})));
+    await recarregarTarefa(data.id); openTarefaModal(data.id); renderTarefas();
+  });
+}
+/* menções: @Nome → ids dos membros (compara pelo primeiro nome, sem acento) */
+function tarefaExtrairMencoes(texto){
+  const ids = new Set();
+  const re = /@([A-Za-zÀ-ÿ]+)/g; let m;
+  while((m = re.exec(texto))){ const alvo = normTxt(m[1]); TAREFAS_EQUIPE.forEach(p=>{ if(normTxt(p.name.split(' ')[0])===alvo) ids.add(p.userId); }); }
+  return Array.from(ids);
+}
+function tarefaMencoesHtml(texto){
+  return linkify(texto).replace(/@([A-Za-zÀ-ÿ]+)/g, (m0, nome)=>{ const ok = TAREFAS_EQUIPE.some(p=>normTxt(p.name.split(' ')[0])===normTxt(nome)); return ok ? `<span class="tf-mencao">@${nome}</span>` : m0; });
+}
+function tarefaBindMencoes(ta, box){
+  const fechar = ()=>{ box.hidden = true; box.innerHTML=''; };
+  ta.addEventListener('input', ()=>{
+    const pos = ta.selectionStart, antes = ta.value.slice(0,pos);
+    const m = antes.match(/@([A-Za-zÀ-ÿ]*)$/);
+    if(!m){ fechar(); return; }
+    const q = normTxt(m[1]);
+    const ops = TAREFAS_EQUIPE.filter(p=>p.ativo && normTxt(p.name).includes(q)).slice(0,6);
+    if(!ops.length){ fechar(); return; }
+    box.hidden = false;
+    box.innerHTML = ops.map(p=>`<button type="button" data-mencao="${escapeAttr(p.name.split(' ')[0])}">${initialsAvatar(p.initials,p.color,18,p.avatarUrl)} ${escapeHtml(p.name)}</button>`).join('');
+    box.querySelectorAll('[data-mencao]').forEach(b=>b.addEventListener('click', ()=>{
+      const ini = antes.lastIndexOf('@');
+      ta.value = ta.value.slice(0,ini) + '@' + b.dataset.mencao + ' ' + ta.value.slice(pos);
+      fechar(); ta.focus();
+    }));
+  });
+  ta.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(); });
+}
+async function tarefaAnexoUpload(tarefaId, file){
+  if(!file) return null;
+  if(file.size > 15*1024*1024){ alert(`"${file.name}" é muito grande — o limite é 15 MB.`); return null; }
+  const safe = (file.name||'arquivo').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9._-]+/g,'_').slice(-80);
+  const path = `${tarefaId}/${Date.now()}-${safe}`;
+  const { error: upErr } = await sb.storage.from('tarefas-anexos').upload(path, file, {upsert:false, contentType:file.type||'application/octet-stream'});
+  if(upErr){ console.error(upErr); alert('Não foi possível enviar o arquivo: '+(upErr.message||'')); return null; }
+  const { error } = await sb.from('tarefas_anexos').insert({tarefa_id:tarefaId, nome:file.name||safe, path, mime:file.type||null, tamanho:file.size||null, autor_id: tarefasEu()});
+  if(error){ console.error(error); alert('O arquivo subiu mas não foi possível registrá-lo: '+(error.message||'')); return null; }
+  return true;
+}
+async function tarefaAnexoAbrir(a){
+  const w = window.open('', '_blank');
+  const { data, error } = await sb.storage.from('tarefas-anexos').createSignedUrl(a.path, 3600);
+  if(error || !data){ if(w) w.close(); alert('Não foi possível abrir o anexo.'); return; }
+  if(w) w.location.href = data.signedUrl; else window.open(data.signedUrl, '_blank');
+}
+
 /* ================= VIEW: INÍCIO DA EQUIPE INTERNA ================= */
 /* Painel de entrada da equipe: um botão grande para cada área do menu lateral (mesma ordem), com uma
    linha explicando o que tem em cada uma. É onde a equipe cai ao entrar no sistema. */
 const EQUIPE_ATALHOS = [
+  {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
@@ -8456,7 +9364,7 @@ function renderEquipe(){
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>a.view!=='tarefas' || tarefasSouMembro()).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
