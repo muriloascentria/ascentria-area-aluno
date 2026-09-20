@@ -1498,6 +1498,7 @@
           <button data-role="aluno">Aluno</button>
           <button data-role="staff">Equipe Interna</button>
           <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem">Visualização Consultora</button>
+          <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê">Visualização Editor</button>
         </div>
         <button class="icon-btn" id="notif-btn" title="Notificações">
           <span class="dot-alert" id="notif-dot"></span>
@@ -2424,7 +2425,7 @@ let currentStudentId = null;
 const CONSULTORA_PREVIEW_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3']; // Murilo
 /* Equipe interna de verdade E fora do modo "Visualização Consultora": é o que libera os poderes que
    as vendedoras não têm (dados do lead, vínculo com aluno, excluir análise, anexos do financeiro). */
-function staffPleno(){ return currentUserRole==='staff' && currentRole!=='consultora'; }
+function staffPleno(){ return currentUserRole==='staff' && currentRole!=='consultora' && currentRole!=='editor'; }
 let currentRole = 'aluno';
 let currentView = 'inicio';
 let panelQuadrantId = null;
@@ -3918,7 +3919,7 @@ function setupNav(){
   });
   document.getElementById('notif-btn').addEventListener('click',()=>{
     /* Avisos do módulo Tarefas têm prioridade no sino: abre a tela com o painel de notificações. */
-    if((currentRole==='staff' || currentRole==='consultora') && tarefasNaoLidas().length){
+    if(currentRole!=='aluno' && tarefasNaoLidas().length){
       tarefasUI.notifsAberto = true;
       if(currentView==='tarefas') renderTarefas(); else goTo('tarefas');
       return;
@@ -3995,8 +3996,8 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = (currentRole==='staff' || currentRole==='consultora') ? tarefasNaoLidas().length : 0;
-  if(currentRole==='staff' || currentRole==='consultora'){
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length : 0;
+  if(currentRole!=='aluno'){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
     badge.textContent = pend.length+tf;
@@ -4031,19 +4032,21 @@ function setRole(role){
   if(currentUserRole==='vendas' || currentUserRole==='editor'){ setRoleVendas(); return; }
   currentRole = role;
   document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
-  document.getElementById('role-consultora').style.display = (currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id)) ? '' : 'none';
+  const podePrever = currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id);
+  document.getElementById('role-consultora').style.display = podePrever ? '' : 'none';
+  document.getElementById('role-editor').style.display = podePrever ? '' : 'none';
   document.querySelectorAll('#role-toggle [data-role]').forEach(b=>{
     const active = b.dataset.role===role;
     b.classList.toggle('active', active);
-    b.classList.toggle('staff-active', active && (role==='staff' || role==='consultora'));
+    b.classList.toggle('staff-active', active && role!=='aluno');
   });
-  /* "Visualização Consultora": a barra lateral e as telas ficam iguais às das vendedoras (Registro de
-     Sessões 1:1, Análise Sessões 1:1 e Treinamento Time), mas o botão lá em cima continua pra voltar. */
-  if(role==='consultora'){
+  /* "Visualização Consultora" / "Visualização Editor": a barra lateral e as telas ficam iguais às daquele
+     papel (inclusive o Início dele), mas o botão lá em cima continua pra voltar. */
+  if(role==='consultora' || role==='editor'){
     document.querySelectorAll('.nav-item[data-view]').forEach(el=>{ el.style.display = 'none'; });
     document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
-    ['nav-vendas','nav-analise','nav-treinamento'].forEach(id=>{ document.getElementById(id).style.display = 'flex'; });
-    document.getElementById('nav-tarefas').style.display = tarefasSouMembro() ? 'flex' : 'none';
+    const permitidas = viewsDoPapel() || [];
+    permitidas.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'flex'; });
     document.getElementById('staff-group-label').style.display = 'flex';
     document.getElementById('nav-prontuarios').style.display = 'none';
     document.getElementById('profile-dropdown-label').style.display = 'none';
@@ -4051,7 +4054,7 @@ function setRole(role){
     document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`;
     renderProfile();
     updateNotifBadge();
-    if(!['vendas','analise','treinamento','tarefas'].includes(currentView)) goTo('vendas'); else renderCurrentView();
+    if(!permitidas.includes(currentView)) goTo('equipe'); else renderCurrentView();
     return;
   }
   /* Os itens da equipe interna ficam disponíveis o tempo todo para quem é da equipe — inclusive
@@ -9383,8 +9386,10 @@ const EQUIPE_ATALHOS = [
 ];
 /* O que cada papel interno pode abrir (a barra lateral e a trava do goTo seguem a mesma lista). */
 function viewsDoPapel(){
-  if(currentUserRole==='vendas') return ['equipe','vendas','analise','treinamento'].concat(tarefasSouMembro()? ['tarefas'] : []);
-  if(currentUserRole==='editor') return ['equipe','conteudo'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
+  const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
+  if(papel==='vendas') return ['equipe','vendas','analise','treinamento'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='editor') return ['equipe','conteudo'].concat(tarefasSouMembro()? ['tarefas'] : []);
   return null; // equipe interna: tudo
 }
 function renderEquipe(){
