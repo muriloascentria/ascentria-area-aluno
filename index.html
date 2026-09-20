@@ -1345,13 +1345,13 @@
   .tf-m-acoes .danger-text{color:var(--danger);}
   @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} .tf-modo{margin-left:0;} }
   /* ---- Mensagens ---- */
-  .msg-wrap{display:grid;grid-template-columns:300px 1fr;gap:0;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;height:calc(100vh - 150px);min-height:460px;}
-  .msg-lista{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;}
+  .msg-wrap{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;height:calc(100vh - 150px);min-height:460px;}
+  .msg-lista{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
   .msg-lista-hd{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--border);}
   .msg-lista-hd .ps-input{margin:0;flex:1;}
   .msg-som{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--text-mute);white-space:nowrap;cursor:pointer;}
   .msg-som .icon{width:12px;height:12px;}
-  .msg-pessoas{overflow-y:auto;flex:1;}
+  .msg-pessoas{overflow-y:auto;flex:1;min-height:0;}
   .msg-pessoa{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:none;border-bottom:1px solid var(--border);background:none;color:var(--text);font:inherit;cursor:pointer;}
   .msg-pessoa:hover,.msg-pessoa.ativa{background:var(--bg-card);}
   .msg-pessoa.nao-lida strong{color:var(--text);}
@@ -1360,10 +1360,10 @@
   .msg-pessoa-txt small{font-size:11.5px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .msg-badge{min-width:20px;height:20px;border-radius:10px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;}
   .msg-quando{font-size:10.5px;color:var(--text-mute);white-space:nowrap;}
-  .msg-conversa{display:flex;flex-direction:column;min-width:0;}
+  .msg-conversa{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
   .msg-conversa-hd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);}
   .msg-voltar{display:none;}
-  .msg-corpo{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px;}
+  .msg-corpo{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px;display:flex;flex-direction:column;gap:6px;}
   .msg-dia{align-self:center;font-size:10.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin:8px 0 4px;}
   .msg-bolha{max-width:72%;align-self:flex-start;background:var(--bg-card);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;}
   .msg-bolha.minha{align-self:flex-end;background:rgba(141,145,111,.22);border-color:transparent;border-radius:14px 14px 4px 14px;}
@@ -1382,10 +1382,10 @@
     .msg-conversa{display:none;} .msg-lista.com-conversa + .msg-conversa{display:flex;}
     .msg-voltar{display:inline-flex;}
   }
-  /* janelinhas no canto inferior esquerdo */
-  #msg-popups{position:fixed;left:16px;bottom:16px;z-index:290;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:min(340px,calc(100vw - 32px));}
+  /* janelinhas no canto superior direito (abaixo da barra do topo) */
+  #msg-popups{position:fixed;right:16px;top:76px;z-index:290;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:min(340px,calc(100vw - 32px));}
   .msg-popup{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.45);padding:10px 12px;animation:msgPop .25s ease-out;}
-  @keyframes msgPop{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes msgPop{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
   .msg-popup-hd{display:flex;align-items:center;gap:8px;}
   .msg-popup-nome{display:flex;flex-direction:column;min-width:0;flex:1;}
   .msg-popup-nome strong{font-size:13px;}
@@ -9437,7 +9437,7 @@ async function tarefaAnexoAbrir(a){
 /* ================= VIEW: MENSAGENS (messenger interno da equipe) =================
    Conversas privadas, só texto, entre equipe interna, consultoras e editor. Sem grupos. O banco
    garante que só os dois participantes leem cada conversa. Mensagens novas chegam em tempo real
-   (Supabase Realtime) e sobem uma janelinha no canto inferior esquerdo — a não ser que a conversa
+   (Supabase Realtime) e sobem uma janelinha no canto superior direito — a não ser que a conversa
    com aquela pessoa já esteja aberta na tela. */
 let MSG_EQUIPE = [];          // quem pode conversar comigo
 let MSG_CONVERSAS = {};       // outroId -> [mensagens] (ordem cronológica)
@@ -9598,6 +9598,11 @@ function renderMensagens(){
   const outro = msgPessoa(msgUI.aberto);
   const conversa = outro ? (MSG_CONVERSAS[outro.id]||[]) : [];
   const taAntes = el.querySelector('#msg-texto');
+  const corpoAntes = el.querySelector('#msg-corpo');
+  const mesmaConversa = corpoAntes && el.dataset.aberto===String(msgUI.aberto||'');
+  const pertoDoFim = !mesmaConversa || (corpoAntes.scrollHeight - corpoAntes.scrollTop - corpoAntes.clientHeight < 60);
+  const scrollAntes = corpoAntes ? corpoAntes.scrollTop : 0;
+  el.dataset.aberto = String(msgUI.aberto||'');
   const rascunho = taAntes ? taAntes.value : '';
   const tinhaFoco = !!taAntes && document.activeElement===taAntes;
   const eu = msgEu();
@@ -9650,11 +9655,11 @@ function renderMensagens(){
   }));
   const voltar = el.querySelector('#msg-voltar'); if(voltar) voltar.addEventListener('click', ()=>{ msgUI.aberto = null; renderMensagens(); });
   if(outro){
-    const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = corpo.scrollHeight;
+    const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = (pertoDoFim || msgUI.forcarFim) ? corpo.scrollHeight : scrollAntes; msgUI.forcarFim = false;
     if(!(MSG_CONVERSAS[outro.id]||{})._completa){ msgCarregarConversa(outro.id).then(()=>{ msgMarcarLidas(outro.id); if(msgUI.aberto===outro.id && currentView==='mensagens') renderMensagens(); }); }
     else msgMarcarLidas(outro.id);
     const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
-    const enviar = async ()=>{ const t = ta.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(outro.id, t)){ ta.value=''; renderMensagens(); document.getElementById('msg-texto').focus(); } else btn.disabled = false; };
+    const enviar = async ()=>{ const t = ta.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(outro.id, t)){ ta.value=''; msgUI.forcarFim = true; renderMensagens(); document.getElementById('msg-texto').focus(); } else btn.disabled = false; };
     btn.addEventListener('click', enviar);
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); enviar(); } });
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
