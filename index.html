@@ -1368,6 +1368,13 @@
   .msg-bolha{max-width:72%;align-self:flex-start;background:var(--bg-card);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;}
   .msg-bolha.minha{align-self:flex-end;background:rgba(141,145,111,.22);border-color:transparent;border-radius:14px 14px 4px 14px;}
   .msg-txt{font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+  .msg-bolha{position:relative;}
+  .msg-apagar{position:absolute;left:-26px;top:50%;transform:translateY(-50%);padding:4px;color:var(--text-mute);opacity:0;transition:opacity .15s;}
+  .msg-apagar .icon{width:13px;height:13px;}
+  .msg-bolha.minha:hover .msg-apagar{opacity:1;}
+  .msg-apagar:hover{color:var(--danger);}
+  .msg-conversa-hd .btn-mini.danger{margin-left:auto;white-space:nowrap;}
+  @media (hover:none){ .msg-bolha.minha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
   .msg-editor{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--border);}
   .msg-editor .ps-input{margin:0;flex:1;resize:none;min-height:38px;max-height:140px;}
@@ -9472,6 +9479,8 @@ function msgAssinarTempoReal(){
   msgUI.canal = sb.channel('mensagens-'+eu)
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens', filter:'para=eq.'+eu}, payload=>msgChegou(mapMsgRow(payload.new)))
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens', filter:'de=eq.'+eu}, payload=>msgEnviadaEmOutraAba(mapMsgRow(payload.new)))
+    .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens', filter:'para=eq.'+eu}, payload=>msgRemovida(payload.old))
+    .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens', filter:'de=eq.'+eu}, payload=>msgRemovida(payload.old))
     .subscribe();
 }
 function msgGuardar(m){
@@ -9480,6 +9489,31 @@ function msgGuardar(m){
   if(lista.some(x=>x.id===m.id)) return false;
   lista.push(m); lista.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
   return true;
+}
+/* Alguém (ou eu, em outra aba) apagou uma mensagem: some daqui também. */
+function msgRemovida(old){
+  if(!old || !old.id) return;
+  const id = old.id;
+  Object.keys(MSG_CONVERSAS).forEach(k=>{ const l = MSG_CONVERSAS[k]; const i = l.findIndex(m=>m.id===id); if(i>=0) l.splice(i,1); });
+  MSG_NAO_LIDAS = MSG_NAO_LIDAS.filter(n=>n.id!==id);
+  updateNotifBadge();
+  const c = document.getElementById('msg-popups'); if(c && old.de){ const el = c.querySelector(`[data-msg-popup="${old.de}"]`); if(el && el.dataset.msgId===String(id)) el.remove(); }
+  if(currentView==='mensagens') renderMensagens();
+}
+async function msgApagar(m){
+  if(!(await showAppConfirm('Apagar esta mensagem? Ela some da conversa para vocês dois.', {title:'Apagar mensagem', confirmLabel:'Apagar'}))) return;
+  const { error } = await sb.from('mensagens').delete().eq('id', m.id);
+  if(error){ alert('Não foi possível apagar: '+(error.message||'')); return; }
+  msgRemovida(m);
+}
+async function msgLimparConversa(outroId){
+  const p = msgPessoa(outroId); if(!p) return;
+  if(!(await showAppConfirm(`Limpar toda a conversa com ${p.name.split(' ')[0]}? As mensagens somem para vocês dois e não dá para desfazer.`, {title:'Limpar conversa', confirmLabel:'Limpar tudo'}))) return;
+  const { error } = await sb.rpc('mensagens_limpar_conversa', {p_outro: outroId});
+  if(error){ alert('Não foi possível limpar: '+(error.message||'')); return; }
+  MSG_CONVERSAS[outroId] = []; MSG_CONVERSAS[outroId]._completa = true;
+  MSG_NAO_LIDAS = MSG_NAO_LIDAS.filter(n=>n.de!==outroId);
+  updateNotifBadge(); renderMensagens();
 }
 function msgEnviadaEmOutraAba(m){ if(msgGuardar(m) && currentView==='mensagens' && msgUI.aberto===m.para) renderMensagens(); }
 async function msgChegou(m){
@@ -9561,9 +9595,9 @@ function msgPopup(m){
   const c = msgPopupContainer();
   // uma janela por pessoa: se já tem, só atualiza o texto
   let el = c.querySelector(`[data-msg-popup="${m.de}"]`);
-  if(el){ el.querySelector('.msg-popup-txt').textContent = m.texto; el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
+  if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').textContent = m.texto; el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
   el = document.createElement('div');
-  el.className = 'msg-popup'; el.dataset.msgPopup = m.de;
+  el.className = 'msg-popup'; el.dataset.msgPopup = m.de; el.dataset.msgId = String(m.id);
   el.innerHTML = `
     <div class="msg-popup-hd">${initialsAvatar(p.initials, p.color, 30, p.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></div><span class="msg-popup-hora">${tzDataHora(m.createdAt, true).split(' às ')[1]||''}</span><button type="button" class="msg-popup-x" title="Fechar">${icon('x','tiny')}</button></div>
     <div class="msg-popup-txt"></div>
@@ -9613,7 +9647,7 @@ function renderMensagens(){
     const dia = tzDataHora(m.createdAt).slice(0,10); let sep = '';
     if(dia!==diaAnterior){ diaAnterior = dia; const hoje = tzDataHora(new Date().toISOString()).slice(0,10); sep = `<div class="msg-dia">${dia===hoje? 'Hoje' : dia}</div>`; }
     const hora = (tzDataHora(m.createdAt, true).split(' às ')[1])||'';
-    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}"><div class="msg-txt">${linkify(m.texto)}</div><div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}" data-msg-id="${m.id}">${m.de===eu ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="Apagar mensagem">${icon('trash','tiny')}</button>` : ''}<div class="msg-txt">${linkify(m.texto)}</div><div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   el.innerHTML = `
     <div class="msg-wrap">
@@ -9637,6 +9671,7 @@ function renderMensagens(){
             <button type="button" class="btn-mini msg-voltar" id="msg-voltar">${icon('back','tiny')}</button>
             ${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}
             <div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>
+            ${conversa.length ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Apagar toda a conversa, para os dois">${icon('trash','tiny')} Limpar conversa</button>` : ''}
           </div>
           <div class="msg-corpo" id="msg-corpo">${bolhas || '<div class="tf-vazio" style="text-align:center;padding:30px">Nenhuma mensagem ainda. Diga oi!</div>'}</div>
           <div class="msg-editor">
@@ -9656,6 +9691,8 @@ function renderMensagens(){
     renderMensagens();
   }));
   const voltar = el.querySelector('#msg-voltar'); if(voltar) voltar.addEventListener('click', ()=>{ msgUI.aberto = null; renderMensagens(); });
+  const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(outro.id));
+  el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[outro.id]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
   if(outro){
     const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = (pertoDoFim || msgUI.forcarFim) ? corpo.scrollHeight : scrollAntes; msgUI.forcarFim = false;
     if(!(MSG_CONVERSAS[outro.id]||{})._completa){ msgCarregarConversa(outro.id).then(()=>{ msgMarcarLidas(outro.id); if(msgUI.aberto===outro.id && currentView==='mensagens') renderMensagens(); }); }
