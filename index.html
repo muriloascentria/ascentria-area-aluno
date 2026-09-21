@@ -1201,6 +1201,7 @@
   .cell-collapse.expanded{display:block;-webkit-line-clamp:unset;overflow:visible;}
   .cell-collapse.resumo-oculto[hidden]{display:none;}
   .cell-collapse.resumo-oculto.expanded{margin-bottom:4px;}
+  .vd-obj{margin-bottom:4px;} .vd-obj b{color:var(--text-dim);font-weight:700;} .vd-sem{color:var(--text-mute);}
   .cc-toggle{display:block;margin-top:3px;background:none;border:none;padding:0;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline;}
   .link-btn{background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--accent);text-decoration:underline;cursor:pointer;}
   .link-btn:hover{opacity:0.8;}
@@ -10513,6 +10514,13 @@ function topPhrases(items, n){
   });
   return Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,n);
 }
+function vendaTemRegistro(t, fallback){ return !!(t && String(t).trim() && String(t).trim()!==fallback); }
+/* Objeções e observações ficam recolhidas: a célula mostra só "Ver registro" e, ao clicar, abre o texto
+   inteiro (as duas objeções juntas). Sem registro, mostra um traço. Deixa a tabela bem mais limpa. */
+function vendasRegistroCell(html, cellId){
+  if(!html) return '<span class="vd-sem">—</span>';
+  return `<div class="cell-collapse resumo-oculto" data-cc="${cellId}" hidden>${html}</div><button type="button" class="cc-toggle" style="margin-top:0" data-cc-toggle="${cellId}" data-cc-abrir="Ver registro" data-cc-fechar="Ocultar registro">Ver registro</button>`;
+}
 function vendasClampCell(html, plainText, cellId){
   if(!plainText || plainText.length<=80) return html || '';
   return `<div class="cell-collapse" data-cc="${cellId}">${html}</div><button type="button" class="cc-toggle" data-cc-toggle="${cellId}">Ver mais</button>`;
@@ -10678,8 +10686,8 @@ function renderVendas(){
               <td>${escapeHtml(v.presenca)}</td>
               <td>${v.resultado? `<span class="resp-pill">${escapeHtml(v.resultado)}</span>` : ''}</td>
               <td>${escapeHtml(v.valorTexto)}</td>
-              <td>${vendasClampCell([v.objecoes,v.objecoes2].filter(Boolean).map(o=>linkify(o)).join('<br>'), [v.objecoes,v.objecoes2].filter(Boolean).join(' '), 'obj-'+v.id)}</td>
-              <td>${vendasClampCell(linkify(v.observacoes), v.observacoes, 'obs-'+v.id)}</td>
+              <td>${vendasRegistroCell([v.objecoes,v.objecoes2].filter(o=>vendaTemRegistro(o, VENDAS_SEM_OBJECAO)).map((o,i)=>`<div class="vd-obj"><b>Objeção ${i+1}:</b> ${linkify(o)}</div>`).join(''), 'obj-'+v.id)}</td>
+              <td>${vendasRegistroCell(vendaTemRegistro(v.observacoes, VENDAS_SEM_OBSERVACAO) ? linkify(v.observacoes) : '', 'obs-'+v.id)}</td>
               <td>${v.contrato? (/^https?:\/\//i.test(v.contrato.trim()) ? `<a href="${escapeAttr(v.contrato.trim())}" target="_blank" rel="noopener" class="link-btn">Clique aqui</a>` : escapeHtml(v.contrato)) : ''}</td>
               <td class="vendas-actions-cell">
                 <button class="btn-mini icon-only" data-edit-venda="${v.id}" title="Editar">${icon('edit','tiny')}</button>
@@ -10731,7 +10739,8 @@ function renderVendas(){
       const el = document.querySelector(`[data-cc="${id}"]`);
       if(!el) return;
       const expanded = el.classList.toggle('expanded');
-      btn.textContent = expanded ? 'Ver menos' : 'Ver mais';
+      if(el.classList.contains('resumo-oculto')) el.hidden = !expanded;
+      btn.textContent = expanded ? (btn.dataset.ccFechar||'Ver menos') : (btn.dataset.ccAbrir||'Ver mais');
     });
   });
   document.querySelectorAll('[data-del-venda]').forEach(btn=>{
