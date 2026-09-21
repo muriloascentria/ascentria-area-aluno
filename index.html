@@ -1406,6 +1406,23 @@
   @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
   .msg-de{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:2px;display:flex;align-items:center;gap:5px;}
+  .msg-aula{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-top:4px;border:1px solid var(--border);border-radius:12px;background:var(--bg-elev);color:var(--text);font:inherit;text-align:left;cursor:pointer;max-width:340px;width:100%;}
+  .msg-aula:hover{border-color:var(--accent);}
+  .msg-aula-ic{width:38px;height:38px;border-radius:10px;background:rgba(141,145,111,.25);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .msg-aula-ic .icon{width:18px;height:18px;}
+  .msg-aula-txt{display:flex;flex-direction:column;min-width:0;gap:1px;}
+  .msg-aula-txt small{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);}
+  .msg-aula-txt strong{font-size:var(--msg-fonte,14px);line-height:1.3;word-break:break-word;}
+  .msg-aula-txt em{font-style:normal;font-size:11.5px;font-weight:700;color:var(--accent);}
+  .msg-aula-painel{border-top:1px solid var(--border);background:var(--bg-card);padding:8px 10px;display:flex;flex-direction:column;gap:6px;}
+  .msg-aula-painel[hidden]{display:none;}
+  .msg-aula-hd{display:flex;gap:6px;align-items:center;} .msg-aula-hd .ps-input{margin:0;flex:1;}
+  .msg-aula-dica{font-size:11px;color:var(--text-mute);}
+  .msg-aula-lista{max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+  .msg-aula-cat{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);padding:6px 8px 2px;}
+  .msg-aula-lista button{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;text-align:left;font:inherit;font-size:13px;color:var(--text);}
+  .msg-aula-lista button:hover{background:rgba(141,145,111,.22);}
+  .msg-aula-lista button .icon{width:12px;height:12px;color:var(--accent);flex-shrink:0;}
   .msg-de small{font-weight:600;color:var(--text-mute);}
   .msg-bolha.mencionado{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);}
   .msg-popup.mencao{border-left-color:var(--accent);}
@@ -9704,7 +9721,7 @@ function msgAlunoAcomp(id){ const s = typeof getStudent==='function' ? getStuden
 function msgQuem(id){ return msgPessoa(id) || msgAlunoAcomp(id) || (typeof getPerson==='function' ? getPerson(id) : null) || null; }
 function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
-function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'' }; }
+function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null }; }
 /* ---- grupos ---- */
 function msgChaveGrupo(id){ return 'g:'+id; }
 function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
@@ -10145,6 +10162,32 @@ function msgArquivoHtml(m){
   if(msgArquivoEhImagem(m)) return `<a class="msg-arq-img" ${base} data-msg-arq-tipo="imagem" target="_blank" rel="noopener" title="${nome}"><img alt="${nome}"><small>${nome} · ${tam}</small></a>`;
   return `<a class="msg-arq" ${base} data-msg-arq-tipo="arquivo" target="_blank" rel="noopener" download="${escapeAttr(m.arquivoNome)}"><span class="msg-arq-ic">${icon('file','tiny')}</span><span class="msg-arq-txt"><strong>${nome}</strong><small>${tam} · clique para abrir ou baixar</small></span></a>`;
 }
+/* ---- indicar uma aula no Acompanhamento: vira um cartão que abre a aula direto (como nas Metas) ---- */
+function msgAulaHtml(m){
+  const c = typeof getCourse==='function' ? getCourse(m.aulaId) : null;
+  const titulo = c ? c.title : 'Aula';
+  const nota = (m.texto||'').split('\n').slice(1).join('\n').trim();
+  return `${nota ? `<div class="msg-txt">${linkify(nota)}</div>` : ''}<button type="button" class="msg-aula" data-msg-aula="${escapeAttr(m.aulaId)}" title="Abrir aula"><span class="msg-aula-ic">${icon('play','tiny')}</span><span class="msg-aula-txt"><small>${escapeHtml(c ? c.cat : 'Aula indicada')}</small><strong>${escapeHtml(titulo)}</strong><em>Abrir aula</em></span></button>`;
+}
+async function msgEnviarAula(chave, aulaId, nota){
+  const c = getCourse(aulaId); if(!c) return false;
+  nota = (nota||'').trim().slice(0, 1000);
+  const texto = ('📚 Aula: '+c.title).slice(0,180) + (nota ? '\n'+nota : '');
+  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'aula', texto, aula_id:aulaId}, msgDestino(chave))).select().single();
+  if(error){ console.error('msgEnviarAula', error); alert('Não foi possível enviar a aula: '+(error.message||'')); return false; }
+  msgGuardar(mapMsgRow(data));
+  msgUI.forcarFim = true;
+  if(msgNaTela() && msgUI.aberto===chave) renderMensagens();
+  return true;
+}
+function msgAulaPainelHtml(q){
+  const n = normTxt(q||'').trim();
+  const cats = orderedCourseCats();
+  const grupos = cats.map(cat=>({cat, aulas: COURSES.filter(c=>c.cat===cat && (!n || normTxt(c.title).includes(n) || normTxt(cat).includes(n)))})).filter(g=>g.aulas.length);
+  if(!COURSES.length) return '<div class="tf-vazio" style="padding:10px">Nenhuma aula cadastrada ainda.</div>';
+  if(!grupos.length) return '<div class="tf-vazio" style="padding:10px">Nenhuma aula com esse nome.</div>';
+  return grupos.map(g=>`<div class="msg-aula-cat">${escapeHtml(g.cat)}</div>${g.aulas.map(c=>`<button type="button" data-msg-aula-enviar="${escapeAttr(c.id)}">${icon('play','tiny')} <span>${escapeHtml(c.title)}</span></button>`).join('')}`).join('');
+}
 async function msgEnviarArquivos(chave, files){
   files = Array.from(files||[]).filter(f=>f && f.size>=0);
   if(!files.length) return;
@@ -10312,7 +10355,7 @@ function renderMensagens(){
     deAnterior = m.de;
     const podeApagar = minha || (!grupo && !acomp);
     const menciona = msgMeMenciona(m);
-    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : m.tipo==='aula' ? msgAulaHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   const cabecalho = grupo
     ? `${msgGrupoAvatar(36, grupo)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
@@ -10386,9 +10429,15 @@ function renderMensagens(){
           </div>` : ''}
           <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe da mentoria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o mentorado e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
           <div class="msg-mencoes" id="msg-mencoes" hidden></div>
+          ${acomp && currentUserRole==='staff' ? `<div class="msg-aula-painel" id="msg-aula-painel" hidden>
+            <div class="msg-aula-hd"><input class="ps-input" type="text" id="msg-aula-busca" placeholder="Buscar aula pelo nome…"><button type="button" class="btn-mini" id="msg-aula-fechar">${icon('x','tiny')}</button></div>
+            <small class="msg-aula-dica">Clique numa aula para enviar. O que estiver escrito na caixa de mensagem vai junto, como recado.</small>
+            <div class="msg-aula-lista" id="msg-aula-lista"></div>
+          </div>` : ''}
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
+            ${acomp && currentUserRole==='staff' ? `<button type="button" class="msg-mic" id="msg-aula-btn" title="Indicar uma aula ao mentorado">${icon('film')}</button>` : ''}
             <button type="button" class="msg-mic" id="msg-anexo" title="Anexar arquivo (áudio, PDF, imagem, documento)">${icon('paperclip')}</button>
             <input type="file" id="msg-anexo-input" multiple hidden>
             <button type="button" class="msg-mic" id="msg-mic" title="Gravar mensagem de voz">${icon('mic')}</button>
@@ -10436,6 +10485,17 @@ function renderMensagens(){
     msgBindMaiuscula(ta);
     msgBindMencoes(ta, el.querySelector('#msg-mencoes'), chave);
     const mic = el.querySelector('#msg-mic'); if(mic) mic.addEventListener('click', ()=>msgGravarIniciar(chave));
+    // indicar aula (Acompanhamento, equipe): painel com busca; clique envia
+    const aulaBtn = el.querySelector('#msg-aula-btn');
+    if(aulaBtn){
+      const painel = el.querySelector('#msg-aula-painel'), lista = el.querySelector('#msg-aula-lista'), busca = el.querySelector('#msg-aula-busca');
+      const desenha = ()=>{ lista.innerHTML = msgAulaPainelHtml(busca.value); lista.querySelectorAll('[data-msg-aula-enviar]').forEach(b=>b.addEventListener('click', async ()=>{ b.disabled = true; const nota = ta.value; ta.value = ''; if(!(await msgEnviarAula(chave, b.dataset.msgAulaEnviar, nota))){ ta.value = nota; b.disabled = false; } })); };
+      aulaBtn.addEventListener('click', ()=>{ painel.hidden = !painel.hidden; if(!painel.hidden){ desenha(); busca.focus(); } });
+      el.querySelector('#msg-aula-fechar').addEventListener('click', ()=>{ painel.hidden = true; });
+      busca.addEventListener('input', desenha);
+      busca.addEventListener('keydown', e=>{ if(e.key==='Escape') painel.hidden = true; });
+    }
+    el.querySelectorAll('[data-msg-aula]').forEach(b=>b.addEventListener('click', ()=>openCourseModal(b.dataset.msgAula)));
     // anexos: clipe, arrastar e soltar na conversa, colar arquivo/imagem na caixa de texto
     const anexoInp = el.querySelector('#msg-anexo-input');
     el.querySelector('#msg-anexo').addEventListener('click', ()=>anexoInp.click());
