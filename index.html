@@ -1405,6 +1405,24 @@
   @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
   .msg-editor{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--border);}
+  .msg-editor.gravando{display:none;}
+  .msg-mic{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;}
+  .msg-mic .icon{width:18px;height:18px;}
+  .msg-mic:hover{border-color:var(--danger);color:var(--danger);}
+  .msg-grav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;border-top:1px solid var(--border);font-size:13px;}
+  .msg-grav[hidden]{display:none;}
+  .msg-grav b{font-variant-numeric:tabular-nums;min-width:38px;}
+  .msg-grav small{color:var(--text-mute);}
+  .msg-grav .btn-accent,.msg-grav .btn-outline{display:inline-flex;align-items:center;gap:6px;}
+  .msg-grav .btn-accent{margin-left:auto;}
+  .msg-grav-ponto{width:10px;height:10px;border-radius:50%;background:var(--danger);animation:msgPulse 1s infinite;}
+  @keyframes msgPulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .msg-grav-st{width:100%;font-size:12px;color:var(--text-mute);}
+  .msg-audio{display:flex;align-items:center;gap:8px;min-width:230px;}
+  .msg-audio audio{height:36px;flex:1;min-width:0;max-width:280px;}
+  .msg-audio-ic .icon{width:14px;height:14px;color:var(--text-mute);}
+  .msg-audio small{color:var(--text-mute);font-size:11px;}
+  .msg-audio.erro::after{content:'áudio indisponível';font-size:11px;color:var(--danger);}
   .msg-editor .ps-input{margin:0;flex:1;resize:none;min-height:38px;max-height:140px;}
   .msg-editor .btn-accent{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .msg-vazio{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-mute);text-align:center;padding:30px;}
@@ -1412,11 +1430,23 @@
   .msg-vazio p{font-size:14px;color:var(--text-dim);}
   .msg-vazio small{font-size:12px;max-width:340px;line-height:1.5;}
   @media (max-width:760px){
-    .msg-wrap{grid-template-columns:1fr;height:calc(100vh - 130px);}
+    .msg-wrap{grid-template-columns:1fr;height:calc(100dvh - 104px);min-height:0;border-radius:10px;}
     .msg-lista.com-conversa{display:none;}
     .msg-conversa{display:none;} .msg-lista.com-conversa + .msg-conversa{display:flex;}
     .msg-voltar{display:inline-flex;}
+    .msg-conversa-hd{padding:8px 10px;gap:8px;}
+    .msg-conversa-hd .btn-mini.danger span{display:none;}
+    .msg-corpo{padding:10px;}
+    .msg-bolha{max-width:88%;}
+    .msg-apagar{opacity:.55;}
+    .msg-editor{padding:8px;gap:6px;}
+    .msg-editor .btn-accent{padding:8px 10px;}
+    .msg-editor .btn-accent span{display:none;}
+    .msg-audio{min-width:0;} .msg-audio audio{max-width:200px;}
+    .msg-grav .btn-accent{margin-left:0;}
+    #msg-popups{left:10px;right:10px;bottom:10px;width:auto;}
   }
+  @media (max-width:880px){ #view-mensagens{margin:-12px -8px 0;} }
   /* janelinhas no canto inferior direito */
   #msg-popups{position:fixed;right:16px;bottom:16px;z-index:290;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:min(340px,calc(100vw - 32px));}
   .msg-popup{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.45);padding:10px 12px;animation:msgPop .25s ease-out;}
@@ -1460,12 +1490,48 @@
     .topbar-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .role-toggle span, .role-toggle{font-size:11px;}
   }
+  .role-toggle .sm{display:none;}
+  @media (max-width:880px){
+    .role-toggle .lg{display:none;} .role-toggle .sm{display:inline;}
+  }
   @media (max-width:520px){
     .topbar{gap:6px;}
-    .topbar-right{gap:8px;}
-    .role-toggle button{padding:6px 8px;font-size:10px;}
+    .topbar-right{gap:6px;}
+    .role-toggle{padding:2px;gap:1px;}
+    .role-toggle button{padding:6px 7px;font-size:10px;}
     .profile-btn span{display:none;}
     .profile-btn{padding:5px;}
+    .icon-btn{width:34px;height:34px;}
+    .content{padding:14px 12px 40px;}
+    .kpi-row{gap:8px;} .kpi-tile{min-width:calc(50% - 4px);padding:10px 12px;}
+    .stat-row{gap:8px;}
+    .section-title{font-size:17px;}
+    /* Tarefas: filtros em duas colunas, datas lado a lado */
+    .tf-filtros .ps-input{min-width:0;flex:1 1 calc(50% - 4px);}
+    .tf-filtros .tf-busca{flex:1 1 100%;}
+    .tf-periodo{flex:1 1 100%;display:flex;gap:6px;} .tf-periodo .ps-input{min-width:0;flex:1;}
+    .tf-topo-acoes{width:100%;justify-content:space-between;padding-top:0;}
+    .tf-topo-acoes .btn-accent{flex:1;justify-content:center;}
+    .tf-kanban{grid-template-columns:1fr;}
+    .tf-card-meta .tf-status{margin-left:0;}
+    /* Acompanhamento Interno: seletor e botões em coluna, ocupando a largura */
+    .interno-topo{flex-direction:column;}
+    .interno-topo-acoes{width:100%;flex-direction:column;}
+    .interno-topo-acoes .btn-outline,.interno-topo-acoes .btn-accent{width:100%;justify-content:center;min-height:44px;}
+    .aluno-picker-btn{min-height:56px;}
+    /* Início da equipe */
+    .equipe-grid{grid-template-columns:1fr;gap:10px;}
+    .equipe-card{padding:14px;}
+    /* modais ocupam a tela quase toda */
+    .modal-backdrop{padding:8px;align-items:flex-start;}
+    .modal{max-height:calc(100dvh - 16px);border-radius:12px;}
+    .modal-body{padding:16px 14px 18px;}
+    .modal-actions{gap:6px;} .modal-actions button{flex:1 1 45%;justify-content:center;}
+    .add-form{grid-template-columns:1fr !important;padding:12px;}
+    .busca-bar{flex-wrap:wrap;} .busca-bar .ps-input{max-width:none;flex:1 1 100%;}
+    .vg-sec-head{flex-wrap:wrap;}
+    .community-filters{gap:6px;} .filter-tab{padding:6px 10px;font-size:11.5px;}
+    #msg-popups{max-width:none;}
   }
 </style>
 </head>
@@ -1587,9 +1653,9 @@
       <div class="topbar-right">
         <div class="role-toggle" id="role-toggle">
           <button data-role="aluno">Aluno</button>
-          <button data-role="staff">Equipe Interna</button>
-          <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem">Visualização Consultora</button>
-          <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê">Visualização Editor</button>
+          <button data-role="staff"><span class="lg">Equipe Interna</span><span class="sm">Equipe</span></button>
+          <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem"><span class="lg">Visualização Consultora</span><span class="sm">Consultora</span></button>
+          <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê"><span class="lg">Visualização Editor</span><span class="sm">Editor</span></button>
         </div>
         <button class="icon-btn" id="notif-btn" title="Notificações">
           <span class="dot-alert" id="notif-dot"></span>
@@ -1696,6 +1762,7 @@ const ICONS = {
   copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   money:'<circle cx="12" cy="12" r="9"/><path d="M12 6.5v11M15.5 9.3c0-1.5-1.6-2.5-3.5-2.5s-3.5 1-3.5 2.4c0 3 7 1.3 7 4.3 0 1.5-1.6 2.5-3.5 2.5s-3.5-1-3.5-2.5"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   moon:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>',
 };
@@ -9522,7 +9589,8 @@ function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
-function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at }; }
+function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'' }; }
+function msgAudioDur(seg){ seg = Math.max(0, Math.round(seg||0)); return Math.floor(seg/60)+':'+String(seg%60).padStart(2,'0'); }
 function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de Vendas' : p.role==='editor' ? 'Editor de Vídeos' : 'Equipe interna'); }
 
 async function msgBootstrap(){
@@ -9574,6 +9642,7 @@ async function msgApagar(m){
     ? await sb.from('mensagens').delete().eq('id', m.id)
     : await sb.rpc('mensagens_ocultar', {p_id: m.id});
   if(error){ alert('Não foi possível apagar: '+(error.message||'')); return; }
+  if(minha && m.tipo==='audio' && m.audioPath){ try{ await sb.storage.from('mensagens-audio').remove([m.audioPath]); }catch(e){ console.error(e); } }
   msgRemovida(m);
 }
 async function msgLimparConversa(outroId){
@@ -9635,6 +9704,85 @@ async function msgEnviar(paraId, texto){
   return true;
 }
 
+/* ---- mensagens de voz: grava pelo microfone, sobe pro bucket privado e envia como mensagem 'audio' ---- */
+const MSG_AUDIO_MAX_SEG = 180;
+let msgGrav = null; // {rec, chunks, inicio, timer, paraId, mime, cancelado}
+const MSG_AUDIO_URLS = {}; // path -> {url, ate}
+function msgAudioMime(){
+  if(!window.MediaRecorder) return '';
+  for(const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']){ if(MediaRecorder.isTypeSupported(t)) return t; }
+  return '';
+}
+async function msgGravarIniciar(paraId){
+  if(msgGrav) return;
+  if(!navigator.mediaDevices || !window.MediaRecorder){ alert('Este navegador não permite gravar áudio.'); return; }
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.'); return; }
+  const mime = msgAudioMime();
+  const rec = mime ? new MediaRecorder(stream, {mimeType:mime}) : new MediaRecorder(stream);
+  msgGrav = { rec, chunks:[], inicio:Date.now(), timer:null, paraId, mime: rec.mimeType||mime||'audio/webm', cancelado:false, stream };
+  rec.ondataavailable = e=>{ if(e.data && e.data.size) msgGrav.chunks.push(e.data); };
+  rec.onstop = ()=>msgGravarFinalizou();
+  rec.start(250);
+  msgGrav.timer = setInterval(()=>{
+    const seg = Math.floor((Date.now()-msgGrav.inicio)/1000);
+    const t = document.getElementById('msg-grav-tempo'); if(t) t.textContent = msgAudioDur(seg);
+    if(seg >= MSG_AUDIO_MAX_SEG) msgGravarParar(false);
+  }, 250);
+  msgGravarUI(true);
+}
+function msgGravarParar(cancelar){
+  if(!msgGrav) return;
+  msgGrav.cancelado = !!cancelar;
+  clearInterval(msgGrav.timer);
+  try{ msgGrav.rec.stop(); }catch(e){ msgGravarFinalizou(); }
+}
+async function msgGravarFinalizou(){
+  const g = msgGrav; if(!g) return;
+  msgGrav = null;
+  try{ g.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  msgGravarUI(false);
+  const seg = Math.max(1, Math.round((Date.now()-g.inicio)/1000));
+  if(g.cancelado || !g.chunks.length || seg < 1) return;
+  const blob = new Blob(g.chunks, {type:g.mime});
+  if(blob.size > 10*1024*1024){ alert('O áudio ficou grande demais. Grave um áudio mais curto.'); return; }
+  const ext = /mp4/.test(g.mime) ? 'm4a' : /ogg/.test(g.mime) ? 'ogg' : 'webm';
+  const path = `${msgEu()}/${g.paraId}/${Date.now()}.${ext}`;
+  const st = document.getElementById('msg-grav-status'); if(st){ st.hidden = false; st.textContent = 'Enviando áudio…'; }
+  const { error: upErr } = await sb.storage.from('mensagens-audio').upload(path, blob, {upsert:false, contentType:g.mime});
+  if(upErr){ console.error(upErr); alert('Não foi possível enviar o áudio: '+(upErr.message||'')); if(st) st.hidden = true; return; }
+  const { data, error } = await sb.from('mensagens').insert({de:msgEu(), para:g.paraId, tipo:'audio', texto:'🎤 Mensagem de voz', audio_path:path, audio_seg:seg, audio_mime:g.mime}).select().single();
+  if(error){ console.error(error); alert('O áudio subiu, mas não foi possível registrar a mensagem: '+(error.message||'')); if(st) st.hidden = true; return; }
+  msgGuardar(mapMsgRow(data));
+  msgUI.forcarFim = true;
+  if(currentView==='mensagens' && msgUI.aberto===g.paraId) renderMensagens();
+}
+function msgGravarUI(gravando){
+  const box = document.getElementById('msg-grav'); const ed = document.querySelector('.msg-editor');
+  if(!box || !ed) return;
+  box.hidden = !gravando; ed.classList.toggle('gravando', gravando);
+  const st = document.getElementById('msg-grav-status'); if(st) st.hidden = true;
+}
+async function msgAudioUrl(path){
+  const c = MSG_AUDIO_URLS[path];
+  if(c && c.ate > Date.now()) return c.url;
+  const { data, error } = await sb.storage.from('mensagens-audio').createSignedUrl(path, 3600);
+  if(error || !data){ console.error('msgAudioUrl', error); return null; }
+  MSG_AUDIO_URLS[path] = { url:data.signedUrl, ate: Date.now()+50*60*1000 };
+  return data.signedUrl;
+}
+function msgAudioHtml(m){
+  return `<div class="msg-audio" data-msg-audio="${escapeAttr(m.audioPath)}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="none" controlsList="nodownload"></audio><small>${msgAudioDur(m.audioSeg)}</small></div>`;
+}
+function msgAudioCarregar(root){
+  root.querySelectorAll('[data-msg-audio]').forEach(async box=>{
+    if(box.dataset.ok) return; box.dataset.ok = '1';
+    const url = await msgAudioUrl(box.dataset.msgAudio);
+    const a = box.querySelector('audio'); if(url && a) a.src = url; else box.classList.add('erro');
+  });
+}
+
 /* ---- som de aviso (gerado no navegador, sem arquivo externo) ---- */
 let msgAudioCtx = null;
 function msgSom(){
@@ -9665,7 +9813,7 @@ function msgPopup(m){
   const c = msgPopupContainer();
   // uma janela por pessoa: se já tem, só atualiza o texto
   let el = c.querySelector(`[data-msg-popup="${m.de}"]`);
-  if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').innerHTML = linkify(m.texto); el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
+  if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').innerHTML = m.tipo==='audio' ? `🎤 Mensagem de voz (${msgAudioDur(m.audioSeg)})` : linkify(m.texto); el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
   el = document.createElement('div');
   el.className = 'msg-popup'; el.dataset.msgPopup = m.de; el.dataset.msgId = String(m.id);
   el.innerHTML = `
@@ -9673,7 +9821,7 @@ function msgPopup(m){
     <div class="msg-popup-txt"></div>
     <div class="msg-popup-resp"><input class="ps-input" type="text" placeholder="Responder…" maxlength="4000"><button type="button" class="emoji-btn" title="Emoji">😊</button><button type="button" class="btn-accent" title="Enviar">${icon('reply','tiny')}</button></div>
     <button type="button" class="msg-popup-abrir">Abrir conversa</button>`;
-  el.querySelector('.msg-popup-txt').innerHTML = linkify(m.texto);
+  el.querySelector('.msg-popup-txt').innerHTML = m.tipo==='audio' ? `🎤 Mensagem de voz (${msgAudioDur(m.audioSeg)})` : linkify(m.texto);
   c.appendChild(el);
   while(c.children.length>3) c.removeChild(c.firstChild);
   const fechar = ()=>{ clearTimeout(el._timer); el.remove(); };
@@ -9717,7 +9865,7 @@ function renderMensagens(){
     const dia = tzDataHora(m.createdAt).slice(0,10); let sep = '';
     if(dia!==diaAnterior){ diaAnterior = dia; const hoje = tzDataHora(new Date().toISOString()).slice(0,10); sep = `<div class="msg-dia">${dia===hoje? 'Hoje' : dia}</div>`; }
     const hora = (tzDataHora(m.createdAt, true).split(' às ')[1])||'';
-    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}" data-msg-id="${m.id}"><button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${m.de===eu ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button><div class="msg-txt">${linkify(m.texto)}</div><div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}" data-msg-id="${m.id}"><button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${m.de===eu ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>${m.tipo==='audio' ? msgAudioHtml(m) : `<div class="msg-txt">${linkify(m.texto)}</div>`}<div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   el.innerHTML = `
     <div class="msg-wrap" style="--msg-fonte:${msgUI.fonte}px">
@@ -9755,13 +9903,20 @@ function renderMensagens(){
             <button type="button" class="btn-mini msg-voltar" id="msg-voltar">${icon('back','tiny')}</button>
             ${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}
             <div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>
-            ${conversa.length ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Limpar a conversa só para você">${icon('trash','tiny')} Limpar conversa</button>` : ''}
+            ${conversa.length ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Limpar a conversa só para você">${icon('trash','tiny')}<span> Limpar conversa</span></button>` : ''}
           </div>
           <div class="msg-corpo" id="msg-corpo">${bolhas || '<div class="tf-vazio" style="text-align:center;padding:30px">Nenhuma mensagem ainda. Diga oi!</div>'}</div>
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
-            <button type="button" class="btn-accent" id="msg-enviar">${icon('reply','tiny')} Enviar</button>
+            <button type="button" class="msg-mic" id="msg-mic" title="Gravar mensagem de voz">${icon('mic')}</button>
+            <button type="button" class="btn-accent" id="msg-enviar">${icon('reply','tiny')}<span> Enviar</span></button>
+          </div>
+          <div class="msg-grav" id="msg-grav" hidden>
+            <span class="msg-grav-ponto"></span><span>Gravando</span> <b id="msg-grav-tempo">0:00</b> <small>(máx. ${Math.floor(MSG_AUDIO_MAX_SEG/60)} min)</small>
+            <button type="button" class="btn-outline" id="msg-grav-cancelar">Cancelar</button>
+            <button type="button" class="btn-accent" id="msg-grav-enviar">${icon('reply','tiny')} Enviar áudio</button>
+            <span class="msg-grav-st" id="msg-grav-status" hidden></span>
           </div>`
         : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe para conversar.</p><small>Conversas privadas, só texto. Quem receber vê a mensagem na hora, em qualquer tela.</small></div>`}
       </section>
@@ -9790,6 +9945,11 @@ function renderMensagens(){
     btn.addEventListener('click', enviar);
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); enviar(); } });
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
+    const mic = el.querySelector('#msg-mic'); if(mic) mic.addEventListener('click', ()=>msgGravarIniciar(outro.id));
+    el.querySelector('#msg-grav-cancelar').addEventListener('click', ()=>msgGravarParar(true));
+    el.querySelector('#msg-grav-enviar').addEventListener('click', ()=>msgGravarParar(false));
+    if(msgGrav && msgGrav.paraId===outro.id) msgGravarUI(true);
+    msgAudioCarregar(el);
     if(rascunho){ ta.value = rascunho; ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; }
     if(tinhaFoco || !rascunho){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
