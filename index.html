@@ -10233,9 +10233,11 @@ function msgPopup(m){
   msgPopupTimer(el);
 }
 function msgPopupTimer(el){ clearTimeout(el._timer); el._timer = setTimeout(()=>{ if(document.activeElement && el.contains(document.activeElement)) { msgPopupTimer(el); return; } el.remove(); }, 25000); }
+/* Fecha a janelinha daquela conversa — chamada sempre que a conversa é aberta/desenhada na tela. */
+function msgFecharPopup(chave){ const c = document.getElementById('msg-popups'); if(!c || !chave) return; const el = c.querySelector(`[data-msg-popup="${chave}"]`); if(el){ clearTimeout(el._timer); el.remove(); } }
 function msgAbrirConversa(chave){
   msgUI.aberto = chave;
-  const c = document.getElementById('msg-popups'); if(c){ const el = c.querySelector(`[data-msg-popup="${chave}"]`); if(el) el.remove(); }
+  msgFecharPopup(chave);
   const alvo = (msgSouMentorado() || (currentRole==='aluno' && msgEhAcomp(chave))) ? 'acompanhamento' : 'mensagens';
   if(currentView!==alvo) goTo(alvo); else renderMensagens();
 }
@@ -10403,6 +10405,7 @@ function renderMensagens(){
   const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(chave));
   el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
   if(chave){
+    msgFecharPopup(chave); // a conversa está na tela: o aviso lá embaixo não faz mais sentido
     const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = (pertoDoFim || msgUI.forcarFim) ? corpo.scrollHeight : scrollAntes; msgUI.forcarFim = false;
     if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && msgNaTela()) renderMensagens(); }); }
     else msgMarcarLidas(chave);
