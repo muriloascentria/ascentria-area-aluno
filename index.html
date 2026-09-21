@@ -1345,14 +1345,14 @@
   .tf-m-acoes .danger-text{color:var(--danger);}
   @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} .tf-modo{margin-left:0;} }
   /* ---- Emojis ---- */
-  .emoji-btn{font-size:18px;line-height:1;padding:4px 6px;border-radius:8px;background:none;border:1px solid transparent;cursor:pointer;flex-shrink:0;filter:grayscale(.2);}
-  .emoji-btn:hover{border-color:var(--border);background:var(--bg-card);filter:none;}
+  .emoji-btn{width:38px;height:38px;font-size:19px;line-height:1;padding:0;border-radius:10px;background:none;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .emoji-btn:hover{background:var(--bg-card);border-color:var(--accent);}
   #emoji-painel{position:fixed;z-index:320;width:292px;max-height:260px;overflow-y:auto;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.4);padding:8px;display:grid;grid-template-columns:repeat(8,1fr);gap:2px;}
   #emoji-painel button{font-size:20px;line-height:1;padding:5px 0;border-radius:8px;background:none;border:none;cursor:pointer;}
   #emoji-painel button:hover{background:var(--bg-card);transform:scale(1.15);}
-  .composer-footer .emoji-btn{margin-left:auto;margin-right:6px;}
-  .comment-composer .emoji-btn{padding:2px 4px;font-size:16px;}
-  .msg-popup-resp .emoji-btn{padding:2px 4px;font-size:16px;}
+  .composer-footer .emoji-btn{margin-left:auto;margin-right:6px;width:34px;height:34px;font-size:17px;}
+  .comment-composer .emoji-btn{width:30px;height:30px;font-size:15px;border-radius:8px;}
+  .msg-popup-resp .emoji-btn{width:32px;height:32px;font-size:15px;border-radius:8px;}
   /* ---- Mensagens ---- */
   .msg-wrap{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;height:calc(100vh - 150px);min-height:460px;}
   .msg-lista{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
@@ -1406,9 +1406,10 @@
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
   .msg-editor{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--border);}
   .msg-editor.gravando{display:none;}
-  .msg-mic{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;}
+  .msg-mic{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:none;display:inline-flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;padding:0;}
   .msg-mic .icon{width:18px;height:18px;}
-  .msg-mic:hover{border-color:var(--danger);color:var(--danger);}
+  .msg-mic:hover{background:var(--bg-card);border-color:var(--danger);color:var(--danger);}
+  .msg-editor .btn-accent{height:38px;}
   .msg-grav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;border-top:1px solid var(--border);font-size:13px;}
   .msg-grav[hidden]{display:none;}
   .msg-grav b{font-variant-numeric:tabular-nums;min-width:38px;}
