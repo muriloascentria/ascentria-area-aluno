@@ -1376,14 +1376,21 @@
   .msg-dia{align-self:center;font-size:10.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin:8px 0 4px;}
   .msg-bolha{max-width:72%;align-self:flex-start;background:var(--bg-card);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;}
   .msg-bolha.minha{align-self:flex-end;background:rgba(141,145,111,.22);border-color:transparent;border-radius:14px 14px 4px 14px;}
-  .msg-txt{font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+  .msg-txt{font-size:var(--msg-fonte,14px);line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+  .msg-txt a,.msg-popup-txt a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;word-break:break-all;}
+  .msg-txt a:hover,.msg-popup-txt a:hover{color:var(--text);}
+  .msg-fonte{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-mute);}
+  .msg-fonte b{min-width:18px;text-align:center;color:var(--text-dim);}
+  .msg-fonte button{font-size:12px;font-weight:800;padding:2px 8px;border:1px solid var(--border);border-radius:8px;color:var(--text-dim);}
+  .msg-fonte button:hover{background:var(--bg-card);color:var(--text);}
   .msg-bolha{position:relative;}
   .msg-apagar{position:absolute;left:-26px;top:50%;transform:translateY(-50%);padding:4px;color:var(--text-mute);opacity:0;transition:opacity .15s;}
+  .msg-bolha:not(.minha) .msg-apagar{left:auto;right:-26px;}
   .msg-apagar .icon{width:13px;height:13px;}
-  .msg-bolha.minha:hover .msg-apagar{opacity:1;}
+  .msg-bolha:hover .msg-apagar{opacity:1;}
   .msg-apagar:hover{color:var(--danger);}
   .msg-conversa-hd .btn-mini.danger{margin-left:auto;white-space:nowrap;}
-  @media (hover:none){ .msg-bolha.minha .msg-apagar{opacity:.6;} }
+  @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
   .msg-editor{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--border);}
   .msg-editor .ps-input{margin:0;flex:1;resize:none;min-height:38px;max-height:140px;}
@@ -9494,8 +9501,9 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') emojiFechar(); })
 let MSG_EQUIPE = [];          // quem pode conversar comigo
 let MSG_CONVERSAS = {};       // outroId -> [mensagens] (ordem cronológica)
 let MSG_NAO_LIDAS = [];       // {id, de} das mensagens recebidas ainda não lidas
-let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true };
-try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; }catch(e){}
+let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14 };
+try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; const f = parseInt(localStorage.getItem('ascentria-msg-fonte')||'14',10); if(f>=12 && f<=22) msgUI.fonte = f; }catch(e){}
+function msgSetFonte(v){ msgUI.fonte = Math.max(12, Math.min(22, v)); try{ localStorage.setItem('ascentria-msg-fonte', String(msgUI.fonte)); }catch(e){} const w = document.querySelector('.msg-wrap'); if(w) w.style.setProperty('--msg-fonte', msgUI.fonte+'px'); const lbl = document.getElementById('msg-fonte-valor'); if(lbl) lbl.textContent = msgUI.fonte; }
 
 function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
@@ -9544,15 +9552,20 @@ function msgRemovida(old){
   const c = document.getElementById('msg-popups'); if(c && old.de){ const el = c.querySelector(`[data-msg-popup="${old.de}"]`); if(el && el.dataset.msgId===String(id)) el.remove(); }
   if(currentView==='mensagens') renderMensagens();
 }
+/* Minha mensagem: apaga para os dois. Mensagem do outro: some só para mim (o outro continua vendo). */
 async function msgApagar(m){
-  if(!(await showAppConfirm('Apagar esta mensagem? Ela some da conversa para vocês dois.', {title:'Apagar mensagem', confirmLabel:'Apagar'}))) return;
-  const { error } = await sb.from('mensagens').delete().eq('id', m.id);
+  const minha = m.de===msgEu();
+  const msg = minha ? 'Apagar esta mensagem para todos? Ela some da conversa para vocês dois.' : 'Apagar esta mensagem só para você? A outra pessoa continua vendo.';
+  if(!(await showAppConfirm(msg, {title: minha ? 'Apagar para todos' : 'Apagar para mim', confirmLabel:'Apagar'}))) return;
+  const { error } = minha
+    ? await sb.from('mensagens').delete().eq('id', m.id)
+    : await sb.rpc('mensagens_ocultar', {p_id: m.id});
   if(error){ alert('Não foi possível apagar: '+(error.message||'')); return; }
   msgRemovida(m);
 }
 async function msgLimparConversa(outroId){
   const p = msgPessoa(outroId); if(!p) return;
-  if(!(await showAppConfirm(`Limpar toda a conversa com ${p.name.split(' ')[0]}? As mensagens somem para vocês dois e não dá para desfazer.`, {title:'Limpar conversa', confirmLabel:'Limpar tudo'}))) return;
+  if(!(await showAppConfirm(`Limpar toda a conversa com ${p.name.split(' ')[0]} só para você? Ela some daqui, mas ${p.name.split(' ')[0]} continua vendo as mensagens do lado dela. Não dá para desfazer.`, {title:'Limpar conversa', confirmLabel:'Limpar para mim'}))) return;
   const { error } = await sb.rpc('mensagens_limpar_conversa', {p_outro: outroId});
   if(error){ alert('Não foi possível limpar: '+(error.message||'')); return; }
   MSG_CONVERSAS[outroId] = []; MSG_CONVERSAS[outroId]._completa = true;
@@ -9639,7 +9652,7 @@ function msgPopup(m){
   const c = msgPopupContainer();
   // uma janela por pessoa: se já tem, só atualiza o texto
   let el = c.querySelector(`[data-msg-popup="${m.de}"]`);
-  if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').textContent = m.texto; el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
+  if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').innerHTML = linkify(m.texto); el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
   el = document.createElement('div');
   el.className = 'msg-popup'; el.dataset.msgPopup = m.de; el.dataset.msgId = String(m.id);
   el.innerHTML = `
@@ -9647,7 +9660,7 @@ function msgPopup(m){
     <div class="msg-popup-txt"></div>
     <div class="msg-popup-resp"><input class="ps-input" type="text" placeholder="Responder…" maxlength="4000"><button type="button" class="emoji-btn" title="Emoji">😊</button><button type="button" class="btn-accent" title="Enviar">${icon('reply','tiny')}</button></div>
     <button type="button" class="msg-popup-abrir">Abrir conversa</button>`;
-  el.querySelector('.msg-popup-txt').textContent = m.texto;
+  el.querySelector('.msg-popup-txt').innerHTML = linkify(m.texto);
   c.appendChild(el);
   while(c.children.length>3) c.removeChild(c.firstChild);
   const fechar = ()=>{ clearTimeout(el._timer); el.remove(); };
@@ -9691,14 +9704,20 @@ function renderMensagens(){
     const dia = tzDataHora(m.createdAt).slice(0,10); let sep = '';
     if(dia!==diaAnterior){ diaAnterior = dia; const hoje = tzDataHora(new Date().toISOString()).slice(0,10); sep = `<div class="msg-dia">${dia===hoje? 'Hoje' : dia}</div>`; }
     const hora = (tzDataHora(m.createdAt, true).split(' às ')[1])||'';
-    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}" data-msg-id="${m.id}">${m.de===eu ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="Apagar mensagem">${icon('trash','tiny')}</button>` : ''}<div class="msg-txt">${linkify(m.texto)}</div><div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}" data-msg-id="${m.id}"><button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${m.de===eu ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button><div class="msg-txt">${linkify(m.texto)}</div><div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   el.innerHTML = `
-    <div class="msg-wrap">
+    <div class="msg-wrap" style="--msg-fonte:${msgUI.fonte}px">
       <aside class="msg-lista ${outro?'com-conversa':''}">
         <div class="msg-lista-hd">
           <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="Buscar pessoa…">
           <label class="msg-som" title="Som ao receber mensagem"><input type="checkbox" id="msg-som" ${msgUI.somLigado?'checked':''}> ${icon('bell','tiny')} Som</label>
+        </div>
+        <div class="msg-fonte" title="Tamanho da letra das mensagens">
+          <span>Letra</span>
+          <button type="button" id="msg-fonte-menos" title="Diminuir">A−</button>
+          <b id="msg-fonte-valor">${msgUI.fonte}</b>
+          <button type="button" id="msg-fonte-mais" title="Aumentar">A+</button>
         </div>
         <div class="msg-pessoas">
           ${ordenadas.map(p=>{ const u = ultima(p.id), n = msgNaoLidasDe(p.id); return `
@@ -9715,7 +9734,7 @@ function renderMensagens(){
             <button type="button" class="btn-mini msg-voltar" id="msg-voltar">${icon('back','tiny')}</button>
             ${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}
             <div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>
-            ${conversa.length ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Apagar toda a conversa, para os dois">${icon('trash','tiny')} Limpar conversa</button>` : ''}
+            ${conversa.length ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Limpar a conversa só para você">${icon('trash','tiny')} Limpar conversa</button>` : ''}
           </div>
           <div class="msg-corpo" id="msg-corpo">${bolhas || '<div class="tf-vazio" style="text-align:center;padding:30px">Nenhuma mensagem ainda. Diga oi!</div>'}</div>
           <div class="msg-editor">
@@ -9728,6 +9747,8 @@ function renderMensagens(){
     </div>`;
   bindBuscaInput('msg-busca', v=>{ msgUI.busca = v; }, renderMensagens);
   el.querySelector('#msg-som').addEventListener('change', e=>{ msgSetSom(e.target.checked); if(e.target.checked) msgSom(); });
+  el.querySelector('#msg-fonte-menos').addEventListener('click', ()=>msgSetFonte(msgUI.fonte-1));
+  el.querySelector('#msg-fonte-mais').addEventListener('click', ()=>msgSetFonte(msgUI.fonte+1));
   el.querySelectorAll('[data-msg-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
     msgUI.aberto = b.dataset.msgAbrir;
     renderMensagens();
