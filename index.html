@@ -1404,7 +1404,17 @@
   .msg-conversa-hd .btn-mini.danger{margin-left:auto;white-space:nowrap;}
   @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
-  .msg-de{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:2px;}
+  .msg-de{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:2px;display:flex;align-items:center;gap:5px;}
+  .msg-de small{font-weight:600;color:var(--text-mute);}
+  .msg-bolha.mencionado{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);}
+  .msg-popup.mencao{border-left-color:var(--accent);}
+  .msg-wrap.msg-solo{grid-template-columns:minmax(0,1fr);}
+  .msg-wrap.msg-solo .msg-config{border-top:none;}
+  .msg-conversa-hd #msg-config-btn{margin-left:auto;}
+  .msg-mencoes{display:flex;flex-direction:column;background:var(--bg-card);border-top:1px solid var(--border);padding:4px;max-height:220px;overflow-y:auto;}
+  .msg-mencoes[hidden]{display:none;}
+  .msg-mencoes button{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;text-align:left;font:inherit;font-size:13px;color:var(--text);}
+  .msg-mencoes button:hover,.msg-mencoes button.ativo{background:rgba(141,145,111,.22);}
   .msg-grupo-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}
   .msg-arq{display:flex;align-items:center;gap:10px;padding:6px 4px;color:inherit;text-decoration:none;max-width:320px;}
   .msg-arq-ic{width:36px;height:36px;border-radius:10px;background:rgba(141,145,111,.25);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -1471,6 +1481,7 @@
     .msg-wrap{grid-template-columns:1fr;height:calc(100dvh - 104px);min-height:0;border-radius:10px;}
     .msg-lista.com-conversa{display:none;}
     .msg-conversa{display:none;} .msg-lista.com-conversa + .msg-conversa{display:flex;}
+    .msg-solo .msg-conversa{display:flex;}
     .msg-voltar{display:inline-flex;}
     .msg-conversa-hd{padding:8px 10px;gap:8px;}
     .msg-conversa-hd .btn-mini.danger span,.msg-conversa-hd #msg-grupo-gerir span{display:none;}
@@ -1488,7 +1499,7 @@
     .msg-grav .btn-accent{margin-left:0;}
     #msg-popups{left:10px;right:10px;bottom:10px;width:auto;}
   }
-  @media (max-width:880px){ #view-mensagens{margin:-12px -8px 0;} }
+  @media (max-width:880px){ #view-mensagens,#view-acompanhamento{margin:-12px -8px 0;} }
   /* janelinhas no canto inferior direito */
   #msg-popups{position:fixed;right:16px;bottom:16px;z-index:290;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:min(340px,calc(100vw - 32px));}
   .msg-popup{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.45);padding:10px 12px;animation:msgPop .25s ease-out;}
@@ -1661,6 +1672,7 @@
     <div class="nav-group-label" id="nav-group-individual">Minha Área</div>
     <button class="nav-item individual" data-view="sessoes"></button>
     <button class="nav-item individual" data-view="metas"></button>
+    <button class="nav-item individual" id="nav-acompanhamento" data-view="acompanhamento"></button>
     <a class="nav-item individual" id="nav-prontuarios" href="https://esis.digital" target="_blank" rel="noopener">
       <svg class="icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
       <span>Prontuários eSIS</span>
@@ -1748,6 +1760,7 @@
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-mensagens"></div>
+      <div class="view" id="view-acompanhamento"></div>
     </div>
   </div>
 </div>
@@ -1830,6 +1843,7 @@ const NAV_LABELS = {
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   mensagens:['comment','Mensagens'],
+  acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
   dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict',
@@ -3236,6 +3250,7 @@ async function bootstrapData(){
 
   currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
   if(currentUserRole==='staff'){ await tarefasBootstrap(); await msgBootstrap(); }
+  else if(msgSouMentorado()) await msgBootstrap();
 }
 
 async function enterApp(){
@@ -4131,10 +4146,11 @@ function setupNav(){
       return;
     }
     if(currentRole!=='aluno' && msgTotalNaoLidas()){
-      const g = MSG_GRUPOS.find(x=>x.naoLidas);
-      msgAbrirConversa(MSG_NAO_LIDAS.length ? MSG_NAO_LIDAS[MSG_NAO_LIDAS.length-1].de : msgChaveGrupo(g.id));
+      const g = MSG_GRUPOS.find(x=>x.naoLidas), a = Object.values(MSG_ACOMP).find(x=>x.naoLidas);
+      msgAbrirConversa(MSG_NAO_LIDAS.length ? MSG_NAO_LIDAS[MSG_NAO_LIDAS.length-1].de : g ? msgChaveGrupo(g.id) : msgChaveAcomp(a.alunoId));
       return;
     }
+    if(currentRole==='aluno' && msgSouMentorado() && msgTotalNaoLidas()){ msgAbrirConversa(msgChaveAcomp(msgEu())); return; }
     if(currentRole==='staff'){
       // Como comentários feitos dentro de uma aula não aparecem mais no mural da Comunidade, uma dúvida
       // sem resposta registrada numa aula não aparecia lá mesmo depois de clicar no sino — a equipe
@@ -4207,8 +4223,8 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgTotalNaoLidas() : 0;
-  if(currentRole!=='aluno'){
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgTotalNaoLidas() : (msgSouMentorado() ? msgTotalNaoLidas() : 0);
+  if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
     badge.textContent = pend.length+tf;
@@ -4297,7 +4313,7 @@ function setRole(role){
      tier de quem está sendo visto — a própria conta, ou o mentorado selecionado pela equipe interna. */
   const viewingTier = getViewingTier();
   const isCursoView = role==='aluno' && viewingTier==='curso';
-  ['ranking','painel','sessoes','metas'].forEach(v=>{
+  ['ranking','painel','sessoes','metas','acompanhamento'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   });
@@ -4395,7 +4411,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens};
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -9626,6 +9642,7 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') emojiFechar(); })
    ou 'g:<id do grupo>'. */
 let MSG_EQUIPE = [];          // quem pode conversar comigo
 let MSG_GRUPOS = [];          // grupos de que participo: {id,nome,criadoPor,membros[],naoLidas}
+let MSG_ACOMP = {};           // acompanhamento: alunoId -> {alunoId,naoLidas,ultimaEm,ultimaTexto,ultimaDe} (equipe vê todos; mentorado só o seu)
 let MSG_CONVERSAS = {};       // chave -> [mensagens] (ordem cronológica)
 let MSG_NAO_LIDAS = [];       // {id, de} das mensagens 1:1 recebidas ainda não lidas
 let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true };
@@ -9656,17 +9673,79 @@ function msgBindMaiuscula(campo){
 function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
+/* Mentorado (aluno da mentoria, não do curso gravado): tem a janela "Acompanhamento" com a equipe. */
+function msgSouMentorado(){ return currentUserRole==='aluno' && !!currentUserProfile && (currentUserProfile.tier||'mentorado')!=='curso'; }
+function msgNaTela(){ return currentView==='mensagens' || currentView==='acompanhamento'; }
+function msgChaveAcomp(id){ return 'a:'+id; }
+function msgEhAcomp(chave){ return typeof chave==='string' && chave.startsWith('a:'); }
+function msgAcompDaChave(chave){ return msgEhAcomp(chave) ? chave.slice(2) : null; }
+function msgAcompInfo(alunoId){ return MSG_ACOMP[alunoId] || (MSG_ACOMP[alunoId] = {alunoId, naoLidas:0, ultimaEm:null, ultimaTexto:'', ultimaDe:null}); }
+function msgAlunoAcomp(id){ const s = typeof getStudent==='function' ? getStudent(id) : null; if(s) return s; if(currentUserProfile && currentUserProfile.id===id) return currentUserProfile; return null; }
+/* Quem é essa pessoa? Equipe (MSG_EQUIPE), mentorado (STUDENTS), qualquer perfil já carregado (PEOPLE) ou eu. */
+function msgQuem(id){ return msgPessoa(id) || msgAlunoAcomp(id) || (typeof getPerson==='function' ? getPerson(id) : null) || null; }
+function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
-function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'' }; }
+function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'' }; }
 /* ---- grupos ---- */
 function msgChaveGrupo(id){ return 'g:'+id; }
 function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
 function msgGrupoDaChave(chave){ return msgEhGrupo(chave) ? (MSG_GRUPOS.find(g=>g.id===chave.slice(2))||null) : null; }
 function msgGrupo(id){ return MSG_GRUPOS.find(g=>g.id===id) || null; }
-function msgChave(m){ return m.grupoId ? msgChaveGrupo(m.grupoId) : (m.de===msgEu() ? m.para : m.de); }
+function msgChave(m){ return m.grupoId ? msgChaveGrupo(m.grupoId) : m.alunoId ? msgChaveAcomp(m.alunoId) : (m.de===msgEu() ? m.para : m.de); }
 function msgSouAdminGrupos(){ return currentUserRole==='staff' && typeof tarefasSouAdmin==='function' && tarefasSouAdmin(); }
-function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + MSG_GRUPOS.reduce((s,g)=>s+(g.naoLidas||0),0); }
-function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgPessoa(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
+function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + MSG_GRUPOS.reduce((s,g)=>s+(g.naoLidas||0),0) + Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0); }
+function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgQuem(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
+function msgAvatarDe(id, tam){ const p = msgQuem(id); return p ? initialsAvatar(p.initials||'', p.color||'#8d916f', tam, p.avatarUrl||null) : msgGrupoAvatar(tam); }
+async function msgCarregarAcomp(){
+  try{
+    const { data, error } = await sb.rpc('mensagens_acomp_resumo');
+    if(error) throw error;
+    const novo = {};
+    (data||[]).forEach(r=>{ novo[r.aluno_id] = {alunoId:r.aluno_id, naoLidas:r.nao_lidas||0, ultimaEm:r.ultima_em, ultimaTexto:r.ultima_texto||'', ultimaDe:r.ultima_de, ultimaLeitura:r.ultima_leitura}; });
+    MSG_ACOMP = novo;
+  }catch(e){ console.error('msgCarregarAcomp', e); }
+}
+/* Menções (@Nome) numa conversa: quem pode ser marcado são as pessoas daquela conversa. */
+function msgMencionaveis(chave){
+  const g = msgGrupoDaChave(chave);
+  if(g) return g.membros.filter(id=>id!==msgEu()).map(id=>msgQuem(id)).filter(Boolean);
+  return [];
+}
+function msgExtrairMencoes(texto, chave){
+  const pessoas = msgMencionaveis(chave); const ids = new Set();
+  const re = /@([A-Za-zÀ-ÿ]+)/g; let m;
+  while((m = re.exec(texto||''))){ const alvo = normTxt(m[1]); pessoas.forEach(p=>{ if(normTxt(p.name.split(' ')[0])===alvo) ids.add(p.id); }); }
+  return Array.from(ids);
+}
+function msgTextoHtml(m){
+  let h = linkify(m.texto);
+  if(m.grupoId){ const nomes = new Set(msgMencionaveis(msgChaveGrupo(m.grupoId)).concat(currentUserProfile?[currentUserProfile]:[]).map(p=>normTxt(p.name.split(' ')[0]))); h = h.replace(/@([A-Za-zÀ-ÿ]+)/g, (m0,nome)=> nomes.has(normTxt(nome)) ? `<span class="tf-mencao">@${nome}</span>` : m0); }
+  return h;
+}
+function msgMeMenciona(m){ return !!(m.mencoes && m.mencoes.includes(msgEu())); }
+function msgBindMencoes(ta, box, chave){
+  const pessoas = msgMencionaveis(chave); if(!pessoas.length) return;
+  const fechar = ()=>{ box.hidden = true; box.innerHTML=''; };
+  const escolher = (nome, antes, pos)=>{ const ini = antes.lastIndexOf('@'); ta.value = ta.value.slice(0,ini) + '@' + nome + ' ' + ta.value.slice(pos); fechar(); ta.focus(); const c = ini+nome.length+2; ta.setSelectionRange(c,c); ta.dispatchEvent(new Event('input')); };
+  ta.addEventListener('input', ()=>{
+    const pos = ta.selectionStart, antes = ta.value.slice(0,pos);
+    const m = antes.match(/@([A-Za-zÀ-ÿ]*)$/);
+    if(!m){ fechar(); return; }
+    const q = normTxt(m[1]);
+    const ops = pessoas.filter(p=>normTxt(p.name).includes(q)).slice(0,6);
+    if(!ops.length){ fechar(); return; }
+    box.hidden = false;
+    box.innerHTML = ops.map((p,i)=>`<button type="button" class="${i?'':'ativo'}" data-mencao="${escapeAttr(p.name.split(' ')[0])}">${initialsAvatar(p.initials,p.color,20,p.avatarUrl)} ${escapeHtml(p.name)}</button>`).join('');
+    box.querySelectorAll('[data-mencao]').forEach(b=>b.addEventListener('mousedown', e=>{ e.preventDefault(); escolher(b.dataset.mencao, antes, pos); }));
+  });
+  ta.addEventListener('keydown', e=>{
+    if(box.hidden) return;
+    const itens = Array.from(box.querySelectorAll('[data-mencao]')); let i = itens.findIndex(b=>b.classList.contains('ativo'));
+    if(e.key==='Escape'){ fechar(); e.stopPropagation(); }
+    else if(e.key==='ArrowDown' || e.key==='ArrowUp'){ e.preventDefault(); itens[i] && itens[i].classList.remove('ativo'); i = (i + (e.key==='ArrowDown'?1:-1) + itens.length) % itens.length; itens[i].classList.add('ativo'); }
+    else if(e.key==='Enter' || e.key==='Tab'){ e.preventDefault(); e.stopImmediatePropagation(); const b = itens[i>=0?i:0]; const pos = ta.selectionStart; escolher(b.dataset.mencao, ta.value.slice(0,pos), pos); }
+  }, true);
+}
 function msgGrupoMembrosLabel(g){ const n = (g.membros||[]).length; return n+' '+(n===1?'membro':'membros'); }
 function msgGrupoAvatar(tam, g){ return `<span class="msg-grupo-av" style="width:${tam}px;height:${tam}px">${g && g.fotoUrl ? `<img src="${escapeAttr(g.fotoUrl)}" alt="">` : icon('users','tiny')}</span>`; }
 let msgGruposTimer = null;
@@ -9683,18 +9762,27 @@ async function msgCarregarGrupos(){
 /* Grupo criado/renomeado/excluído ou membros mudaram (evento em tempo real): recarrega com calma. */
 function msgGruposMudaram(){
   clearTimeout(msgGruposTimer);
-  msgGruposTimer = setTimeout(async ()=>{ await msgCarregarGrupos(); updateNotifBadge(); if(currentView==='mensagens') renderMensagens(); }, 400);
+  msgGruposTimer = setTimeout(async ()=>{ await msgCarregarGrupos(); updateNotifBadge(); if(msgNaTela()) renderMensagens(); }, 400);
 }
 function msgAudioDur(seg){ seg = Math.max(0, Math.round(seg||0)); return Math.floor(seg/60)+':'+String(seg%60).padStart(2,'0'); }
 function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de Vendas' : p.role==='editor' ? 'Editor de Vídeos' : 'Equipe interna'); }
 
 async function msgBootstrap(){
+  if(msgSouMentorado()){
+    /* mentorado: só a conversa de acompanhamento (e a equipe que aparece nela vem de PEOPLE) */
+    MSG_EQUIPE = []; MSG_GRUPOS = []; MSG_NAO_LIDAS = [];
+    await msgCarregarAcomp();
+    msgAssinarTempoReal();
+    updateNotifBadge();
+    return;
+  }
   if(!msgSouEquipe()) return;
   try{
     const [{data:eq},{data:nl}] = await Promise.all([
       sb.rpc('equipe_interna'),
       sb.from('mensagens').select('id,de').eq('para', msgEu()).eq('lida', false),
       msgCarregarGrupos(),
+      currentUserRole==='staff' ? msgCarregarAcomp() : Promise.resolve(),
     ]);
     MSG_EQUIPE = (eq||[]).filter(p=>p.id!==msgEu()).map(p=>({id:p.id, name:p.name||'', initials:p.initials||'', color:p.color||'#8d916f', avatarUrl:p.avatar_url||null, role:p.role, cargo:p.cargo||''}));
     MSG_NAO_LIDAS = (nl||[]).map(m=>({id:m.id, de:m.de}));
@@ -9707,17 +9795,22 @@ async function msgBootstrap(){
 function msgAssinarTempoReal(){
   if(msgUI.canal || !sb.channel) return;
   const eu = msgEu();
-  msgUI.canal = sb.channel('mensagens-'+eu)
+  let ch = sb.channel('mensagens-'+eu)
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens'}, payload=>msgRotear(mapMsgRow(payload.new)))
-    .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens'}, payload=>msgRemovida(payload.old))
+    .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens'}, payload=>msgRemovida(payload.old));
+  if(msgSouEquipe()) ch = ch
     .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupos'}, ()=>msgGruposMudaram())
-    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram())
-    .subscribe();
+    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram());
+  msgUI.canal = ch.subscribe();
 }
 async function msgRotear(m, jaTentou){
   const eu = msgEu();
   if(m.grupoId){
     if(!msgGrupo(m.grupoId)){ if(jaTentou) return; await msgCarregarGrupos(); return msgRotear(m, true); }
+    if(m.de===eu) msgEnviadaEmOutraAba(m); else msgChegou(m);
+  }
+  else if(m.alunoId){
+    const a = msgAcompInfo(m.alunoId); a.ultimaEm = m.createdAt; a.ultimaTexto = m.texto; a.ultimaDe = m.de;
     if(m.de===eu) msgEnviadaEmOutraAba(m); else msgChegou(m);
   }
   else if(m.para===eu) msgChegou(m);
@@ -9742,13 +9835,14 @@ function msgRemovida(old){
   if(gid && old.de && old.de!==msgEu()){ const g = msgGrupo(gid); const l = MSG_CONVERSAS[msgChaveGrupo(gid)]; if(g && g.naoLidas && (!l || !l._completa || achou)) g.naoLidas = Math.max(0, g.naoLidas-1); }
   updateNotifBadge();
   const c = document.getElementById('msg-popups'); if(c){ const chave = gid ? msgChaveGrupo(gid) : old.de; const el = chave ? c.querySelector(`[data-msg-popup="${chave}"]`) : null; if(el && el.dataset.msgId===String(id)) el.remove(); }
-  if(currentView==='mensagens' && (achou || eraNaoLida || gid)) renderMensagens();
+  if(msgNaTela() && (achou || eraNaoLida || gid || old.aluno_id || old.alunoId)) renderMensagens();
 }
 /* Minha mensagem: apaga para todos. Mensagem do outro (só nas conversas 1:1): some só para mim. */
 async function msgApagar(m){
   const minha = m.de===msgEu();
   if(!minha && m.grupoId){ alert('Em grupos, só quem escreveu pode apagar a mensagem. Você pode limpar a conversa só para você.'); return; }
-  const msg = minha ? (m.grupoId ? 'Apagar esta mensagem para todos do grupo?' : 'Apagar esta mensagem para todos? Ela some da conversa para vocês dois.') : 'Apagar esta mensagem só para você? A outra pessoa continua vendo.';
+  if(!minha && m.alunoId){ alert('Só quem escreveu pode apagar a mensagem.'); return; }
+  const msg = minha ? (m.grupoId ? 'Apagar esta mensagem para todos do grupo?' : m.alunoId ? 'Apagar esta mensagem para todos nesta conversa?' : 'Apagar esta mensagem para todos? Ela some da conversa para vocês dois.') : 'Apagar esta mensagem só para você? A outra pessoa continua vendo.';
   if(!(await showAppConfirm(msg, {title: minha ? 'Apagar para todos' : 'Apagar para mim', confirmLabel:'Apagar'}))) return;
   const { error } = minha
     ? await sb.from('mensagens').delete().eq('id', m.id)
@@ -9777,24 +9871,34 @@ async function msgLimparConversa(chave){
   MSG_NAO_LIDAS = MSG_NAO_LIDAS.filter(n=>n.de!==outroId);
   updateNotifBadge(); renderMensagens();
 }
-function msgEnviadaEmOutraAba(m){ if(msgGuardar(m) && currentView==='mensagens' && msgUI.aberto===msgChave(m)) renderMensagens(); }
+function msgEnviadaEmOutraAba(m){ if(msgGuardar(m) && msgNaTela() && msgUI.aberto===msgChave(m)) renderMensagens(); }
 async function msgChegou(m){
   if(!msgGuardar(m)) return;
   const chave = msgChave(m);
-  const conversaAberta = currentView==='mensagens' && msgUI.aberto===chave && document.visibilityState==='visible';
+  const conversaAberta = msgNaTela() && msgUI.aberto===chave && document.visibilityState==='visible';
   if(m.grupoId){ const g = msgGrupo(m.grupoId); if(g) g.naoLidas = (g.naoLidas||0)+1; }
+  else if(m.alunoId){ const a = msgAcompInfo(m.alunoId); a.naoLidas = (a.naoLidas||0)+1; }
   else MSG_NAO_LIDAS.push({id:m.id, de:m.de}); // se a conversa está aberta, entra e sai na hora: só pra marcar como lida no banco
   if(conversaAberta){
+    msgMarcarLidas(chave); // a parte síncrona zera o contador antes de desenhar
     renderMensagens();
-    msgMarcarLidas(chave);
   } else {
     updateNotifBadge();
-    if(currentView==='mensagens') renderMensagens();
+    if(msgNaTela()) renderMensagens();
     msgPopup(m);
   }
   msgSom();
 }
 async function msgMarcarLidas(chave){
+  const alunoId = msgAcompDaChave(chave);
+  if(alunoId){
+    const a = MSG_ACOMP[alunoId]; if(!a || !a.naoLidas) return;
+    a.naoLidas = 0; a.ultimaLeitura = new Date().toISOString();
+    updateNotifBadge();
+    const { error } = await sb.from('mensagens_acomp_leitura').upsert({user_id:msgEu(), aluno_id:alunoId, ultima_leitura:a.ultimaLeitura}, {onConflict:'user_id,aluno_id'});
+    if(error) console.error('msgMarcarLidas acomp', error);
+    return;
+  }
   const g = msgGrupoDaChave(chave);
   if(g){
     if(!g.naoLidas) return;
@@ -9818,7 +9922,8 @@ async function msgCarregarConversa(chave){
   const eu = msgEu();
   const g = msgGrupoDaChave(chave);
   let q = sb.from('mensagens').select('*');
-  q = g ? q.eq('grupo_id', g.id) : q.or(`and(de.eq.${eu},para.eq.${chave}),and(de.eq.${chave},para.eq.${eu})`);
+  const alunoId = msgAcompDaChave(chave);
+  q = g ? q.eq('grupo_id', g.id) : alunoId ? q.eq('aluno_id', alunoId) : q.or(`and(de.eq.${eu},para.eq.${chave}),and(de.eq.${chave},para.eq.${eu})`);
   const { data, error } = await q.order('created_at',{ascending:false}).limit(200);
   if(error){ console.error('msgCarregarConversa', error); return; }
   const lista = (data||[]).map(mapMsgRow).reverse();
@@ -9828,13 +9933,15 @@ async function msgCarregarConversa(chave){
   lista._completa = true;
   MSG_CONVERSAS[chave] = lista;
 }
-function msgDestino(chave){ const g = msgGrupoDaChave(chave); return g ? {grupo_id:g.id} : {para:chave}; }
+function msgDestino(chave){ const g = msgGrupoDaChave(chave), a = msgAcompDaChave(chave); return g ? {grupo_id:g.id} : a ? {aluno_id:a} : {para:chave}; }
+function msgPastaDestino(chave){ const g = msgGrupoDaChave(chave), a = msgAcompDaChave(chave); return g ? 'g-'+g.id : a ? 'a-'+a : chave; }
 async function msgEnviar(chave, texto){
   texto = (texto||'').trim();
   if(!texto) return false;
   if(texto.length>4000){ alert('A mensagem pode ter no máximo 4000 caracteres.'); return false; }
-  if(!msgGrupoDaChave(chave) && !msgPessoa(chave)){ alert(msgEhGrupo(chave) ? 'Você não está mais neste grupo.' : 'Essa pessoa não está na equipe.'); return false; }
-  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), texto}, msgDestino(chave))).select().single();
+  if(!msgGrupoDaChave(chave) && !msgAcompDaChave(chave) && !msgPessoa(chave)){ alert(msgEhGrupo(chave) ? 'Você não está mais neste grupo.' : 'Essa pessoa não está na equipe.'); return false; }
+  const mencoes = msgExtrairMencoes(texto, chave);
+  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), texto, mencoes}, msgDestino(chave))).select().single();
   if(error){ console.error('msgEnviar', error); alert('Não foi possível enviar: '+(error.message||'')); return false; }
   msgGuardar(mapMsgRow(data));
   return true;
@@ -9982,8 +10089,7 @@ async function msgGravarFinalizou(){
   const blob = new Blob(g.chunks, {type:g.mime});
   if(blob.size > 10*1024*1024){ alert('O áudio ficou grande demais. Grave um áudio mais curto.'); return; }
   const ext = /mp4/.test(g.mime) ? 'm4a' : /ogg/.test(g.mime) ? 'ogg' : 'webm';
-  const grupo = msgGrupoDaChave(g.chave);
-  const path = `${msgEu()}/${grupo ? 'g-'+grupo.id : g.chave}/${Date.now()}.${ext}`;
+  const path = `${msgEu()}/${msgPastaDestino(g.chave)}/${Date.now()}.${ext}`;
   const st = document.getElementById('msg-grav-status'); if(st){ st.hidden = false; st.textContent = 'Enviando áudio…'; }
   const { error: upErr } = await sb.storage.from('mensagens-audio').upload(path, blob, {upsert:false, contentType:g.mime});
   if(upErr){ console.error(upErr); alert('Não foi possível enviar o áudio: '+(upErr.message||'')); if(st) st.hidden = true; return; }
@@ -9991,7 +10097,7 @@ async function msgGravarFinalizou(){
   if(error){ console.error(error); alert('O áudio subiu, mas não foi possível registrar a mensagem: '+(error.message||'')); if(st) st.hidden = true; return; }
   msgGuardar(mapMsgRow(data));
   msgUI.forcarFim = true;
-  if(currentView==='mensagens' && msgUI.aberto===g.chave) renderMensagens();
+  if(msgNaTela() && msgUI.aberto===g.chave) renderMensagens();
 }
 function msgGravarUI(gravando){
   const box = document.getElementById('msg-grav'); const ed = document.querySelector('.msg-editor');
@@ -10023,15 +10129,14 @@ function msgArquivoHtml(m){
 async function msgEnviarArquivos(chave, files){
   files = Array.from(files||[]).filter(f=>f && f.size>=0);
   if(!files.length) return;
-  if(!msgGrupoDaChave(chave) && !msgPessoa(chave)) return;
+  if(!msgGrupoDaChave(chave) && !msgAcompDaChave(chave) && !msgPessoa(chave)) return;
   const st = document.getElementById('msg-anexo-status');
   for(const [i,f] of files.entries()){
     if(f.size > MSG_ARQUIVO_MAX){ alert(`"${f.name}" tem ${msgTamanho(f.size)}. O limite por arquivo é ${msgTamanho(MSG_ARQUIVO_MAX)}.`); continue; }
     if(st){ st.hidden = false; st.textContent = `Enviando ${f.name}${files.length>1 ? ` (${i+1} de ${files.length})` : ''}…`; }
     const nome = (f.name||'arquivo').slice(0,150);
     const seguro = nome.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(0,80) || 'arquivo';
-    const g = msgGrupoDaChave(chave);
-    const path = `${msgEu()}/${g ? 'g-'+g.id : chave}/${Date.now()}-${seguro}`;
+    const path = `${msgEu()}/${msgPastaDestino(chave)}/${Date.now()}-${seguro}`;
     const mime = f.type || 'application/octet-stream';
     const { error: upErr } = await sb.storage.from('mensagens-arquivos').upload(path, f, {upsert:false, contentType:mime});
     if(upErr){ console.error(upErr); alert(`Não foi possível enviar "${nome}": `+(upErr.message||'')); continue; }
@@ -10039,7 +10144,7 @@ async function msgEnviarArquivos(chave, files){
     if(error){ console.error(error); alert(`O arquivo subiu, mas não foi possível registrar a mensagem: `+(error.message||'')); continue; }
     msgGuardar(mapMsgRow(data));
     msgUI.forcarFim = true;
-    if(currentView==='mensagens' && msgUI.aberto===chave) renderMensagens();
+    if(msgNaTela() && msgUI.aberto===chave) renderMensagens();
   }
   const st2 = document.getElementById('msg-anexo-status'); if(st2) st2.hidden = true;
 }
@@ -10089,18 +10194,24 @@ function msgPopupContainer(){
   return c;
 }
 function msgPopup(m){
-  const p = msgPessoa(m.de); if(!p) return;
+  const p = msgQuem(m.de); if(!p) return;
   const g = m.grupoId ? msgGrupo(m.grupoId) : null; if(m.grupoId && !g) return;
+  const aluno = m.alunoId ? msgAlunoAcomp(m.alunoId) : null;
   const chave = msgChave(m);
   const c = msgPopupContainer();
-  const texto = ()=> (g ? `<b class="msg-popup-de">${escapeHtml(p.name.split(' ')[0])}:</b> ` : '') + (m.tipo==='audio' ? `🎤 Mensagem de voz (${msgAudioDur(m.audioSeg)})` : linkify(m.texto));
+  const menciona = msgMeMenciona(m);
+  const texto = ()=> ((g || (aluno && !msgSouMentorado())) ? `<b class="msg-popup-de">${escapeHtml(p.name.split(' ')[0])}:</b> ` : '') + (m.tipo==='audio' ? `🎤 Mensagem de voz (${msgAudioDur(m.audioSeg)})` : msgTextoHtml(m));
   // uma janela por conversa: se já tem, só atualiza o texto
   let el = c.querySelector(`[data-msg-popup="${chave}"]`);
   if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').innerHTML = texto(); el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
   el = document.createElement('div');
-  el.className = 'msg-popup'; el.dataset.msgPopup = chave; el.dataset.msgId = String(m.id);
+  el.className = 'msg-popup'+(menciona?' mencao':''); el.dataset.msgPopup = chave; el.dataset.msgId = String(m.id);
   const cabecalho = g
-    ? `${msgGrupoAvatar(30, g)}<div class="msg-popup-nome"><strong>${escapeHtml(g.nome)}</strong><small>Grupo · ${escapeHtml(p.name.split(' ')[0])}</small></div>`
+    ? `${msgGrupoAvatar(30, g)}<div class="msg-popup-nome"><strong>${escapeHtml(g.nome)}</strong><small>${menciona ? `${escapeHtml(p.name.split(' ')[0])} mencionou você` : `Grupo · ${escapeHtml(p.name.split(' ')[0])}`}</small></div>`
+    : aluno && !msgSouMentorado()
+    ? `${msgAvatarDe(m.alunoId, 30)}<div class="msg-popup-nome"><strong>${escapeHtml((aluno.name||'').split(' ')[0])}</strong><small>Acompanhamento · ${escapeHtml(p.name.split(' ')[0])}</small></div>`
+    : aluno
+    ? `${msgAvatarDe(m.de, 30)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>Acompanhamento · Equipe Ascentria</small></div>`
     : `${initialsAvatar(p.initials, p.color, 30, p.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></div>`;
   el.innerHTML = `
     <div class="msg-popup-hd">${cabecalho}<span class="msg-popup-hora">${tzDataHora(m.createdAt, true).split(' às ')[1]||''}</span><button type="button" class="msg-popup-x" title="Fechar">${icon('x','tiny')}</button></div>
@@ -10125,26 +10236,41 @@ function msgPopupTimer(el){ clearTimeout(el._timer); el._timer = setTimeout(()=>
 function msgAbrirConversa(chave){
   msgUI.aberto = chave;
   const c = document.getElementById('msg-popups'); if(c){ const el = c.querySelector(`[data-msg-popup="${chave}"]`); if(el) el.remove(); }
-  if(currentView!=='mensagens') goTo('mensagens'); else renderMensagens();
+  const alvo = (msgSouMentorado() || (currentRole==='aluno' && msgEhAcomp(chave))) ? 'acompanhamento' : 'mensagens';
+  if(currentView!==alvo) goTo(alvo); else renderMensagens();
 }
 
 /* ---- tela ---- */
 function renderMensagens(){
-  const el = document.getElementById('view-mensagens');
-  if(!msgSouEquipe()){ el.innerHTML = '<div class="empty-state">As mensagens são só para a equipe interna.</div>'; return; }
+  /* Duas portas para a mesma tela: "Mensagens" (equipe: pessoas, grupos e acompanhamento dos mentorados) e
+     "Acompanhamento" (mentorado: só a conversa dele com a equipe — sem lista, sem grupos). A equipe em modo
+     Aluno também cai em "Acompanhamento", vendo a conversa do mentorado selecionado. */
+  const solo = currentView==='acompanhamento';
+  const el = document.getElementById(solo ? 'view-acompanhamento' : 'view-mensagens');
+  if(solo){
+    const alvo = msgSouMentorado() ? msgEu() : (currentUserRole==='staff' ? currentStudentId : null);
+    if(!alvo || (!msgSouMentorado() && !(msgAlunoAcomp(alvo) && (msgAlunoAcomp(alvo).tier||'mentorado')!=='curso'))){ el.innerHTML = '<div class="empty-state">O Acompanhamento é o canal direto entre o mentorado e a equipe da mentoria.</div>'; return; }
+    msgUI.aberto = msgChaveAcomp(alvo);
+  } else if(!msgSouEquipe()){ el.innerHTML = '<div class="empty-state">As mensagens são só para a equipe interna.</div>'; return; }
   const q = normTxt(msgUI.busca).trim();
   const eu = msgEu();
   const admin = msgSouAdminGrupos();
   const pessoas = MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
   const grupos = MSG_GRUPOS.filter(g=>!q || normTxt(g.nome).includes(q));
+  const mentorados = (!solo && currentUserRole==='staff') ? msgMentorados().filter(s=>!q || normTxt(s.name).includes(q)) : [];
   const ultima = (chave)=>{ const l = MSG_CONVERSAS[chave]||[]; return l.length ? l[l.length-1] : null; };
   const previa = (u, grupo)=>{ if(!u) return ''; const quem = u.de===eu ? 'Você: ' : (grupo ? msgNomeDe(u.de)+': ' : ''); return escapeHtml(quem+u.texto).slice(0,60); };
   const quando = (u)=> u ? `<small class="msg-quando">${tzDataCurta(tzDataHora(u.createdAt).split('/').reverse().join('-'))}</small>` : '';
   const ordenadas = pessoas.slice().sort((a,b)=>{ const ua = ultima(a.id), ub = ultima(b.id); const na = msgNaoLidasDe(a.id), nb = msgNaoLidasDe(b.id); if(!!nb!==!!na) return nb?1:-1; if(ua&&ub) return ub.createdAt.localeCompare(ua.createdAt); if(ua||ub) return ub?1:-1; return a.name.localeCompare(b.name,'pt-BR'); });
   const gruposOrd = grupos.slice().sort((a,b)=>{ if(!!b.naoLidas!==!!a.naoLidas) return b.naoLidas?1:-1; return a.nome.localeCompare(b.nome,'pt-BR'); });
+  const acompDe = (s)=> MSG_ACOMP[s.id] || null;
+  const mentoradosOrd = mentorados.slice().sort((a,b)=>{ const ia = acompDe(a), ib = acompDe(b); const na = ia? ia.naoLidas:0, nb = ib? ib.naoLidas:0; if(!!nb!==!!na) return nb?1:-1; const ta = ia&&ia.ultimaEm, tb = ib&&ib.ultimaEm; if(ta&&tb) return tb.localeCompare(ta); if(ta||tb) return tb?1:-1; return a.name.localeCompare(b.name,'pt-BR'); });
   const grupo = msgGrupoDaChave(msgUI.aberto);
-  const outro = grupo ? null : msgPessoa(msgUI.aberto);
-  const chave = grupo ? msgChaveGrupo(grupo.id) : (outro ? outro.id : null);
+  const acompId = msgAcompDaChave(msgUI.aberto);
+  const acompAluno = acompId ? msgAlunoAcomp(acompId) : null;
+  const outro = (grupo || acompId) ? null : msgPessoa(msgUI.aberto);
+  const chave = grupo ? msgChaveGrupo(grupo.id) : acompId ? msgChaveAcomp(acompId) : (outro ? outro.id : null);
+  const acomp = !!acompId;
   const conversa = chave ? (MSG_CONVERSAS[chave]||[]) : [];
   const taAntes = el.querySelector('#msg-texto');
   const corpoAntes = el.querySelector('#msg-corpo');
@@ -10161,18 +10287,23 @@ function renderMensagens(){
     const hora = (tzDataHora(m.createdAt, true).split(' às ')[1])||'';
     const minha = m.de===eu;
     // em grupo, mostra quem escreveu (só quando muda o remetente)
-    const remetente = grupo && !minha && m.de!==deAnterior ? `<div class="msg-de">${escapeHtml(msgNomeDe(m.de))}</div>` : '';
+    const remetente = (grupo || acomp) && !minha && m.de!==deAnterior ? `<div class="msg-de">${(acomp && m.de!==acompId) ? msgAvatarDe(m.de, 18)+' ' : ''}${escapeHtml(msgNomeDe(m.de))}${(acomp && m.de!==acompId) ? ' <small>· equipe</small>' : ''}</div>` : '';
     deAnterior = m.de;
-    const podeApagar = minha || !grupo;
-    return sep + `<div class="msg-bolha ${minha?'minha':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : `<div class="msg-txt">${linkify(m.texto)}</div>`}<div class="msg-meta">${hora}${minha && !grupo ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    const podeApagar = minha || (!grupo && !acomp);
+    const menciona = msgMeMenciona(m);
+    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   const cabecalho = grupo
     ? `${msgGrupoAvatar(36, grupo)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
        ${admin ? `<button type="button" class="btn-mini" id="msg-grupo-gerir" title="Renomear, adicionar ou remover membros, excluir">${icon('gear','tiny')}<span> Gerenciar</span></button>` : ''}`
+    : acomp && msgSouMentorado()
+    ? `${msgGrupoAvatar(36)}<div class="msg-pessoa-txt"><strong>Acompanhamento</strong><small>Sua conversa com a equipe da mentoria — Murilo, Diego, Carmem, Sandra e Mariane</small></div>`
+    : acomp
+    ? `${msgAvatarDe(acompId, 36)}<div class="msg-pessoa-txt"><strong>${escapeHtml(acompAluno ? acompAluno.name : 'Mentorado')}</strong><small>Acompanhamento · conversa compartilhada com toda a equipe</small></div>`
     : outro ? `${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}<div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>` : '';
   el.innerHTML = `
-    <div class="msg-wrap" style="--msg-fonte:${msgUI.fonte}px">
-      <aside class="msg-lista ${chave?'com-conversa':''}">
+    <div class="msg-wrap ${solo?'msg-solo':''}" style="--msg-fonte:${msgUI.fonte}px">
+      ${solo ? '' : `<aside class="msg-lista ${chave?'com-conversa':''}">
         <div class="msg-lista-hd">
           <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="Buscar pessoa ou grupo…">
           <button type="button" class="msg-config-btn ${msgUI.configAberta?'ativo':''}" id="msg-config-btn" title="Configurações das mensagens">${icon('gear')}</button>
@@ -10209,17 +10340,31 @@ function renderMensagens(){
               ${initialsAvatar(p.initials, p.color, 36, p.avatarUrl)}
               <span class="msg-pessoa-txt"><strong>${escapeHtml(p.name)}</strong><small>${u ? previa(u, false) : escapeHtml(msgPapelLabel(p))}</small></span>
               ${n ? `<span class="msg-badge">${n}</span>` : quando(u)}
-            </button>`; }).join('') || (gruposOrd.length ? '' : '<div class="tf-vazio">Ninguém encontrado.</div>')}
+            </button>`; }).join('') || (gruposOrd.length || mentoradosOrd.length ? '' : '<div class="tf-vazio">Ninguém encontrado.</div>')}
+          ${mentoradosOrd.length ? `<div class="msg-secao"><span>Acompanhamento · mentorados</span></div>` : ''}
+          ${mentoradosOrd.map(st=>{ const k = msgChaveAcomp(st.id), a = acompDe(st), n = a ? a.naoLidas : 0; const u = ultima(k) || (a && a.ultimaEm ? {de:a.ultimaDe, texto:a.ultimaTexto, createdAt:a.ultimaEm} : null); return `
+            <button type="button" class="msg-pessoa msg-acomp ${msgUI.aberto===k?'ativa':''} ${n?'nao-lida':''}" data-msg-abrir="${k}">
+              ${initialsAvatar(st.initials, st.color, 36, st.avatarUrl)}
+              <span class="msg-pessoa-txt"><strong>${escapeHtml(st.name)}</strong><small>${u ? previa(u, true) : 'Mentorado · sem mensagens ainda'}</small></span>
+              ${n ? `<span class="msg-badge">${n}</span>` : quando(u)}
+            </button>`; }).join('')}
         </div>
-      </aside>
+      </aside>`}
       <section class="msg-conversa">
         ${chave ? `
           <div class="msg-conversa-hd">
-            <button type="button" class="btn-mini msg-voltar" id="msg-voltar">${icon('back','tiny')}</button>
+            ${solo ? '' : `<button type="button" class="btn-mini msg-voltar" id="msg-voltar">${icon('back','tiny')}</button>`}
             ${cabecalho}
-            ${conversa.length ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Limpar a conversa só para você">${icon('trash','tiny')}<span> Limpar conversa</span></button>` : ''}
+            ${conversa.length && !acomp ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Limpar a conversa só para você">${icon('trash','tiny')}<span> Limpar conversa</span></button>` : ''}
+            ${solo ? `<button type="button" class="msg-config-btn ${msgUI.configAberta?'ativo':''}" id="msg-config-btn" title="Configurações">${icon('gear')}</button>` : ''}
           </div>
-          <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
+          ${solo ? `<div class="msg-config" id="msg-config" ${msgUI.configAberta?'':'hidden'}>
+            <div class="msg-config-linha"><span>${icon('bell','tiny')} Som ao receber mensagem</span><label class="msg-switch"><input type="checkbox" id="msg-som" ${msgUI.somLigado?'checked':''}><i></i></label></div>
+            <div class="msg-config-linha"><span>Maiúscula automática no início das frases</span><label class="msg-switch"><input type="checkbox" id="msg-maiuscula" ${msgUI.maiuscula?'checked':''}><i></i></label></div>
+            <div class="msg-config-linha"><span>Tamanho da letra</span><span class="msg-fonte"><button type="button" id="msg-fonte-menos" title="Diminuir">A−</button><b id="msg-fonte-valor">${msgUI.fonte}</b><button type="button" id="msg-fonte-mais" title="Aumentar">A+</button></span></div>
+          </div>` : ''}
+          <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe da mentoria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o mentorado e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
+          <div class="msg-mencoes" id="msg-mencoes" hidden></div>
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
@@ -10236,15 +10381,15 @@ function renderMensagens(){
             <button type="button" class="btn-accent" id="msg-grav-enviar">${icon('reply','tiny')} Enviar áudio</button>
             <span class="msg-grav-st" id="msg-grav-status" hidden></span>
           </div>`
-        : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${MSG_GRUPOS.length ? ' ou um grupo' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe. Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
+        : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${MSG_GRUPOS.length ? ', um grupo' : ''}${mentorados.length ? ' ou um mentorado' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe, e o acompanhamento de cada mentorado (visível para toda a equipe). Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
       </section>
     </div>`;
-  bindBuscaInput('msg-busca', v=>{ msgUI.busca = v; }, renderMensagens);
-  el.querySelector('#msg-config-btn').addEventListener('click', ()=>{ msgUI.configAberta = !msgUI.configAberta; const c = el.querySelector('#msg-config'); c.hidden = !msgUI.configAberta; el.querySelector('#msg-config-btn').classList.toggle('ativo', msgUI.configAberta); });
-  el.querySelector('#msg-som').addEventListener('change', e=>{ msgSetSom(e.target.checked); if(e.target.checked) msgSom(); });
-  el.querySelector('#msg-maiuscula').addEventListener('change', e=>msgSetMaiuscula(e.target.checked));
-  el.querySelector('#msg-fonte-menos').addEventListener('click', ()=>msgSetFonte(msgUI.fonte-1));
-  el.querySelector('#msg-fonte-mais').addEventListener('click', ()=>msgSetFonte(msgUI.fonte+1));
+  if(!solo) bindBuscaInput('msg-busca', v=>{ msgUI.busca = v; }, renderMensagens);
+  const cfgBtn = el.querySelector('#msg-config-btn'); if(cfgBtn) cfgBtn.addEventListener('click', ()=>{ msgUI.configAberta = !msgUI.configAberta; const c = el.querySelector('#msg-config'); c.hidden = !msgUI.configAberta; cfgBtn.classList.toggle('ativo', msgUI.configAberta); });
+  const somSw = el.querySelector('#msg-som'); if(somSw) somSw.addEventListener('change', e=>{ msgSetSom(e.target.checked); if(e.target.checked) msgSom(); });
+  const maiSw = el.querySelector('#msg-maiuscula'); if(maiSw) maiSw.addEventListener('change', e=>msgSetMaiuscula(e.target.checked));
+  const fMenos = el.querySelector('#msg-fonte-menos'); if(fMenos) fMenos.addEventListener('click', ()=>msgSetFonte(msgUI.fonte-1));
+  const fMais = el.querySelector('#msg-fonte-mais'); if(fMais) fMais.addEventListener('click', ()=>msgSetFonte(msgUI.fonte+1));
   const novo = el.querySelector('#msg-grupo-novo'); if(novo) novo.addEventListener('click', ()=>msgGrupoModal(null));
   const gerir = el.querySelector('#msg-grupo-gerir'); if(gerir) gerir.addEventListener('click', ()=>msgGrupoModal(grupo.id));
   el.querySelectorAll('[data-msg-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
@@ -10259,7 +10404,7 @@ function renderMensagens(){
   el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
   if(chave){
     const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = (pertoDoFim || msgUI.forcarFim) ? corpo.scrollHeight : scrollAntes; msgUI.forcarFim = false;
-    if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && currentView==='mensagens') renderMensagens(); }); }
+    if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && msgNaTela()) renderMensagens(); }); }
     else msgMarcarLidas(chave);
     const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
     const enviar = async ()=>{ const t = ta.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(chave, t)){ ta.value=''; msgUI.forcarFim = true; renderMensagens(); document.getElementById('msg-texto').focus(); } else btn.disabled = false; };
@@ -10267,6 +10412,7 @@ function renderMensagens(){
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); enviar(); } });
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
     msgBindMaiuscula(ta);
+    msgBindMencoes(ta, el.querySelector('#msg-mencoes'), chave);
     const mic = el.querySelector('#msg-mic'); if(mic) mic.addEventListener('click', ()=>msgGravarIniciar(chave));
     // anexos: clipe, arrastar e soltar na conversa, colar arquivo/imagem na caixa de texto
     const anexoInp = el.querySelector('#msg-anexo-input');
@@ -10292,7 +10438,7 @@ function renderMensagens(){
    linha explicando o que tem em cada uma. É onde a equipe cai ao entrar no sistema. */
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
-  {view:'mensagens',  desc:'Conversas privadas com a equipe, em tempo real.'},
+  {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
