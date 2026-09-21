@@ -1405,6 +1405,30 @@
   @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
   .msg-de{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:2px;}
+  .msg-grupo-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}
+  .msg-arq{display:flex;align-items:center;gap:10px;padding:6px 4px;color:inherit;text-decoration:none;max-width:320px;}
+  .msg-arq-ic{width:36px;height:36px;border-radius:10px;background:rgba(141,145,111,.25);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .msg-arq-ic .icon{width:18px;height:18px;}
+  .msg-arq-txt{display:flex;flex-direction:column;min-width:0;}
+  .msg-arq-txt strong{font-size:var(--msg-fonte,14px);word-break:break-word;}
+  .msg-arq-txt small{font-size:11px;color:var(--text-mute);}
+  .msg-arq:hover strong{text-decoration:underline;}
+  .msg-arq-img{display:flex;flex-direction:column;gap:4px;color:inherit;text-decoration:none;}
+  .msg-arq-img img{max-width:min(320px,70vw);max-height:280px;border-radius:10px;display:block;background:var(--bg-card);}
+  .msg-arq-img small{font-size:11px;color:var(--text-mute);}
+  .msg-arq-audio{flex-wrap:wrap;}
+  .msg-arq-audio .msg-arq-nome{flex-basis:100%;font-size:11px;color:var(--text-mute);word-break:break-word;}
+  .msg-arq-baixar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;color:var(--text-mute);}
+  .msg-arq-baixar:hover{color:var(--text);background:var(--bg-card);}
+  .msg-arq-baixar .icon{width:15px;height:15px;}
+  [data-msg-arquivo].erro{opacity:.5;}
+  .msg-anexo-st{padding:6px 14px;font-size:12px;color:var(--text-dim);border-top:1px solid var(--border);}
+  .msg-anexo-st[hidden]{display:none;}
+  .msg-conversa{position:relative;}
+  .msg-anexo-drop{position:absolute;inset:8px;border:2px dashed var(--accent);border-radius:12px;background:rgba(20,22,18,.85);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:700;color:var(--accent);z-index:5;pointer-events:none;}
+  .msg-anexo-drop[hidden]{display:none;}
+  .mg-foto{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .mg-foto .btn-mini{white-space:nowrap;}
   .msg-popup-de{color:var(--accent);font-weight:800;}
   .msg-grupo-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(141,145,111,.25);color:var(--accent);flex-shrink:0;}
   .msg-grupo-av .icon{width:55%;height:55%;}
@@ -1450,6 +1474,10 @@
     .msg-voltar{display:inline-flex;}
     .msg-conversa-hd{padding:8px 10px;gap:8px;}
     .msg-conversa-hd .btn-mini.danger span,.msg-conversa-hd #msg-grupo-gerir span{display:none;}
+    .msg-editor{gap:6px;padding:8px;}
+    .msg-editor .emoji-btn,.msg-editor .msg-mic{width:34px;height:34px;}
+    .msg-editor .emoji-btn{font-size:16px;}
+    .msg-editor .btn-accent{padding:0 10px;}
     .msg-corpo{padding:10px;}
     .msg-bolha{max-width:88%;}
     .msg-apagar{opacity:.55;}
@@ -1738,6 +1766,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ================= ICONS ================= */
 const ICONS = {
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5-7 7-3-3-3 3"/>',
   paperclip:'<path d="M21 12.5l-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.3-8.3"/>',
   file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
@@ -9628,7 +9657,7 @@ function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
-function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'' }; }
+function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'' }; }
 /* ---- grupos ---- */
 function msgChaveGrupo(id){ return 'g:'+id; }
 function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
@@ -9639,13 +9668,13 @@ function msgSouAdminGrupos(){ return currentUserRole==='staff' && typeof tarefas
 function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + MSG_GRUPOS.reduce((s,g)=>s+(g.naoLidas||0),0); }
 function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgPessoa(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
 function msgGrupoMembrosLabel(g){ const n = (g.membros||[]).length; return n+' '+(n===1?'membro':'membros'); }
-function msgGrupoAvatar(tam){ return `<span class="msg-grupo-av" style="width:${tam}px;height:${tam}px">${icon('users','tiny')}</span>`; }
+function msgGrupoAvatar(tam, g){ return `<span class="msg-grupo-av" style="width:${tam}px;height:${tam}px">${g && g.fotoUrl ? `<img src="${escapeAttr(g.fotoUrl)}" alt="">` : icon('users','tiny')}</span>`; }
 let msgGruposTimer = null;
 async function msgCarregarGrupos(){
   try{
     const { data, error } = await sb.rpc('mensagens_meus_grupos');
     if(error) throw error;
-    MSG_GRUPOS = (data||[]).map(g=>({ id:g.id, nome:g.nome||'', criadoPor:g.criado_por, createdAt:g.created_at, membros:g.membros||[], naoLidas:g.nao_lidas||0, ultimaLeitura:g.ultima_leitura, limpoEm:g.limpo_em }));
+    MSG_GRUPOS = (data||[]).map(g=>({ id:g.id, nome:g.nome||'', criadoPor:g.criado_por, createdAt:g.created_at, membros:g.membros||[], naoLidas:g.nao_lidas||0, ultimaLeitura:g.ultima_leitura, limpoEm:g.limpo_em, fotoUrl:g.foto_url||null }));
     // se saí de um grupo (ou ele foi excluído) enquanto estava aberto, fecha a conversa
     if(msgEhGrupo(msgUI.aberto) && !msgGrupoDaChave(msgUI.aberto)) msgUI.aberto = null;
     MSG_GRUPOS.forEach(g=>{ if(g.limpoEm && MSG_CONVERSAS[msgChaveGrupo(g.id)]){ MSG_CONVERSAS[msgChaveGrupo(g.id)] = MSG_CONVERSAS[msgChaveGrupo(g.id)].filter(m=>m.createdAt > g.limpoEm); } });
@@ -9726,6 +9755,7 @@ async function msgApagar(m){
     : await sb.rpc('mensagens_ocultar', {p_id: m.id});
   if(error){ alert('Não foi possível apagar: '+(error.message||'')); return; }
   if(minha && m.tipo==='audio' && m.audioPath){ try{ await sb.storage.from('mensagens-audio').remove([m.audioPath]); }catch(e){ console.error(e); } }
+  if(minha && m.tipo==='arquivo' && m.arquivoPath){ try{ await sb.storage.from('mensagens-arquivos').remove([m.arquivoPath]); }catch(e){ console.error(e); } }
   msgRemovida(m);
 }
 async function msgLimparConversa(chave){
@@ -9823,6 +9853,14 @@ async function msgGrupoModal(id){
   modal.innerHTML = `<div class="modal-body form-modal msg-grupo-modal">
     <h3 style="margin:0 0 4px">${g ? 'Gerenciar grupo' : 'Novo grupo'}</h3>
     <p class="desc" style="margin:0 0 14px">${g ? 'Renomeie, adicione ou remova pessoas. Você continua sempre no grupo.' : 'Dê um nome e escolha quem participa. Você entra automaticamente.'}</p>
+    <div class="mg-foto">
+      <span id="mg-foto-prev">${msgGrupoAvatar(64, g)}</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button type="button" class="btn-mini" id="mg-foto-btn">${icon('image','tiny')}<span> ${g && g.fotoUrl ? 'Trocar foto' : 'Escolher foto'}</span></button>
+        <button type="button" class="btn-mini" id="mg-foto-rem" ${g && g.fotoUrl ? '' : 'hidden'}>${icon('x','tiny')}<span> Remover foto</span></button>
+        <input type="file" id="mg-foto-input" accept="image/*" hidden>
+      </div>
+    </div>
     <div class="field"><label>Nome do grupo</label><input class="ps-input" id="mg-nome" type="text" maxlength="60" value="${escapeAttr(g ? g.nome : '')}" placeholder="Ex.: Comercial, Direção, Todos"></div>
     <div class="field"><label>Membros</label>
       <div class="mg-membros">
@@ -9837,6 +9875,19 @@ async function msgGrupoModal(id){
   </div>`;
   modal.querySelector('#mg-cancelar').addEventListener('click', closeModal);
   modal.querySelector('#mg-nome').focus();
+  // foto do grupo: escolhe agora, sobe ao salvar (fica no bucket público de fotos, como a de perfil)
+  let fotoNova = null, fotoRemover = false;
+  const fotoInp = modal.querySelector('#mg-foto-input'), fotoPrev = modal.querySelector('#mg-foto-prev'), fotoRem = modal.querySelector('#mg-foto-rem');
+  modal.querySelector('#mg-foto-btn').addEventListener('click', ()=>fotoInp.click());
+  fotoInp.addEventListener('change', async ()=>{
+    const f = fotoInp.files && fotoInp.files[0]; fotoInp.value=''; if(!f) return;
+    try{ fotoNova = await Promise.race([resizeImageForUpload(f, AVATAR_ALVO_BYTES, AVATAR_MAX_DIM), new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado ao processar a imagem.')), 12000))]); }
+    catch(e){ fotoNova = f; }
+    if(fotoNova.size > AVATAR_LIMITE_BYTES){ alert('Imagem muito grande. Escolha uma foto menor.'); fotoNova = null; return; }
+    fotoRemover = false;
+    fotoPrev.innerHTML = msgGrupoAvatar(64, {fotoUrl: URL.createObjectURL(fotoNova)}); fotoRem.hidden = false;
+  });
+  fotoRem.addEventListener('click', ()=>{ fotoNova = null; fotoRemover = true; fotoPrev.innerHTML = msgGrupoAvatar(64, null); fotoRem.hidden = true; });
   modal.querySelector('#mg-salvar').addEventListener('click', async ()=>{
     const nome = modal.querySelector('#mg-nome').value.trim();
     if(!nome){ alert('Dê um nome ao grupo.'); return; }
@@ -9859,6 +9910,16 @@ async function msgGrupoModal(id){
       const saem = Array.from(atuais).filter(u=>!querem.has(u) && u!==eu);
       if(entram.length){ const { error } = await sb.from('mensagens_grupo_membros').insert(entram.map(u=>({grupo_id:gid, user_id:u}))); if(error) throw error; }
       if(saem.length){ const { error } = await sb.from('mensagens_grupo_membros').delete().eq('grupo_id', gid).in('user_id', saem); if(error) throw error; }
+      if(fotoNova){
+        const ext = (fotoNova.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+        const path = `grupos/${gid}/${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from('avatars').upload(path, fotoNova, {upsert:true, cacheControl:'31536000', contentType: fotoNova.type||undefined});
+        if(upErr) throw upErr;
+        const { data: pu } = sb.storage.from('avatars').getPublicUrl(path);
+        const { error } = await sb.from('mensagens_grupos').update({foto_url: pu.publicUrl}).eq('id', gid); if(error) throw error;
+      } else if(fotoRemover && g && g.fotoUrl){
+        const { error } = await sb.from('mensagens_grupos').update({foto_url: null}).eq('id', gid); if(error) throw error;
+      }
       closeModal();
       await msgCarregarGrupos();
       if(!g) msgUI.aberto = msgChaveGrupo(gid);
@@ -9938,13 +9999,49 @@ function msgGravarUI(gravando){
   box.hidden = !gravando; ed.classList.toggle('gravando', gravando);
   const st = document.getElementById('msg-grav-status'); if(st) st.hidden = true;
 }
-async function msgAudioUrl(path){
-  const c = MSG_AUDIO_URLS[path];
+async function msgAudioUrl(path, bucket){
+  bucket = bucket || 'mensagens-audio';
+  const k = bucket+'/'+path, c = MSG_AUDIO_URLS[k];
   if(c && c.ate > Date.now()) return c.url;
-  const { data, error } = await sb.storage.from('mensagens-audio').createSignedUrl(path, 3600);
+  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 3600);
   if(error || !data){ console.error('msgAudioUrl', error); return null; }
-  MSG_AUDIO_URLS[path] = { url:data.signedUrl, ate: Date.now()+50*60*1000 };
+  MSG_AUDIO_URLS[k] = { url:data.signedUrl, ate: Date.now()+50*60*1000 };
   return data.signedUrl;
+}
+/* ---- anexos: qualquer arquivo (áudio do WhatsApp, PDF, imagem, documento…) ---- */
+const MSG_ARQUIVO_MAX = 25*1024*1024;
+function msgTamanho(b){ b = +b||0; return b<1024 ? b+' B' : b<1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB'; }
+function msgArquivoEhAudio(m){ return /^audio\//.test(m.arquivoMime||'') || /\.(opus|ogg|oga|mp3|m4a|aac|wav|webm|amr)$/i.test(m.arquivoNome||''); }
+function msgArquivoEhImagem(m){ return /^image\//.test(m.arquivoMime||'') && !/svg/.test(m.arquivoMime||''); }
+function msgArquivoHtml(m){
+  const nome = escapeHtml(m.arquivoNome||'arquivo'), tam = msgTamanho(m.arquivoTam);
+  const base = `data-msg-arquivo="${escapeAttr(m.arquivoPath)}"`;
+  if(msgArquivoEhAudio(m)) return `<div class="msg-audio msg-arq-audio" ${base} data-msg-arq-tipo="audio"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="none" controlsList="nodownload"></audio><a class="msg-arq-baixar" download="${escapeAttr(m.arquivoNome)}" title="Baixar ${nome}">${icon('download','tiny')}</a><small class="msg-arq-nome">${nome} · ${tam}</small></div>`;
+  if(msgArquivoEhImagem(m)) return `<a class="msg-arq-img" ${base} data-msg-arq-tipo="imagem" target="_blank" rel="noopener" title="${nome}"><img alt="${nome}"><small>${nome} · ${tam}</small></a>`;
+  return `<a class="msg-arq" ${base} data-msg-arq-tipo="arquivo" target="_blank" rel="noopener" download="${escapeAttr(m.arquivoNome)}"><span class="msg-arq-ic">${icon('file','tiny')}</span><span class="msg-arq-txt"><strong>${nome}</strong><small>${tam} · clique para abrir ou baixar</small></span></a>`;
+}
+async function msgEnviarArquivos(chave, files){
+  files = Array.from(files||[]).filter(f=>f && f.size>=0);
+  if(!files.length) return;
+  if(!msgGrupoDaChave(chave) && !msgPessoa(chave)) return;
+  const st = document.getElementById('msg-anexo-status');
+  for(const [i,f] of files.entries()){
+    if(f.size > MSG_ARQUIVO_MAX){ alert(`"${f.name}" tem ${msgTamanho(f.size)}. O limite por arquivo é ${msgTamanho(MSG_ARQUIVO_MAX)}.`); continue; }
+    if(st){ st.hidden = false; st.textContent = `Enviando ${f.name}${files.length>1 ? ` (${i+1} de ${files.length})` : ''}…`; }
+    const nome = (f.name||'arquivo').slice(0,150);
+    const seguro = nome.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(0,80) || 'arquivo';
+    const g = msgGrupoDaChave(chave);
+    const path = `${msgEu()}/${g ? 'g-'+g.id : chave}/${Date.now()}-${seguro}`;
+    const mime = f.type || 'application/octet-stream';
+    const { error: upErr } = await sb.storage.from('mensagens-arquivos').upload(path, f, {upsert:false, contentType:mime});
+    if(upErr){ console.error(upErr); alert(`Não foi possível enviar "${nome}": `+(upErr.message||'')); continue; }
+    const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'arquivo', texto:('📎 '+nome).slice(0,300), arquivo_path:path, arquivo_nome:nome, arquivo_tam:f.size, arquivo_mime:mime}, msgDestino(chave))).select().single();
+    if(error){ console.error(error); alert(`O arquivo subiu, mas não foi possível registrar a mensagem: `+(error.message||'')); continue; }
+    msgGuardar(mapMsgRow(data));
+    msgUI.forcarFim = true;
+    if(currentView==='mensagens' && msgUI.aberto===chave) renderMensagens();
+  }
+  const st2 = document.getElementById('msg-anexo-status'); if(st2) st2.hidden = true;
 }
 function msgAudioHtml(m){
   return `<div class="msg-audio" data-msg-audio="${escapeAttr(m.audioPath)}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="none" controlsList="nodownload"></audio><small>${msgAudioDur(m.audioSeg)}</small></div>`;
@@ -9954,6 +10051,15 @@ function msgAudioCarregar(root){
     if(box.dataset.ok) return; box.dataset.ok = '1';
     const url = await msgAudioUrl(box.dataset.msgAudio);
     const a = box.querySelector('audio'); if(url && a) a.src = url; else box.classList.add('erro');
+  });
+  root.querySelectorAll('[data-msg-arquivo]').forEach(async box=>{
+    if(box.dataset.ok) return; box.dataset.ok = '1';
+    const url = await msgAudioUrl(box.dataset.msgArquivo, 'mensagens-arquivos');
+    if(!url){ box.classList.add('erro'); return; }
+    const t = box.dataset.msgArqTipo;
+    if(t==='audio'){ const a = box.querySelector('audio'); if(a) a.src = url; const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = url; }
+    else if(t==='imagem'){ box.href = url; const im = box.querySelector('img'); if(im) im.src = url; }
+    else box.href = url;
   });
 }
 
@@ -9994,7 +10100,7 @@ function msgPopup(m){
   el = document.createElement('div');
   el.className = 'msg-popup'; el.dataset.msgPopup = chave; el.dataset.msgId = String(m.id);
   const cabecalho = g
-    ? `${msgGrupoAvatar(30)}<div class="msg-popup-nome"><strong>${escapeHtml(g.nome)}</strong><small>Grupo · ${escapeHtml(p.name.split(' ')[0])}</small></div>`
+    ? `${msgGrupoAvatar(30, g)}<div class="msg-popup-nome"><strong>${escapeHtml(g.nome)}</strong><small>Grupo · ${escapeHtml(p.name.split(' ')[0])}</small></div>`
     : `${initialsAvatar(p.initials, p.color, 30, p.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></div>`;
   el.innerHTML = `
     <div class="msg-popup-hd">${cabecalho}<span class="msg-popup-hora">${tzDataHora(m.createdAt, true).split(' às ')[1]||''}</span><button type="button" class="msg-popup-x" title="Fechar">${icon('x','tiny')}</button></div>
@@ -10058,10 +10164,10 @@ function renderMensagens(){
     const remetente = grupo && !minha && m.de!==deAnterior ? `<div class="msg-de">${escapeHtml(msgNomeDe(m.de))}</div>` : '';
     deAnterior = m.de;
     const podeApagar = minha || !grupo;
-    return sep + `<div class="msg-bolha ${minha?'minha':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : `<div class="msg-txt">${linkify(m.texto)}</div>`}<div class="msg-meta">${hora}${minha && !grupo ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    return sep + `<div class="msg-bolha ${minha?'minha':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : `<div class="msg-txt">${linkify(m.texto)}</div>`}<div class="msg-meta">${hora}${minha && !grupo ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   const cabecalho = grupo
-    ? `${msgGrupoAvatar(36)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
+    ? `${msgGrupoAvatar(36, grupo)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
        ${admin ? `<button type="button" class="btn-mini" id="msg-grupo-gerir" title="Renomear, adicionar ou remover membros, excluir">${icon('gear','tiny')}<span> Gerenciar</span></button>` : ''}`
     : outro ? `${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}<div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>` : '';
   el.innerHTML = `
@@ -10093,7 +10199,7 @@ function renderMensagens(){
           ${(gruposOrd.length || admin) ? `<div class="msg-secao"><span>Grupos</span>${admin ? `<button type="button" class="btn-mini" id="msg-grupo-novo" title="Criar um grupo (só o administrador)">${icon('plus','tiny')}<span> Novo grupo</span></button>` : ''}</div>` : ''}
           ${gruposOrd.map(g=>{ const k = msgChaveGrupo(g.id), u = ultima(k), n = g.naoLidas||0; return `
             <button type="button" class="msg-pessoa msg-grupo ${msgUI.aberto===k?'ativa':''} ${n?'nao-lida':''}" data-msg-abrir="${k}">
-              ${msgGrupoAvatar(36)}
+              ${msgGrupoAvatar(36, g)}
               <span class="msg-pessoa-txt"><strong>${escapeHtml(g.nome)}</strong><small>${u ? previa(u, true) : escapeHtml(msgGrupoMembrosLabel(g))}</small></span>
               ${n ? `<span class="msg-badge">${n}</span>` : quando(u)}
             </button>`; }).join('') || (admin && !q ? '<div class="tf-vazio" style="padding:8px 12px">Nenhum grupo ainda.</div>' : '')}
@@ -10117,9 +10223,13 @@ function renderMensagens(){
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
+            <button type="button" class="msg-mic" id="msg-anexo" title="Anexar arquivo (áudio, PDF, imagem, documento)">${icon('paperclip')}</button>
+            <input type="file" id="msg-anexo-input" multiple hidden>
             <button type="button" class="msg-mic" id="msg-mic" title="Gravar mensagem de voz">${icon('mic')}</button>
             <button type="button" class="btn-accent" id="msg-enviar">${icon('reply','tiny')}<span> Enviar</span></button>
           </div>
+          <div class="msg-anexo-st" id="msg-anexo-status" hidden></div>
+          <div class="msg-anexo-drop" id="msg-anexo-drop" hidden>${icon('paperclip')} Solte para enviar nesta conversa</div>
           <div class="msg-grav" id="msg-grav" hidden>
             <span class="msg-grav-ponto"></span><span>Gravando</span> <b id="msg-grav-tempo">0:00</b> <small>(máx. ${Math.floor(MSG_AUDIO_MAX_SEG/60)} min)</small>
             <button type="button" class="btn-outline" id="msg-grav-cancelar">Cancelar</button>
@@ -10158,6 +10268,16 @@ function renderMensagens(){
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
     msgBindMaiuscula(ta);
     const mic = el.querySelector('#msg-mic'); if(mic) mic.addEventListener('click', ()=>msgGravarIniciar(chave));
+    // anexos: clipe, arrastar e soltar na conversa, colar arquivo/imagem na caixa de texto
+    const anexoInp = el.querySelector('#msg-anexo-input');
+    el.querySelector('#msg-anexo').addEventListener('click', ()=>anexoInp.click());
+    anexoInp.addEventListener('change', ()=>{ const fs = Array.from(anexoInp.files||[]); anexoInp.value=''; msgEnviarArquivos(chave, fs); });
+    const secao = el.querySelector('.msg-conversa'), drop = el.querySelector('#msg-anexo-drop'); let dragN = 0;
+    secao.addEventListener('dragenter', e=>{ if(!e.dataTransfer || !Array.from(e.dataTransfer.types||[]).includes('Files')) return; e.preventDefault(); dragN++; drop.hidden = false; });
+    secao.addEventListener('dragover', e=>{ if(!drop.hidden) e.preventDefault(); });
+    secao.addEventListener('dragleave', ()=>{ dragN = Math.max(0, dragN-1); if(!dragN) drop.hidden = true; });
+    secao.addEventListener('drop', e=>{ if(!e.dataTransfer) return; e.preventDefault(); dragN = 0; drop.hidden = true; const fs = Array.from(e.dataTransfer.files||[]); if(fs.length) msgEnviarArquivos(chave, fs); });
+    ta.addEventListener('paste', e=>{ const fs = Array.from((e.clipboardData && e.clipboardData.files)||[]); if(fs.length){ e.preventDefault(); msgEnviarArquivos(chave, fs); } });
     el.querySelector('#msg-grav-cancelar').addEventListener('click', ()=>msgGravarParar(true));
     el.querySelector('#msg-grav-enviar').addEventListener('click', ()=>msgGravarParar(false));
     if(msgGrav && msgGrav.chave===chave) msgGravarUI(true);
