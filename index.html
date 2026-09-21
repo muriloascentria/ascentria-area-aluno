@@ -8978,7 +8978,7 @@ function tarefasSubquadroHtml(m, lista){
       <div class="tf-membro-hd" data-tf-recolher="${m.userId}">
         <div class="tf-membro-linha">
           ${initialsAvatar(m.initials, m.color, 44, m.avatarUrl)}
-          <div class="tf-membro-nome"><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas': m.role==='editor'?'Editor de vídeos':'Equipe interna'))}</small></div>
+          <div class="tf-membro-nome"><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de Vendas': m.role==='editor'?'Editor de Vídeos':'Equipe interna'))}</small></div>
           <span class="vg-sec-toggle ${rec?'fechado':''}">${icon('down')} ${rec?'Expandir':'Recolher'}</span>
         </div>
         <div class="tf-membro-linha tf-membro-rodape">
@@ -9113,7 +9113,7 @@ function tarefasAdminHtml(){
       <thead><tr><th>Membro</th><th>Função</th><th>Ativo</th><th>Pode delegar</th><th>Administrador</th></tr></thead>
       <tbody>${TAREFAS_EQUIPE.map(m=>`<tr>
         <td><span class="tf-pessoa">${initialsAvatar(m.initials, m.color, 24, m.avatarUrl)}<span>${escapeHtml(m.name)}</span></span></td>
-        <td>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de vendas': m.role==='editor'?'Editor de vídeos':'—'))}</td>
+        <td>${escapeHtml(m.cargo || (m.role==='vendas'?'Consultora de Vendas': m.role==='editor'?'Editor de Vídeos':'—'))}</td>
         <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="ativo" ${m.ativo?'checked':''} ${m.userId===tarefasEu()?'disabled':''}></td>
         <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="pode_delegar" ${m.pode_delegar?'checked':''}></td>
         <td><input type="checkbox" data-tf-membro="${m.userId}" data-campo="admin" ${m.admin?'checked':''} ${m.userId===tarefasEu()?'disabled':''}></td>
@@ -9502,7 +9502,7 @@ function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
 function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at }; }
-function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de vendas' : p.role==='editor' ? 'Editor de vídeos' : 'Equipe interna'); }
+function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de Vendas' : p.role==='editor' ? 'Editor de Vídeos' : 'Equipe interna'); }
 
 async function msgBootstrap(){
   if(!msgSouEquipe()) return;
