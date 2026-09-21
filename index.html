@@ -1472,6 +1472,8 @@
   .msg-anexo-drop{position:absolute;inset:8px;border:2px dashed var(--accent);border-radius:12px;background:rgba(20,22,18,.85);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:700;color:var(--accent);z-index:5;pointer-events:none;}
   .msg-anexo-drop[hidden]{display:none;}
   .mg-foto{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .te-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  @media (max-width:520px){ .te-grid{grid-template-columns:1fr;} }
   .mg-foto .btn-mini{white-space:nowrap;}
   .msg-popup-de{color:var(--accent);font-weight:800;}
   .msg-grupo-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(141,145,111,.25);color:var(--accent);flex-shrink:0;}
@@ -3541,6 +3543,10 @@ async function syncChecklistItemInsert(sid, item){
   const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[]}).select().single();
   if(error) throw error;
   return data.id;
+}
+async function syncChecklistItemUpdate(id, campos){
+  const { error } = await sb.from('checklist_items').update(campos).eq('id', id);
+  if(error) throw error;
 }
 function syncChecklistItemAulas(id, aulas){
   syncNow(sb.from('checklist_items').update({aulas: aulas||[]}).eq('id', id));
@@ -8042,6 +8048,58 @@ function goalAulasHtml(ids, s){
     return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada — conclua a anterior':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
   }).join('')}</div>`;
 }
+/* Editar uma tarefa do checklist (que aparece em Minhas Metas do mentorado) sem precisar apagar e
+   recriar: descrição, responsável, prazo, status, observações e aulas de apoio, tudo numa janela. */
+function openTarefaEditModal(s, t){
+  const sel = new Set(t.aulas||[]);
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Checklist de Acompanhamento</div>
+      <h3>Editar tarefa</h3>
+      <div class="field full"><label>Tarefa</label><textarea class="ps-input" id="te-tarefa" rows="2">${escapeHtml(t.tarefa||'')}</textarea></div>
+      <div class="te-grid">
+        <div class="field"><label>Responsável</label>
+          <select class="ps-input" id="te-resp">${['Mentorado','Mentor'].map(r=>`<option value="${r}" ${t.responsavel===r?'selected':''}>${r}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="te-prazo" value="${escapeAttr(t.prazo==='—' ? '' : (t.prazo||''))}" placeholder="Ex.: 30 ago"></div>
+        <div class="field"><label>Status</label>
+          <select class="ps-input" id="te-status">${['Pendente','Concluída','Atrasada'].map(st=>`<option value="${st}" ${t.status===st?'selected':''}>${st}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="field full"><label>Observações</label><textarea class="ps-input" id="te-obs" rows="2">${escapeHtml(t.obs||'')}</textarea></div>
+      <div class="field full"><label>Aulas de apoio (<span id="te-count">${sel.size? `${sel.size} selecionada${sel.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
+        ${aulaPickHtml(t.aulas, 'te')}
+      </div>
+      <div class="modal-actions">
+        <button class="btn-accent" id="te-save">Salvar alterações</button>
+        <button class="btn-outline" id="te-cancel">Cancelar</button>
+      </div>
+    </div>`;
+  modalReturnTo = null;
+  modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+  bindAulaPick('te', sel);
+  document.getElementById('te-cancel').addEventListener('click', closeModal);
+  document.getElementById('te-tarefa').focus();
+  document.getElementById('te-save').addEventListener('click', async ()=>{
+    const tarefa = document.getElementById('te-tarefa').value.trim();
+    if(!tarefa){ alert('Descreva a tarefa.'); return; }
+    const campos = {
+      tarefa,
+      responsavel: document.getElementById('te-resp').value,
+      prazo: document.getElementById('te-prazo').value.trim() || '—',
+      status: document.getElementById('te-status').value,
+      obs: document.getElementById('te-obs').value.trim(),
+      aulas: orderedCourseIds().filter(id=>sel.has(id)),
+    };
+    const btn = document.getElementById('te-save'); btn.disabled = true;
+    try{ await syncChecklistItemUpdate(t.id, campos); }
+    catch(e){ console.error(e); alert('Não foi possível salvar: '+(e.message||'')); btn.disabled = false; return; }
+    Object.assign(t, campos);
+    closeModal();
+    renderInterno();
+  });
+}
 function openTarefaAulasModal(s, t){
   const sel = new Set(t.aulas||[]);
   document.getElementById('modal').innerHTML = `
@@ -8157,7 +8215,7 @@ function renderInterno(){
               <td>${t.prazo}</td>
               <td><button class="status-pill ${statusClass(t.status)}" data-check="${t.id}">${t.status}</button></td>
               <td style="min-width:160px">${linkify(t.obs)||'—'}</td>
-              <td><button class="btn-mini danger" data-del-task="${t.id}" title="Excluir tarefa">${icon('trash')}</button></td>
+              <td style="white-space:nowrap"><button class="btn-mini" data-edit-task="${t.id}" title="Editar tarefa">${icon('edit')}</button> <button class="btn-mini danger" data-del-task="${t.id}" title="Excluir tarefa">${icon('trash')}</button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -8414,6 +8472,12 @@ function renderInterno(){
     btn.addEventListener('click',()=>{
       const t = s.checklist.find(x=>x.id==btn.dataset.taskAulas);
       if(t) openTarefaAulasModal(s, t);
+    });
+  });
+  document.querySelectorAll('[data-edit-task]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t = s.checklist.find(x=>x.id==btn.dataset.editTask);
+      if(t) openTarefaEditModal(s, t);
     });
   });
   document.querySelectorAll('[data-del-task]').forEach(btn=>{
