@@ -1406,6 +1406,22 @@
   @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
   .msg-de{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:2px;display:flex;align-items:center;gap:5px;}
+  #notif-painel{position:fixed;z-index:1200;width:380px;max-width:calc(100vw - 16px);max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.35);overflow:hidden;}
+  #notif-painel[hidden]{display:none;}
+  .notif-hd{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px;}
+  .notif-lista{overflow-y:auto;display:flex;flex-direction:column;}
+  .notif-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:none;border-bottom:1px solid var(--border);background:none;text-align:left;font:inherit;color:var(--text);cursor:pointer;}
+  .notif-item:last-child{border-bottom:none;}
+  .notif-item:hover{background:var(--bg-card);}
+  .notif-item .avatar,.notif-item .msg-grupo-av{flex-shrink:0;margin-top:1px;}
+  .notif-ic{width:34px;height:34px;border-radius:50%;background:rgba(141,145,111,.25);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .notif-ic .icon{width:16px;height:16px;}
+  .notif-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .notif-txt strong{font-size:13px;line-height:1.3;}
+  .notif-txt small{font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .notif-txt em{font-style:normal;font-size:11px;color:var(--text-mute);}
+  .notif-vazio{padding:22px 16px;font-size:13px;color:var(--text-mute);text-align:center;line-height:1.5;}
+  @media (max-width:520px){ #notif-painel{left:8px;right:8px!important;width:auto;} }
   .msg-aula{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-top:4px;border:1px solid var(--border);border-radius:12px;background:var(--bg-elev);color:var(--text);font:inherit;text-align:left;cursor:pointer;max-width:340px;width:100%;}
   .msg-aula:hover{border-color:var(--accent);}
   .msg-aula-ic{width:38px;height:38px;border-radius:10px;background:rgba(141,145,111,.25);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -2549,9 +2565,10 @@ async function ensureCourseComments(courseId){
 /* Sininho: calculado no banco, não mais varrendo a comunidade inteira no navegador. */
 async function refreshPendencias(){
   try{
-    const { data, error } = await sb.rpc('comunidade_pendencias');
+    const { data, error } = await sb.rpc('comunidade_pendencias_detalhe');
     if(error) throw error;
     PENDENCIAS = data || [];
+    notifPainelAtualizar();
   }catch(e){
     console.error('Não foi possível verificar as pendências da comunidade', e);
   }
@@ -4156,48 +4173,10 @@ function setupNav(){
     document.getElementById('profile-dropdown').classList.remove('open');
     openSetNewPasswordModal('change');
   });
-  document.getElementById('notif-btn').addEventListener('click',()=>{
-    /* Avisos do módulo Tarefas têm prioridade no sino: abre a tela com o painel de notificações. */
-    if(currentRole!=='aluno' && tarefasNaoLidas().length){
-      tarefasUI.notifsAberto = true;
-      if(currentView==='tarefas') renderTarefas(); else goTo('tarefas');
-      return;
-    }
-    if(currentRole!=='aluno' && msgTotalNaoLidas()){
-      const g = MSG_GRUPOS.find(x=>x.naoLidas), a = Object.values(MSG_ACOMP).find(x=>x.naoLidas);
-      msgAbrirConversa(MSG_NAO_LIDAS.length ? MSG_NAO_LIDAS[MSG_NAO_LIDAS.length-1].de : g ? msgChaveGrupo(g.id) : msgChaveAcomp(a.alunoId));
-      return;
-    }
-    if(currentRole==='aluno' && msgSouMentorado() && msgTotalNaoLidas()){ msgAbrirConversa(msgChaveAcomp(msgEu())); return; }
-    if(currentRole==='staff'){
-      // Como comentários feitos dentro de uma aula não aparecem mais no mural da Comunidade, uma dúvida
-      // sem resposta registrada numa aula não aparecia lá mesmo depois de clicar no sino — a equipe
-      // interna clicava e não achava do que se tratava. Abre a aula certa direto nesse caso.
-      const pendingDuvida = pendenciasDoSino()[0];
-      if(pendingDuvida){
-        // getViewingTier() segue currentCommunityAudience enquanto a equipe estiver no modo "Equipe
-        // Interna" — sem isto, abrir a aula certa mostraria os comentários da comunidade errada (ou o
-        // mural cairia na aba errada) se a dúvida pendente for da comunidade do Curso.
-        currentCommunityAudience = pendingDuvida.audience||'mentorado';
-      }
-      if(pendingDuvida && pendingDuvida.course_id){
-        openCourseModal(pendingDuvida.course_id);
-        return;
-      }
-      communityFilter = 'duvida';
-      goTo('comunidade');
-      return;
-    }
-    // Se o aviso pendente for de um comentário feito dentro de uma aula (que não aparece mais no mural
-    // da Comunidade), abre a aula direto — senão a pessoa clicaria no sino e não acharia a resposta.
-    const pending = pendenciasDoSino()[0];
-    if(pending && pending.course_id){
-      openCourseModal(pending.course_id);
-      return;
-    }
-    communityFilter = 'todas';
-    goTo('comunidade');
-  });
+  /* Sininho: abre um painel listando cada aviso (quem, o quê, quando). Clicar num item leva ao lugar certo. */
+  document.getElementById('notif-btn').addEventListener('click',(e)=>{ e.stopPropagation(); notifPainelToggle(); });
+  document.addEventListener('click', (e)=>{ const p = document.getElementById('notif-painel'); if(p && !p.hidden && !p.contains(e.target)) notifPainelFechar(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') notifPainelFechar(); });
   document.getElementById('menu-btn').addEventListener('click',()=>{
     document.getElementById('sidebar').classList.add('open');
     document.getElementById('sidebar-backdrop').classList.add('open');
@@ -4250,7 +4229,93 @@ function updateNotifBadge(){
     dot.style.display = pend.length>0 ? 'block' : 'none';
     badge.style.display = 'none';
   }
+  notifPainelAtualizar();
 }
+
+/* ================= PAINEL DO SININHO =================
+   Junta, numa lista só, tudo o que hoje faz o sino acender: avisos de Tarefas, mensagens não lidas
+   (pessoas, grupos e Acompanhamento) e pendências da Comunidade (dúvidas sem resposta, respostas e
+   menções). Cada item diz quem fez o quê e quando; o clique abre exatamente aquele lugar. */
+function notifQuando(iso){
+  if(!iso) return '';
+  const d = new Date(iso); if(isNaN(d)) return '';
+  const min = Math.round((Date.now()-d.getTime())/60000);
+  if(min < 1) return 'agora';
+  if(min < 60) return `há ${min} min`;
+  const h = Math.round(min/60); if(h < 24) return `há ${h} h`;
+  const dias = Math.round(h/24); if(dias===1) return 'ontem'; if(dias < 7) return `há ${dias} dias`;
+  return tzDataHora(iso);
+}
+function notifItens(){
+  const itens = [];
+  const eu = currentUser ? currentUser.id : null;
+  const equipe = currentRole!=='aluno';
+  if(equipe && typeof tarefasNaoLidas==='function'){
+    tarefasNaoLidas().forEach(n=>{
+      const t = (typeof TAREFAS!=='undefined' ? TAREFAS : []).find(x=>x.id===n.tarefaId);
+      itens.push({ tipo:'tarefa', icone:'check', quando:n.createdAt, titulo:n.texto||'Aviso de tarefa', sub: t ? t.titulo : 'Tarefas', acao: ()=>{ if(currentView!=='tarefas') goTo('tarefas'); openTarefaModal(n.tarefaId); } });
+    });
+  }
+  if(equipe || msgSouMentorado()){
+    const porPessoa = {};
+    MSG_NAO_LIDAS.forEach(n=>{ porPessoa[n.de] = (porPessoa[n.de]||0)+1; });
+    Object.keys(porPessoa).forEach(id=>{
+      const p = msgQuem(id); const l = MSG_CONVERSAS[id]||[]; const ult = l.filter(m=>m.de===id).pop();
+      itens.push({ tipo:'mensagem', avatarDe:id, quando: ult ? ult.createdAt : null, titulo:`${p ? p.name.split(' ')[0] : 'Alguém'} te enviou ${porPessoa[id]} ${porPessoa[id]===1?'mensagem':'mensagens'}`, sub: ult ? ult.texto : 'Mensagem privada', acao: ()=>msgAbrirConversa(id) });
+    });
+    MSG_GRUPOS.filter(g=>g.naoLidas).forEach(g=>{
+      const l = MSG_CONVERSAS[msgChaveGrupo(g.id)]||[]; const ult = l.filter(m=>m.de!==eu).pop();
+      const menc = l.some(m=>m.de!==eu && msgMeMenciona(m) && m.createdAt > (g.ultimaLeitura||''));
+      itens.push({ tipo:'mensagem', grupo:g, quando: ult ? ult.createdAt : null, titulo: menc ? `Você foi mencionado em ${g.nome}` : `${g.naoLidas} ${g.naoLidas===1?'nova mensagem':'novas mensagens'} em ${g.nome}`, sub: ult ? `${msgNomeDe(ult.de)}: ${ult.texto}` : 'Grupo', acao: ()=>msgAbrirConversa(msgChaveGrupo(g.id)) });
+    });
+    Object.values(MSG_ACOMP).filter(a=>a.naoLidas).forEach(a=>{
+      const aluno = msgAlunoAcomp(a.alunoId); const quem = a.ultimaDe ? msgQuem(a.ultimaDe) : null;
+      if(msgSouMentorado()) itens.push({ tipo:'mensagem', avatarDe:a.ultimaDe, quando:a.ultimaEm, titulo:`${quem ? quem.name.split(' ')[0] : 'A equipe'} respondeu no seu Acompanhamento`, sub:a.ultimaTexto||'', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
+      else itens.push({ tipo:'mensagem', avatarDe:a.alunoId, quando:a.ultimaEm, titulo:`${aluno ? aluno.name.split(' ')[0] : 'Mentorado'} · ${a.naoLidas} ${a.naoLidas===1?'nova mensagem':'novas mensagens'} no Acompanhamento`, sub: a.ultimaTexto ? `${a.ultimaDe===a.alunoId ? '' : msgNomeDe(a.ultimaDe)+': '}${a.ultimaTexto}` : '', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
+    });
+  }
+  pendenciasDoSino().forEach(x=>{
+    const c = x.course_id && typeof getCourse==='function' ? getCourse(x.course_id) : null;
+    const onde = c ? `na aula "${c.title}"` : 'na Comunidade';
+    const nome = x.quem_nome ? x.quem_nome.split(' ')[0] : 'Alguém';
+    const titulo = x.motivo==='duvida' ? `${nome} deixou uma dúvida ${onde}` : x.motivo==='mencao' ? `${nome} mencionou você ${onde}` : `${nome} respondeu você ${onde}`;
+    itens.push({ tipo:'comunidade', avatarDe:x.quem_id, quando:x.quando, titulo, sub:(x.texto||'').replace(/\s+/g,' '), acao: ()=>{
+      currentCommunityAudience = x.audience||'mentorado';
+      if(x.course_id){ openCourseModal(x.course_id); return; }
+      communityFilter = currentRole==='staff' ? 'duvida' : 'todas';
+      goTo('comunidade');
+    } });
+  });
+  itens.sort((a,b)=> String(b.quando||'').localeCompare(String(a.quando||'')));
+  return itens;
+}
+function notifPainelHtml(){
+  const itens = notifItens();
+  const av = (it)=> it.grupo ? msgGrupoAvatar(34, it.grupo) : it.avatarDe ? msgAvatarDe(it.avatarDe, 34) : `<span class="notif-ic">${icon(it.icone||'bell','tiny')}</span>`;
+  return `<div class="notif-hd"><strong>Notificações</strong>${itens.length ? `<span class="msg-badge">${itens.length}</span>` : ''}</div>
+    <div class="notif-lista">${itens.length ? itens.map((it,i)=>`<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
+}
+function notifPainelEl(){
+  let p = document.getElementById('notif-painel');
+  if(!p){ p = document.createElement('div'); p.id = 'notif-painel'; p.hidden = true; document.body.appendChild(p); }
+  return p;
+}
+function notifPainelPosicionar(p){
+  const b = document.getElementById('notif-btn'); if(!b) return;
+  const r = b.getBoundingClientRect();
+  p.style.top = (r.bottom+8)+'px';
+  p.style.right = Math.max(8, window.innerWidth - r.right)+'px';
+}
+function notifPainelAtualizar(){
+  const p = document.getElementById('notif-painel'); if(!p || p.hidden) return;
+  const itens = notifItens();
+  p.innerHTML = notifPainelHtml();
+  p.querySelectorAll('[data-notif]').forEach(b=>b.addEventListener('click', ()=>{ const it = itens[+b.dataset.notif]; notifPainelFechar(); if(it) it.acao(); }));
+  notifPainelPosicionar(p);
+}
+function notifPainelToggle(){ const p = notifPainelEl(); if(p.hidden){ p.hidden = false; notifPainelAtualizar(); } else notifPainelFechar(); }
+function notifPainelFechar(){ const p = document.getElementById('notif-painel'); if(p) p.hidden = true; }
+window.addEventListener('resize', ()=>{ const p = document.getElementById('notif-painel'); if(p && !p.hidden) notifPainelPosicionar(p); });
 
 /* Barra lateral da vendedora (role 'vendas'): esconde TUDO e reacende só o Registro de Sessões 1:1.
    Feito por exclusão de propósito — se amanhã surgir um item novo no menu, ele já nasce invisível pra
