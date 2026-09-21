@@ -1404,6 +1404,19 @@
   .msg-conversa-hd .btn-mini.danger{margin-left:auto;white-space:nowrap;}
   @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
   .msg-meta{font-size:10.5px;color:var(--text-mute);margin-top:3px;text-align:right;}
+  .msg-de{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:2px;}
+  .msg-popup-de{color:var(--accent);font-weight:800;}
+  .msg-grupo-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(141,145,111,.25);color:var(--accent);flex-shrink:0;}
+  .msg-grupo-av .icon{width:55%;height:55%;}
+  .msg-secao{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px 4px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
+  .msg-secao .btn-mini{text-transform:none;letter-spacing:0;font-size:11.5px;}
+  .msg-conversa-hd .btn-mini{white-space:nowrap;}
+  .msg-conversa-hd #msg-grupo-gerir{margin-left:auto;}
+  .msg-conversa-hd #msg-grupo-gerir + .btn-mini.danger{margin-left:0;}
+  .mg-membros{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:6px;}
+  .mg-membro{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;cursor:pointer;font-weight:400;}
+  .mg-membro:hover{background:var(--bg-card);}
+  .mg-membro input{width:16px;height:16px;margin:0;flex-shrink:0;accent-color:var(--accent);}
   .msg-editor{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--border);}
   .msg-editor.gravando{display:none;}
   .msg-mic{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:none;display:inline-flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;padding:0;}
@@ -1436,7 +1449,7 @@
     .msg-conversa{display:none;} .msg-lista.com-conversa + .msg-conversa{display:flex;}
     .msg-voltar{display:inline-flex;}
     .msg-conversa-hd{padding:8px 10px;gap:8px;}
-    .msg-conversa-hd .btn-mini.danger span{display:none;}
+    .msg-conversa-hd .btn-mini.danger span,.msg-conversa-hd #msg-grupo-gerir span{display:none;}
     .msg-corpo{padding:10px;}
     .msg-bolha{max-width:88%;}
     .msg-apagar{opacity:.55;}
@@ -4088,8 +4101,9 @@ function setupNav(){
       if(currentView==='tarefas') renderTarefas(); else goTo('tarefas');
       return;
     }
-    if(currentRole!=='aluno' && MSG_NAO_LIDAS.length){
-      msgAbrirConversa(MSG_NAO_LIDAS[MSG_NAO_LIDAS.length-1].de);
+    if(currentRole!=='aluno' && msgTotalNaoLidas()){
+      const g = MSG_GRUPOS.find(x=>x.naoLidas);
+      msgAbrirConversa(MSG_NAO_LIDAS.length ? MSG_NAO_LIDAS[MSG_NAO_LIDAS.length-1].de : msgChaveGrupo(g.id));
       return;
     }
     if(currentRole==='staff'){
@@ -4164,7 +4178,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + MSG_NAO_LIDAS.length : 0;
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgTotalNaoLidas() : 0;
   if(currentRole!=='aluno'){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
@@ -9575,22 +9589,73 @@ document.addEventListener('click', e=>{ const b = e.target.closest('.emoji-btn')
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') emojiFechar(); });
 
 /* ================= VIEW: MENSAGENS (messenger interno da equipe) =================
-   Conversas privadas, só texto, entre equipe interna, consultoras e editor. Sem grupos. O banco
-   garante que só os dois participantes leem cada conversa. Mensagens novas chegam em tempo real
-   (Supabase Realtime) e sobem uma janelinha no canto inferior direito — a não ser que a conversa
-   com aquela pessoa já esteja aberta na tela. */
+   Conversas privadas (1:1) e grupos, entre equipe interna, consultoras e editor. Só o administrador
+   (Murilo) cria, renomeia, monta e exclui grupos; os membros conversam normalmente. O banco garante
+   que só os participantes leem cada conversa. Mensagens novas chegam em tempo real (Supabase
+   Realtime) e sobem uma janelinha no canto inferior direito — a não ser que aquela conversa já
+   esteja aberta na tela. Uma conversa é identificada por uma "chave": o id da outra pessoa (1:1)
+   ou 'g:<id do grupo>'. */
 let MSG_EQUIPE = [];          // quem pode conversar comigo
-let MSG_CONVERSAS = {};       // outroId -> [mensagens] (ordem cronológica)
-let MSG_NAO_LIDAS = [];       // {id, de} das mensagens recebidas ainda não lidas
-let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14 };
-try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; const f = parseInt(localStorage.getItem('ascentria-msg-fonte')||'14',10); if(f>=12 && f<=22) msgUI.fonte = f; }catch(e){}
+let MSG_GRUPOS = [];          // grupos de que participo: {id,nome,criadoPor,membros[],naoLidas}
+let MSG_CONVERSAS = {};       // chave -> [mensagens] (ordem cronológica)
+let MSG_NAO_LIDAS = [];       // {id, de} das mensagens 1:1 recebidas ainda não lidas
+let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true };
+try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; msgUI.maiuscula = localStorage.getItem('ascentria-msg-maiuscula')!=='0'; const f = parseInt(localStorage.getItem('ascentria-msg-fonte')||'14',10); if(f>=12 && f<=22) msgUI.fonte = f; }catch(e){}
 function msgSetFonte(v){ msgUI.fonte = Math.max(12, Math.min(22, v)); try{ localStorage.setItem('ascentria-msg-fonte', String(msgUI.fonte)); }catch(e){} const w = document.querySelector('.msg-wrap'); if(w) w.style.setProperty('--msg-fonte', msgUI.fonte+'px'); const lbl = document.getElementById('msg-fonte-valor'); if(lbl) lbl.textContent = msgUI.fonte; }
 
+/* Maiúscula automática: primeira letra da mensagem e de cada frase (depois de . ! ? ou quebra de linha),
+   como o teclado do celular faz. Só troca letras minúsculas, então o texto não muda de tamanho e o
+   cursor fica onde estava. Endereços (http…, www.) ficam como foram digitados. */
+const MSG_CAPS_MODO = 'frases'; // 'frases' | 'palavras'
+function msgCapitalizar(txt){
+  const re = MSG_CAPS_MODO==='palavras' ? /(^|[\s(\["'“])(\p{Ll})(?!\S*:\/\/)(?!ww\.)/gu : /(^|[.!?…]\s+|\n\s*)(\p{Ll})(?!\S*:\/\/)(?!ww\.)/gu;
+  return (txt||'').replace(re, (m,a,b)=>a+b.toUpperCase());
+}
+function msgSetMaiuscula(v){ msgUI.maiuscula = !!v; try{ localStorage.setItem('ascentria-msg-maiuscula', v?'1':'0'); }catch(e){} }
+function msgBindMaiuscula(campo){
+  if(!campo) return;
+  campo.setAttribute('autocapitalize', MSG_CAPS_MODO==='palavras' ? 'words' : 'sentences');
+  campo.addEventListener('input', ()=>{
+    if(!msgUI.maiuscula) return;
+    const v = campo.value, novo = msgCapitalizar(v);
+    if(novo===v) return;
+    const a = campo.selectionStart, b = campo.selectionEnd;
+    campo.value = novo;
+    try{ campo.setSelectionRange(a, b); }catch(e){}
+  });
+}
 function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
-function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'' }; }
+function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'' }; }
+/* ---- grupos ---- */
+function msgChaveGrupo(id){ return 'g:'+id; }
+function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
+function msgGrupoDaChave(chave){ return msgEhGrupo(chave) ? (MSG_GRUPOS.find(g=>g.id===chave.slice(2))||null) : null; }
+function msgGrupo(id){ return MSG_GRUPOS.find(g=>g.id===id) || null; }
+function msgChave(m){ return m.grupoId ? msgChaveGrupo(m.grupoId) : (m.de===msgEu() ? m.para : m.de); }
+function msgSouAdminGrupos(){ return currentUserRole==='staff' && typeof tarefasSouAdmin==='function' && tarefasSouAdmin(); }
+function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + MSG_GRUPOS.reduce((s,g)=>s+(g.naoLidas||0),0); }
+function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgPessoa(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
+function msgGrupoMembrosLabel(g){ const n = (g.membros||[]).length; return n+' '+(n===1?'membro':'membros'); }
+function msgGrupoAvatar(tam){ return `<span class="msg-grupo-av" style="width:${tam}px;height:${tam}px">${icon('users','tiny')}</span>`; }
+let msgGruposTimer = null;
+async function msgCarregarGrupos(){
+  try{
+    const { data, error } = await sb.rpc('mensagens_meus_grupos');
+    if(error) throw error;
+    MSG_GRUPOS = (data||[]).map(g=>({ id:g.id, nome:g.nome||'', criadoPor:g.criado_por, createdAt:g.created_at, membros:g.membros||[], naoLidas:g.nao_lidas||0, ultimaLeitura:g.ultima_leitura, limpoEm:g.limpo_em }));
+    // se saí de um grupo (ou ele foi excluído) enquanto estava aberto, fecha a conversa
+    if(msgEhGrupo(msgUI.aberto) && !msgGrupoDaChave(msgUI.aberto)) msgUI.aberto = null;
+    MSG_GRUPOS.forEach(g=>{ if(g.limpoEm && MSG_CONVERSAS[msgChaveGrupo(g.id)]){ MSG_CONVERSAS[msgChaveGrupo(g.id)] = MSG_CONVERSAS[msgChaveGrupo(g.id)].filter(m=>m.createdAt > g.limpoEm); } });
+  }catch(e){ console.error('msgCarregarGrupos', e); }
+}
+/* Grupo criado/renomeado/excluído ou membros mudaram (evento em tempo real): recarrega com calma. */
+function msgGruposMudaram(){
+  clearTimeout(msgGruposTimer);
+  msgGruposTimer = setTimeout(async ()=>{ await msgCarregarGrupos(); updateNotifBadge(); if(currentView==='mensagens') renderMensagens(); }, 400);
+}
 function msgAudioDur(seg){ seg = Math.max(0, Math.round(seg||0)); return Math.floor(seg/60)+':'+String(seg%60).padStart(2,'0'); }
 function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de Vendas' : p.role==='editor' ? 'Editor de Vídeos' : 'Equipe interna'); }
 
@@ -9600,6 +9665,7 @@ async function msgBootstrap(){
     const [{data:eq},{data:nl}] = await Promise.all([
       sb.rpc('equipe_interna'),
       sb.from('mensagens').select('id,de').eq('para', msgEu()).eq('lida', false),
+      msgCarregarGrupos(),
     ]);
     MSG_EQUIPE = (eq||[]).filter(p=>p.id!==msgEu()).map(p=>({id:p.id, name:p.name||'', initials:p.initials||'', color:p.color||'#8d916f', avatarUrl:p.avatar_url||null, role:p.role, cargo:p.cargo||''}));
     MSG_NAO_LIDAS = (nl||[]).map(m=>({id:m.id, de:m.de}));
@@ -9607,19 +9673,30 @@ async function msgBootstrap(){
   msgAssinarTempoReal();
   updateNotifBadge();
 }
+/* Uma assinatura só, sem filtro: o banco (RLS) entrega apenas o que eu posso ler — minhas conversas
+   1:1 e as mensagens dos grupos de que participo. Aqui só se decide para onde cada linha vai. */
 function msgAssinarTempoReal(){
   if(msgUI.canal || !sb.channel) return;
   const eu = msgEu();
   msgUI.canal = sb.channel('mensagens-'+eu)
-    .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens', filter:'para=eq.'+eu}, payload=>msgChegou(mapMsgRow(payload.new)))
-    .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens', filter:'de=eq.'+eu}, payload=>msgEnviadaEmOutraAba(mapMsgRow(payload.new)))
-    .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens', filter:'para=eq.'+eu}, payload=>msgRemovida(payload.old))
-    .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens', filter:'de=eq.'+eu}, payload=>msgRemovida(payload.old))
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensagens'}, payload=>msgRotear(mapMsgRow(payload.new)))
+    .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens'}, payload=>msgRemovida(payload.old))
+    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupos'}, ()=>msgGruposMudaram())
+    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram())
     .subscribe();
 }
+async function msgRotear(m, jaTentou){
+  const eu = msgEu();
+  if(m.grupoId){
+    if(!msgGrupo(m.grupoId)){ if(jaTentou) return; await msgCarregarGrupos(); return msgRotear(m, true); }
+    if(m.de===eu) msgEnviadaEmOutraAba(m); else msgChegou(m);
+  }
+  else if(m.para===eu) msgChegou(m);
+  else if(m.de===eu) msgEnviadaEmOutraAba(m);
+}
 function msgGuardar(m){
-  const outro = m.de===msgEu() ? m.para : m.de;
-  const lista = (MSG_CONVERSAS[outro] = MSG_CONVERSAS[outro]||[]);
+  const chave = msgChave(m);
+  const lista = (MSG_CONVERSAS[chave] = MSG_CONVERSAS[chave]||[]);
   if(lista.some(x=>x.id===m.id)) return false;
   lista.push(m); lista.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
   return true;
@@ -9628,16 +9705,21 @@ function msgGuardar(m){
 function msgRemovida(old){
   if(!old || !old.id) return;
   const id = old.id;
-  Object.keys(MSG_CONVERSAS).forEach(k=>{ const l = MSG_CONVERSAS[k]; const i = l.findIndex(m=>m.id===id); if(i>=0) l.splice(i,1); });
+  let achou = false;
+  Object.keys(MSG_CONVERSAS).forEach(k=>{ const l = MSG_CONVERSAS[k]; const i = l.findIndex(m=>m.id===id); if(i>=0){ l.splice(i,1); achou = true; } });
+  const eraNaoLida = MSG_NAO_LIDAS.some(n=>n.id===id);
   MSG_NAO_LIDAS = MSG_NAO_LIDAS.filter(n=>n.id!==id);
+  const gid = old.grupoId || old.grupo_id;
+  if(gid && old.de && old.de!==msgEu()){ const g = msgGrupo(gid); const l = MSG_CONVERSAS[msgChaveGrupo(gid)]; if(g && g.naoLidas && (!l || !l._completa || achou)) g.naoLidas = Math.max(0, g.naoLidas-1); }
   updateNotifBadge();
-  const c = document.getElementById('msg-popups'); if(c && old.de){ const el = c.querySelector(`[data-msg-popup="${old.de}"]`); if(el && el.dataset.msgId===String(id)) el.remove(); }
-  if(currentView==='mensagens') renderMensagens();
+  const c = document.getElementById('msg-popups'); if(c){ const chave = gid ? msgChaveGrupo(gid) : old.de; const el = chave ? c.querySelector(`[data-msg-popup="${chave}"]`) : null; if(el && el.dataset.msgId===String(id)) el.remove(); }
+  if(currentView==='mensagens' && (achou || eraNaoLida || gid)) renderMensagens();
 }
-/* Minha mensagem: apaga para os dois. Mensagem do outro: some só para mim (o outro continua vendo). */
+/* Minha mensagem: apaga para todos. Mensagem do outro (só nas conversas 1:1): some só para mim. */
 async function msgApagar(m){
   const minha = m.de===msgEu();
-  const msg = minha ? 'Apagar esta mensagem para todos? Ela some da conversa para vocês dois.' : 'Apagar esta mensagem só para você? A outra pessoa continua vendo.';
+  if(!minha && m.grupoId){ alert('Em grupos, só quem escreveu pode apagar a mensagem. Você pode limpar a conversa só para você.'); return; }
+  const msg = minha ? (m.grupoId ? 'Apagar esta mensagem para todos do grupo?' : 'Apagar esta mensagem para todos? Ela some da conversa para vocês dois.') : 'Apagar esta mensagem só para você? A outra pessoa continua vendo.';
   if(!(await showAppConfirm(msg, {title: minha ? 'Apagar para todos' : 'Apagar para mim', confirmLabel:'Apagar'}))) return;
   const { error } = minha
     ? await sb.from('mensagens').delete().eq('id', m.id)
@@ -9646,7 +9728,17 @@ async function msgApagar(m){
   if(minha && m.tipo==='audio' && m.audioPath){ try{ await sb.storage.from('mensagens-audio').remove([m.audioPath]); }catch(e){ console.error(e); } }
   msgRemovida(m);
 }
-async function msgLimparConversa(outroId){
+async function msgLimparConversa(chave){
+  const g = msgGrupoDaChave(chave);
+  if(g){
+    if(!(await showAppConfirm(`Limpar toda a conversa do grupo "${g.nome}" só para você? Ela some daqui, mas os outros membros continuam vendo. Não dá para desfazer.`, {title:'Limpar conversa', confirmLabel:'Limpar para mim'}))) return;
+    const { error } = await sb.rpc('mensagens_limpar_grupo', {p_grupo: g.id});
+    if(error){ alert('Não foi possível limpar: '+(error.message||'')); return; }
+    MSG_CONVERSAS[chave] = []; MSG_CONVERSAS[chave]._completa = true; g.naoLidas = 0; g.limpoEm = new Date().toISOString();
+    updateNotifBadge(); renderMensagens();
+    return;
+  }
+  const outroId = chave;
   const p = msgPessoa(outroId); if(!p) return;
   if(!(await showAppConfirm(`Limpar toda a conversa com ${p.name.split(' ')[0]} só para você? Ela some daqui, mas ${p.name.split(' ')[0]} continua vendo as mensagens do lado dela. Não dá para desfazer.`, {title:'Limpar conversa', confirmLabel:'Limpar para mim'}))) return;
   const { error } = await sb.rpc('mensagens_limpar_conversa', {p_outro: outroId});
@@ -9655,23 +9747,34 @@ async function msgLimparConversa(outroId){
   MSG_NAO_LIDAS = MSG_NAO_LIDAS.filter(n=>n.de!==outroId);
   updateNotifBadge(); renderMensagens();
 }
-function msgEnviadaEmOutraAba(m){ if(msgGuardar(m) && currentView==='mensagens' && msgUI.aberto===m.para) renderMensagens(); }
+function msgEnviadaEmOutraAba(m){ if(msgGuardar(m) && currentView==='mensagens' && msgUI.aberto===msgChave(m)) renderMensagens(); }
 async function msgChegou(m){
   if(!msgGuardar(m)) return;
-  const conversaAberta = currentView==='mensagens' && msgUI.aberto===m.de && document.visibilityState==='visible';
+  const chave = msgChave(m);
+  const conversaAberta = currentView==='mensagens' && msgUI.aberto===chave && document.visibilityState==='visible';
+  if(m.grupoId){ const g = msgGrupo(m.grupoId); if(g) g.naoLidas = (g.naoLidas||0)+1; }
+  else MSG_NAO_LIDAS.push({id:m.id, de:m.de}); // se a conversa está aberta, entra e sai na hora: só pra marcar como lida no banco
   if(conversaAberta){
-    MSG_NAO_LIDAS.push({id:m.id, de:m.de}); // entra e sai na hora: só pra marcar como lida no banco
     renderMensagens();
-    msgMarcarLidas(m.de);
+    msgMarcarLidas(chave);
   } else {
-    MSG_NAO_LIDAS.push({id:m.id, de:m.de});
     updateNotifBadge();
     if(currentView==='mensagens') renderMensagens();
     msgPopup(m);
   }
   msgSom();
 }
-async function msgMarcarLidas(outroId){
+async function msgMarcarLidas(chave){
+  const g = msgGrupoDaChave(chave);
+  if(g){
+    if(!g.naoLidas) return;
+    g.naoLidas = 0; g.ultimaLeitura = new Date().toISOString();
+    updateNotifBadge();
+    const { error } = await sb.from('mensagens_grupo_membros').update({ultima_leitura: g.ultimaLeitura}).eq('grupo_id', g.id).eq('user_id', msgEu());
+    if(error) console.error('msgMarcarLidas grupo', error);
+    return;
+  }
+  const outroId = chave;
   const ids = MSG_NAO_LIDAS.filter(x=>x.de===outroId).map(x=>x.id);
   if(!ids.length) return;
   MSG_NAO_LIDAS = MSG_NAO_LIDAS.filter(x=>x.de!==outroId);
@@ -9680,41 +9783,110 @@ async function msgMarcarLidas(outroId){
   const { error } = await sb.from('mensagens').update({lida:true}).in('id', ids);
   if(error) console.error('msgMarcarLidas', error);
 }
-async function msgCarregarConversa(outroId){
-  if(MSG_CONVERSAS[outroId] && MSG_CONVERSAS[outroId]._completa) return;
+async function msgCarregarConversa(chave){
+  if(MSG_CONVERSAS[chave] && MSG_CONVERSAS[chave]._completa) return;
   const eu = msgEu();
-  const { data, error } = await sb.from('mensagens').select('*')
-    .or(`and(de.eq.${eu},para.eq.${outroId}),and(de.eq.${outroId},para.eq.${eu})`)
-    .order('created_at',{ascending:false}).limit(200);
+  const g = msgGrupoDaChave(chave);
+  let q = sb.from('mensagens').select('*');
+  q = g ? q.eq('grupo_id', g.id) : q.or(`and(de.eq.${eu},para.eq.${chave}),and(de.eq.${chave},para.eq.${eu})`);
+  const { data, error } = await q.order('created_at',{ascending:false}).limit(200);
   if(error){ console.error('msgCarregarConversa', error); return; }
   const lista = (data||[]).map(mapMsgRow).reverse();
-  const atual = MSG_CONVERSAS[outroId]||[];
+  const atual = MSG_CONVERSAS[chave]||[];
   atual.forEach(m=>{ if(!lista.some(x=>x.id===m.id)) lista.push(m); });
   lista.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
   lista._completa = true;
-  MSG_CONVERSAS[outroId] = lista;
+  MSG_CONVERSAS[chave] = lista;
 }
-async function msgEnviar(paraId, texto){
+function msgDestino(chave){ const g = msgGrupoDaChave(chave); return g ? {grupo_id:g.id} : {para:chave}; }
+async function msgEnviar(chave, texto){
   texto = (texto||'').trim();
   if(!texto) return false;
   if(texto.length>4000){ alert('A mensagem pode ter no máximo 4000 caracteres.'); return false; }
-  if(!msgPessoa(paraId)){ alert('Essa pessoa não está na equipe.'); return false; }
-  const { data, error } = await sb.from('mensagens').insert({de:msgEu(), para:paraId, texto}).select().single();
+  if(!msgGrupoDaChave(chave) && !msgPessoa(chave)){ alert(msgEhGrupo(chave) ? 'Você não está mais neste grupo.' : 'Essa pessoa não está na equipe.'); return false; }
+  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), texto}, msgDestino(chave))).select().single();
   if(error){ console.error('msgEnviar', error); alert('Não foi possível enviar: '+(error.message||'')); return false; }
   msgGuardar(mapMsgRow(data));
   return true;
 }
 
+/* ---- administração dos grupos (só o administrador cria, renomeia, escolhe membros e exclui) ---- */
+async function msgGrupoModal(id){
+  if(!msgSouAdminGrupos()) return;
+  const eu = msgEu();
+  const g = id ? msgGrupo(id) : null;
+  if(id && !g) return;
+  const membros = new Set(g ? g.membros : []);
+  const modal = document.getElementById('modal');
+  document.getElementById('modal-backdrop').classList.add('open');
+  const pessoas = MSG_EQUIPE.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  modal.innerHTML = `<div class="modal-body form-modal msg-grupo-modal">
+    <h3 style="margin:0 0 4px">${g ? 'Gerenciar grupo' : 'Novo grupo'}</h3>
+    <p class="desc" style="margin:0 0 14px">${g ? 'Renomeie, adicione ou remova pessoas. Você continua sempre no grupo.' : 'Dê um nome e escolha quem participa. Você entra automaticamente.'}</p>
+    <div class="field"><label>Nome do grupo</label><input class="ps-input" id="mg-nome" type="text" maxlength="60" value="${escapeAttr(g ? g.nome : '')}" placeholder="Ex.: Comercial, Direção, Todos"></div>
+    <div class="field"><label>Membros</label>
+      <div class="mg-membros">
+        ${pessoas.map(p=>`<label class="mg-membro"><input type="checkbox" data-mg-membro="${p.id}" ${membros.has(p.id)?'checked':''}>${initialsAvatar(p.initials, p.color, 28, p.avatarUrl)}<span class="msg-pessoa-txt"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></span></label>`).join('') || '<div class="tf-vazio">Ninguém na equipe ainda.</div>'}
+      </div>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button type="button" class="btn-accent" id="mg-salvar">${g ? 'Salvar' : 'Criar grupo'}</button>
+      <button type="button" class="btn-outline" id="mg-cancelar">Cancelar</button>
+      ${g ? `<button type="button" class="btn-mini danger" id="mg-excluir" style="margin-left:auto">${icon('trash','tiny')}<span> Excluir grupo</span></button>` : ''}
+    </div>
+  </div>`;
+  modal.querySelector('#mg-cancelar').addEventListener('click', closeModal);
+  modal.querySelector('#mg-nome').focus();
+  modal.querySelector('#mg-salvar').addEventListener('click', async ()=>{
+    const nome = modal.querySelector('#mg-nome').value.trim();
+    if(!nome){ alert('Dê um nome ao grupo.'); return; }
+    const escolhidos = Array.from(modal.querySelectorAll('[data-mg-membro]:checked')).map(c=>c.dataset.mgMembro);
+    if(!escolhidos.length){ alert('Escolha pelo menos uma pessoa para o grupo.'); return; }
+    const btn = modal.querySelector('#mg-salvar'); btn.disabled = true;
+    try{
+      let gid = g ? g.id : null;
+      if(!g){
+        const { data, error } = await sb.from('mensagens_grupos').insert({nome, criado_por:eu}).select().single();
+        if(error) throw error;
+        gid = data.id;
+      } else if(nome!==g.nome){
+        const { error } = await sb.from('mensagens_grupos').update({nome}).eq('id', g.id);
+        if(error) throw error;
+      }
+      const querem = new Set(escolhidos.concat([eu]));
+      const atuais = new Set(g ? g.membros : []);
+      const entram = Array.from(querem).filter(u=>!atuais.has(u));
+      const saem = Array.from(atuais).filter(u=>!querem.has(u) && u!==eu);
+      if(entram.length){ const { error } = await sb.from('mensagens_grupo_membros').insert(entram.map(u=>({grupo_id:gid, user_id:u}))); if(error) throw error; }
+      if(saem.length){ const { error } = await sb.from('mensagens_grupo_membros').delete().eq('grupo_id', gid).in('user_id', saem); if(error) throw error; }
+      closeModal();
+      await msgCarregarGrupos();
+      if(!g) msgUI.aberto = msgChaveGrupo(gid);
+      updateNotifBadge(); renderMensagens();
+    }catch(e){ console.error('msgGrupoModal', e); alert('Não foi possível salvar o grupo: '+(e.message||'')); btn.disabled = false; }
+  });
+  const exc = modal.querySelector('#mg-excluir');
+  if(exc) exc.addEventListener('click', async ()=>{
+    if(!(await showAppConfirm(`Excluir o grupo "${g.nome}"? Todas as mensagens dele somem para todo mundo. Não dá para desfazer.`, {title:'Excluir grupo', confirmLabel:'Excluir'}))) return;
+    const { error } = await sb.from('mensagens_grupos').delete().eq('id', g.id);
+    if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
+    delete MSG_CONVERSAS[msgChaveGrupo(g.id)];
+    closeModal();
+    await msgCarregarGrupos();
+    updateNotifBadge(); renderMensagens();
+  });
+}
+
 /* ---- mensagens de voz: grava pelo microfone, sobe pro bucket privado e envia como mensagem 'audio' ---- */
 const MSG_AUDIO_MAX_SEG = 180;
-let msgGrav = null; // {rec, chunks, inicio, timer, paraId, mime, cancelado}
+let msgGrav = null; // {rec, chunks, inicio, timer, chave, mime, cancelado}
 const MSG_AUDIO_URLS = {}; // path -> {url, ate}
 function msgAudioMime(){
   if(!window.MediaRecorder) return '';
   for(const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']){ if(MediaRecorder.isTypeSupported(t)) return t; }
   return '';
 }
-async function msgGravarIniciar(paraId){
+async function msgGravarIniciar(chave){
   if(msgGrav) return;
   if(!navigator.mediaDevices || !window.MediaRecorder){ alert('Este navegador não permite gravar áudio.'); return; }
   let stream;
@@ -9722,7 +9894,7 @@ async function msgGravarIniciar(paraId){
   catch(e){ alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.'); return; }
   const mime = msgAudioMime();
   const rec = mime ? new MediaRecorder(stream, {mimeType:mime}) : new MediaRecorder(stream);
-  msgGrav = { rec, chunks:[], inicio:Date.now(), timer:null, paraId, mime: rec.mimeType||mime||'audio/webm', cancelado:false, stream };
+  msgGrav = { rec, chunks:[], inicio:Date.now(), timer:null, chave, mime: rec.mimeType||mime||'audio/webm', cancelado:false, stream };
   rec.ondataavailable = e=>{ if(e.data && e.data.size) msgGrav.chunks.push(e.data); };
   rec.onstop = ()=>msgGravarFinalizou();
   rec.start(250);
@@ -9749,15 +9921,16 @@ async function msgGravarFinalizou(){
   const blob = new Blob(g.chunks, {type:g.mime});
   if(blob.size > 10*1024*1024){ alert('O áudio ficou grande demais. Grave um áudio mais curto.'); return; }
   const ext = /mp4/.test(g.mime) ? 'm4a' : /ogg/.test(g.mime) ? 'ogg' : 'webm';
-  const path = `${msgEu()}/${g.paraId}/${Date.now()}.${ext}`;
+  const grupo = msgGrupoDaChave(g.chave);
+  const path = `${msgEu()}/${grupo ? 'g-'+grupo.id : g.chave}/${Date.now()}.${ext}`;
   const st = document.getElementById('msg-grav-status'); if(st){ st.hidden = false; st.textContent = 'Enviando áudio…'; }
   const { error: upErr } = await sb.storage.from('mensagens-audio').upload(path, blob, {upsert:false, contentType:g.mime});
   if(upErr){ console.error(upErr); alert('Não foi possível enviar o áudio: '+(upErr.message||'')); if(st) st.hidden = true; return; }
-  const { data, error } = await sb.from('mensagens').insert({de:msgEu(), para:g.paraId, tipo:'audio', texto:'🎤 Mensagem de voz', audio_path:path, audio_seg:seg, audio_mime:g.mime}).select().single();
+  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'audio', texto:'🎤 Mensagem de voz', audio_path:path, audio_seg:seg, audio_mime:g.mime}, msgDestino(g.chave))).select().single();
   if(error){ console.error(error); alert('O áudio subiu, mas não foi possível registrar a mensagem: '+(error.message||'')); if(st) st.hidden = true; return; }
   msgGuardar(mapMsgRow(data));
   msgUI.forcarFim = true;
-  if(currentView==='mensagens' && msgUI.aberto===g.paraId) renderMensagens();
+  if(currentView==='mensagens' && msgUI.aberto===g.chave) renderMensagens();
 }
 function msgGravarUI(gravando){
   const box = document.getElementById('msg-grav'); const ed = document.querySelector('.msg-editor');
@@ -9811,34 +9984,41 @@ function msgPopupContainer(){
 }
 function msgPopup(m){
   const p = msgPessoa(m.de); if(!p) return;
+  const g = m.grupoId ? msgGrupo(m.grupoId) : null; if(m.grupoId && !g) return;
+  const chave = msgChave(m);
   const c = msgPopupContainer();
-  // uma janela por pessoa: se já tem, só atualiza o texto
-  let el = c.querySelector(`[data-msg-popup="${m.de}"]`);
-  if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').innerHTML = m.tipo==='audio' ? `🎤 Mensagem de voz (${msgAudioDur(m.audioSeg)})` : linkify(m.texto); el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
+  const texto = ()=> (g ? `<b class="msg-popup-de">${escapeHtml(p.name.split(' ')[0])}:</b> ` : '') + (m.tipo==='audio' ? `🎤 Mensagem de voz (${msgAudioDur(m.audioSeg)})` : linkify(m.texto));
+  // uma janela por conversa: se já tem, só atualiza o texto
+  let el = c.querySelector(`[data-msg-popup="${chave}"]`);
+  if(el){ el.dataset.msgId = String(m.id); el.querySelector('.msg-popup-txt').innerHTML = texto(); el.querySelector('.msg-popup-hora').textContent = tzDataHora(m.createdAt, true).split(' às ')[1]||''; msgPopupTimer(el); return; }
   el = document.createElement('div');
-  el.className = 'msg-popup'; el.dataset.msgPopup = m.de; el.dataset.msgId = String(m.id);
+  el.className = 'msg-popup'; el.dataset.msgPopup = chave; el.dataset.msgId = String(m.id);
+  const cabecalho = g
+    ? `${msgGrupoAvatar(30)}<div class="msg-popup-nome"><strong>${escapeHtml(g.nome)}</strong><small>Grupo · ${escapeHtml(p.name.split(' ')[0])}</small></div>`
+    : `${initialsAvatar(p.initials, p.color, 30, p.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></div>`;
   el.innerHTML = `
-    <div class="msg-popup-hd">${initialsAvatar(p.initials, p.color, 30, p.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(p.name.split(' ')[0])}</strong><small>${escapeHtml(msgPapelLabel(p))}</small></div><span class="msg-popup-hora">${tzDataHora(m.createdAt, true).split(' às ')[1]||''}</span><button type="button" class="msg-popup-x" title="Fechar">${icon('x','tiny')}</button></div>
+    <div class="msg-popup-hd">${cabecalho}<span class="msg-popup-hora">${tzDataHora(m.createdAt, true).split(' às ')[1]||''}</span><button type="button" class="msg-popup-x" title="Fechar">${icon('x','tiny')}</button></div>
     <div class="msg-popup-txt"></div>
     <div class="msg-popup-resp"><input class="ps-input" type="text" placeholder="Responder…" maxlength="4000"><button type="button" class="emoji-btn" title="Emoji">😊</button><button type="button" class="btn-accent" title="Enviar">${icon('reply','tiny')}</button></div>
     <button type="button" class="msg-popup-abrir">Abrir conversa</button>`;
-  el.querySelector('.msg-popup-txt').innerHTML = m.tipo==='audio' ? `🎤 Mensagem de voz (${msgAudioDur(m.audioSeg)})` : linkify(m.texto);
+  el.querySelector('.msg-popup-txt').innerHTML = texto();
   c.appendChild(el);
   while(c.children.length>3) c.removeChild(c.firstChild);
   const fechar = ()=>{ clearTimeout(el._timer); el.remove(); };
   el.querySelector('.msg-popup-x').addEventListener('click', fechar);
-  el.querySelector('.msg-popup-abrir').addEventListener('click', ()=>{ fechar(); msgAbrirConversa(m.de); });
-  const inp = el.querySelector('input'), btn = el.querySelector('.msg-popup-resp button');
-  const responder = async ()=>{ const t = inp.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(m.de, t)){ inp.value=''; msgMarcarLidas(m.de); fechar(); } else btn.disabled = false; };
+  el.querySelector('.msg-popup-abrir').addEventListener('click', ()=>{ fechar(); msgAbrirConversa(chave); });
+  const inp = el.querySelector('input'), btn = el.querySelector('.msg-popup-resp .btn-accent');
+  const responder = async ()=>{ const t = inp.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(chave, t)){ inp.value=''; msgMarcarLidas(chave); fechar(); } else btn.disabled = false; };
   btn.addEventListener('click', responder);
   inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); responder(); } if(e.key==='Escape') fechar(); });
   inp.addEventListener('focus', ()=>clearTimeout(el._timer));
+  msgBindMaiuscula(inp);
   msgPopupTimer(el);
 }
 function msgPopupTimer(el){ clearTimeout(el._timer); el._timer = setTimeout(()=>{ if(document.activeElement && el.contains(document.activeElement)) { msgPopupTimer(el); return; } el.remove(); }, 25000); }
-function msgAbrirConversa(outroId){
-  msgUI.aberto = outroId;
-  const c = document.getElementById('msg-popups'); if(c){ const el = c.querySelector(`[data-msg-popup="${outroId}"]`); if(el) el.remove(); }
+function msgAbrirConversa(chave){
+  msgUI.aberto = chave;
+  const c = document.getElementById('msg-popups'); if(c){ const el = c.querySelector(`[data-msg-popup="${chave}"]`); if(el) el.remove(); }
   if(currentView!=='mensagens') goTo('mensagens'); else renderMensagens();
 }
 
@@ -9847,11 +10027,19 @@ function renderMensagens(){
   const el = document.getElementById('view-mensagens');
   if(!msgSouEquipe()){ el.innerHTML = '<div class="empty-state">As mensagens são só para a equipe interna.</div>'; return; }
   const q = normTxt(msgUI.busca).trim();
+  const eu = msgEu();
+  const admin = msgSouAdminGrupos();
   const pessoas = MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
-  const ultima = (id)=>{ const l = MSG_CONVERSAS[id]||[]; return l.length ? l[l.length-1] : null; };
+  const grupos = MSG_GRUPOS.filter(g=>!q || normTxt(g.nome).includes(q));
+  const ultima = (chave)=>{ const l = MSG_CONVERSAS[chave]||[]; return l.length ? l[l.length-1] : null; };
+  const previa = (u, grupo)=>{ if(!u) return ''; const quem = u.de===eu ? 'Você: ' : (grupo ? msgNomeDe(u.de)+': ' : ''); return escapeHtml(quem+u.texto).slice(0,60); };
+  const quando = (u)=> u ? `<small class="msg-quando">${tzDataCurta(tzDataHora(u.createdAt).split('/').reverse().join('-'))}</small>` : '';
   const ordenadas = pessoas.slice().sort((a,b)=>{ const ua = ultima(a.id), ub = ultima(b.id); const na = msgNaoLidasDe(a.id), nb = msgNaoLidasDe(b.id); if(!!nb!==!!na) return nb?1:-1; if(ua&&ub) return ub.createdAt.localeCompare(ua.createdAt); if(ua||ub) return ub?1:-1; return a.name.localeCompare(b.name,'pt-BR'); });
-  const outro = msgPessoa(msgUI.aberto);
-  const conversa = outro ? (MSG_CONVERSAS[outro.id]||[]) : [];
+  const gruposOrd = grupos.slice().sort((a,b)=>{ if(!!b.naoLidas!==!!a.naoLidas) return b.naoLidas?1:-1; return a.nome.localeCompare(b.nome,'pt-BR'); });
+  const grupo = msgGrupoDaChave(msgUI.aberto);
+  const outro = grupo ? null : msgPessoa(msgUI.aberto);
+  const chave = grupo ? msgChaveGrupo(grupo.id) : (outro ? outro.id : null);
+  const conversa = chave ? (MSG_CONVERSAS[chave]||[]) : [];
   const taAntes = el.querySelector('#msg-texto');
   const corpoAntes = el.querySelector('#msg-corpo');
   const mesmaConversa = corpoAntes && el.dataset.aberto===String(msgUI.aberto||'');
@@ -9860,25 +10048,37 @@ function renderMensagens(){
   el.dataset.aberto = String(msgUI.aberto||'');
   const rascunho = taAntes ? taAntes.value : '';
   const tinhaFoco = !!taAntes && document.activeElement===taAntes;
-  const eu = msgEu();
-  let diaAnterior = '';
+  let diaAnterior = '', deAnterior = null;
   const bolhas = conversa.map(m=>{
     const dia = tzDataHora(m.createdAt).slice(0,10); let sep = '';
-    if(dia!==diaAnterior){ diaAnterior = dia; const hoje = tzDataHora(new Date().toISOString()).slice(0,10); sep = `<div class="msg-dia">${dia===hoje? 'Hoje' : dia}</div>`; }
+    if(dia!==diaAnterior){ diaAnterior = dia; deAnterior = null; const hoje = tzDataHora(new Date().toISOString()).slice(0,10); sep = `<div class="msg-dia">${dia===hoje? 'Hoje' : dia}</div>`; }
     const hora = (tzDataHora(m.createdAt, true).split(' às ')[1])||'';
-    return sep + `<div class="msg-bolha ${m.de===eu?'minha':''}" data-msg-id="${m.id}"><button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${m.de===eu ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>${m.tipo==='audio' ? msgAudioHtml(m) : `<div class="msg-txt">${linkify(m.texto)}</div>`}<div class="msg-meta">${hora}${m.de===eu ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    const minha = m.de===eu;
+    // em grupo, mostra quem escreveu (só quando muda o remetente)
+    const remetente = grupo && !minha && m.de!==deAnterior ? `<div class="msg-de">${escapeHtml(msgNomeDe(m.de))}</div>` : '';
+    deAnterior = m.de;
+    const podeApagar = minha || !grupo;
+    return sep + `<div class="msg-bolha ${minha?'minha':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : `<div class="msg-txt">${linkify(m.texto)}</div>`}<div class="msg-meta">${hora}${minha && !grupo ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
+  const cabecalho = grupo
+    ? `${msgGrupoAvatar(36)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
+       ${admin ? `<button type="button" class="btn-mini" id="msg-grupo-gerir" title="Renomear, adicionar ou remover membros, excluir">${icon('gear','tiny')}<span> Gerenciar</span></button>` : ''}`
+    : outro ? `${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}<div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>` : '';
   el.innerHTML = `
     <div class="msg-wrap" style="--msg-fonte:${msgUI.fonte}px">
-      <aside class="msg-lista ${outro?'com-conversa':''}">
+      <aside class="msg-lista ${chave?'com-conversa':''}">
         <div class="msg-lista-hd">
-          <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="Buscar pessoa…">
+          <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="Buscar pessoa ou grupo…">
           <button type="button" class="msg-config-btn ${msgUI.configAberta?'ativo':''}" id="msg-config-btn" title="Configurações das mensagens">${icon('gear')}</button>
         </div>
         <div class="msg-config" id="msg-config" ${msgUI.configAberta?'':'hidden'}>
           <div class="msg-config-linha">
             <span>${icon('bell','tiny')} Som ao receber mensagem</span>
             <label class="msg-switch"><input type="checkbox" id="msg-som" ${msgUI.somLigado?'checked':''}><i></i></label>
+          </div>
+          <div class="msg-config-linha">
+            <span>Maiúscula automática no início das frases</span>
+            <label class="msg-switch"><input type="checkbox" id="msg-maiuscula" ${msgUI.maiuscula?'checked':''}><i></i></label>
           </div>
           <div class="msg-config-linha">
             <span>Tamanho da letra</span>
@@ -9890,23 +10090,30 @@ function renderMensagens(){
           </div>
         </div>
         <div class="msg-pessoas">
+          ${(gruposOrd.length || admin) ? `<div class="msg-secao"><span>Grupos</span>${admin ? `<button type="button" class="btn-mini" id="msg-grupo-novo" title="Criar um grupo (só o administrador)">${icon('plus','tiny')}<span> Novo grupo</span></button>` : ''}</div>` : ''}
+          ${gruposOrd.map(g=>{ const k = msgChaveGrupo(g.id), u = ultima(k), n = g.naoLidas||0; return `
+            <button type="button" class="msg-pessoa msg-grupo ${msgUI.aberto===k?'ativa':''} ${n?'nao-lida':''}" data-msg-abrir="${k}">
+              ${msgGrupoAvatar(36)}
+              <span class="msg-pessoa-txt"><strong>${escapeHtml(g.nome)}</strong><small>${u ? previa(u, true) : escapeHtml(msgGrupoMembrosLabel(g))}</small></span>
+              ${n ? `<span class="msg-badge">${n}</span>` : quando(u)}
+            </button>`; }).join('') || (admin && !q ? '<div class="tf-vazio" style="padding:8px 12px">Nenhum grupo ainda.</div>' : '')}
+          ${(gruposOrd.length || admin) ? '<div class="msg-secao"><span>Pessoas</span></div>' : ''}
           ${ordenadas.map(p=>{ const u = ultima(p.id), n = msgNaoLidasDe(p.id); return `
             <button type="button" class="msg-pessoa ${msgUI.aberto===p.id?'ativa':''} ${n?'nao-lida':''}" data-msg-abrir="${p.id}">
               ${initialsAvatar(p.initials, p.color, 36, p.avatarUrl)}
-              <span class="msg-pessoa-txt"><strong>${escapeHtml(p.name)}</strong><small>${u ? escapeHtml((u.de===eu?'Você: ':'')+u.texto).slice(0,60) : escapeHtml(msgPapelLabel(p))}</small></span>
-              ${n ? `<span class="msg-badge">${n}</span>` : (u ? `<small class="msg-quando">${tzDataCurta(tzDataHora(u.createdAt).split('/').reverse().join('-'))}</small>` : '')}
-            </button>`; }).join('') || '<div class="tf-vazio">Ninguém encontrado.</div>'}
+              <span class="msg-pessoa-txt"><strong>${escapeHtml(p.name)}</strong><small>${u ? previa(u, false) : escapeHtml(msgPapelLabel(p))}</small></span>
+              ${n ? `<span class="msg-badge">${n}</span>` : quando(u)}
+            </button>`; }).join('') || (gruposOrd.length ? '' : '<div class="tf-vazio">Ninguém encontrado.</div>')}
         </div>
       </aside>
       <section class="msg-conversa">
-        ${outro ? `
+        ${chave ? `
           <div class="msg-conversa-hd">
             <button type="button" class="btn-mini msg-voltar" id="msg-voltar">${icon('back','tiny')}</button>
-            ${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}
-            <div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>
+            ${cabecalho}
             ${conversa.length ? `<button type="button" class="btn-mini danger" id="msg-limpar" title="Limpar a conversa só para você">${icon('trash','tiny')}<span> Limpar conversa</span></button>` : ''}
           </div>
-          <div class="msg-corpo" id="msg-corpo">${bolhas || '<div class="tf-vazio" style="text-align:center;padding:30px">Nenhuma mensagem ainda. Diga oi!</div>'}</div>
+          <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
@@ -9919,14 +10126,17 @@ function renderMensagens(){
             <button type="button" class="btn-accent" id="msg-grav-enviar">${icon('reply','tiny')} Enviar áudio</button>
             <span class="msg-grav-st" id="msg-grav-status" hidden></span>
           </div>`
-        : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe para conversar.</p><small>Conversas privadas, só texto. Quem receber vê a mensagem na hora, em qualquer tela.</small></div>`}
+        : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${MSG_GRUPOS.length ? ' ou um grupo' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe. Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
       </section>
     </div>`;
   bindBuscaInput('msg-busca', v=>{ msgUI.busca = v; }, renderMensagens);
   el.querySelector('#msg-config-btn').addEventListener('click', ()=>{ msgUI.configAberta = !msgUI.configAberta; const c = el.querySelector('#msg-config'); c.hidden = !msgUI.configAberta; el.querySelector('#msg-config-btn').classList.toggle('ativo', msgUI.configAberta); });
   el.querySelector('#msg-som').addEventListener('change', e=>{ msgSetSom(e.target.checked); if(e.target.checked) msgSom(); });
+  el.querySelector('#msg-maiuscula').addEventListener('change', e=>msgSetMaiuscula(e.target.checked));
   el.querySelector('#msg-fonte-menos').addEventListener('click', ()=>msgSetFonte(msgUI.fonte-1));
   el.querySelector('#msg-fonte-mais').addEventListener('click', ()=>msgSetFonte(msgUI.fonte+1));
+  const novo = el.querySelector('#msg-grupo-novo'); if(novo) novo.addEventListener('click', ()=>msgGrupoModal(null));
+  const gerir = el.querySelector('#msg-grupo-gerir'); if(gerir) gerir.addEventListener('click', ()=>msgGrupoModal(grupo.id));
   el.querySelectorAll('[data-msg-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
     msgUI.aberto = b.dataset.msgAbrir;
     renderMensagens();
@@ -9935,21 +10145,22 @@ function renderMensagens(){
     renderMensagens();
   }));
   const voltar = el.querySelector('#msg-voltar'); if(voltar) voltar.addEventListener('click', ()=>{ msgUI.aberto = null; renderMensagens(); });
-  const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(outro.id));
-  el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[outro.id]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
-  if(outro){
+  const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(chave));
+  el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
+  if(chave){
     const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = (pertoDoFim || msgUI.forcarFim) ? corpo.scrollHeight : scrollAntes; msgUI.forcarFim = false;
-    if(!(MSG_CONVERSAS[outro.id]||{})._completa){ msgCarregarConversa(outro.id).then(()=>{ msgMarcarLidas(outro.id); if(msgUI.aberto===outro.id && currentView==='mensagens') renderMensagens(); }); }
-    else msgMarcarLidas(outro.id);
+    if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && currentView==='mensagens') renderMensagens(); }); }
+    else msgMarcarLidas(chave);
     const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
-    const enviar = async ()=>{ const t = ta.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(outro.id, t)){ ta.value=''; msgUI.forcarFim = true; renderMensagens(); document.getElementById('msg-texto').focus(); } else btn.disabled = false; };
+    const enviar = async ()=>{ const t = ta.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(chave, t)){ ta.value=''; msgUI.forcarFim = true; renderMensagens(); document.getElementById('msg-texto').focus(); } else btn.disabled = false; };
     btn.addEventListener('click', enviar);
     ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); enviar(); } });
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
-    const mic = el.querySelector('#msg-mic'); if(mic) mic.addEventListener('click', ()=>msgGravarIniciar(outro.id));
+    msgBindMaiuscula(ta);
+    const mic = el.querySelector('#msg-mic'); if(mic) mic.addEventListener('click', ()=>msgGravarIniciar(chave));
     el.querySelector('#msg-grav-cancelar').addEventListener('click', ()=>msgGravarParar(true));
     el.querySelector('#msg-grav-enviar').addEventListener('click', ()=>msgGravarParar(false));
-    if(msgGrav && msgGrav.paraId===outro.id) msgGravarUI(true);
+    if(msgGrav && msgGrav.chave===chave) msgGravarUI(true);
     msgAudioCarregar(el);
     if(rascunho){ ta.value = rascunho; ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; }
     if(tinhaFoco || !rascunho){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
