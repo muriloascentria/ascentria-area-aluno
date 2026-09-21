@@ -10704,13 +10704,13 @@ function renderVendas(){
   document.getElementById('view-vendas').innerHTML = `
 
     <div class="kpi-row">
-      <div class="kpi-tile"><div class="label">Sessões registradas</div><div class="value">${base.length}</div></div>
+      <div class="kpi-tile" title="Sessões em que o lead compareceu (Presença = Show). No-shows não entram aqui."><div class="label">Sessões realizadas</div><div class="value">${showSessoes.length}</div></div>
       <div class="kpi-tile"><div class="label">Vendas fechadas</div><div class="value">${fechadas.length}</div></div>
-      <div class="kpi-tile"><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
-      <div class="kpi-tile"><div class="label">Taxa de no-show</div><div class="value">${taxaNoShow}%</div></div>
+      <div class="kpi-tile" title="Vendas fechadas ÷ sessões realizadas. No-shows não entram na conta."><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
+      <div class="kpi-tile" title="No-shows ÷ todas as sessões registradas (${base.length})."><div class="label">Taxa de no-show</div><div class="value">${taxaNoShow}%</div></div>
       <div class="kpi-tile"><div class="label">Faturamento (vendas fechadas)</div><div class="value" style="font-size:16px">${formatBRL(faturamento)}</div></div>
     </div>
-    <p class="kpi-note" style="margin:12px 0 22px">${filtroAtivo ? `Indicadores do recorte: <strong>${escapeHtml(recorte)}</strong>.` : 'Indicadores de todas as sessões registradas — mudam conforme os filtros abaixo.'}</p>
+    <p class="kpi-note" style="margin:12px 0 22px">${filtroAtivo ? `Indicadores do recorte: <strong>${escapeHtml(recorte)}</strong>.` : 'Indicadores de todas as sessões — mudam conforme os filtros abaixo.'} ${base.length} registrada${base.length===1?'':'s'} no total, sendo ${noShowSessoes.length} no-show${noShowSessoes.length===1?'':'s'}. Sessões realizadas e taxa de fechamento não contam no-shows; eles só entram na taxa de no-show.</p>
 
     <h2 class="section-title">${icon('idcard')} Registro de Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
