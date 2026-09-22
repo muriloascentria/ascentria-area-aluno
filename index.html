@@ -9810,7 +9810,7 @@ let MSG_GRUPOS = [];          // grupos de que participo: {id,nome,criadoPor,mem
 let MSG_ACOMP = {};           // acompanhamento: alunoId -> {alunoId,naoLidas,ultimaEm,ultimaTexto,ultimaDe} (equipe vê todos; mentorado só o seu)
 let MSG_CONVERSAS = {};       // chave -> [mensagens] (ordem cronológica)
 let MSG_NAO_LIDAS = [];       // {id, de} das mensagens 1:1 recebidas ainda não lidas
-let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true };
+let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true, listaScroll:0 };
 try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; msgUI.maiuscula = localStorage.getItem('ascentria-msg-maiuscula')!=='0'; const f = parseInt(localStorage.getItem('ascentria-msg-fonte')||'14',10); if(f>=12 && f<=22) msgUI.fonte = f; }catch(e){}
 function msgSetFonte(v){ msgUI.fonte = Math.max(12, Math.min(22, v)); try{ localStorage.setItem('ascentria-msg-fonte', String(msgUI.fonte)); }catch(e){} const w = document.querySelector('.msg-wrap'); if(w) w.style.setProperty('--msg-fonte', msgUI.fonte+'px'); const lbl = document.getElementById('msg-fonte-valor'); if(lbl) lbl.textContent = msgUI.fonte; }
 
@@ -10467,6 +10467,11 @@ function renderMensagens(){
   const conversa = chave ? (MSG_CONVERSAS[chave]||[]) : [];
   const taAntes = el.querySelector('#msg-texto');
   const corpoAntes = el.querySelector('#msg-corpo');
+  /* A lista de pessoas/grupos é redesenhada inteira a cada render — sem isto, escolher alguém lá
+     embaixo jogaria a rolagem da lista de volta pro topo. Guarda onde ela estava e devolve depois
+     (só quando a lista está visível; no celular ela some enquanto a conversa está aberta). */
+  const listaAntes = el.querySelector('.msg-pessoas');
+  if(listaAntes && listaAntes.clientHeight) msgUI.listaScroll = listaAntes.scrollTop;
   const mesmaConversa = corpoAntes && el.dataset.aberto===String(msgUI.aberto||'');
   const pertoDoFim = !mesmaConversa || (corpoAntes.scrollHeight - corpoAntes.scrollTop - corpoAntes.clientHeight < 60);
   const scrollAntes = corpoAntes ? corpoAntes.scrollTop : 0;
@@ -10583,6 +10588,8 @@ function renderMensagens(){
         : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${MSG_GRUPOS.length ? ', um grupo' : ''}${mentorados.length ? ' ou um mentorado' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe, e o acompanhamento de cada mentorado (visível para toda a equipe). Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
       </section>
     </div>`;
+  const listaAgora = el.querySelector('.msg-pessoas');
+  if(listaAgora && msgUI.listaScroll) listaAgora.scrollTop = msgUI.listaScroll;
   if(!solo) bindBuscaInput('msg-busca', v=>{ msgUI.busca = v; }, renderMensagens);
   const cfgBtn = el.querySelector('#msg-config-btn'); if(cfgBtn) cfgBtn.addEventListener('click', ()=>{ msgUI.configAberta = !msgUI.configAberta; const c = el.querySelector('#msg-config'); c.hidden = !msgUI.configAberta; cfgBtn.classList.toggle('ativo', msgUI.configAberta); });
   const somSw = el.querySelector('#msg-som'); if(somSw) somSw.addEventListener('change', e=>{ msgSetSom(e.target.checked); if(e.target.checked) msgSom(); });
@@ -10607,9 +10614,40 @@ function renderMensagens(){
     if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && msgNaTela()) renderMensagens(); }); }
     else msgMarcarLidas(chave);
     const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
-    const enviar = async ()=>{ const t = ta.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(chave, t)){ ta.value=''; msgUI.forcarFim = true; renderMensagens(); document.getElementById('msg-texto').focus(); } else btn.disabled = false; };
+    /* Enviar: a caixa é esvaziada ANTES de o envio terminar. Enquanto a mensagem vai ao servidor, a
+       tela pode ser redesenhada (mensagem nova chegando, aviso, grupo mudando) — e o redesenho guarda
+       o que estiver escrito na caixa e devolve depois. Se só limpássemos no fim, esse rascunho voltava
+       e o texto parecia "grudado" na caixa mesmo com a mensagem já enviada. Se o envio falhar, o texto
+       é devolvido. Como o redesenho troca os elementos, sempre procuramos a caixa e o botão atuais. */
+    const msgCampo = ()=> document.getElementById('msg-texto');
+    const msgBotao = ()=> document.getElementById('msg-enviar');
+    let enviando = false;
+    const enviar = async ()=>{
+      if(enviando) return;
+      const campo = msgCampo() || ta;
+      const t = campo.value.trim();
+      if(!t) return;
+      enviando = true;
+      const b = msgBotao(); if(b) b.disabled = true;
+      campo.value = ''; campo.style.height = 'auto';
+      let ok = false;
+      try{ ok = await msgEnviar(chave, t); }
+      finally{ enviando = false; }
+      const depois = msgCampo();
+      if(ok){
+        msgUI.forcarFim = true;
+        renderMensagens();
+        const c = msgCampo(); if(c) c.focus();
+      } else {
+        if(depois && !depois.value.trim()){ depois.value = t; depois.style.height='auto'; depois.style.height = Math.min(depois.scrollHeight,140)+'px'; depois.focus(); }
+        const b2 = msgBotao(); if(b2) b2.disabled = false;
+      }
+    };
     btn.addEventListener('click', enviar);
-    ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); enviar(); } });
+    ta.addEventListener('keydown', e=>{
+      // e.isComposing: acento/teclado de celular ainda montando a palavra — Enter aí não é "enviar".
+      if(e.key==='Enter' && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); enviar(); }
+    });
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
     msgBindMaiuscula(ta);
     msgBindMencoes(ta, el.querySelector('#msg-mencoes'), chave);
