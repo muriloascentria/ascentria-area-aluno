@@ -10445,23 +10445,39 @@ async function msgEnviarArquivos(chave, files){
   }
   const st2 = document.getElementById('msg-anexo-status'); if(st2) st2.hidden = true;
 }
+/* Nome amigável para o arquivo salvo no computador: quem mandou e quando. */
+function msgAudioNomeArquivo(m){
+  const ext = (String(m.audioPath||'').split('.').pop()||'webm').toLowerCase().replace(/[^a-z0-9]/g,'') || 'webm';
+  const quem = normTxt(msgNomeDe(m.de)).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'audio';
+  const d = tzDataHora(m.createdAt, true).replace(' às ',' ').replace(/[/:]/g,'-').replace(' ','_');
+  return `audio-${quem}-${d}.${ext}`;
+}
 function msgAudioHtml(m){
-  return `<div class="msg-audio" data-msg-audio="${escapeAttr(m.audioPath)}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="none" controlsList="nodownload"></audio><small>${msgAudioDur(m.audioSeg)}</small></div>`;
+  /* O player mostra o botão de download do próprio navegador e, ao lado, um atalho para baixar —
+     o link leva o arquivo direto para o computador em vez de abrir numa aba. */
+  return `<div class="msg-audio" data-msg-audio="${escapeAttr(m.audioPath)}" data-msg-audio-nome="${escapeAttr(msgAudioNomeArquivo(m))}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="none"></audio><a class="msg-arq-baixar" target="_blank" rel="noopener" title="Baixar este áudio">${icon('download','tiny')}</a><small>${msgAudioDur(m.audioSeg)}</small></div>`;
+}
+/* Acrescenta à URL assinada o pedido de download — assim o arquivo é salvo, e não aberto no navegador. */
+function urlParaBaixar(url, nome){
+  if(!url) return url;
+  return url + (url.indexOf('?')>=0 ? '&' : '?') + 'download=' + encodeURIComponent(nome||'');
 }
 function msgAudioCarregar(root){
   root.querySelectorAll('[data-msg-audio]').forEach(async box=>{
     if(box.dataset.ok) return; box.dataset.ok = '1';
     const url = await msgAudioUrl(box.dataset.msgAudio);
     const a = box.querySelector('audio'); if(url && a) a.src = url; else box.classList.add('erro');
+    const d = box.querySelector('.msg-arq-baixar'); if(url && d) d.href = urlParaBaixar(url, box.dataset.msgAudioNome);
   });
   root.querySelectorAll('[data-msg-arquivo]').forEach(async box=>{
     if(box.dataset.ok) return; box.dataset.ok = '1';
     const url = await msgAudioUrl(box.dataset.msgArquivo, 'mensagens-arquivos');
     if(!url){ box.classList.add('erro'); return; }
     const t = box.dataset.msgArqTipo;
-    if(t==='audio'){ const a = box.querySelector('audio'); if(a) a.src = url; const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = url; }
+    const nome = box.getAttribute('download') || (box.querySelector('.msg-arq-baixar') && box.querySelector('.msg-arq-baixar').getAttribute('download')) || '';
+    if(t==='audio'){ const a = box.querySelector('audio'); if(a) a.src = url; const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, d.getAttribute('download')||nome); }
     else if(t==='imagem'){ box.href = url; const im = box.querySelector('img'); if(im) im.src = url; }
-    else box.href = url;
+    else box.href = urlParaBaixar(url, nome);
   });
 }
 
