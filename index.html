@@ -1480,6 +1480,24 @@
   .msg-grupo-av .icon{width:55%;height:55%;}
   .msg-secao{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px 4px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
   .msg-secao-n{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 5px;margin-left:5px;border-radius:8px;background:var(--danger);color:#fff;font-size:10px;}
+  .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
+  .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
+  .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
+  .alerta-qtd{min-width:20px;height:20px;border-radius:10px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;}
+  .alerta-sub{font-size:12px;color:var(--text-dim);margin:6px 0 10px;}
+  .alerta-lista{display:flex;flex-direction:column;gap:8px;}
+  .alerta-item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--bg-elev);}
+  .alerta-txt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+  .alerta-txt strong{font-size:13.5px;}
+  .alerta-txt small{font-size:11.5px;color:var(--text-mute);}
+  .alerta-acoes{display:flex;gap:6px;flex-wrap:wrap;}
+  @media(max-width:560px){ .alerta-item{row-gap:8px;} .alerta-acoes{flex:1 0 100%;} .alerta-acoes .btn-mini{flex:1;justify-content:center;} }
+  .chk-bloco{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin:0 0 14px;}
+  .chk-txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+  .chk-txt strong{display:flex;align-items:center;gap:6px;font-size:13.5px;}
+  .chk-txt strong .icon{width:15px;height:15px;color:var(--accent);}
+  .chk-txt small{font-size:11.5px;color:var(--text-mute);}
+  .chk-acoes{display:flex;gap:6px;flex-wrap:wrap;}
   .aniv-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 20px;}
   .aniv-bloco-hd{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px;}
   .aniv-bloco-hd .icon{width:18px;height:18px;color:var(--accent);}
@@ -2906,6 +2924,100 @@ function aniversariantesClientes(hoje){
   });
   return lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
 }
+/* ---- Checkpoint semanal ----
+   Toda segunda-feira, às 7h, cada mentorado recebe no Acompanhamento uma mensagem da equipe
+   perguntando como está indo a semana. O disparo é feito pelo banco (agendador do Supabase), então
+   acontece mesmo com ninguém logado; o texto muda a cada semana, num rodízio de dez modelos.
+   Este bloco só mostra a situação e permite pausar/retomar, além de um envio manual. */
+let CHECKPOINT_INFO = null;
+let ACOMP_ALERTAS = [];   // mentorados que não responderam dois checkpoints seguidos
+async function carregarAlertasAcomp(){
+  if(currentUserRole!=='staff'){ ACOMP_ALERTAS = []; return; }
+  try{
+    const { data, error } = await sb.rpc('alertas_acompanhamento_abertos');
+    if(error) throw error;
+    ACOMP_ALERTAS = (data||[]).map(a=>({id:a.id, alunoId:a.aluno_id, nome:a.aluno_nome||'', motivo:a.motivo, detalhe:a.detalhe||'', criadoEm:a.criado_em, desde:a.desde}));
+  }catch(e){ console.error('alertas_acompanhamento', e); ACOMP_ALERTAS = []; }
+}
+async function alertaResolver(id){
+  if(!(await showAppConfirm('Marcar como resolvido? Use quando alguém da equipe já tiver feito o contato por fora (ligação, WhatsApp, encontro). O aviso some da lista.', {title:'Resolver alerta', confirmLabel:'Marcar como resolvido'}))) return;
+  const { error } = await sb.rpc('alerta_resolver', {p_id: id});
+  if(error){ alert('Não foi possível resolver: '+(error.message||'')); return; }
+  ACOMP_ALERTAS = ACOMP_ALERTAS.filter(a=>a.id!==id);
+  updateNotifBadge();
+  if(currentView==='equipe') renderEquipe();
+}
+/* Lista de quem sumiu — a equipe precisa de uma ação diferente de mandar mensagem. */
+function alertasAcompHtml(){
+  if(currentRole!=='staff' || !ACOMP_ALERTAS.length) return '';
+  return `
+    <div class="alerta-bloco">
+      <div class="alerta-hd">${icon('bell')} <strong>Mentorados sem resposta</strong> <span class="alerta-qtd">${ACOMP_ALERTAS.length}</span></div>
+      <p class="alerta-sub">Não responderam os dois últimos checkpoints semanais. Vale um contato por fora do sistema — ligação, WhatsApp ou um encontro — em vez de mais uma mensagem.</p>
+      <div class="alerta-lista">
+        ${ACOMP_ALERTAS.map(a=>{ const st = getStudent(a.alunoId); return `
+          <div class="alerta-item">
+            ${st ? initialsAvatar(st.initials, st.color, 38, st.avatarUrl) : msgGrupoAvatar(38)}
+            <div class="alerta-txt">
+              <strong>${escapeHtml(a.nome)}</strong>
+              <small>Sem responder desde ${a.desde ? tzDataCurta(String(a.desde).slice(0,10)) : '—'}</small>
+            </div>
+            <div class="alerta-acoes">
+              <button type="button" class="btn-mini" data-alerta-abrir="${a.alunoId}" title="Abrir a conversa de acompanhamento">${icon('comment','tiny')}<span> Abrir conversa</span></button>
+              <button type="button" class="btn-mini" data-alerta-ok="${a.id}" title="Já fizemos o contato">${icon('check','tiny')}<span> Resolvido</span></button>
+            </div>
+          </div>`; }).join('')}
+      </div>
+    </div>`;
+}
+function bindAlertasAcomp(){
+  document.querySelectorAll('[data-alerta-abrir]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.alertaAbrir))));
+  document.querySelectorAll('[data-alerta-ok]').forEach(b=>b.addEventListener('click', ()=>alertaResolver(+b.dataset.alertaOk)));
+}
+async function carregarCheckpoint(){
+  if(currentUserRole!=='staff') return;
+  try{
+    const { data, error } = await sb.rpc('checkpoint_status');
+    if(error) throw error;
+    CHECKPOINT_INFO = (data && data[0]) || null;
+  }catch(e){ console.error('checkpoint_status', e); CHECKPOINT_INFO = null; }
+}
+function checkpointHtml(){
+  const c = CHECKPOINT_INFO;
+  if(!c || currentRole!=='staff') return '';
+  const ultima = c.ultima_semana ? `${c.ultimos_envios} ${c.ultimos_envios===1?'mensagem':'mensagens'} na semana de ${tzDataCurta(c.ultima_semana)}` : 'ainda não houve disparo';
+  return `
+    <div class="chk-bloco">
+      <div class="chk-txt">
+        <strong>${icon('comment','tiny')} Checkpoint semanal dos mentorados</strong>
+        <small>${c.ativo ? 'Ligado' : 'Pausado'} · toda segunda-feira às 7h, como ${escapeHtml((c.remetente_nome||'').split(' ')[0])} · ${c.mentorados} mentorado${c.mentorados===1?'':'s'} · último envio: ${ultima}</small>
+      </div>
+      <div class="chk-acoes">
+        <button type="button" class="btn-mini" id="chk-agora" title="Enviar o checkpoint desta semana agora (quem já recebeu não recebe de novo)">${icon('reply','tiny')}<span> Enviar agora</span></button>
+        <button type="button" class="btn-mini ${c.ativo?'danger':''}" id="chk-toggle">${c.ativo ? 'Pausar' : 'Retomar'}</button>
+      </div>
+    </div>`;
+}
+function bindCheckpoint(){
+  const t = document.getElementById('chk-toggle');
+  if(t) t.addEventListener('click', async ()=>{
+    const ligar = !(CHECKPOINT_INFO && CHECKPOINT_INFO.ativo);
+    if(!ligar && !(await showAppConfirm('Pausar o checkpoint semanal? Os mentorados deixam de receber a mensagem de segunda-feira até você retomar.', {title:'Pausar checkpoint', confirmLabel:'Pausar'}))) return;
+    t.disabled = true;
+    const { error } = await sb.rpc('checkpoint_ativar', {p_ativo: ligar});
+    if(error){ alert('Não foi possível alterar: '+(error.message||'')); t.disabled = false; return; }
+    await carregarCheckpoint(); renderEquipe();
+  });
+  const a = document.getElementById('chk-agora');
+  if(a) a.addEventListener('click', async ()=>{
+    if(!(await showAppConfirm('Enviar o checkpoint desta semana agora para os mentorados que ainda não receberam?', {title:'Enviar checkpoint', confirmLabel:'Enviar'}))) return;
+    a.disabled = true;
+    const { data, error } = await sb.rpc('enviar_checkpoint_semanal', {p_forcar: true});
+    if(error){ alert('Não foi possível enviar: '+(error.message||'')); a.disabled = false; return; }
+    alert(data ? `Checkpoint enviado para ${data} mentorado${data===1?'':'s'}.` : 'Todos os mentorados já tinham recebido o checkpoint desta semana.');
+    await carregarCheckpoint(); renderEquipe();
+  });
+}
 /* Bloco "Aniversariantes de hoje" da equipe interna. Devolve '' nos dias sem ninguem. */
 function aniversariantesEquipeHtml(){
   const lista = aniversariantesClientes();
@@ -3320,7 +3432,7 @@ async function bootstrapData(){
       });
     }),
   ];
-  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap());
+  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp());
   else if(msgSouMentorado()) onda.push(msgBootstrap());
 
   /* Listas que só a equipe interna carrega — o aluno nunca faz estas consultas, então esse conteúdo
@@ -4332,7 +4444,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgTotalNaoLidas() : (msgSouMentorado() ? msgTotalNaoLidas() : 0);
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgTotalNaoLidas() + (currentRole==='staff' ? ACOMP_ALERTAS.length : 0) : (msgSouMentorado() ? msgTotalNaoLidas() : 0);
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
@@ -4384,6 +4496,14 @@ function notifItens(){
       const aluno = msgAlunoAcomp(a.alunoId); const quem = a.ultimaDe ? msgQuem(a.ultimaDe) : null;
       if(msgSouMentorado()) itens.push({ tipo:'mensagem', avatarDe:a.ultimaDe, quando:a.ultimaEm, titulo:`${quem ? quem.name.split(' ')[0] : 'A equipe'} respondeu no seu Acompanhamento`, sub:a.ultimaTexto||'', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
       else itens.push({ tipo:'mensagem', avatarDe:a.alunoId, quando:a.ultimaEm, titulo:`${aluno ? aluno.name.split(' ')[0] : 'Mentorado'} · ${a.naoLidas} ${a.naoLidas===1?'nova mensagem':'novas mensagens'} no Acompanhamento`, sub: a.ultimaTexto ? `${a.ultimaDe===a.alunoId ? '' : msgNomeDe(a.ultimaDe)+': '}${a.ultimaTexto}` : '', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
+    });
+  }
+  if(currentRole==='staff'){
+    ACOMP_ALERTAS.forEach(a=>{
+      itens.push({ tipo:'alerta', icone:'bell', quando:a.criadoEm, avatarDe:a.alunoId,
+        titulo:`${(a.nome||'').split(' ')[0]} não respondeu os dois últimos checkpoints`,
+        sub:'Vale um contato por fora do sistema — ligação, WhatsApp ou encontro.',
+        acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
     });
   }
   pendenciasDoSino().forEach(x=>{
@@ -10849,6 +10969,8 @@ function renderEquipe(){
   document.getElementById('view-equipe').innerHTML = `
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
+    ${alertasAcompHtml()}
+    ${checkpointHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
       ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
@@ -10859,6 +10981,8 @@ function renderEquipe(){
         </button>`; }).join('')}
     </div>`;
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
+  bindCheckpoint();
+  bindAlertasAcomp();
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
