@@ -1491,6 +1491,24 @@
   .alerta-txt strong{font-size:13.5px;}
   .alerta-txt small{font-size:11.5px;color:var(--text-mute);}
   .alerta-acoes{display:flex;gap:6px;flex-wrap:wrap;}
+  .recado-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.78);display:flex;align-items:center;justify-content:center;z-index:320;padding:20px;}
+  .recado-card{width:100%;max-width:440px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;box-shadow:0 18px 44px rgba(0,0,0,0.5);}
+  .recado-topo{display:flex;align-items:center;gap:11px;margin-bottom:14px;}
+  .recado-de{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .recado-de strong{font-size:13.5px;}
+  .recado-de small{font-size:11.5px;color:var(--text-mute);}
+  .recado-saud{font-size:19px;margin:0 0 10px;}
+  .recado-texto{font-size:14px;line-height:1.6;color:var(--text-dim);white-space:normal;word-break:break-word;max-height:46vh;overflow:auto;}
+  .recado-acoes{display:flex;justify-content:flex-end;margin-top:20px;}
+  .recado-bloco{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
+  .recado-hd{display:flex;align-items:center;gap:7px;font-size:14px;}
+  .recado-hd .icon{width:15px;height:15px;color:var(--accent);}
+  .recado-sub{font-size:12px;color:var(--text-dim);margin:6px 0 10px;}
+  .recado-bloco textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:10px 12px;resize:vertical;min-height:64px;}
+  .recado-rodape{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;}
+  .recado-rodape small{font-size:11.5px;color:var(--text-mute);flex:1;min-width:0;}
+  .recado-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  @media(max-width:560px){ .recado-rodape{flex-direction:column;align-items:stretch;} .recado-btns{justify-content:flex-end;} }
   @media(max-width:560px){ .alerta-item{row-gap:8px;} .alerta-acoes{flex:1 0 100%;} .alerta-acoes .btn-mini{flex:1;justify-content:center;} }
   .chk-bloco{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin:0 0 14px;}
   .chk-txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
@@ -2974,6 +2992,127 @@ function bindAlertasAcomp(){
   document.querySelectorAll('[data-alerta-abrir]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.alertaAbrir))));
   document.querySelectorAll('[data-alerta-ok]').forEach(b=>b.addEventListener('click', ()=>alertaResolver(+b.dataset.alertaOk)));
 }
+/* ---- Recado do dia ----
+   Murilo escreve um recado e, na primeira vez que cada pessoa da equipe interna abre o sistema
+   naquele dia, aparece uma janela com o texto. Depois de fechar, só volta no dia seguinte (ou
+   se o recado for reescrito). Aluno e mentorado nunca veem nada disso. */
+let RECADO_DIA = null;
+let RECADO_VISTOS = [];
+function recadoSouAutor(){ return currentUserRole==='staff' && typeof tarefasSouAdmin==='function' && tarefasSouAdmin(); }
+async function carregarRecadoDia(){
+  if(currentUserRole==='aluno'){ RECADO_DIA = null; return; }
+  try{
+    const { data, error } = await sb.rpc('recado_do_dia');
+    if(error) throw error;
+    RECADO_DIA = (data && data[0]) || null;
+  }catch(e){ console.error('recado_do_dia', e); RECADO_DIA = null; }
+}
+async function carregarRecadoVistos(){
+  if(!recadoSouAutor()){ RECADO_VISTOS = []; return; }
+  try{
+    const { data, error } = await sb.rpc('recado_quem_viu');
+    if(error) throw error;
+    RECADO_VISTOS = (data||[]).map(r=>({id:r.user_id, nome:r.nome||'', lidoEm:r.lido_em}));
+  }catch(e){ console.error('recado_quem_viu', e); RECADO_VISTOS = []; }
+}
+/* A janela em si. Só aparece se houver recado hoje e a pessoa ainda não tiver fechado. */
+function recadoAbrirJanela(){
+  if(!RECADO_DIA || RECADO_DIA.ja_vi) return;
+  if(document.querySelector('.recado-backdrop')) return;
+  const nome = ((currentUserProfile||{}).name||'').split(' ')[0];
+  const hora = new Date().getHours();
+  const saud = hora<12 ? 'Bom dia' : hora<18 ? 'Boa tarde' : 'Boa noite';
+  const autorNome = RECADO_DIA.autor_nome || '';
+  const wrap = document.createElement('div');
+  wrap.className = 'recado-backdrop';
+  wrap.innerHTML = `
+    <div class="recado-card" role="dialog" aria-modal="true" aria-label="Recado do dia">
+      <div class="recado-topo">
+        ${initialsAvatar(RECADO_DIA.autor_iniciais||'A', '#b8863b', 44, RECADO_DIA.autor_foto)}
+        <div class="recado-de">
+          <strong>${escapeHtml(autorNome)}</strong>
+          <small>Recado de hoje · ${tzDataCurta(String(RECADO_DIA.dia).slice(0,10))}</small>
+        </div>
+      </div>
+      <h3 class="recado-saud">${saud}${nome? ', '+escapeHtml(nome) : ''}!</h3>
+      <div class="recado-texto">${escapeHtml(RECADO_DIA.texto||'').replace(/\n/g,'<br>')}</div>
+      <div class="recado-acoes">
+        <button type="button" class="btn-accent" id="recado-ok">Ok, ${saud.toLowerCase()}!</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = async ()=>{
+    wrap.remove();
+    if(RECADO_DIA) RECADO_DIA.ja_vi = true;
+    try{ await sb.rpc('recado_marcar_lido'); }catch(e){ console.error('recado_marcar_lido', e); }
+  };
+  wrap.querySelector('#recado-ok').addEventListener('click', fechar);
+  wrap.addEventListener('click', (e)=>{ if(e.target===wrap) fechar(); });
+  document.addEventListener('keydown', function esc(ev){
+    if(ev.key==='Escape'){ document.removeEventListener('keydown', esc); fechar(); }
+  });
+}
+/* Bloco no Início da equipe — só o Murilo vê e escreve. */
+function recadoPainelHtml(){
+  if(!recadoSouAutor()) return '';
+  const texto = RECADO_DIA ? (RECADO_DIA.texto||'') : '';
+  const vistos = RECADO_VISTOS.length;
+  const status = !texto
+    ? 'Nada escrito hoje — a equipe não verá nenhuma janela.'
+    : (vistos ? `${vistos} pessoa${vistos===1?'':'s'} já ${vistos===1?'viu':'viram'}: ${escapeHtml(RECADO_VISTOS.map(v=>(v.nome||'').split(' ')[0]).join(', '))}` : 'Publicado — ninguém abriu o sistema ainda hoje.');
+  return `
+    <div class="recado-bloco">
+      <div class="recado-hd">${icon('comment','tiny')} <strong>Recado do dia para a equipe</strong></div>
+      <p class="recado-sub">Aparece numa janela para todo mundo da equipe interna na primeira vez que abrirem o sistema hoje. Se você reescrever, a janela volta a aparecer para todos.</p>
+      <textarea id="recado-texto" rows="3" maxlength="600" placeholder="Bom dia, time! Hoje o foco é...">${escapeHtml(texto)}</textarea>
+      <div class="recado-rodape">
+        <small>${status}</small>
+        <div class="recado-btns">
+          ${texto ? `<button type="button" class="btn-mini danger" id="recado-apagar">Apagar</button>` : ''}
+          <button type="button" class="btn-mini" id="recado-ver">Pré-visualizar</button>
+          <button type="button" class="btn-accent btn-mini" id="recado-salvar">Publicar</button>
+        </div>
+      </div>
+    </div>`;
+}
+function bindRecadoPainel(){
+  const ta = document.getElementById('recado-texto');
+  const salvar = async (texto)=>{
+    const { error } = await sb.rpc('recado_salvar', {p_texto: texto});
+    if(error){ alert('Não foi possível publicar: '+(error.message||'')); return false; }
+    await carregarRecadoDia();
+    await carregarRecadoVistos();
+    if(RECADO_DIA) RECADO_DIA.ja_vi = true; // quem escreveu não precisa ver a própria janela
+    if(currentView==='equipe') renderEquipe();
+    return true;
+  };
+  const b = document.getElementById('recado-salvar');
+  if(b) b.addEventListener('click', async ()=>{
+    const t = (ta && ta.value || '').trim();
+    if(!t){ alert('Escreva o recado antes de publicar.'); return; }
+    b.disabled = true;
+    const ok = await salvar(t);
+    if(ok) alert('Recado publicado. A equipe vai ver a janela ao abrir o sistema.');
+    else b.disabled = false;
+  });
+  const d = document.getElementById('recado-apagar');
+  if(d) d.addEventListener('click', async ()=>{
+    if(!(await showAppConfirm('Apagar o recado de hoje? Quem ainda não abriu o sistema não verá janela nenhuma.', {title:'Apagar recado', confirmLabel:'Apagar'}))) return;
+    d.disabled = true;
+    await salvar('');
+  });
+  const v = document.getElementById('recado-ver');
+  if(v) v.addEventListener('click', ()=>{
+    const t = (ta && ta.value || '').trim();
+    if(!t){ alert('Escreva o recado para pré-visualizar.'); return; }
+    const guardado = RECADO_DIA;
+    RECADO_DIA = { dia: new Date().toISOString().slice(0,10), texto: t, ja_vi: false,
+      autor_nome: (currentUserProfile||{}).name || '', autor_iniciais: (currentUserProfile||{}).initials || '',
+      autor_foto: (currentUserProfile||{}).avatarUrl || null };
+    recadoAbrirJanela();
+    RECADO_DIA = guardado;
+  });
+}
 async function carregarCheckpoint(){
   if(currentUserRole!=='staff') return;
   try{
@@ -3432,6 +3571,7 @@ async function bootstrapData(){
       });
     }),
   ];
+  if(currentUserRole!=='aluno') onda.push(carregarRecadoDia());
   if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp());
   else if(msgSouMentorado()) onda.push(msgBootstrap());
 
@@ -3494,10 +3634,12 @@ async function enterApp(){
   if(currentUserRole==='vendas' || currentUserRole==='editor'){
     setRoleVendas();
     goTo('equipe');
+    setTimeout(recadoAbrirJanela, 350);
     return;
   }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
   goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
+  if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); }
 }
 
 /* ================= SYNC: grava mutações locais de volta no Supabase ================= */
@@ -10970,6 +11112,7 @@ function renderEquipe(){
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
     ${alertasAcompHtml()}
+    ${recadoPainelHtml()}
     ${checkpointHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
@@ -10983,6 +11126,7 @@ function renderEquipe(){
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
   bindCheckpoint();
   bindAlertasAcomp();
+  bindRecadoPainel();
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
