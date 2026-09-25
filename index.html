@@ -11245,7 +11245,12 @@ function msgPopupContainer(){
   if(!c){ c = document.createElement('div'); c.id='msg-popups'; document.body.appendChild(c); }
   return c;
 }
+/* Aquele avisozinho no canto da tela é coisa de computador. No celular o espaço é curto e a
+   pessoa já é avisada pela notificação do próprio aparelho, pela bolinha no ícone e pela seção
+   "Não lidas" no topo da lista — três avisos para a mesma coisa viram estorvo. */
+const msgPopupCabe = ()=> !(window.matchMedia('(pointer:coarse)').matches || window.innerWidth<=880);
 function msgPopup(m){
+  if(!msgPopupCabe()) return;
   const p = msgQuem(m.de); if(!p) return;
   const g = m.grupoId ? msgGrupo(m.grupoId) : null; if(m.grupoId && !g) return;
   const aluno = m.alunoId ? msgAlunoAcomp(m.alunoId) : null;
