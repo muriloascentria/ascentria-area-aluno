@@ -10629,7 +10629,8 @@ function msgAlunoAcomp(id){ const s = typeof getStudent==='function' ? getStuden
 function msgQuem(id){ return msgPessoa(id) || msgAlunoAcomp(id) || (typeof getPerson==='function' ? getPerson(id) : null) || null; }
 function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
-function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null, respondeA:r.responde_a||null, respondeDe:r.responde_de||null, respondeTexto:r.responde_texto||'' }; }
+let MSG_MAIOR_ID = 0;
+function mapMsgRow(r){ const _n = Number(r.id)||0; if(_n > MSG_MAIOR_ID) MSG_MAIOR_ID = _n; return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null, respondeA:r.responde_a||null, respondeDe:r.responde_de||null, respondeTexto:r.responde_texto||'' }; }
 /* ---- grupos ---- */
 function msgChaveGrupo(id){ return 'g:'+id; }
 function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
@@ -10745,8 +10746,37 @@ function msgAssinarTempoReal(){
   if(msgSouEquipe()) ch = ch
     .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupos'}, ()=>msgGruposMudaram())
     .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram());
-  msgUI.canal = ch.subscribe();
+  /* A ligação ao vivo cai calada em rede de celular: troca de wi-fi para dados, túnel, elevador,
+     tela apagada. Sem tratar isso, o app continua "conectado" na aparência e as mensagens só
+     aparecem quando alguém mexe na tela. Aqui a queda é percebida e a ligação é refeita. */
+  msgUI.canal = ch.subscribe((status)=>{
+    if(status === 'SUBSCRIBED'){ msgUI.canalFalhas = 0; return; }
+    if(status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){
+      msgUI.canalFalhas = (msgUI.canalFalhas || 0) + 1;
+      clearTimeout(msgUI.canalRetomar);
+      const espera = Math.min(30000, 1500 * Math.pow(2, Math.min(4, msgUI.canalFalhas - 1)));
+      msgUI.canalRetomar = setTimeout(()=>{ if(!document.hidden) msgRevalidar(true); }, espera);
+    }
+  });
 }
+
+/* Rede de segurança: de tempos em tempos, uma pergunta minúscula ao banco — "qual o número da
+   mensagem mais nova que eu posso ver?". Se for maior que a última que tenho, alguma coisa
+   escapou da ligação ao vivo e o app busca o que falta. É uma consulta de uma linha só. */
+async function msgEspiar(){
+  if(document.hidden || !currentUser) return;
+  if(!msgSouEquipe() && !msgSouMentorado()) return;
+  if(msgRevalidando) return;
+  try{
+    const { data, error } = await sb.from('mensagens').select('id').order('id',{ascending:false}).limit(1);
+    if(error) return;
+    const maior = (data && data[0]) ? Number(data[0].id) : 0;
+    /* Primeira passada só toma nota: ainda não há com o que comparar. */
+    if(!MSG_MAIOR_ID){ MSG_MAIOR_ID = maior; return; }
+    if(maior > MSG_MAIOR_ID) msgRevalidar(true);
+  }catch(e){}
+}
+setInterval(msgEspiar, 20000);
 /* Voltar ao app depois de um tempo fora.
    O celular congela a página quando ela sai da frente, e a ligação ao vivo com o servidor cai
    sem avisar ninguém. Ao voltar — pela notificação ou simplesmente trocando de app — a conversa
