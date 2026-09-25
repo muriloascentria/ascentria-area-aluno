@@ -1622,7 +1622,9 @@
   .msg-audio audio{height:36px;flex:1;min-width:0;max-width:280px;}
   .msg-audio-ic .icon{width:14px;height:14px;color:var(--text-mute);}
   .msg-audio small{color:var(--text-mute);font-size:11px;}
-  .msg-audio.erro::after{content:'áudio indisponível';font-size:11px;color:var(--danger);}
+  .msg-audio.erro::after{content:'não foi possível tocar aqui — use o botão de baixar';font-size:11px;color:var(--danger);}
+  .msg-audio.erro audio{display:none;}
+  .msg-audio.carregando small::after{content:' · preparando…';color:var(--text-mute);}
   .msg-editor .ps-input{margin:0;flex:1;resize:none;min-height:38px;max-height:140px;}
   .msg-editor .btn-accent{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .msg-vazio{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-mute);text-align:center;padding:30px;}
@@ -1706,7 +1708,8 @@
     .role-toggle{padding:2px;gap:1px;}
     .role-toggle button{padding:6px 7px;font-size:10px;}
     .profile-btn span{display:none;}
-    .profile-btn{padding:5px;}
+    /* Com o nome escondido, a setinha ficava encostada na curva do botão e parecia cortada. */
+    .profile-btn{padding:5px 9px 5px 5px;gap:5px;}
     .icon-btn{width:34px;height:34px;}
     .content{padding:14px 12px 40px;}
     .kpi-row{gap:8px;} .kpi-tile{min-width:calc(50% - 4px);padding:10px 12px;}
@@ -5933,6 +5936,8 @@ function pushIrPara(url){
   if(destino.startsWith('msg:')){
     const chave = destino.slice(4);
     if(typeof msgAbrirConversa==='function') msgAbrirConversa(chave);
+    /* Veio pela notificação: a mensagem que gerou o aviso tem que estar na tela. */
+    if(typeof msgRevalidar==='function') setTimeout(()=>msgRevalidar(true), 60);
   }else if(destino.startsWith('tarefa:')){
     goTo('tarefas');
     const id = destino.slice(7);
@@ -10723,6 +10728,38 @@ function msgAssinarTempoReal(){
     .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram());
   msgUI.canal = ch.subscribe();
 }
+/* Voltar ao app depois de um tempo fora.
+   O celular congela a página quando ela sai da frente, e a ligação ao vivo com o servidor cai
+   sem avisar ninguém. Ao voltar — pela notificação ou simplesmente trocando de app — a conversa
+   ficava mostrando o que havia antes, e só arrumava fechando e abrindo tudo de novo. Aqui a
+   ligação é refeita e o que chegou durante a ausência é buscado outra vez. */
+let msgRevalidando = false, msgRevalidadoEm = 0;
+async function msgRevalidar(forcar){
+  if(msgRevalidando) return;
+  if(!currentUser) return;
+  if(!msgSouEquipe() && !msgSouMentorado()) return;
+  if(!forcar && Date.now() - msgRevalidadoEm < 3000) return;
+  msgRevalidando = true; msgRevalidadoEm = Date.now();
+  try{
+    try{ if(msgUI.canal && sb.removeChannel) sb.removeChannel(msgUI.canal); }catch(e){}
+    msgUI.canal = null;
+    msgAssinarTempoReal();
+    const chave = msgUI.aberto;
+    if(chave && MSG_CONVERSAS[chave]) MSG_CONVERSAS[chave]._completa = false;
+    await msgBootstrap();
+    if(chave){
+      await msgCarregarConversa(chave);
+      msgMarcarLidas(chave);
+    }
+    if(msgNaTela()) renderMensagens();
+    updateNotifBadge();
+  }catch(e){ console.error('msgRevalidar', e); }
+  finally{ msgRevalidando = false; }
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) msgRevalidar(); });
+window.addEventListener('focus', ()=>msgRevalidar());
+window.addEventListener('pageshow', (e)=>{ if(e.persisted) msgRevalidar(true); });
+
 async function msgRotear(m, jaTentou){
   const eu = msgEu();
   if(m.grupoId){
@@ -11130,6 +11167,9 @@ async function msgGravarFinalizou(){
   if(upErr){ console.error(upErr); alert('Não foi possível enviar o áudio: '+(upErr.message||'')); if(st) st.hidden = true; return; }
   const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'audio', texto:'🎤 Mensagem de voz', audio_path:path, audio_seg:seg, audio_mime:g.mime}, msgRespondeCampos(g.chave), msgDestino(g.chave))).select().single();
   if(error){ console.error(error); alert('O áudio subiu, mas não foi possível registrar a mensagem: '+(error.message||'')); if(st) st.hidden = true; return; }
+  /* Pede a URL do arquivo ANTES de desenhar a bolha: assim o player já nasce com o áudio e
+     não aparece rodando a bolinha de carregando enquanto espera a resposta. */
+  try{ await msgAudioUrl(path); }catch(e){}
   msgGuardar(mapMsgRow(data));
   msgUI.forcarFim = true;
   if(msgNaTela() && msgUI.aberto===g.chave) renderMensagens();
@@ -11139,6 +11179,12 @@ function msgGravarUI(gravando){
   if(!box || !ed) return;
   box.hidden = !gravando; ed.classList.toggle('gravando', gravando);
   const st = document.getElementById('msg-grav-status'); if(st) st.hidden = true;
+}
+/* Devolve a URL na hora se ela já estiver guardada — é o que evita o player nascer vazio,
+   esperando uma resposta, e ficar rodando a bolinha de carregando. */
+function msgAudioUrlPronta(path, bucket){
+  const c = MSG_AUDIO_URLS[(bucket||'mensagens-audio')+'/'+path];
+  return (c && c.ate > Date.now()) ? c.url : null;
 }
 async function msgAudioUrl(path, bucket){
   bucket = bucket || 'mensagens-audio';
@@ -11219,19 +11265,39 @@ function msgAudioNomeArquivo(m){
 function msgAudioHtml(m){
   /* O player mostra o botão de download do próprio navegador e, ao lado, um atalho para baixar —
      o link leva o arquivo direto para o computador em vez de abrir numa aba. */
-  return `<div class="msg-audio" data-msg-audio="${escapeAttr(m.audioPath)}" data-msg-audio-nome="${escapeAttr(msgAudioNomeArquivo(m))}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="none"></audio><a class="msg-arq-baixar" target="_blank" rel="noopener" title="Baixar este áudio">${icon('download','tiny')}</a><small>${msgAudioDur(m.audioSeg)}</small></div>`;
+  const pronta = msgAudioUrlPronta(m.audioPath);
+  return `<div class="msg-audio${pronta ? ' pronto' : ''}" data-msg-audio="${escapeAttr(m.audioPath)}" data-msg-audio-nome="${escapeAttr(msgAudioNomeArquivo(m))}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="metadata"${pronta ? ` src="${escapeAttr(pronta)}"` : ''}></audio><a class="msg-arq-baixar" target="_blank" rel="noopener" title="Baixar este áudio"${pronta ? ` href="${escapeAttr(urlParaBaixar(pronta, msgAudioNomeArquivo(m)))}"` : ''}>${icon('download','tiny')}</a><small>${msgAudioDur(m.audioSeg)}</small></div>`;
 }
 /* Acrescenta à URL assinada o pedido de download — assim o arquivo é salvo, e não aberto no navegador. */
 function urlParaBaixar(url, nome){
   if(!url) return url;
   return url + (url.indexOf('?')>=0 ? '&' : '?') + 'download=' + encodeURIComponent(nome||'');
 }
+/* Se o player não conseguir tocar o arquivo, melhor dizer isso do que deixar a bolinha girando
+   para sempre. O atalho de baixar continua ali para a pessoa ouvir fora do app. */
+function msgAudioVigiar(a, box){
+  if(!a || a.dataset.vigiado) return; a.dataset.vigiado = '1';
+  a.addEventListener('error', ()=>{ box.classList.remove('carregando'); box.classList.add('erro'); }, { once:true });
+  a.addEventListener('loadedmetadata', ()=>box.classList.remove('carregando'), { once:true });
+  a.addEventListener('canplay', ()=>box.classList.remove('carregando'), { once:true });
+  /* Rede lenta ou navegador que não avisa nada: o aviso de "preparando" não fica para sempre. */
+  setTimeout(()=>box.classList.remove('carregando'), 8000);
+}
 function msgAudioCarregar(root){
   root.querySelectorAll('[data-msg-audio]').forEach(async box=>{
-    if(box.dataset.ok) return; box.dataset.ok = '1';
+    const a = box.querySelector('audio');
+    msgAudioVigiar(a, box);
+    if(a && a.getAttribute('src')) return;          // já veio pronto do próprio HTML
+    if(box.dataset.carregando) return;
+    box.dataset.carregando = '1';
+    box.classList.add('carregando');
     const url = await msgAudioUrl(box.dataset.msgAudio);
-    const a = box.querySelector('audio'); if(url && a) a.src = url; else box.classList.add('erro');
-    const d = box.querySelector('.msg-arq-baixar'); if(url && d) d.href = urlParaBaixar(url, box.dataset.msgAudioNome);
+    box.dataset.carregando = '';
+    if(!box.isConnected) return;                    // a tela foi redesenhada no meio do caminho
+    if(!url){ box.classList.remove('carregando'); box.classList.add('erro'); return; }
+    const atual = box.querySelector('audio');
+    if(atual && !atual.getAttribute('src')){ msgAudioVigiar(atual, box); atual.src = url; }
+    const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, box.dataset.msgAudioNome);
   });
   root.querySelectorAll('[data-msg-arquivo]').forEach(async box=>{
     if(box.dataset.ok) return; box.dataset.ok = '1';
@@ -11239,7 +11305,7 @@ function msgAudioCarregar(root){
     if(!url){ box.classList.add('erro'); return; }
     const t = box.dataset.msgArqTipo;
     const nome = box.getAttribute('download') || (box.querySelector('.msg-arq-baixar') && box.querySelector('.msg-arq-baixar').getAttribute('download')) || '';
-    if(t==='audio'){ const a = box.querySelector('audio'); if(a) a.src = url; const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, d.getAttribute('download')||nome); }
+    if(t==='audio'){ const a = box.querySelector('audio'); if(a){ msgAudioVigiar(a, box); a.src = url; } const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, d.getAttribute('download')||nome); }
     else if(t==='imagem'){ box.href = url; const im = box.querySelector('img'); if(im) im.src = url; }
     else box.href = urlParaBaixar(url, nome);
   });
