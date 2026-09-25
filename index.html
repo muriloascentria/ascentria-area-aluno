@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ascentria · Método Essência — Área do Aluno</title>
+<!-- App de celular: o mesmo sistema, instalado na tela inicial. Ver sw.js e manifest.webmanifest. -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#171813">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Essência">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABDklEQVR42u2QzUrDUBCFz+Qm95LExmqqVFSoUlQKUle2IOLOp3Dp3hfyIdz7AiK4EqELcaWooBRN0jR/d1y01ijudNlve+bMnDPAlD8jAABEAABVWam78xuHTm3rSGfRVZFFyadWnitjAACY4dZaXa++c5pnwW2RBtc6j+ORVjIyw1SenFncPpjsBAB7ttEwHb+TBg/nJJSbho/3ukgZRADz6JJQ5Mw1O0K6zUH/7iyLX8JJjOrq3gmR+L2jrFhurbXrLXeP7era+k/dBABikgw9zmRAWK4lbX/Jsv02yFDp4Pkieu1dgnUpOH9VcPzNtnQW9rXO3wyCYuY4T95vkvCplw/7w29PHFea8o98AAChWBv0sPd7AAAAAElFTkSuQmCC">
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACkElEQVR42u1UTWgTQRidmd1s9scku5uYNDYG29gQgi2RBqEVFKXUFhShiKh40JMHz14VvHoQPBQ8KHgUxJPx4qHeGoq0lVKJRio1piTWJE272ST7Nx6S1CZNmvTsvsNc5vv2e9+b9xYAEyZMmPjfQXS8gRAAAAAirMjujd7ij5/94PBGnyCSzVal9CcA4OGnwf09ZMdCjAHt8Pt433hcU+RVKft5SlOkjOA/l5ZziVdqpVCukcC9TK7VYdw7S84ZGu0L3/jJCIGhxpW9b/SKK3h1HhEUPOzWiKAgKw6FD36C+uasGBwRT5xf0hRpy1DlBYYfuODwjb8mKdtwYX1uQldlresT7JGb4vpE5+BEHFnoY+XCWqxVmyZQnJt3BaYLW+l4BCGLg2RdF4GhF6vSxrtyYS3ZVfL6EgAAAAkK2r3Ruww/8FTKLl+SNlfjXXoJ4A7OrNi90WsHv2d3g3HOUMQdvv7dFZh+SdI83am3yYSsMzSGEbDuZBbf1D7YYjKMW0wH6yUNg0HACIGg7eipFxCRrp3M0mU5n0y0KtORAOccmpXzyXsYG/UGo70CcA8ZXIsqIwbOsGLoGUSkW84l7pT+fPmIDe1fT4cENBFAFjailH4vAwj3ZxY3DrwrAsV5eFY4edtq8z3CWE3Jua/3S7lvcWyouHnrzr5pImAY6hbFeSJKKTvXjjFEBLAwLsHq8E/SR/ofEBZ2WJU3nxfT86cr26lfu4Mag3vIfdOaDD8wyPePrZS3U4+VUva9oVeLEJE0abUHSUactFj5KQAJQVOKsWoxNVspri/qaklrl4CefxP7Y+gRbO6RhyQt3IQE6QGGUdFVeUGt5N9WpY2YImV+6Kqst/eECRMmTJg4PP4CZ7n8I7/53tEAAAAASUVORK5CYII=">
 <link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAMAAABlApw1AAAAYFBMVEUAAAAYK1kMFzEPHDsTI0kJEiYUJlAQHkERIEMIDyAQHj4IDx8aLmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwWWvbAAAAIHRSTlMA/E9xsDDPh5UigyD/AAAAAAAAAAAAAAAAAAAAAAAAAJI2OWYAAALCSURBVHja7ZvprtowEIXxbHa4ff/nLQWVrI0CnnFi9Xw/QULH9mweD7cbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgP8Bpbs8YOpSPVsayV2rf9LVKeS05lc/KyhpG+13919YD/Ip7XB9+cPCda0wqVLpxY95rn7Uq69PysX1y1Q+b3wl/Vg/ba5NejEfXpUUr8/vfZjPhqVfPxHYbrq6fBjVUb7sfKsd6KedzCxhwUO8wo/tLi7S+X5c9K83QiVYv6bqFDnqv+/Jj9Gf6+9Lk/QlPPVSzeGFqFp9pa7LglMKM3FeFHU5dPsrqsQhHUJjQ1/F8R6Sz8HbX/H7dkB+iPWQz/G+g0yWprs/LbxqchhPVfLGGkpM7cBOvRpdVp/DI/qIPXi4lWT6CVE/s566EiK4xDlw66u7YtsZNXJ22/7REM+6tNb6V/uOJ7n2ii01bpToVL6p12HaGb7rcep/f2poI794p/Z7aJ7dCz1JXJJjSwPigFeS0q7LwCGVVbMUPH9qKN4/29R1k/gFjNSi0anz6tYczZUaHMBSvmu+t/CHX7JA+fGdZg5+X6bQHDAsnmjNv1iUwCRMFi7/bUENbMdCrHQIWoAumwIS5GQUkoV51dCILk48XYCkTTdpVke4eZeuRiss9pZaXBewniqS6BLXcQFkqaXtOPvA2vCTNOlwuEShDfWNrqdjR9RXvTQcxKnaMGVL523+/J70hfrNWbrS+v1ev2uK0uYbiJwxw2Uft1e3xSfj2ynoJ7Y7zstdRP2i8uLhY489W/3kTvPScqetff/3s190rfPxCl6iJPOTP49ke4+ucpHJS05fYHyhiSf9VH253NBrPi5eLjqxe8SOrNBwuy5adjeeu5i3p2wbMYk6+a/A+yiU6BlGqTflAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE7mN5dODaT+DrDlAAAAAElFTkSuQmCC">
@@ -402,6 +410,16 @@
   .modal-backdrop.open{display:flex;}
   /* Confirmação própria do app (showAppConfirm) — visual da plataforma, por cima de qualquer modal já
      aberto (ex.: o do CRM), em vez do confirm() nativo do navegador. */
+  /* Barras do app instalado: aviso de versão nova e convite para instalar. */
+  .pwa-barra{position:fixed;left:14px;right:14px;bottom:14px;z-index:340;display:flex;align-items:center;gap:12px;background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;padding:11px 14px;box-shadow:0 12px 30px rgba(0,0,0,.45);}
+  .pwa-barra-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .pwa-barra-txt strong{font-size:13.5px;}
+  .pwa-barra-txt small{font-size:11.5px;color:var(--text-mute);line-height:1.45;}
+  .pwa-barra .btn-mini{flex:0 0 auto;}
+  .pwa-fechar{background:none;border:0;color:var(--text-mute);cursor:pointer;padding:4px;line-height:0;}
+  .pwa-fechar:hover{color:var(--text);}
+  .pwa-fechar .icon{width:14px;height:14px;}
+  @media(max-width:560px){ .pwa-barra{flex-wrap:wrap;} .pwa-barra-txt{flex-basis:100%;} }
   .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
   .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
   .app-confirm-card h4{font-size:15.5px;margin:0 0 8px;}
@@ -3667,11 +3685,13 @@ async function enterApp(){
     setRoleVendas();
     goTo('equipe');
     setTimeout(recadoAbrirJanela, 350);
+    setTimeout(pwaConvidarInstalar, 2500);
     return;
   }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
   goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
   if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); }
+  setTimeout(pwaConvidarInstalar, 2500);
 }
 
 /* ================= SYNC: grava mutações locais de volta no Supabase ================= */
@@ -5651,6 +5671,95 @@ function openSetNewPasswordModal(mode){
 }
 /* Confirmação própria do app (em vez do confirm() nativo do navegador, que abre uma janela com a cara
    do sistema operacional) — mesmo visual do resto da plataforma, sobreposta a qualquer modal já aberto. */
+/* ================= APP DE CELULAR (PWA) =================
+   O site inteiro vira um app instalável: ícone na tela inicial, tela cheia, sem barra do
+   navegador. Como é o MESMO endereço, toda atualização que sobe para o ar chega sozinha
+   para a equipe e para os alunos — ninguém precisa baixar nada de loja nenhuma.
+
+   Aqui embaixo ficam só três coisas: registrar o sw.js, avisar quando existe versão nova
+   e convidar a pessoa a instalar (com o passo a passo do iPhone, que não tem botão). */
+const pwaInstalado = ()=> window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const pwaEhIOS = ()=> /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+let pwaConvite = null;   // evento do Android/Chrome que abre o instalador
+
+function pwaBarra(id, html){
+  const antiga = document.getElementById(id); if(antiga) antiga.remove();
+  const el = document.createElement('div');
+  el.className = 'pwa-barra'; el.id = id; el.innerHTML = html;
+  document.body.appendChild(el);
+  return el;
+}
+function pwaDispensado(chave){ try{ return localStorage.getItem(chave)==='1'; }catch(e){ return false; } }
+function pwaDispensar(chave){ try{ localStorage.setItem(chave,'1'); }catch(e){} }
+
+/* Versão nova no ar: a pessoa decide a hora de recarregar, para não perder o que está escrevendo. */
+function pwaAvisarVersaoNova(registro){
+  const el = pwaBarra('pwa-versao', `
+    <div class="pwa-barra-txt"><strong>Nova versão disponível</strong><small>Atualize para pegar as novidades. Leva um segundo.</small></div>
+    <button type="button" class="btn-accent btn-mini" id="pwa-atualizar">Atualizar</button>
+    <button type="button" class="pwa-fechar" id="pwa-depois" title="Depois">${icon('x','tiny')}</button>`);
+  el.querySelector('#pwa-atualizar').addEventListener('click', ()=>{
+    const esperando = registro.waiting;
+    if(esperando) esperando.postMessage('ATUALIZAR_AGORA'); else location.reload();
+  });
+  el.querySelector('#pwa-depois').addEventListener('click', ()=>el.remove());
+}
+
+/* Convite para instalar — some assim que a pessoa instala e não volta se ela dispensar. */
+function pwaConvidarInstalar(){
+  if(pwaInstalado() || pwaDispensado('ascentria-pwa-nao')) return;
+  if(pwaEhIOS()){
+    const el = pwaBarra('pwa-instalar', `
+      <div class="pwa-barra-txt"><strong>Deixe o Essência no seu celular</strong><small>Toque em <b>Compartilhar</b> na barra do Safari e escolha <b>Adicionar à Tela de Início</b>. Fica com ícone próprio, igual a um aplicativo.</small></div>
+      <button type="button" class="pwa-fechar" id="pwa-nao" title="Agora não">${icon('x','tiny')}</button>`);
+    el.querySelector('#pwa-nao').addEventListener('click', ()=>{ pwaDispensar('ascentria-pwa-nao'); el.remove(); });
+    return;
+  }
+  if(!pwaConvite) return;
+  const el = pwaBarra('pwa-instalar', `
+    <div class="pwa-barra-txt"><strong>Instalar o app do Essência</strong><small>Fica com ícone na tela inicial e abre em tela cheia, sem barra de navegador.</small></div>
+    <button type="button" class="btn-accent btn-mini" id="pwa-sim">Instalar</button>
+    <button type="button" class="pwa-fechar" id="pwa-nao" title="Agora não">${icon('x','tiny')}</button>`);
+  el.querySelector('#pwa-sim').addEventListener('click', async ()=>{
+    el.remove();
+    const convite = pwaConvite; pwaConvite = null;
+    if(!convite) return;
+    convite.prompt();
+    try{ await convite.userChoice; }catch(e){}
+  });
+  el.querySelector('#pwa-nao').addEventListener('click', ()=>{ pwaDispensar('ascentria-pwa-nao'); el.remove(); });
+}
+
+function pwaIniciar(){
+  window.addEventListener('beforeinstallprompt', (e)=>{
+    e.preventDefault(); pwaConvite = e;
+    if(document.getElementById('app') && document.getElementById('app').classList.contains('active')) pwaConvidarInstalar();
+  });
+  window.addEventListener('appinstalled', ()=>{
+    pwaConvite = null;
+    const el = document.getElementById('pwa-instalar'); if(el) el.remove();
+  });
+  if(!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  navigator.serviceWorker.register('sw.js').then(registro=>{
+    if(registro.waiting && navigator.serviceWorker.controller) pwaAvisarVersaoNova(registro);
+    registro.addEventListener('updatefound', ()=>{
+      const novo = registro.installing;
+      if(!novo) return;
+      novo.addEventListener('statechange', ()=>{
+        if(novo.state === 'installed' && navigator.serviceWorker.controller) pwaAvisarVersaoNova(registro);
+      });
+    });
+    /* Ao voltar para o app, procura versão nova. */
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) registro.update().catch(()=>{}); });
+  }).catch(e=>console.error('service worker', e));
+
+  let recarregando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(recarregando) return; recarregando = true; location.reload();
+  });
+}
+pwaIniciar();
+
 function showAppConfirm(message, opts){
   const o = opts || {};
   const confirmLabel = o.confirmLabel || 'Confirmar';
