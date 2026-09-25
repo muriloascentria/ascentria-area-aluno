@@ -1401,6 +1401,13 @@
   .msg-bolha:not(.minha) .msg-apagar{left:auto;right:-26px;}
   .msg-apagar .icon{width:13px;height:13px;}
   .msg-bolha:hover .msg-apagar{opacity:1;}
+  .msg-ferramentas{position:absolute;top:50%;transform:translateY(-50%);left:-28px;display:flex;flex-direction:column;gap:3px;opacity:0;transition:opacity .15s;}
+  .msg-bolha:not(.minha) .msg-ferramentas{left:auto;right:-28px;}
+  .msg-bolha:hover .msg-ferramentas{opacity:1;}
+  @media (hover:none){ .msg-ferramentas{opacity:.75;} }
+  .msg-ferr{background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-mute);cursor:pointer;padding:0;}
+  .msg-ferr:hover{color:var(--text);border-color:var(--accent);}
+  .msg-ferr .icon{width:12px;height:12px;}
   .msg-apagar:hover{color:var(--danger);}
   .msg-conversa-hd .btn-mini.danger{margin-left:auto;white-space:nowrap;}
   @media (hover:none){ .msg-bolha .msg-apagar{opacity:.6;} }
@@ -1441,6 +1448,19 @@
   .msg-aula-lista button .icon{width:12px;height:12px;color:var(--accent);flex-shrink:0;}
   .msg-de small{font-weight:600;color:var(--text-mute);}
   .msg-bolha.mencionado{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);}
+  .msg-naolidas{display:flex;align-items:center;gap:10px;margin:10px 0 2px;color:var(--danger);font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+  .msg-naolidas::before,.msg-naolidas::after{content:'';flex:1;height:1px;background:var(--danger);opacity:.55;}
+  .msg-naolidas span{white-space:nowrap;}
+  .msg-citacao{display:flex;flex-direction:column;gap:1px;width:100%;text-align:left;background:rgba(255,255,255,.05);border:0;border-left:3px solid var(--accent);border-radius:8px;padding:5px 9px;margin-bottom:6px;cursor:pointer;font:inherit;}
+  .msg-citacao strong{font-size:11.5px;color:var(--accent);}
+  .msg-citacao span{font-size:12px;color:var(--text-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .msg-citacao:hover{background:rgba(255,255,255,.09);}
+  .msg-bolha.piscando{animation:msgPisca 1.6s ease;}
+  @keyframes msgPisca{0%,100%{box-shadow:none;}20%,60%{box-shadow:0 0 0 2px var(--accent);}}
+  .msg-respondendo{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--border);background:var(--bg-card);}
+  .msg-respondendo-txt{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;border-left:3px solid var(--accent);padding-left:9px;}
+  .msg-respondendo-txt strong{font-size:11.5px;color:var(--accent);display:flex;align-items:center;gap:5px;}
+  .msg-respondendo-txt small{font-size:12px;color:var(--text-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .msg-popup.mencao{border-left-color:var(--accent);}
   .msg-wrap.msg-solo{grid-template-columns:minmax(0,1fr);}
   .msg-wrap.msg-solo .msg-config{border-top:none;}
@@ -3412,6 +3432,23 @@ function mapProfileRow(p){
   };
 }
 
+/* O Supabase entrega no máximo 1000 linhas por consulta, e o corte é silencioso: a consulta
+   funciona, mas volta incompleta. Tabelas que passaram desse tamanho (checklist dos módulos,
+   respostas dos diagnósticos, lançamentos financeiros) vinham cortadas, e o que estava salvo
+   parecia ter sumido da tela. Aqui a leitura é feita em páginas até acabar. */
+async function lerTudo(tabela, monta){
+  const PAG = 1000;
+  const linhas = [];
+  for(let de = 0; de < 100000; de += PAG){
+    let q = sb.from(tabela).select('*');
+    if(monta) q = monta(q);
+    const { data, error } = await q.range(de, de + PAG - 1);
+    if(error){ console.error('lerTudo '+tabela, error); break; }
+    if(data && data.length) linhas.push(...data);
+    if(!data || data.length < PAG) break;
+  }
+  return linhas;
+}
 async function bootstrapData(){
   const PROFILE_SELECT = '*, student_cadastro(*), diagnostico(*), module_progress(*), checklist_items(*), sessions(*), contatos(*), course_progress(*)';
   const { data: profiles, error: perr } = await sb.from('profiles').select(PROFILE_SELECT).order('name');
@@ -3446,10 +3483,10 @@ async function bootstrapData(){
   }
   if(currentUserRole==='vendas'){
     VENDA_SESSOES.length = 0;
-    const { data: vsRows } = await sb.from('venda_sessoes').select('*').order('numero',{ascending:true});
+    const vsRows = await lerTudo('venda_sessoes', q=>q.order('numero',{ascending:true}));
     (vsRows||[]).forEach(r=>VENDA_SESSOES.push(mapVendaSessaoRow(r)));
     ANALISE_SESSOES.length = 0;
-    const { data: anRows } = await sb.from('analise_sessoes').select('*').order('ordem',{ascending:false});
+    const anRows = await lerTudo('analise_sessoes', q=>q.order('ordem',{ascending:false}).order('id'));
     (anRows||[]).forEach(r=>ANALISE_SESSOES.push(mapAnaliseRow(r)));
     PEOPLE = {};
     if(me) PEOPLE[me.id] = {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, role:me.role};
@@ -3471,10 +3508,10 @@ async function bootstrapData(){
   profiles.forEach(p=>{ PEOPLE[p.id] = {id:p.id, name:p.name, initials:p.initials, color:p.color, avatarUrl:p.avatar_url||null, role:p.role}; });
 
   const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:liveRows},{data:watchedRows},{data:meusLikes},{data:apresentacaoRows}] = await Promise.all([
-    sb.from('module_checklist_state').select('*'),
-    sb.from('panel_data').select('*'),
-    sb.from('panel_overrides').select('*'),
-    sb.from('internal_diag_answers').select('*'),
+    lerTudo('module_checklist_state', q=>q.order('student_id').order('module_id').order('item_idx')).then(data=>({data})),
+    lerTudo('panel_data', q=>q.order('student_id').order('topic_id')).then(data=>({data})),
+    lerTudo('panel_overrides', q=>q.order('student_id').order('topic_id')).then(data=>({data})),
+    lerTudo('internal_diag_answers', q=>q.order('student_id').order('diag_type').order('idx')).then(data=>({data})),
     sb.from('courses').select('*, course_materials(*)').order('mod_id').order('order_index'),
     sb.from('materials').select('*').order('id'),
     sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
@@ -3550,7 +3587,7 @@ async function bootstrapData(){
        então a consulta extra é inofensiva e evita depender da ordem em que o app descobre o tier. */
     carregarMural('mentorado'),
     carregarMural('curso'),
-    sb.from('student_points').select('*').then(({data:spRows})=>{
+    lerTudo('student_points', q=>q.order('student_id')).then((spRows)=>{
       (spRows||[]).forEach(r=>{
         STUDENT_POINTS[r.student_id] = {
           total:Number(r.total_points)||0,
@@ -3583,15 +3620,15 @@ async function bootstrapData(){
         });
       }),
       // Registro de Sessões 1:1 (vendas).
-      sb.from('venda_sessoes').select('*').order('numero',{ascending:true}).then(({data:vsRows})=>{
+      lerTudo('venda_sessoes', q=>q.order('numero',{ascending:true})).then((vsRows)=>{
         (vsRows||[]).forEach(r=>VENDA_SESSOES.push(mapVendaSessaoRow(r)));
       }),
       // Análise Sessões 1:1 — planilha derivada do registro acima.
-      sb.from('analise_sessoes').select('*').order('ordem',{ascending:false}).then(({data:anRows})=>{
+      lerTudo('analise_sessoes', q=>q.order('ordem',{ascending:false}).order('id')).then((anRows)=>{
         (anRows||[]).forEach(r=>ANALISE_SESSOES.push(mapAnaliseRow(r)));
       }),
       // Registro de Clientes — cadastros feitos pelo formulário público (sem login).
-      sb.from('registro_clientes').select('*').order('created_at',{ascending:false}).then(({data:crRows})=>{
+      lerTudo('registro_clientes', q=>q.order('created_at',{ascending:false}).order('id')).then((crRows)=>{
         (crRows||[]).forEach(r=>CLIENTES_REGISTRO.push(mapClienteRow(r)));
       }),
       // Códigos de acesso — a validação/consumo no cadastro passa sempre pelas funções do banco.
@@ -3608,10 +3645,10 @@ async function bootstrapData(){
       sb.from('fin_formas').select('*').order('nome').then(({data:ffRows})=>{
         (ffRows||[]).forEach(r=>FIN_FORMAS.push({id:r.id, nome:r.nome}));
       }),
-      sb.from('fin_lancamentos').select('*').order('data_vencimento').order('created_at').order('parcela_num').then(({data:flRows})=>{
+      lerTudo('fin_lancamentos', q=>q.order('data_vencimento').order('created_at').order('parcela_num').order('id')).then((flRows)=>{
         (flRows||[]).forEach(r=>FIN_LANCAMENTOS.push(mapFinLancamentoRow(r)));
       }),
-      sb.from('fin_anexos').select('*').order('created_at').then(({data:faRows})=>{
+      lerTudo('fin_anexos', q=>q.order('created_at').order('id')).then((faRows)=>{
         (faRows||[]).forEach(r=>FIN_ANEXOS.push(mapFinAnexoRow(r)));
       }),
       carregarTreinamentoRegistros(),
@@ -10173,7 +10210,7 @@ let MSG_GRUPOS = [];          // grupos de que participo: {id,nome,criadoPor,mem
 let MSG_ACOMP = {};           // acompanhamento: alunoId -> {alunoId,naoLidas,ultimaEm,ultimaTexto,ultimaDe} (equipe vê todos; mentorado só o seu)
 let MSG_CONVERSAS = {};       // chave -> [mensagens] (ordem cronológica)
 let MSG_NAO_LIDAS = [];       // {id, de} das mensagens 1:1 recebidas ainda não lidas
-let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true, listaScroll:0 };
+let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true, listaScroll:0, marcador:null, respondendo:null, destacado:null };
 try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; msgUI.maiuscula = localStorage.getItem('ascentria-msg-maiuscula')!=='0'; const f = parseInt(localStorage.getItem('ascentria-msg-fonte')||'14',10); if(f>=12 && f<=22) msgUI.fonte = f; }catch(e){}
 function msgSetFonte(v){ msgUI.fonte = Math.max(12, Math.min(22, v)); try{ localStorage.setItem('ascentria-msg-fonte', String(msgUI.fonte)); }catch(e){} const w = document.querySelector('.msg-wrap'); if(w) w.style.setProperty('--msg-fonte', msgUI.fonte+'px'); const lbl = document.getElementById('msg-fonte-valor'); if(lbl) lbl.textContent = msgUI.fonte; }
 
@@ -10213,7 +10250,7 @@ function msgAlunoAcomp(id){ const s = typeof getStudent==='function' ? getStuden
 function msgQuem(id){ return msgPessoa(id) || msgAlunoAcomp(id) || (typeof getPerson==='function' ? getPerson(id) : null) || null; }
 function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
-function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null }; }
+function mapMsgRow(r){ return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null, respondeA:r.responde_a||null, respondeDe:r.responde_de||null, respondeTexto:r.responde_texto||'' }; }
 /* ---- grupos ---- */
 function msgChaveGrupo(id){ return 'g:'+id; }
 function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
@@ -10461,6 +10498,59 @@ async function msgCarregarConversa(chave){
   lista._completa = true;
   MSG_CONVERSAS[chave] = lista;
 }
+/* Marcador de "não lidas": no instante em que a conversa é aberta — antes de tudo virar lido —
+   guardamos de onde em diante estava por ler. A linha vermelha fica na tela enquanto a conversa
+   estiver aberta e é recalculada a cada vez que ela é aberta de novo. */
+function msgGuardarMarcador(chave){
+  const g = msgGrupoDaChave(chave), a = msgAcompDaChave(chave);
+  if(g){ msgUI.marcador = g.naoLidas ? {chave, desde: g.ultimaLeitura||null, ids:null} : null; return; }
+  if(a){ const inf = MSG_ACOMP[a]; msgUI.marcador = (inf && inf.naoLidas) ? {chave, desde: inf.ultimaLeitura||null, ids:null} : null; return; }
+  const ids = MSG_NAO_LIDAS.filter(m=>m.de===chave).map(m=>String(m.id));
+  msgUI.marcador = ids.length ? {chave, desde:null, ids} : null;
+}
+function msgPrimeiraNaoLida(chave, conversa, eu){
+  const mk = msgUI.marcador;
+  if(!mk || mk.chave!==chave) return null;
+  const alvo = (conversa||[]).find(m => m.de!==eu && (mk.ids ? mk.ids.includes(String(m.id)) : (!mk.desde || String(m.createdAt) > String(mk.desde))));
+  return alvo ? String(alvo.id) : null;
+}
+/* Responder uma mensagem específica: além do id, guardamos quem escreveu e um pedaço do texto.
+   Assim a citação continua legível mesmo que a original seja apagada depois. */
+function msgResponderA(id){
+  const chave = msgUI.aberto;
+  const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===String(id));
+  if(!m) return;
+  msgUI.respondendo = {chave, id:m.id, de:m.de, texto:(m.texto||'').slice(0,300)};
+  renderMensagens();
+  const ta = document.getElementById('msg-texto'); if(ta) ta.focus();
+}
+function msgCancelarResposta(){ msgUI.respondendo = null; renderMensagens(); }
+function msgRespondeCampos(chave){
+  const r = msgUI.respondendo;
+  if(!r || r.chave!==chave) return {};
+  return {responde_a:r.id, responde_de:r.de, responde_texto:r.texto};
+}
+function msgCitacaoHtml(m){
+  if(!m.respondeA && !m.respondeTexto) return '';
+  const quem = m.respondeDe ? msgNomeDe(m.respondeDe) : 'Mensagem';
+  const trecho = (m.respondeTexto||'').replace(/\s+/g,' ').trim();
+  return `<button type="button" class="msg-citacao" data-msg-ir="${m.respondeA||''}" title="Ir para a mensagem original">
+    <strong>${escapeHtml(quem)}</strong><span>${escapeHtml(trecho.length>120 ? trecho.slice(0,120)+'…' : (trecho||'mensagem'))}</span></button>`;
+}
+function msgIrParaMensagem(id){
+  const alvo = document.querySelector(`.msg-bolha[data-msg-id="${id}"]`);
+  if(!alvo){ alert('A mensagem original não está carregada nesta conversa.'); return; }
+  /* O destaque fica guardado no estado da tela: se a conversa for redesenhada nesse meio tempo
+     (mensagem nova chegando, por exemplo), a mensagem continua marcada. */
+  msgUI.destacado = String(id);
+  alvo.scrollIntoView({block:'center', behavior:'smooth'});
+  alvo.classList.add('piscando');
+  clearTimeout(msgUI._destTimer);
+  msgUI._destTimer = setTimeout(()=>{
+    msgUI.destacado = null;
+    document.querySelectorAll('.msg-bolha.piscando').forEach(e=>e.classList.remove('piscando'));
+  }, 1800);
+}
 function msgDestino(chave){ const g = msgGrupoDaChave(chave), a = msgAcompDaChave(chave); return g ? {grupo_id:g.id} : a ? {aluno_id:a} : {para:chave}; }
 function msgPastaDestino(chave){ const g = msgGrupoDaChave(chave), a = msgAcompDaChave(chave); return g ? 'g-'+g.id : a ? 'a-'+a : chave; }
 async function msgEnviar(chave, texto){
@@ -10469,8 +10559,10 @@ async function msgEnviar(chave, texto){
   if(texto.length>4000){ alert('A mensagem pode ter no máximo 4000 caracteres.'); return false; }
   if(!msgGrupoDaChave(chave) && !msgAcompDaChave(chave) && !msgPessoa(chave)){ alert(msgEhGrupo(chave) ? 'Você não está mais neste grupo.' : 'Essa pessoa não está na equipe.'); return false; }
   const mencoes = msgExtrairMencoes(texto, chave);
-  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), texto, mencoes}, msgDestino(chave))).select().single();
+  const resp = msgRespondeCampos(chave);
+  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), texto, mencoes}, resp, msgDestino(chave))).select().single();
   if(error){ console.error('msgEnviar', error); alert('Não foi possível enviar: '+(error.message||'')); return false; }
+  if(resp.responde_a) msgUI.respondendo = null;
   msgGuardar(mapMsgRow(data));
   return true;
 }
@@ -10621,7 +10713,7 @@ async function msgGravarFinalizou(){
   const st = document.getElementById('msg-grav-status'); if(st){ st.hidden = false; st.textContent = 'Enviando áudio…'; }
   const { error: upErr } = await sb.storage.from('mensagens-audio').upload(path, blob, {upsert:false, contentType:g.mime});
   if(upErr){ console.error(upErr); alert('Não foi possível enviar o áudio: '+(upErr.message||'')); if(st) st.hidden = true; return; }
-  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'audio', texto:'🎤 Mensagem de voz', audio_path:path, audio_seg:seg, audio_mime:g.mime}, msgDestino(g.chave))).select().single();
+  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'audio', texto:'🎤 Mensagem de voz', audio_path:path, audio_seg:seg, audio_mime:g.mime}, msgRespondeCampos(g.chave), msgDestino(g.chave))).select().single();
   if(error){ console.error(error); alert('O áudio subiu, mas não foi possível registrar a mensagem: '+(error.message||'')); if(st) st.hidden = true; return; }
   msgGuardar(mapMsgRow(data));
   msgUI.forcarFim = true;
@@ -10694,7 +10786,7 @@ async function msgEnviarArquivos(chave, files){
     const mime = f.type || 'application/octet-stream';
     const { error: upErr } = await sb.storage.from('mensagens-arquivos').upload(path, f, {upsert:false, contentType:mime});
     if(upErr){ console.error(upErr); alert(`Não foi possível enviar "${nome}": `+(upErr.message||'')); continue; }
-    const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'arquivo', texto:('📎 '+nome).slice(0,300), arquivo_path:path, arquivo_nome:nome, arquivo_tam:f.size, arquivo_mime:mime}, msgDestino(chave))).select().single();
+    const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'arquivo', texto:('📎 '+nome).slice(0,300), arquivo_path:path, arquivo_nome:nome, arquivo_tam:f.size, arquivo_mime:mime}, msgRespondeCampos(chave), msgDestino(chave))).select().single();
     if(error){ console.error(error); alert(`O arquivo subiu, mas não foi possível registrar a mensagem: `+(error.message||'')); continue; }
     msgGuardar(mapMsgRow(data));
     msgUI.forcarFim = true;
@@ -10806,7 +10898,9 @@ function msgPopupTimer(el){ clearTimeout(el._timer); el._timer = setTimeout(()=>
 /* Fecha a janelinha daquela conversa — chamada sempre que a conversa é aberta/desenhada na tela. */
 function msgFecharPopup(chave){ const c = document.getElementById('msg-popups'); if(!c || !chave) return; const el = c.querySelector(`[data-msg-popup="${chave}"]`); if(el){ clearTimeout(el._timer); el.remove(); } }
 function msgAbrirConversa(chave){
+  if(msgUI.respondendo && msgUI.respondendo.chave!==chave) msgUI.respondendo = null;
   msgUI.aberto = chave;
+  msgGuardarMarcador(chave);
   msgFecharPopup(chave);
   const alvo = (msgSouMentorado() || (currentRole==='aluno' && msgEhAcomp(chave))) ? 'acompanhamento' : 'mensagens';
   if(currentView!==alvo) goTo(alvo); else renderMensagens();
@@ -10858,6 +10952,7 @@ function renderMensagens(){
   const rascunho = taAntes ? taAntes.value : '';
   const tinhaFoco = !!taAntes && document.activeElement===taAntes;
   let diaAnterior = '', deAnterior = null;
+  const idNaoLida = msgPrimeiraNaoLida(chave, conversa, eu);
   const bolhas = conversa.map(m=>{
     const dia = tzDataHora(m.createdAt).slice(0,10); let sep = '';
     if(dia!==diaAnterior){ diaAnterior = dia; deAnterior = null; const hoje = tzDataHora(new Date().toISOString()).slice(0,10); sep = `<div class="msg-dia">${dia===hoje? 'Hoje' : dia}</div>`; }
@@ -10868,7 +10963,8 @@ function renderMensagens(){
     deAnterior = m.de;
     const podeApagar = minha || (!grupo && !acomp);
     const menciona = msgMeMenciona(m);
-    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''}" data-msg-id="${m.id}">${podeApagar ? `<button type="button" class="msg-apagar" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}${remetente}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : m.tipo==='aula' ? msgAulaHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    if(idNaoLida && String(m.id)===idNaoLida) sep += `<div class="msg-naolidas" id="msg-marcador"><span>Não lidas</span></div>`;
+    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''} ${msgUI.destacado===String(m.id)?'piscando':''}" data-msg-id="${m.id}"><div class="msg-ferramentas"><button type="button" class="msg-ferr" data-msg-responder="${m.id}" title="Responder esta mensagem">${icon('reply','tiny')}</button>${podeApagar ? `<button type="button" class="msg-ferr" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}</div>${remetente}${msgCitacaoHtml(m)}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : m.tipo==='aula' ? msgAulaHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   const cabecalho = grupo
     ? `${msgGrupoAvatar(36, grupo)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
@@ -10961,6 +11057,10 @@ function renderMensagens(){
             <small class="msg-aula-dica">Clique numa aula para enviar. O que estiver escrito na caixa de mensagem vai junto, como recado.</small>
             <div class="msg-aula-lista" id="msg-aula-lista"></div>
           </div>` : ''}
+          ${msgUI.respondendo && msgUI.respondendo.chave===chave ? `<div class="msg-respondendo">
+            <div class="msg-respondendo-txt"><strong>${icon('reply','tiny')} Respondendo ${escapeHtml(msgUI.respondendo.de===eu ? 'você mesmo' : msgNomeDe(msgUI.respondendo.de))}</strong><small>${escapeHtml((msgUI.respondendo.texto||'').replace(/\s+/g,' ').slice(0,140))}</small></div>
+            <button type="button" class="btn-mini" id="msg-resp-cancelar" title="Cancelar resposta">${icon('x','tiny')}</button>
+          </div>` : ''}
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
@@ -10993,6 +11093,8 @@ function renderMensagens(){
   const gerir = el.querySelector('#msg-grupo-gerir'); if(gerir) gerir.addEventListener('click', ()=>msgGrupoModal(grupo.id));
   el.querySelectorAll('[data-msg-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
     msgUI.aberto = b.dataset.msgAbrir;
+    if(msgUI.respondendo && msgUI.respondendo.chave!==msgUI.aberto) msgUI.respondendo = null;
+    msgGuardarMarcador(msgUI.aberto);
     renderMensagens();
     await msgCarregarConversa(msgUI.aberto);
     msgMarcarLidas(msgUI.aberto);
@@ -11001,9 +11103,15 @@ function renderMensagens(){
   const voltar = el.querySelector('#msg-voltar'); if(voltar) voltar.addEventListener('click', ()=>{ msgUI.aberto = null; renderMensagens(); });
   const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(chave));
   el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
+  el.querySelectorAll('[data-msg-responder]').forEach(b=>b.addEventListener('click', ()=>msgResponderA(b.dataset.msgResponder)));
+  el.querySelectorAll('[data-msg-ir]').forEach(b=>b.addEventListener('click', ()=>{ if(b.dataset.msgIr) msgIrParaMensagem(b.dataset.msgIr); }));
+  const respCancelar = el.querySelector('#msg-resp-cancelar'); if(respCancelar) respCancelar.addEventListener('click', msgCancelarResposta);
   if(chave){
     msgFecharPopup(chave); // a conversa está na tela: o aviso lá embaixo não faz mais sentido
     const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = (pertoDoFim || msgUI.forcarFim) ? corpo.scrollHeight : scrollAntes; msgUI.forcarFim = false;
+    /* Abriu numa conversa com mensagens novas: para na linha "Não lidas", e não lá no fim. */
+    const marcador = el.querySelector('#msg-marcador');
+    if(marcador && !mesmaConversa) corpo.scrollTop = Math.max(0, marcador.offsetTop - 60);
     if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && msgNaTela()) renderMensagens(); }); }
     else msgMarcarLidas(chave);
     const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
