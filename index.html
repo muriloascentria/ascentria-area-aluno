@@ -4686,6 +4686,7 @@ function updateNotifBadge(){
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
   const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgTotalNaoLidas() + (currentRole==='staff' ? ACOMP_ALERTAS.length : 0) : (msgSouMentorado() ? msgTotalNaoLidas() : 0);
+  if(typeof appBadge==='function') appBadge(pend.length + tf);
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
@@ -5907,6 +5908,19 @@ function pushConvidar(){
   });
   el.querySelector('#push-nao').addEventListener('click', ()=>{ pwaDispensar('ascentria-push-nao'); el.remove(); });
 }
+/* Bolinha vermelha com número no ícone do app, como qualquer aplicativo do celular.
+   Aqui mandamos o número verdadeiro de não lidas; com o app fechado, quem conta é o sw.js. */
+function appBadge(n){
+  n = Math.max(0, n|0);
+  try{
+    if(navigator.setAppBadge){ if(n>0) navigator.setAppBadge(n); else navigator.clearAppBadge(); }
+  }catch(e){}
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.controller)
+      navigator.serviceWorker.controller.postMessage({tipo:'badge', n});
+  }catch(e){}
+}
+
 /* Tocar na notificação abre direto onde o assunto está. */
 function pushIrPara(url){
   let destino = '';
