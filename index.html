@@ -424,6 +424,10 @@
   .pwa-fechar{background:none;border:0;color:var(--text-mute);cursor:pointer;padding:4px;line-height:0;}
   .pwa-fechar:hover{color:var(--text);}
   .pwa-fechar .icon{width:14px;height:14px;}
+  .push-linha{display:flex;align-items:center;gap:10px;padding:9px 12px;}
+  .push-linha-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .push-linha-txt strong{font-size:13px;}
+  .push-linha-txt small{font-size:11px;color:var(--text-mute);line-height:1.4;}
   @media(max-width:560px){ .pwa-barra{flex-wrap:wrap;} .pwa-barra-txt{flex-basis:100%;} }
   .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
   .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
@@ -1882,6 +1886,7 @@
           <div class="profile-dropdown" id="profile-dropdown">
             <button class="opt cadastro-opt" id="open-cadastro"></button>
             <button class="opt" id="open-change-password"></button>
+            <div id="push-perfil"></div>
             <div class="dropdown-divider"></div>
             <div class="label">Tema</div>
             <div class="theme-switch" id="theme-switch">
@@ -3714,17 +3719,26 @@ async function enterApp(){
   document.getElementById('app').classList.add('active');
   setupNav();
   renderProfile();
+  pushIniciarRoteamento();
+  /* Reenvia a inscrição em silêncio: o navegador troca a inscrição de tempos em tempos e,
+     sem isso, os avisos parariam de chegar sem ninguém perceber. */
+  pushCarregarPreferencia().then(()=>{
+    if(PUSH_LIGADO && pushEstado()==='ligado') pushInscrever(false);
+    renderProfile();
+  });
   if(currentUserRole==='vendas' || currentUserRole==='editor'){
     setRoleVendas();
     goTo('equipe');
     setTimeout(recadoAbrirJanela, 350);
     setTimeout(pwaConvidarInstalar, 2500);
+    setTimeout(pushConvidar, 6000);
     return;
   }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
   goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
   if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); }
   setTimeout(pwaConvidarInstalar, 2500);
+  setTimeout(pushConvidar, 6000);
 }
 
 /* ================= SYNC: grava mutações locais de volta no Supabase ================= */
@@ -4927,6 +4941,8 @@ function renderProfile(){
   }
   document.getElementById('profile-name').textContent = s.name.split(' ')[0];
   document.getElementById('profile-options').innerHTML = '';
+  const linhaPush = document.getElementById('push-perfil');
+  if(linhaPush){ linhaPush.innerHTML = pushLinhaPerfilHtml(); pushBindPerfil(); }
 }
 
 function goTo(view){
@@ -5763,6 +5779,164 @@ function pwaConvidarInstalar(){
   el.querySelector('#pwa-nao').addEventListener('click', ()=>{ pwaDispensar('ascentria-pwa-nao'); el.remove(); });
 }
 
+/* ---- Avisos no celular (notificações) ----
+   Funciona com o app instalado na tela inicial. O aviso sai do banco no instante em que algo
+   acontece (mensagem, menção, tarefa, alerta, recado) e chega mesmo com o app fechado.
+   No iPhone, o navegador só deixa pedir permissão a partir de um toque da pessoa, por isso o
+   pedido está sempre atrás de um botão ou de um interruptor. */
+const PUSH_SUPORTA = ()=> 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+function pushEstado(){
+  if(!PUSH_SUPORTA()) return 'indisponivel';
+  if(Notification.permission === 'denied') return 'bloqueado';
+  if(Notification.permission === 'granted') return 'ligado';
+  return 'perguntar';
+}
+function urlBase64ParaBytes(base64){
+  const pad = '='.repeat((4 - base64.length % 4) % 4);
+  const b64 = (base64 + pad).replace(/-/g,'+').replace(/_/g,'/');
+  const cru = atob(b64);
+  const bytes = new Uint8Array(cru.length);
+  for(let i=0;i<cru.length;i++) bytes[i] = cru.charCodeAt(i);
+  return bytes;
+}
+function pushChaveEmTexto(buf){
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+/* Registra este aparelho. Chamado quando a pessoa liga o aviso e também, em silêncio, a cada
+   entrada — a inscrição do navegador pode ser trocada sozinha e precisa ser reenviada. */
+async function pushInscrever(pedirPermissao){
+  if(!PUSH_SUPORTA() || !currentUser) return false;
+  try{
+    if(Notification.permission === 'default'){
+      if(!pedirPermissao) return false;
+      const r = await Notification.requestPermission();
+      if(r !== 'granted') return false;
+    }
+    if(Notification.permission !== 'granted') return false;
+    const reg = await navigator.serviceWorker.ready;
+    const { data: chave, error: eChave } = await sb.rpc('push_chave_publica');
+    if(eChave || !chave) throw (eChave || new Error('sem chave'));
+    let ins = await reg.pushManager.getSubscription();
+    if(ins){
+      /* Chave trocada: refaz a inscrição, senão o envio falha em silêncio. */
+      const atual = ins.options && ins.options.applicationServerKey;
+      if(atual && pushChaveEmTexto(atual) !== chave){ await ins.unsubscribe(); ins = null; }
+    }
+    if(!ins){
+      ins = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlBase64ParaBytes(chave) });
+    }
+    const j = ins.toJSON();
+    const { error } = await sb.from('push_assinaturas').upsert({
+      user_id: currentUser.id, endpoint: ins.endpoint,
+      p256dh: j.keys.p256dh, auth: j.keys.auth,
+      aparelho: (navigator.userAgent||'').slice(0,160),
+    }, { onConflict:'endpoint' });
+    if(error) throw error;
+    await sb.from('push_preferencias').upsert({ user_id: currentUser.id, ativo: true, atualizado_em: new Date().toISOString() });
+    return true;
+  }catch(e){ console.error('pushInscrever', e); return false; }
+}
+async function pushDesligar(){
+  try{
+    await sb.from('push_preferencias').upsert({ user_id: currentUser.id, ativo: false, atualizado_em: new Date().toISOString() });
+    const reg = await navigator.serviceWorker.ready;
+    const ins = await reg.pushManager.getSubscription();
+    if(ins){ await sb.from('push_assinaturas').delete().eq('endpoint', ins.endpoint); await ins.unsubscribe(); }
+    return true;
+  }catch(e){ console.error('pushDesligar', e); return false; }
+}
+let PUSH_LIGADO = false;
+async function pushCarregarPreferencia(){
+  if(!currentUser) return;
+  try{
+    const { data } = await sb.from('push_preferencias').select('ativo').eq('user_id', currentUser.id).maybeSingle();
+    PUSH_LIGADO = data ? !!data.ativo : (pushEstado()==='ligado');
+  }catch(e){ PUSH_LIGADO = pushEstado()==='ligado'; }
+}
+/* A linha no menu do perfil: liga e desliga sem precisar desinstalar o app. */
+function pushLinhaPerfilHtml(){
+  const est = pushEstado();
+  if(est === 'indisponivel') return '';
+  const ligado = est==='ligado' && PUSH_LIGADO;
+  const aviso = est==='bloqueado'
+    ? 'Bloqueado no navegador. Libere nos ajustes do site para voltar a receber.'
+    : ligado ? 'Você recebe mensagens, menções e avisos no celular.' : 'Receba mensagens e avisos mesmo com o app fechado.';
+  return `
+    <div class="dropdown-divider"></div>
+    <div class="push-linha">
+      <div class="push-linha-txt"><strong>Avisos no celular</strong><small>${escapeHtml(aviso)}</small></div>
+      ${est==='bloqueado' ? '' : `<label class="msg-switch"><input type="checkbox" id="push-switch" ${ligado?'checked':''}><i></i></label>`}
+    </div>`;
+}
+function pushBindPerfil(){
+  const sw = document.getElementById('push-switch');
+  if(!sw) return;
+  sw.addEventListener('change', async ()=>{
+    sw.disabled = true;
+    if(sw.checked){
+      const ok = await pushInscrever(true);
+      PUSH_LIGADO = ok;
+      if(!ok){
+        sw.checked = false;
+        alert(Notification.permission==='denied'
+          ? 'O navegador está bloqueando os avisos. Libere as notificações nos ajustes do site e tente de novo.'
+          : 'Não foi possível ligar os avisos agora. Tente novamente em instantes.');
+      }
+    }else{
+      await pushDesligar(); PUSH_LIGADO = false;
+    }
+    sw.disabled = false;
+    renderProfile();
+  });
+}
+/* Convite discreto, uma vez só, para quem ainda não decidiu. */
+function pushConvidar(){
+  if(pushEstado() !== 'perguntar') return;
+  if(pwaDispensado('ascentria-push-nao')) return;
+  if(!pwaInstalado() && pwaEhIOS()) return; // no iPhone só funciona com o app instalado
+  const el = pwaBarra('pwa-push', `
+    <div class="pwa-barra-txt"><strong>Quer ser avisado no celular?</strong><small>Mensagens, menções e avisos chegam mesmo com o app fechado. Você pode desligar quando quiser, no menu do seu nome.</small></div>
+    <button type="button" class="btn-accent btn-mini" id="push-sim">Ativar</button>
+    <button type="button" class="pwa-fechar" id="push-nao" title="Agora não">${icon('x','tiny')}</button>`);
+  el.querySelector('#push-sim').addEventListener('click', async ()=>{
+    el.remove();
+    const ok = await pushInscrever(true);
+    PUSH_LIGADO = ok;
+    renderProfile();
+    if(!ok) pwaDispensar('ascentria-push-nao');
+  });
+  el.querySelector('#push-nao').addEventListener('click', ()=>{ pwaDispensar('ascentria-push-nao'); el.remove(); });
+}
+/* Tocar na notificação abre direto onde o assunto está. */
+function pushIrPara(url){
+  let destino = '';
+  try{ destino = new URL(url, location.origin).searchParams.get('abrir') || ''; }catch(e){ destino = ''; }
+  if(!destino) return;
+  if(destino.startsWith('msg:')){
+    const chave = destino.slice(4);
+    if(typeof msgAbrirConversa==='function') msgAbrirConversa(chave);
+  }else if(destino.startsWith('tarefa:')){
+    goTo('tarefas');
+    const id = destino.slice(7);
+    if(typeof openTarefaModal==='function') setTimeout(()=>openTarefaModal(id), 300);
+  }else if(destino==='equipe' || destino==='comunidade'){
+    goTo(destino);
+  }
+}
+function pushIniciarRoteamento(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('message', (e)=>{
+      if(e.data && e.data.tipo==='abrir') pushIrPara(e.data.url);
+    });
+  }
+  try{
+    const abrir = new URLSearchParams(location.search).get('abrir');
+    if(abrir){
+      setTimeout(()=>pushIrPara('/?abrir='+abrir), 400);
+      history.replaceState(null, '', location.pathname);
+    }
+  }catch(e){}
+}
 function pwaIniciar(){
   window.addEventListener('beforeinstallprompt', (e)=>{
     e.preventDefault(); pwaConvite = e;
