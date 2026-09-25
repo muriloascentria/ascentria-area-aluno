@@ -1416,7 +1416,7 @@
   .msg-conversa{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
   .msg-conversa-hd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);}
   .msg-voltar{display:none;}
-  .msg-corpo{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px;display:flex;flex-direction:column;gap:6px;}
+  .msg-corpo{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;scroll-behavior:auto;padding:14px;display:flex;flex-direction:column;gap:6px;}
   .msg-dia{align-self:center;font-size:10.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;margin:8px 0 4px;}
   .msg-bolha{max-width:72%;align-self:flex-start;background:var(--bg-card);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:8px 12px;}
   .msg-bolha.minha{align-self:flex-end;background:rgba(141,145,111,.22);border-color:transparent;border-radius:14px 14px 4px 14px;}
@@ -11326,6 +11326,78 @@ function msgAbrirConversa(chave){
   if(currentView!==alvo) goTo(alvo); else renderMensagens();
 }
 
+/* Onde a conversa deve parar quando é desenhada.
+   No celular a altura da lista ainda está mudando no instante em que a mensagem entra: o
+   teclado abre ou fecha, a caixa de texto volta a ter uma linha, áudio e imagem só informam o
+   tamanho depois de carregar. Empurrar a rolagem uma única vez, como era antes, acertava o
+   lugar antigo e a tela "pulava". Aqui o alvo é reaplicado enquanto a altura ainda mexe. */
+function msgPosicionarRolagem(corpo, alvo){
+  if(!corpo) return;
+  const aplicar = ()=>{
+    if(!corpo.isConnected) return;
+    if(alvo.tipo === 'fim'){
+      corpo.scrollTop = corpo.scrollHeight;
+    }else if(alvo.tipo === 'marcador'){
+      const m = corpo.querySelector('#msg-marcador');
+      corpo.scrollTop = m ? Math.max(0, m.offsetTop - 56) : corpo.scrollHeight;
+    }else{
+      corpo.scrollTop = alvo.valor || 0;
+    }
+  };
+  aplicar();
+  requestAnimationFrame(aplicar);
+  [60, 170, 340, 650].forEach(ms=>setTimeout(aplicar, ms));
+  if(alvo.tipo !== 'manter'){
+    corpo.querySelectorAll('img, audio, video').forEach(e=>{
+      e.addEventListener('load', aplicar, { once:true });
+      e.addEventListener('loadedmetadata', aplicar, { once:true });
+    });
+  }
+}
+
+/* Arrastar o dedo para a direita volta para a lista de conversas, como em qualquer app de
+   mensagens. Só no celular, e só quando a setinha de voltar está à mostra — no computador e
+   na tela do mentorado (que não tem lista) o gesto não existe. */
+function msgBindVoltarArrastando(el){
+  const secao = el.querySelector('.msg-conversa');
+  const voltar = el.querySelector('#msg-voltar');
+  if(!secao || !voltar || !voltar.offsetParent) return;
+  if(!(window.matchMedia('(pointer:coarse)').matches || window.innerWidth<=880)) return;
+
+  let x0 = 0, y0 = 0, arrastando = false, valeu = false;
+  const solta = ()=>{ secao.style.transition = 'transform .18s ease'; secao.style.transform = '';
+    setTimeout(()=>{ secao.style.transition = ''; }, 200); };
+
+  secao.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1) return;
+    /* Não atrapalhar quem está mexendo no player de áudio, num campo ou num botão. */
+    if(e.target.closest('audio, input, textarea, select, button, a, .msg-citacao')) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    arrastando = true; valeu = false;
+  }, { passive:true });
+
+  secao.addEventListener('touchmove', (e)=>{
+    if(!arrastando || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - x0;
+    const dy = e.touches[0].clientY - y0;
+    if(Math.abs(dy) > Math.abs(dx)){ arrastando = false; secao.style.transform = ''; return; }
+    if(dx <= 12) return;                       // para a esquerda ou parado: não é o gesto
+    valeu = dx > 78;
+    secao.style.transform = `translateX(${Math.min(dx, 140)}px)`;
+    secao.style.opacity = String(Math.max(0.55, 1 - dx/420));
+  }, { passive:true });
+
+  const fim = ()=>{
+    if(!arrastando){ secao.style.opacity = ''; return; }
+    arrastando = false;
+    secao.style.opacity = '';
+    if(valeu){ solta(); msgUI.aberto = null; msgUI.respondendo = null; renderMensagens(); }
+    else solta();
+  };
+  secao.addEventListener('touchend', fim);
+  secao.addEventListener('touchcancel', fim);
+}
+
 /* ---- tela ---- */
 function renderMensagens(){
   /* Duas portas para a mesma tela: "Mensagens" (equipe: pessoas, grupos e acompanhamento dos mentorados) e
@@ -11521,6 +11593,7 @@ function renderMensagens(){
     renderMensagens();
   }));
   const voltar = el.querySelector('#msg-voltar'); if(voltar) voltar.addEventListener('click', ()=>{ msgUI.aberto = null; renderMensagens(); });
+  msgBindVoltarArrastando(el);
   const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(chave));
   el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
   el.querySelectorAll('[data-msg-responder]').forEach(b=>b.addEventListener('click', ()=>msgResponderA(b.dataset.msgResponder)));
@@ -11529,10 +11602,16 @@ function renderMensagens(){
   const respCancelar = el.querySelector('#msg-resp-cancelar'); if(respCancelar) respCancelar.addEventListener('click', msgCancelarResposta);
   if(chave){
     msgFecharPopup(chave); // a conversa está na tela: o aviso lá embaixo não faz mais sentido
-    const corpo = el.querySelector('#msg-corpo'); corpo.scrollTop = (pertoDoFim || msgUI.forcarFim) ? corpo.scrollHeight : scrollAntes; msgUI.forcarFim = false;
-    /* Abriu numa conversa com mensagens novas: para na linha "Não lidas", e não lá no fim. */
-    const marcador = el.querySelector('#msg-marcador');
-    if(marcador && !mesmaConversa) corpo.scrollTop = Math.max(0, marcador.offsetTop - 60);
+    const corpo = el.querySelector('#msg-corpo');
+    /* Acabou de abrir a conversa: se há mensagens novas, para na linha "Não lidas"; se não há,
+       para na última mensagem. Já aberta: vai ao fim quando eu acabei de enviar ou quando eu já
+       estava no fim, e em qualquer outro caso fica exatamente onde eu deixei. */
+    const temMarcador = !!el.querySelector('#msg-marcador');
+    const alvo = (temMarcador && !mesmaConversa) ? { tipo:'marcador' }
+               : (pertoDoFim || msgUI.forcarFim) ? { tipo:'fim' }
+               : { tipo:'manter', valor: scrollAntes };
+    msgUI.forcarFim = false;
+    msgPosicionarRolagem(corpo, alvo);
     if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && msgNaTela()) renderMensagens(); }); }
     else msgMarcarLidas(chave);
     const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
@@ -11601,7 +11680,12 @@ function renderMensagens(){
     if(msgGrav && msgGrav.chave===chave) msgGravarUI(true);
     msgAudioCarregar(el);
     if(rascunho){ ta.value = rascunho; ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; }
-    if(tinhaFoco || !rascunho){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    /* No computador a caixa recebe o cursor sozinha, que é cômodo com teclado físico. No celular
+       não: abrir uma conversa levantava o teclado por cima de metade da tela antes mesmo de a
+       pessoa ler as mensagens. Lá o teclado só sobe quando ela toca na caixa (ou ao responder
+       uma mensagem, que é um pedido explícito). Se a caixa já estava com o cursor, mantém. */
+    const foquinhoAutomatico = !(window.matchMedia('(pointer:coarse)').matches || window.innerWidth<=880);
+    if(tinhaFoco || (foquinhoAutomatico && !rascunho)){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
 }
 
