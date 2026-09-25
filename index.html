@@ -1624,6 +1624,7 @@
     #msg-popups{left:10px;right:10px;bottom:10px;width:auto;}
   }
   @media (max-width:880px){ #view-mensagens,#view-acompanhamento{margin:-12px -8px 0;} }
+  @media (max-width:560px){ .msg-editor .emoji-btn{display:none;} }
   /* janelinhas no canto inferior direito */
   #msg-popups{position:fixed;right:16px;bottom:16px;z-index:290;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:min(340px,calc(100vw - 32px));}
   .msg-popup{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.45);padding:10px 12px;animation:msgPop .25s ease-out;}
@@ -1709,6 +1710,18 @@
     .vg-sec-head{flex-wrap:wrap;}
     .community-filters{gap:6px;} .filter-tab{padding:6px 10px;font-size:11.5px;}
     #msg-popups{max-width:none;}
+  }
+
+  /* Zoom automático do iPhone ao tocar num campo de texto.
+     O Safari do iOS amplia a página sozinho sempre que o campo tem letra menor que 16px — e a
+     página fica maior que a tela, obrigando a pessoa a juntar os dedos para voltar a ler. Era o
+     que acontecia na caixa de mensagens (13px). Deixando os campos com 16px no celular, o Safari
+     não amplia mais. O zoom com os dedos continua funcionando normalmente: nada aqui trava isso. */
+  @media (max-width:880px), (pointer:coarse){
+    input[type="text"],input[type="email"],input[type="password"],input[type="search"],
+    input[type="tel"],input[type="url"],input[type="number"],input[type="date"],
+    input[type="time"],input[type="datetime-local"],input:not([type]),
+    textarea, select, .ps-input{ font-size:16px; }
   }
 </style>
 </head>
@@ -11171,7 +11184,7 @@ function renderMensagens(){
             <button type="button" class="btn-mini" id="msg-resp-cancelar" title="Cancelar resposta">${icon('x','tiny')}</button>
           </div>` : ''}
           <div class="msg-editor">
-            <textarea class="ps-input" id="msg-texto" rows="1" placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)" maxlength="4000"></textarea>
+            <textarea class="ps-input" id="msg-texto" rows="1" placeholder="${window.innerWidth<=560 ? 'Mensagem…' : 'Escreva uma mensagem…'}" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
             ${acomp && currentUserRole==='staff' ? `<button type="button" class="msg-mic" id="msg-aula-btn" title="Indicar uma aula ao mentorado">${icon('film')}</button>` : ''}
             <button type="button" class="msg-mic" id="msg-anexo" title="Anexar arquivo (áudio, PDF, imagem, documento)">${icon('paperclip')}</button>
@@ -11254,8 +11267,12 @@ function renderMensagens(){
       }
     };
     btn.addEventListener('click', enviar);
+    /* No celular o Enter do teclado serve para quebrar linha, como no WhatsApp: quem envia é o
+       botão. No computador, Enter continua enviando e Shift+Enter quebra a linha.
+       e.isComposing: acento ainda sendo montado — Enter aí não é "enviar". */
+    const msgEnterEnvia = !(window.matchMedia('(pointer:coarse)').matches || window.innerWidth<=880);
     ta.addEventListener('keydown', e=>{
-      // e.isComposing: acento/teclado de celular ainda montando a palavra — Enter aí não é "enviar".
+      if(!msgEnterEnvia) return;
       if(e.key==='Enter' && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); enviar(); }
     });
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
