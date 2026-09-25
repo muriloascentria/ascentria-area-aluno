@@ -130,11 +130,16 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;}
+  /* Balanço elástico da tela (o "rubber band" do iPhone): ao arrastar o dedo além do topo ou do
+     fim, o app inteiro sacudia como se fosse uma página de navegador. Isto trava esse efeito nas
+     bordas, sem tirar a rolagem normal nem o zoom com os dedos. */
+  html{overscroll-behavior:none;}
   body{
     background:var(--bg);
     color:var(--text);
     min-height:100vh;
     overflow-x:hidden;
+    overscroll-behavior:none;
   }
   ::-webkit-scrollbar{height:8px;width:8px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
@@ -547,7 +552,7 @@
   .mention{color:var(--accent-2);font-weight:700;background:var(--accent-soft);padding:0 4px;border-radius:5px;}
   .mention-wrap{position:relative;flex:1;min-width:0;}
   .mention-wrap>input,.mention-wrap>textarea{width:100%;box-sizing:border-box;}
-  .mention-menu{position:absolute;left:0;right:0;top:100%;z-index:60;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 10px 28px rgba(0,0,0,.35);max-height:220px;overflow:auto;margin-top:4px;}
+  .mention-menu{position:absolute;left:0;right:0;top:100%;z-index:60;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 10px 28px rgba(0,0,0,.35);max-height:220px;overflow:auto;overscroll-behavior:contain;margin-top:4px;}
   .mention-item{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13px;cursor:pointer;color:var(--text);}
   .mention-item:hover,.mention-item.active{background:var(--bg-elev);}
   .mention-item .mention-sub{margin-left:auto;font-size:11px;color:var(--text-mute);}
@@ -1366,7 +1371,7 @@
   /* ---- Emojis ---- */
   .emoji-btn{width:38px;height:38px;font-size:19px;line-height:1;padding:0;border-radius:10px;background:none;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
   .emoji-btn:hover{background:var(--bg-card);border-color:var(--accent);}
-  #emoji-painel{position:fixed;z-index:320;width:292px;max-height:260px;overflow-y:auto;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.4);padding:8px;display:grid;grid-template-columns:repeat(8,1fr);gap:2px;}
+  #emoji-painel{position:fixed;z-index:320;width:292px;max-height:260px;overflow-y:auto;overscroll-behavior:contain;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.4);padding:8px;display:grid;grid-template-columns:repeat(8,1fr);gap:2px;}
   #emoji-painel button{font-size:20px;line-height:1;padding:5px 0;border-radius:8px;background:none;border:none;cursor:pointer;}
   #emoji-painel button:hover{background:var(--bg-card);transform:scale(1.15);}
   .composer-footer .emoji-btn{margin-left:auto;margin-right:6px;width:34px;height:34px;font-size:17px;}
@@ -1391,7 +1396,7 @@
   .msg-switch i::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;}
   .msg-switch input:checked + i{background:var(--success);}
   .msg-switch input:checked + i::after{transform:translateX(16px);}
-  .msg-pessoas{overflow-y:auto;flex:1;min-height:0;}
+  .msg-pessoas{overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0;}
   .msg-pessoa{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:none;border-bottom:1px solid var(--border);background:none;color:var(--text);font:inherit;cursor:pointer;}
   .msg-pessoa:hover,.msg-pessoa.ativa{background:var(--bg-card);}
   .msg-pessoa.nao-lida strong{color:var(--text);}
@@ -1434,7 +1439,7 @@
   #notif-painel{position:fixed;z-index:1200;width:380px;max-width:calc(100vw - 16px);max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.35);overflow:hidden;}
   #notif-painel[hidden]{display:none;}
   .notif-hd{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px;}
-  .notif-lista{overflow-y:auto;display:flex;flex-direction:column;}
+  .notif-lista{overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;}
   .notif-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:none;border-bottom:1px solid var(--border);background:none;text-align:left;font:inherit;color:var(--text);cursor:pointer;}
   .notif-item:last-child{border-bottom:none;}
   .notif-item:hover{background:var(--bg-card);}
@@ -1483,7 +1488,7 @@
   .msg-wrap.msg-solo{grid-template-columns:minmax(0,1fr);}
   .msg-wrap.msg-solo .msg-config{border-top:none;}
   .msg-conversa-hd #msg-config-btn{margin-left:auto;}
-  .msg-mencoes{display:flex;flex-direction:column;background:var(--bg-card);border-top:1px solid var(--border);padding:4px;max-height:220px;overflow-y:auto;}
+  .msg-mencoes{display:flex;flex-direction:column;background:var(--bg-card);border-top:1px solid var(--border);padding:4px;max-height:220px;overflow-y:auto;overscroll-behavior:contain;}
   .msg-mencoes[hidden]{display:none;}
   .msg-mencoes button{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;text-align:left;font:inherit;font-size:13px;color:var(--text);}
   .msg-mencoes button:hover,.msg-mencoes button.ativo{background:rgba(141,145,111,.22);}
