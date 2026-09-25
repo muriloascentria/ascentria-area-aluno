@@ -1427,7 +1427,22 @@
   .msg-ferramentas{position:absolute;top:50%;transform:translateY(-50%);left:-28px;display:flex;flex-direction:column;gap:3px;opacity:0;transition:opacity .15s;}
   .msg-bolha:not(.minha) .msg-ferramentas{left:auto;right:-28px;}
   .msg-bolha:hover .msg-ferramentas{opacity:1;}
-  @media (hover:none){ .msg-ferramentas{opacity:.75;} }
+  /* No celular os botõezinhos não ficam à mostra: as ações aparecem ao segurar o balão. */
+  @media (hover:none){
+    .msg-ferramentas{display:none;}
+    .msg-bolha{-webkit-touch-callout:none;}
+    .msg-bolha.segurando{transform:scale(.97);transition:transform .12s;}
+  }
+  .msg-acoes-fundo{position:fixed;inset:0;background:rgba(5,5,10,.6);z-index:330;display:flex;align-items:flex-end;justify-content:center;padding:12px;}
+  .msg-acoes{width:100%;max-width:420px;background:var(--bg-elev);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 14px 36px rgba(0,0,0,.5);}
+  .msg-acoes-previa{padding:12px 16px 10px;border-bottom:1px solid var(--border);}
+  .msg-acoes-previa strong{display:block;font-size:11.5px;color:var(--accent);margin-bottom:2px;}
+  .msg-acoes-previa span{display:block;font-size:12.5px;color:var(--text-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .msg-acoes button{width:100%;display:flex;align-items:center;gap:11px;padding:14px 16px;background:none;border:0;border-bottom:1px solid var(--border);color:var(--text);font:inherit;font-size:14.5px;text-align:left;cursor:pointer;}
+  .msg-acoes button:last-child{border-bottom:0;color:var(--text-mute);justify-content:center;}
+  .msg-acoes button:active{background:var(--bg-card);}
+  .msg-acoes button.perigo{color:var(--danger);}
+  .msg-acoes .icon{width:17px;height:17px;}
   .msg-ferr{background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-mute);cursor:pointer;padding:0;}
   .msg-ferr:hover{color:var(--text);border-color:var(--accent);}
   .msg-ferr .icon{width:12px;height:12px;}
@@ -10664,6 +10679,66 @@ function msgCitacaoHtml(m){
   return `<button type="button" class="msg-citacao" data-msg-ir="${m.respondeA||''}" title="Ir para a mensagem original">
     <strong>${escapeHtml(quem)}</strong><span>${escapeHtml(trecho.length>120 ? trecho.slice(0,120)+'…' : (trecho||'mensagem'))}</span></button>`;
 }
+/* Segurar o balão por um instante abre as ações daquela mensagem — funciona igual no grupo,
+   na conversa um a um e no Acompanhamento. No computador nada muda: lá os botõezinhos
+   continuam aparecendo ao passar o mouse. */
+function msgAcoesMensagem(id){
+  const chave = msgUI.aberto;
+  const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===String(id));
+  if(!m) return;
+  if(document.querySelector('.msg-acoes-fundo')) return;
+  const g = msgGrupoDaChave(chave), a = msgAcompDaChave(chave);
+  const minha = m.de===msgEu();
+  const podeApagar = minha || (!g && !a);
+  const trecho = (m.texto||'').replace(/\s+/g,' ').trim();
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-acoes-fundo';
+  wrap.innerHTML = `
+    <div class="msg-acoes" role="dialog" aria-label="Ações da mensagem">
+      <div class="msg-acoes-previa">
+        <strong>${escapeHtml(minha ? 'Você' : msgNomeDe(m.de))}</strong>
+        <span>${escapeHtml(trecho.length>90 ? trecho.slice(0,90)+'…' : (trecho||'mensagem'))}</span>
+      </div>
+      <button type="button" data-acao="responder">${icon('reply','tiny')} Responder</button>
+      ${m.tipo==='texto' && trecho ? `<button type="button" data-acao="copiar">${icon('copy','tiny')} Copiar texto</button>` : ''}
+      ${podeApagar ? `<button type="button" class="perigo" data-acao="apagar">${icon('trash','tiny')} ${minha ? 'Apagar para todos' : 'Apagar só para mim'}</button>` : ''}
+      <button type="button" data-acao="cancelar">Cancelar</button>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = ()=>wrap.remove();
+  wrap.addEventListener('click', (e)=>{ if(e.target===wrap) fechar(); });
+  wrap.querySelectorAll('[data-acao]').forEach(b=>b.addEventListener('click', async ()=>{
+    const acao = b.dataset.acao;
+    fechar();
+    if(acao==='responder') msgResponderA(m.id);
+    else if(acao==='copiar'){
+      try{ await navigator.clipboard.writeText(m.texto||''); }catch(e){ console.error('copiar', e); }
+    }
+    else if(acao==='apagar') msgApagar(m);
+  }));
+}
+/* Liga o toque longo em cada balão da conversa. */
+function msgBindToqueLongo(el){
+  el.querySelectorAll('.msg-bolha[data-msg-id]').forEach(b=>{
+    let timer = null, moveu = false;
+    const limpar = ()=>{ clearTimeout(timer); timer = null; b.classList.remove('segurando'); };
+    b.addEventListener('touchstart', ()=>{
+      moveu = false; clearTimeout(timer);
+      timer = setTimeout(()=>{
+        if(moveu) return;
+        b.classList.remove('segurando');
+        if(navigator.vibrate) { try{ navigator.vibrate(12); }catch(e){} }
+        msgAcoesMensagem(b.dataset.msgId);
+      }, 420);
+      b.classList.add('segurando');
+    }, {passive:true});
+    b.addEventListener('touchmove', ()=>{ moveu = true; limpar(); }, {passive:true});
+    b.addEventListener('touchend', limpar);
+    b.addEventListener('touchcancel', limpar);
+    /* Sem o menu do sistema por cima: quem manda aqui é o menu do app. */
+    b.addEventListener('contextmenu', (e)=>{ if(window.matchMedia('(hover:none)').matches) e.preventDefault(); });
+  });
+}
 function msgIrParaMensagem(id){
   const alvo = document.querySelector(`.msg-bolha[data-msg-id="${id}"]`);
   if(!alvo){ alert('A mensagem original não está carregada nesta conversa.'); return; }
@@ -11231,6 +11306,7 @@ function renderMensagens(){
   const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(chave));
   el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
   el.querySelectorAll('[data-msg-responder]').forEach(b=>b.addEventListener('click', ()=>msgResponderA(b.dataset.msgResponder)));
+  msgBindToqueLongo(el);
   el.querySelectorAll('[data-msg-ir]').forEach(b=>b.addEventListener('click', ()=>{ if(b.dataset.msgIr) msgIrParaMensagem(b.dataset.msgIr); }));
   const respCancelar = el.querySelector('#msg-resp-cancelar'); if(respCancelar) respCancelar.addEventListener('click', msgCancelarResposta);
   if(chave){
@@ -11272,12 +11348,9 @@ function renderMensagens(){
       }
     };
     btn.addEventListener('click', enviar);
-    /* No celular o Enter do teclado serve para quebrar linha, como no WhatsApp: quem envia é o
-       botão. No computador, Enter continua enviando e Shift+Enter quebra a linha.
+    /* Enter envia, no celular e no computador. Shift+Enter quebra a linha.
        e.isComposing: acento ainda sendo montado — Enter aí não é "enviar". */
-    const msgEnterEnvia = !(window.matchMedia('(pointer:coarse)').matches || window.innerWidth<=880);
     ta.addEventListener('keydown', e=>{
-      if(!msgEnterEnvia) return;
       if(e.key==='Enter' && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); enviar(); }
     });
     ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140)+'px'; });
