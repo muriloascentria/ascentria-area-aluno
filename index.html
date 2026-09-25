@@ -1867,6 +1867,7 @@
     <div class="nav-group-label" id="staff-group-label" style="display:none"><svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Equipe Interna</div>
     <button class="nav-item restrict" id="nav-equipe" data-view="equipe" style="display:none"></button>
     <button class="nav-item restrict" id="nav-tarefas" data-view="tarefas" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-comunicacao" data-view="comunicacao" style="display:none"></button>
     <button class="nav-item restrict" id="nav-mensagens" data-view="mensagens" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
@@ -1946,6 +1947,7 @@
       <div class="view" id="view-treinamento"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
+      <div class="view" id="view-comunicacao"></div>
       <div class="view" id="view-mensagens"></div>
       <div class="view" id="view-acompanhamento"></div>
     </div>
@@ -2029,11 +2031,12 @@ const NAV_LABELS = {
   treinamento:['play','Treinamento Time'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
+  comunicacao:['mic','Comunicação'],
   mensagens:['comment','Mensagens'],
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -3179,7 +3182,7 @@ function bindRecadoPainel(){
     await carregarRecadoDia();
     await carregarRecadoVistos();
     if(RECADO_DIA) RECADO_DIA.ja_vi = true; // quem escreveu não precisa ver a própria janela
-    if(currentView==='equipe') renderEquipe();
+    if(currentView==='comunicacao') renderComunicacao();
     return true;
   };
   const b = document.getElementById('recado-salvar');
@@ -3241,7 +3244,7 @@ function bindCheckpoint(){
     t.disabled = true;
     const { error } = await sb.rpc('checkpoint_ativar', {p_ativo: ligar});
     if(error){ alert('Não foi possível alterar: '+(error.message||'')); t.disabled = false; return; }
-    await carregarCheckpoint(); renderEquipe();
+    await carregarCheckpoint(); if(currentView==='comunicacao') renderComunicacao();
   });
   const a = document.getElementById('chk-agora');
   if(a) a.addEventListener('click', async ()=>{
@@ -3250,7 +3253,7 @@ function bindCheckpoint(){
     const { data, error } = await sb.rpc('enviar_checkpoint_semanal', {p_forcar: true});
     if(error){ alert('Não foi possível enviar: '+(error.message||'')); a.disabled = false; return; }
     alert(data ? `Checkpoint enviado para ${data} mentorado${data===1?'':'s'}.` : 'Todos os mentorados já tinham recebido o checkpoint desta semana.');
-    await carregarCheckpoint(); renderEquipe();
+    await carregarCheckpoint(); if(currentView==='comunicacao') renderComunicacao();
   });
 }
 /* Bloco "Aniversariantes de hoje" da equipe interna. Devolve '' nos dias sem ninguem. */
@@ -4875,6 +4878,7 @@ function setRole(role){
   document.getElementById('nav-equipe').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-tarefas').style.display = (staffNav && tarefasSouMembro()) ? 'flex' : 'none';
   document.getElementById('nav-mensagens').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-comunicacao').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-visaogeral').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-interno').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-conteudo').style.display = staffNav ? 'flex' : 'none';
@@ -4977,6 +4981,7 @@ function goTo(view){
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
   { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = 'equipe'; }
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
+  if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -4995,7 +5000,8 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento,
+               comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -11862,6 +11868,7 @@ function renderMensagens(){
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
+  {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
@@ -11888,8 +11895,6 @@ function renderEquipe(){
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
     ${alertasAcompHtml()}
-    ${recadoPainelHtml()}
-    ${checkpointHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
       ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
@@ -11900,9 +11905,22 @@ function renderEquipe(){
         </button>`; }).join('')}
     </div>`;
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
-  bindCheckpoint();
   bindAlertasAcomp();
+}
+
+/* ================= VIEW: COMUNICAÇÃO (equipe interna) =================
+   Junta num lugar só as duas coisas que saem da equipe para as pessoas: o recado do dia, que o
+   Murilo escreve e aparece numa janela para todo mundo da equipe interna, e o checkpoint semanal,
+   que o sistema manda sozinho toda segunda-feira para os mentorados. Antes os dois ficavam soltos
+   no Início; aqui têm espaço para respirar e o Início volta a ser só os atalhos. */
+function renderComunicacao(){
+  const recado = recadoPainelHtml();
+  document.getElementById('view-comunicacao').innerHTML = `
+    <p class="section-sub" style="margin-top:2px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
+    ${recado || `<div class="tf-vazio" style="padding:14px">O recado do dia é escrito pela administração. Você vê a janela com o recado ao abrir o sistema.</div>`}
+    ${checkpointHtml()}`;
   bindRecadoPainel();
+  bindCheckpoint();
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
