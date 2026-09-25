@@ -1529,6 +1529,9 @@
   .msg-arq-img small{font-size:11px;color:var(--text-mute);}
   .msg-arq-audio{flex-wrap:wrap;}
   .msg-arq-audio .msg-arq-nome{flex-basis:100%;font-size:11px;color:var(--text-mute);word-break:break-word;}
+  .msg-vel{flex:0 0 auto;min-width:34px;height:26px;padding:0 7px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);font-size:11.5px;font-weight:700;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;}
+  .msg-vel:hover{color:var(--text);border-color:var(--accent);}
+  .msg-vel.ativa{background:var(--accent);border-color:var(--accent);color:#fff;}
   .msg-arq-baixar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;color:var(--text-mute);}
   .msg-arq-baixar:hover{color:var(--text);background:var(--bg-card);}
   .msg-arq-baixar .icon{width:15px;height:15px;}
@@ -10585,7 +10588,8 @@ let MSG_GRUPOS = [];          // grupos de que participo: {id,nome,criadoPor,mem
 let MSG_ACOMP = {};           // acompanhamento: alunoId -> {alunoId,naoLidas,ultimaEm,ultimaTexto,ultimaDe} (equipe vê todos; mentorado só o seu)
 let MSG_CONVERSAS = {};       // chave -> [mensagens] (ordem cronológica)
 let MSG_NAO_LIDAS = [];       // {id, de} das mensagens 1:1 recebidas ainda não lidas
-let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true, listaScroll:0, marcador:null, respondendo:null, destacado:null };
+let msgUI = { aberto:null, busca:'', canal:null, popups:[], carregandoDe:null, somLigado:true, fonte:14, maiuscula:true, listaScroll:0, marcador:null, respondendo:null, destacado:null, velocidade:1 };
+try{ const vv = parseFloat(localStorage.getItem('ascentria-msg-velocidade')); if([1,1.5,2].includes(vv)) msgUI.velocidade = vv; }catch(e){}
 try{ msgUI.somLigado = localStorage.getItem('ascentria-msg-som')!=='0'; msgUI.maiuscula = localStorage.getItem('ascentria-msg-maiuscula')!=='0'; const f = parseInt(localStorage.getItem('ascentria-msg-fonte')||'14',10); if(f>=12 && f<=22) msgUI.fonte = f; }catch(e){}
 function msgSetFonte(v){ msgUI.fonte = Math.max(12, Math.min(22, v)); try{ localStorage.setItem('ascentria-msg-fonte', String(msgUI.fonte)); }catch(e){} const w = document.querySelector('.msg-wrap'); if(w) w.style.setProperty('--msg-fonte', msgUI.fonte+'px'); const lbl = document.getElementById('msg-fonte-valor'); if(lbl) lbl.textContent = msgUI.fonte; }
 
@@ -11218,7 +11222,7 @@ function msgArquivoEhImagem(m){ return /^image\//.test(m.arquivoMime||'') && !/s
 function msgArquivoHtml(m){
   const nome = escapeHtml(m.arquivoNome||'arquivo'), tam = msgTamanho(m.arquivoTam);
   const base = `data-msg-arquivo="${escapeAttr(m.arquivoPath)}"`;
-  if(msgArquivoEhAudio(m)) return `<div class="msg-audio msg-arq-audio" ${base} data-msg-arq-tipo="audio"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="none" controlsList="nodownload"></audio><a class="msg-arq-baixar" download="${escapeAttr(m.arquivoNome)}" title="Baixar ${nome}">${icon('download','tiny')}</a><small class="msg-arq-nome">${nome} · ${tam}</small></div>`;
+  if(msgArquivoEhAudio(m)) return `<div class="msg-audio msg-arq-audio" ${base} data-msg-arq-tipo="audio"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="metadata" controlsList="nodownload"></audio>${msgVelBotaoHtml()}<a class="msg-arq-baixar" download="${escapeAttr(m.arquivoNome)}" title="Baixar ${nome}">${icon('download','tiny')}</a><small class="msg-arq-nome">${nome} · ${tam}</small></div>`;
   if(msgArquivoEhImagem(m)) return `<a class="msg-arq-img" ${base} data-msg-arq-tipo="imagem" target="_blank" rel="noopener" title="${nome}"><img alt="${nome}"><small>${nome} · ${tam}</small></a>`;
   return `<a class="msg-arq" ${base} data-msg-arq-tipo="arquivo" target="_blank" rel="noopener" download="${escapeAttr(m.arquivoNome)}"><span class="msg-arq-ic">${icon('file','tiny')}</span><span class="msg-arq-txt"><strong>${nome}</strong><small>${tam} · clique para abrir ou baixar</small></span></a>`;
 }
@@ -11281,7 +11285,7 @@ function msgAudioHtml(m){
   /* O player mostra o botão de download do próprio navegador e, ao lado, um atalho para baixar —
      o link leva o arquivo direto para o computador em vez de abrir numa aba. */
   const pronta = msgAudioUrlPronta(m.audioPath);
-  return `<div class="msg-audio${pronta ? ' pronto' : ''}" data-msg-audio="${escapeAttr(m.audioPath)}" data-msg-audio-nome="${escapeAttr(msgAudioNomeArquivo(m))}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="metadata"${pronta ? ` src="${escapeAttr(pronta)}"` : ''}></audio><a class="msg-arq-baixar" target="_blank" rel="noopener" title="Baixar este áudio"${pronta ? ` href="${escapeAttr(urlParaBaixar(pronta, msgAudioNomeArquivo(m)))}"` : ''}>${icon('download','tiny')}</a><small>${msgAudioDur(m.audioSeg)}</small></div>`;
+  return `<div class="msg-audio${pronta ? ' pronto' : ''}" data-msg-audio="${escapeAttr(m.audioPath)}" data-msg-audio-nome="${escapeAttr(msgAudioNomeArquivo(m))}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="metadata"${pronta ? ` src="${escapeAttr(pronta)}"` : ''}></audio>${msgVelBotaoHtml()}<a class="msg-arq-baixar" target="_blank" rel="noopener" title="Baixar este áudio"${pronta ? ` href="${escapeAttr(urlParaBaixar(pronta, msgAudioNomeArquivo(m)))}"` : ''}>${icon('download','tiny')}</a><small>${msgAudioDur(m.audioSeg)}</small></div>`;
 }
 /* Acrescenta à URL assinada o pedido de download — assim o arquivo é salvo, e não aberto no navegador. */
 function urlParaBaixar(url, nome){
@@ -11290,6 +11294,56 @@ function urlParaBaixar(url, nome){
 }
 /* Se o player não conseguir tocar o arquivo, melhor dizer isso do que deixar a bolinha girando
    para sempre. O atalho de baixar continua ali para a pessoa ouvir fora do app. */
+/* Velocidade dos áudios, como no WhatsApp: toque no 1× para passar a 1,5× e a 2×.
+   A escolha vale para todos os áudios e fica guardada no aparelho, então quem gosta de ouvir
+   acelerado não precisa ajustar de novo a cada mensagem. Funciona no celular e no computador. */
+const MSG_VELOCIDADES = [1, 1.5, 2];
+function msgVelAtual(){
+  const v = parseFloat(msgUI.velocidade);
+  return MSG_VELOCIDADES.includes(v) ? v : 1;
+}
+function msgVelRotulo(v){ return (v === 1 ? '1' : String(v).replace('.', ',')) + '×'; }
+function msgVelBotaoHtml(){
+  const v = msgVelAtual();
+  return `<button type="button" class="msg-vel${v!==1?' ativa':''}" data-msg-vel title="Velocidade do áudio">${msgVelRotulo(v)}</button>`;
+}
+/* Aplica a velocidade escolhida. O navegador zera o playbackRate quando troca a fonte do áudio,
+   por isso reaplicamos também quando o arquivo termina de carregar e a cada play. */
+function msgVelAplicar(root){
+  const v = msgVelAtual();
+  (root || document).querySelectorAll('.msg-audio audio').forEach(a=>{
+    try{ a.playbackRate = v; }catch(e){}
+    if(!a.dataset.velLigado){
+      a.dataset.velLigado = '1';
+      const por = ()=>{ try{ a.playbackRate = msgVelAtual(); }catch(e){} };
+      a.addEventListener('loadedmetadata', por);
+      a.addEventListener('play', por);
+      a.addEventListener('ratechange', ()=>{
+        /* Se o próprio player trocar a velocidade por fora, o rótulo acompanha. */
+        const atual = Math.round(a.playbackRate*100)/100;
+        if(MSG_VELOCIDADES.includes(atual) && atual !== msgVelAtual()) msgVelDefinir(atual, true);
+      });
+    }
+  });
+}
+function msgVelDefinir(v, semAplicar){
+  msgUI.velocidade = v;
+  try{ localStorage.setItem('ascentria-msg-velocidade', String(v)); }catch(e){}
+  document.querySelectorAll('[data-msg-vel]').forEach(b=>{
+    b.textContent = msgVelRotulo(v);
+    b.classList.toggle('ativa', v !== 1);
+  });
+  if(!semAplicar) msgVelAplicar();
+}
+function msgVelBind(root){
+  (root || document).querySelectorAll('[data-msg-vel]').forEach(b=>{
+    if(b.dataset.ligado) return; b.dataset.ligado = '1';
+    b.addEventListener('click', ()=>{
+      const i = MSG_VELOCIDADES.indexOf(msgVelAtual());
+      msgVelDefinir(MSG_VELOCIDADES[(i + 1) % MSG_VELOCIDADES.length]);
+    });
+  });
+}
 function msgAudioVigiar(a, box){
   if(!a || a.dataset.vigiado) return; a.dataset.vigiado = '1';
   a.addEventListener('error', ()=>{ box.classList.remove('carregando'); box.classList.add('erro'); }, { once:true });
@@ -11299,6 +11353,7 @@ function msgAudioVigiar(a, box){
   setTimeout(()=>box.classList.remove('carregando'), 8000);
 }
 function msgAudioCarregar(root){
+  msgVelBind(root); msgVelAplicar(root);
   root.querySelectorAll('[data-msg-audio]').forEach(async box=>{
     const a = box.querySelector('audio');
     msgAudioVigiar(a, box);
@@ -11313,6 +11368,7 @@ function msgAudioCarregar(root){
     const atual = box.querySelector('audio');
     if(atual && !atual.getAttribute('src')){ msgAudioVigiar(atual, box); atual.src = url; }
     const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, box.dataset.msgAudioNome);
+    msgVelAplicar(box);
   });
   root.querySelectorAll('[data-msg-arquivo]').forEach(async box=>{
     if(box.dataset.ok) return; box.dataset.ok = '1';
