@@ -25,7 +25,11 @@ self.addEventListener('activate', (e)=>{
 });
 
 /* A página avisa quando o usuário aceita atualizar. */
-self.addEventListener('message', (e)=>{ if(e.data==='ATUALIZAR_AGORA') self.skipWaiting(); });
+self.addEventListener('message', (e)=>{
+  if(e.data==='ATUALIZAR_AGORA'){ self.skipWaiting(); return; }
+  /* O app avisa o número real de não lidas sempre que ele muda. */
+  if(e.data && e.data.tipo==='badge') e.waitUntil(badgeMostrar(Math.max(0, e.data.n|0)));
+});
 
 self.addEventListener('fetch', (e)=>{
   const req = e.request;
@@ -65,6 +69,34 @@ self.addEventListener('fetch', (e)=>{
   })());
 });
 
+/* ---- Bolinha vermelha no ícone do app ----
+   O número fica guardado aqui porque o app pode estar fechado quando o aviso chega. Enquanto
+   fechado, cada aviso soma um; quando a pessoa abre e lê, o próprio app manda o número certo. */
+const BADGE_CACHE = 'ascentria-badge';
+const BADGE_CHAVE = '/__badge';
+async function badgeLer(){
+  try{
+    const c = await caches.open(BADGE_CACHE);
+    const r = await c.match(BADGE_CHAVE);
+    if(!r) return 0;
+    const n = parseInt(await r.text(), 10);
+    return isNaN(n) ? 0 : n;
+  }catch(e){ return 0; }
+}
+async function badgeGravar(n){
+  try{
+    const c = await caches.open(BADGE_CACHE);
+    await c.put(BADGE_CHAVE, new Response(String(n)));
+  }catch(e){}
+}
+async function badgeMostrar(n){
+  await badgeGravar(n);
+  try{
+    if(n > 0 && self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(n);
+    else if(self.navigator && self.navigator.clearAppBadge) await self.navigator.clearAppBadge();
+  }catch(e){}
+}
+
 /* ---- Notificações (push) ----
    O aviso chega do servidor mesmo com o app fechado. Aqui a gente só desenha a notificação e,
    quando a pessoa toca nela, leva para o lugar certo dentro do app. */
@@ -73,6 +105,7 @@ self.addEventListener('push', (e)=>{
   try{ d = e.data ? e.data.json() : {}; }
   catch(err){ d = { titulo: 'Essência', corpo: e.data ? e.data.text() : '' }; }
   const titulo = d.titulo || 'Essência';
+  e.waitUntil((async ()=>{ await badgeMostrar((await badgeLer()) + 1); })());
   e.waitUntil(self.registration.showNotification(titulo, {
     body: d.corpo || '',
     icon: './icon-192.png',
@@ -87,6 +120,7 @@ self.addEventListener('notificationclick', (e)=>{
   e.notification.close();
   const destino = (e.notification.data && e.notification.data.url) || './';
   e.waitUntil((async ()=>{
+    await badgeMostrar(0);
     const abas = await self.clients.matchAll({ type:'window', includeUncontrolled:true });
     for(const aba of abas){
       if(aba.url.startsWith(self.location.origin)){
