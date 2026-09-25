@@ -9,7 +9,7 @@
    Nada do Supabase (dados, mensagens, áudios, arquivos) passa por aqui: é outro endereço e
    vai direto para a rede, sempre ao vivo. */
 
-const CACHE = 'ascentria-v1';
+const CACHE = 'ascentria-v2';
 const ESSENCIAIS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e)=>{
@@ -62,5 +62,38 @@ self.addEventListener('fetch', (e)=>{
       if(r && r.ok) c.put(req, r.clone());
       return r;
     }catch(err){ return Response.error(); }
+  })());
+});
+
+/* ---- Notificações (push) ----
+   O aviso chega do servidor mesmo com o app fechado. Aqui a gente só desenha a notificação e,
+   quando a pessoa toca nela, leva para o lugar certo dentro do app. */
+self.addEventListener('push', (e)=>{
+  let d = {};
+  try{ d = e.data ? e.data.json() : {}; }
+  catch(err){ d = { titulo: 'Essência', corpo: e.data ? e.data.text() : '' }; }
+  const titulo = d.titulo || 'Essência';
+  e.waitUntil(self.registration.showNotification(titulo, {
+    body: d.corpo || '',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: d.tag || 'ascentria',
+    renotify: true,
+    data: { url: d.url || './' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e)=>{
+  e.notification.close();
+  const destino = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil((async ()=>{
+    const abas = await self.clients.matchAll({ type:'window', includeUncontrolled:true });
+    for(const aba of abas){
+      if(aba.url.startsWith(self.location.origin)){
+        aba.postMessage({ tipo:'abrir', url: destino });
+        if('focus' in aba) return aba.focus();
+      }
+    }
+    return self.clients.openWindow(destino);
   })());
 });
