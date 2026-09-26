@@ -11506,8 +11506,27 @@ function msgAbrirConversa(chave){
    lugar antigo e a tela "pulava". Aqui o alvo é reaplicado enquanto a altura ainda mexe. */
 function msgPosicionarRolagem(corpo, alvo){
   if(!corpo) return;
+  /* Assim que a pessoa mexe na rolagem — roda do mouse, dedo, teclado ou a barra lateral —
+     a gente para de reposicionar. Sem isso, quem subia para reler algo era puxado de volta
+     alguns instantes depois, e parecia que a barra "voltava sozinha". */
+  let desistir = false;
+  let ultimaPosta = -1;
+  const parar = ()=>{ desistir = true; limpar(); };
+  const limpar = ()=>{
+    corpo.removeEventListener('wheel', parar);
+    corpo.removeEventListener('touchstart', parar);
+    corpo.removeEventListener('keydown', parar);
+    corpo.removeEventListener('mousedown', parar);
+  };
+  corpo.addEventListener('wheel', parar, { passive:true });
+  corpo.addEventListener('touchstart', parar, { passive:true });
+  corpo.addEventListener('keydown', parar);
+  corpo.addEventListener('mousedown', parar);
+
   const aplicar = ()=>{
-    if(!corpo.isConnected) return;
+    if(desistir || !corpo.isConnected) return;
+    /* Saiu do lugar onde a gente mesmo tinha posto: foi a pessoa que rolou. */
+    if(ultimaPosta >= 0 && Math.abs(corpo.scrollTop - ultimaPosta) > 4){ parar(); return; }
     if(alvo.tipo === 'fim'){
       corpo.scrollTop = corpo.scrollHeight;
     }else if(alvo.tipo === 'marcador'){
@@ -11516,10 +11535,12 @@ function msgPosicionarRolagem(corpo, alvo){
     }else{
       corpo.scrollTop = alvo.valor || 0;
     }
+    ultimaPosta = corpo.scrollTop;
   };
   aplicar();
   requestAnimationFrame(aplicar);
   [60, 170, 340, 650].forEach(ms=>setTimeout(aplicar, ms));
+  setTimeout(limpar, 900);
   if(alvo.tipo !== 'manter'){
     corpo.querySelectorAll('img, audio, video').forEach(e=>{
       e.addEventListener('load', aplicar, { once:true });
@@ -11571,6 +11592,7 @@ function msgBindVoltarArrastando(el){
   secao.addEventListener('touchcancel', fim);
 }
 
+const MSG_HTML_ANTERIOR = {};   // última tela desenhada, por área — evita redesenho inútil
 /* ---- tela ---- */
 function renderMensagens(){
   /* Duas portas para a mesma tela: "Mensagens" (equipe: pessoas, grupos e acompanhamento dos mentorados) e
@@ -11673,7 +11695,7 @@ function renderMensagens(){
     semNada ? '<div class="tf-vazio">Ninguém encontrado.</div>' : '',
   ].join('');
 
-  el.innerHTML = `
+  const novoHtml = `
     <div class="msg-wrap ${solo?'msg-solo':''}" style="--msg-fonte:${msgUI.fonte}px">
       ${solo ? '' : `<aside class="msg-lista ${chave?'com-conversa':''}">
         <div class="msg-lista-hd">
@@ -11746,6 +11768,17 @@ function renderMensagens(){
         : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${MSG_GRUPOS.length ? ', um grupo' : ''}${mentorados.length ? ' ou um mentorado' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe, e o acompanhamento de cada mentorado (visível para toda a equipe). Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
       </section>
     </div>`;
+
+  /* Só reescreve a tela se alguma coisa mudou de verdade. Redesenhos "em branco" (uma revalidação
+     que não trouxe nada, o app voltando da segunda plano, o aviso de leitura) apagavam o texto que
+     a pessoa tinha acabado de selecionar e devolviam a rolagem para o lugar calculado. Agora, se o
+     conteúdo é o mesmo, a tela fica exatamente como está — seleção e rolagem intactas. */
+  if(MSG_HTML_ANTERIOR[el.id] === novoHtml && el.firstElementChild){
+    if(chave) msgMarcarLidas(chave);
+    return;
+  }
+  MSG_HTML_ANTERIOR[el.id] = novoHtml;
+  el.innerHTML = novoHtml;
   const listaAgora = el.querySelector('.msg-pessoas');
   if(listaAgora && msgUI.listaScroll) listaAgora.scrollTop = msgUI.listaScroll;
   if(!solo) bindBuscaInput('msg-busca', v=>{ msgUI.busca = v; }, renderMensagens);
