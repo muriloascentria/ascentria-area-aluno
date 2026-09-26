@@ -1578,6 +1578,26 @@
   .recado-rodape small{font-size:11.5px;color:var(--text-mute);flex:1;min-width:0;}
   .recado-btns{display:flex;gap:6px;flex-wrap:wrap;}
   @media(max-width:560px){ .recado-rodape{flex-direction:column;align-items:stretch;} .recado-btns{justify-content:flex-end;} }
+  .envio-bloco{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
+  .envio-hd{display:flex;align-items:center;gap:7px;font-size:14px;}
+  .envio-hd .icon{width:15px;height:15px;color:var(--accent);}
+  .envio-sub{font-size:12px;color:var(--text-dim);margin:6px 0 12px;}
+  .envio-label{font-size:11.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;}
+  .envio-campo{margin:0 0 12px;}
+  .envio-sw{display:inline-flex;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:3px;gap:2px;max-width:100%;flex-wrap:nowrap;}
+  .envio-sw button{padding:7px 14px;border-radius:16px;font-size:12px;font-weight:700;color:var(--text-dim);white-space:nowrap;}
+  .envio-sw button.on{background:var(--accent);color:#fff;}
+  .envio-bloco textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:10px 12px;resize:vertical;min-height:84px;}
+  .envio-quando{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .envio-quando input{background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:8px 10px;}
+  .envio-rodape{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;}
+  .envio-rodape small{font-size:11.5px;color:var(--text-mute);flex:1;min-width:0;}
+  .envio-lista{margin-top:14px;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .envio-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);}
+  .envio-item-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .envio-item-txt strong{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .envio-item-txt small{font-size:11.5px;color:var(--text-mute);}
+  @media(max-width:560px){ .envio-rodape{flex-direction:column;align-items:stretch;} .envio-sw button{padding:7px 10px;font-size:11.5px;} }
   @media(max-width:560px){ .alerta-item{row-gap:8px;} .alerta-acoes{flex:1 0 100%;} .alerta-acoes .btn-mini{flex:1;justify-content:center;} }
   .chk-bloco{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin:0 0 14px;}
   .chk-txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
@@ -1700,6 +1720,9 @@
     .topbar{padding:0 14px;gap:10px;}
     #menu-btn{display:flex;}
     .topbar-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* Quando nao sobra espaco pro nome da tela, ele virava um risquinho da primeira letra
+       (parecia uma barra "|" entre o menu e o seletor de visualizacao). Melhor sumir. */
+    .topbar-title.sem-espaco{display:none;}
     .role-toggle span, .role-toggle{font-size:11px;}
   }
   .role-toggle .sm{display:none;}
@@ -2004,6 +2027,7 @@ const ICONS = {
   externallink:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   reply:'<path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
+  send:'<path d="M21 3L10.5 13.5"/><path d="M21 3l-6.5 18-4-8-8-4z"/>',
   copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   money:'<circle cx="12" cy="12" r="9"/><path d="M12 6.5v11M15.5 9.3c0-1.5-1.6-2.5-3.5-2.5s-3.5 1-3.5 2.4c0 3 7 1.3 7 4.3 0 1.5-1.6 2.5-3.5 2.5s-3.5-1-3.5-2.5"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -3688,7 +3712,7 @@ async function bootstrapData(){
     }),
   ];
   if(currentUserRole!=='aluno') onda.push(carregarRecadoDia());
-  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp());
+  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios());
   else if(msgSouMentorado()) onda.push(msgBootstrap());
 
   /* Listas que só a equipe interna carrega — o aluno nunca faz estas consultas, então esse conteúdo
@@ -4840,10 +4864,22 @@ function setRoleVendas(){
   renderProfile();
   if(!permitidas.includes(currentView)) goTo('equipe');
 }
+/* O nome da tela na barra de cima so aparece se couber inteiro. Em celular estreito, com o
+   seletor de visualizacao aberto, nao cabe — e meia letra cortada so atrapalha. */
+function ajustarTituloTopo(){
+  const t = document.getElementById('topbar-title');
+  if(!t) return;
+  t.classList.remove('sem-espaco');
+  if(t.scrollWidth > t.clientWidth + 1) t.classList.add('sem-espaco');
+}
+window.addEventListener('resize', ajustarTituloTopo);
+window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
+
 function setRole(role){
   if(currentUserRole==='vendas' || currentUserRole==='editor'){ setRoleVendas(); return; }
   currentRole = role;
   document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
+  setTimeout(ajustarTituloTopo, 0);
   const podePrever = currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id);
   document.getElementById('role-consultora').style.display = podePrever ? '' : 'none';
   document.getElementById('role-editor').style.display = podePrever ? '' : 'none';
@@ -4990,6 +5026,7 @@ function goTo(view){
   const [,label] = NAV_LABELS[view];
   const badgeType = BADGE[view];
   document.getElementById('topbar-title').innerHTML = label + (badgeType? ` <span class="badge-${badgeType}">${BADGE_TEXT[badgeType]}</span>`:'');
+  ajustarTituloTopo();
   renderCurrentView();
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebar-backdrop').classList.remove('open');
@@ -11946,14 +11983,181 @@ function renderEquipe(){
    Murilo escreve e aparece numa janela para todo mundo da equipe interna, e o checkpoint semanal,
    que o sistema manda sozinho toda segunda-feira para os mentorados. Antes os dois ficavam soltos
    no Início; aqui têm espaço para respirar e o Início volta a ser só os atalhos. */
+/* ============ ENVIO COLETIVO PARA OS MENTORADOS (só o Murilo) ============ */
+/* Mesma pessoa autorizada no banco (policy da tabela envios_coletivos). */
+const ENVIO_ADMIN_UID = '8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3';
+const ENVIO_REMETENTES = [
+  { id:'8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3', nome:'Murilo' },
+  { id:'a29026ae-d252-4456-bb26-eec09ba778c4', nome:'Sandra' },
+  { id:'3ac4f0c3-4db3-4f98-b9b8-c021da4db519', nome:'Carmem' },
+  { id:'8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc', nome:'Diego'  }
+];
+let ENVIOS_LISTA = [];
+let envioUI = { remetente: ENVIO_ADMIN_UID, canal:'mensagem', modo:'agora', texto:'', data:'', hora:'' };
+
+function envioSouAutor(){ return currentUserRole==='staff' && currentUser && currentUser.id === ENVIO_ADMIN_UID; }
+
+async function carregarEnvios(){
+  if(!envioSouAutor()){ ENVIOS_LISTA = []; return; }
+  try{
+    const { data, error } = await sb.from('envios_coletivos').select('*').order('criado_em', {ascending:false}).limit(25);
+    if(error) throw error;
+    ENVIOS_LISTA = data || [];
+  }catch(e){ console.error('envios_coletivos', e); ENVIOS_LISTA = []; }
+}
+
+function envioNomeRemetente(id){ const r = ENVIO_REMETENTES.find(x=>x.id===id); return r ? r.nome : 'Equipe'; }
+function envioQuandoTexto(e){
+  if(e.status==='agendado') return 'Marcado para ' + fmtDataHora(e.quando);
+  if(e.status==='enviado')  return fmtDataHora(e.enviado_em) + ' · ' + e.destinatarios + ' pessoa' + (e.destinatarios===1?'':'s');
+  if(e.status==='cancelado') return 'Cancelado';
+  return 'Falhou: ' + (e.erro||'');
+}
+function fmtDataHora(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) + ' às ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+function envioBlocoHtml(){
+  if(!envioSouAutor()) return '';
+  const agendar = envioUI.modo === 'agendar';
+  const pessoas = ENVIO_REMETENTES.map(r=>
+    `<button type="button" data-envio-rem="${r.id}" class="${envioUI.remetente===r.id?'on':''}">${escapeHtml(r.nome)}</button>`).join('');
+  const lista = ENVIOS_LISTA.length ? `
+    <div class="envio-lista">
+      ${ENVIOS_LISTA.map(e=>`
+        <div class="envio-item">
+          <div class="envio-item-txt">
+            <strong>${escapeHtml(e.texto)}</strong>
+            <small>${escapeHtml(envioNomeRemetente(e.remetente))} · ${e.canal==='mensagem'?'mensagem':'notificação'} · ${escapeHtml(envioQuandoTexto(e))}</small>
+          </div>
+          ${e.status==='agendado' ? `<button type="button" class="btn-mini danger" data-envio-cancelar="${e.id}">Cancelar</button>` : ''}
+        </div>`).join('')}
+    </div>` : '';
+  return `
+    <div class="envio-bloco">
+      <div class="envio-hd">${icon('send','tiny')} <strong>Envio coletivo para os mentorados</strong></div>
+      <p class="envio-sub">Mesma mensagem para todos os mentorados de uma vez. Cada um recebe na conversa privada com a pessoa escolhida, ou só como notificação no celular.</p>
+
+      <div class="envio-campo">
+        <p class="envio-label">Enviar como</p>
+        <div class="envio-sw" id="envio-remetentes">${pessoas}</div>
+      </div>
+
+      <div class="envio-campo">
+        <p class="envio-label">Mensagem</p>
+        <textarea id="envio-texto" rows="4" maxlength="1200" placeholder="Escreva aqui o que todos vão receber...">${escapeHtml(envioUI.texto)}</textarea>
+      </div>
+
+      <div class="envio-campo">
+        <p class="envio-label">Como chega</p>
+        <div class="envio-sw" id="envio-canal">
+          <button type="button" data-envio-canal="mensagem" class="${envioUI.canal==='mensagem'?'on':''}">Mensagem</button>
+          <button type="button" data-envio-canal="notificacao" class="${envioUI.canal==='notificacao'?'on':''}">Notificação</button>
+        </div>
+      </div>
+
+      <div class="envio-campo">
+        <p class="envio-label">Quando</p>
+        <div class="envio-sw" id="envio-modo">
+          <button type="button" data-envio-modo="agora" class="${!agendar?'on':''}">Agora</button>
+          <button type="button" data-envio-modo="agendar" class="${agendar?'on':''}">Agendar</button>
+        </div>
+        ${agendar ? `<div class="envio-quando">
+          <input type="date" id="envio-data" value="${escapeAttr(envioUI.data)}">
+          <input type="time" id="envio-hora" value="${escapeAttr(envioUI.hora)}">
+        </div>` : ''}
+      </div>
+
+      <div class="envio-rodape">
+        <small>${envioUI.canal==='mensagem' ? 'Vai abrir uma conversa 1 a 1 — os mentorados podem responder.' : 'Só um aviso no celular de quem tem o app instalado, sem conversa.'}</small>
+        <div class="recado-btns">
+          <button type="button" class="btn-accent btn-mini" id="envio-disparar">${agendar?'Agendar':'Enviar agora'}</button>
+        </div>
+      </div>
+      ${lista}
+    </div>`;
+}
+
+function envioRedesenhar(){ if(currentView==='comunicacao') renderComunicacao(); }
+
+function bindEnvioBloco(){
+  if(!envioSouAutor()) return;
+  const ta = document.getElementById('envio-texto');
+  if(ta) ta.addEventListener('input', ()=>{ envioUI.texto = ta.value; });
+
+  document.querySelectorAll('[data-envio-rem]').forEach(b=>b.addEventListener('click', ()=>{
+    if(ta) envioUI.texto = ta.value;
+    envioUI.remetente = b.dataset.envioRem; envioRedesenhar();
+  }));
+  document.querySelectorAll('[data-envio-canal]').forEach(b=>b.addEventListener('click', ()=>{
+    if(ta) envioUI.texto = ta.value;
+    envioUI.canal = b.dataset.envioCanal; envioRedesenhar();
+  }));
+  document.querySelectorAll('[data-envio-modo]').forEach(b=>b.addEventListener('click', ()=>{
+    if(ta) envioUI.texto = ta.value;
+    envioUI.modo = b.dataset.envioModo;
+    if(envioUI.modo==='agendar' && !envioUI.data){
+      const d = new Date(Date.now() + 60*60*1000);
+      envioUI.data = d.toISOString().slice(0,10);
+      envioUI.hora = String(d.getHours()).padStart(2,'0') + ':00';
+    }
+    envioRedesenhar();
+  }));
+  const dt = document.getElementById('envio-data'); if(dt) dt.addEventListener('change', ()=>{ envioUI.data = dt.value; });
+  const hr = document.getElementById('envio-hora'); if(hr) hr.addEventListener('change', ()=>{ envioUI.hora = hr.value; });
+
+  document.querySelectorAll('[data-envio-cancelar]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!(await showAppConfirm('Cancelar este envio agendado?', {title:'Cancelar envio', confirmLabel:'Cancelar envio'}))) return;
+    b.disabled = true;
+    const { error } = await sb.rpc('envio_coletivo_cancelar', { p_id: b.dataset.envioCancelar });
+    if(error){ alert('Não foi possível cancelar: '+(error.message||'')); b.disabled = false; return; }
+    await carregarEnvios(); envioRedesenhar();
+  }));
+
+  const enviar = document.getElementById('envio-disparar');
+  if(enviar) enviar.addEventListener('click', async ()=>{
+    const texto = (ta && ta.value || '').trim();
+    envioUI.texto = texto;
+    if(!texto){ alert('Escreva a mensagem antes de enviar.'); return; }
+    let quando = null;
+    if(envioUI.modo === 'agendar'){
+      const d = document.getElementById('envio-data'), h = document.getElementById('envio-hora');
+      const dia = d && d.value, hora = h && h.value;
+      if(!dia || !hora){ alert('Escolha o dia e a hora do envio.'); return; }
+      const alvo = new Date(dia + 'T' + hora + ':00');
+      if(isNaN(alvo.getTime())){ alert('Data ou hora inválida.'); return; }
+      if(alvo.getTime() <= Date.now()){ alert('Escolha um horário no futuro.'); return; }
+      quando = alvo.toISOString();
+    }
+    const quem = envioNomeRemetente(envioUI.remetente);
+    const como = envioUI.canal==='mensagem' ? 'como mensagem na conversa 1 a 1' : 'como notificação no celular';
+    const pergunta = quando
+      ? `Agendar para ${fmtDataHora(quando)}? Todos os mentorados vão receber ${como}, em nome de ${quem}.`
+      : `Enviar agora para todos os mentorados, ${como}, em nome de ${quem}?`;
+    if(!(await showAppConfirm(pergunta, {title: quando?'Agendar envio':'Enviar para todos', confirmLabel: quando?'Agendar':'Enviar'}))) return;
+    enviar.disabled = true;
+    const { error } = await sb.rpc('envio_coletivo_criar', {
+      p_remetente: envioUI.remetente, p_texto: texto, p_canal: envioUI.canal, p_quando: quando });
+    if(error){ alert('Não foi possível enviar: '+(error.message||'')); enviar.disabled = false; return; }
+    envioUI.texto = ''; envioUI.modo = 'agora';
+    await carregarEnvios();
+    envioRedesenhar();
+    alert(quando ? 'Envio agendado.' : 'Mensagem enviada para todos os mentorados.');
+  });
+}
+
 function renderComunicacao(){
   const recado = recadoPainelHtml();
   document.getElementById('view-comunicacao').innerHTML = `
     <p class="section-sub" style="margin-top:2px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
     ${recado || `<div class="tf-vazio" style="padding:14px">O recado do dia é escrito pela administração. Você vê a janela com o recado ao abrir o sistema.</div>`}
-    ${checkpointHtml()}`;
+    ${checkpointHtml()}
+    ${envioBlocoHtml()}`;
   bindRecadoPainel();
   bindCheckpoint();
+  bindEnvioBloco();
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
