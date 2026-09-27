@@ -4867,7 +4867,8 @@ function setRoleVendas(){
   permitidas.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'flex'; });
   const grupo = document.getElementById('staff-group-label');
   if(grupo) grupo.style.display = 'flex';
-  document.getElementById('nav-ecrm').style.display = 'none';
+  /* eCRM: consultora vê, editor de vídeos não. */
+  document.getElementById('nav-ecrm').style.display = currentUserRole==='vendas' ? 'flex' : 'none';
   document.getElementById('profile-dropdown-label').style.display = 'none';
   document.getElementById('profile-options').style.display = 'none';
   document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados</span>`;
@@ -4907,7 +4908,7 @@ function setRole(role){
     permitidas.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'flex'; });
     document.getElementById('staff-group-label').style.display = 'flex';
     document.getElementById('nav-prontuarios').style.display = 'none';
-    document.getElementById('nav-ecrm').style.display = 'none';
+    document.getElementById('nav-ecrm').style.display = role==='consultora' ? 'flex' : 'none';
     document.getElementById('profile-dropdown-label').style.display = 'none';
     document.getElementById('profile-options').style.display = 'none';
     document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`;
@@ -4934,7 +4935,7 @@ function setRole(role){
   document.getElementById('nav-analise').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-financeiro').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
-  /* eCRM é só da equipe interna de verdade: consultora e editor de vídeos não veem (nem na pré-visualização). */
+  /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
