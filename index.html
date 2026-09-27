@@ -1900,6 +1900,10 @@
     <button class="nav-item restrict" id="nav-clientes" data-view="clientes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
     <button class="nav-item restrict" id="nav-treinamento" data-view="treinamento" style="display:none"></button>
+    <a class="nav-item restrict" id="nav-ecrm" href="https://www.ecrm.digital" target="_blank" rel="noopener" style="display:none">
+      <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h3M8 17h6"/><circle cx="16.5" cy="15" r="1.5"/></svg>
+      <span>eCRM</span>
+    </a>
 
     <div class="sidebar-footer">
       <button class="nav-item" id="logout-btn"></button>
@@ -4702,6 +4706,11 @@ function setupNav(){
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-backdrop').classList.remove('open');
   });
+  /* eCRM abre em outra aba; no celular a gaveta do menu fecha junto, pra ninguém voltar e achar o menu aberto. */
+  document.getElementById('nav-ecrm').addEventListener('click',()=>{
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-backdrop').classList.remove('open');
+  });
   document.getElementById('nav-prontuarios').addEventListener('click',(e)=>{
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-backdrop').classList.remove('open');
@@ -4858,6 +4867,7 @@ function setRoleVendas(){
   permitidas.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'flex'; });
   const grupo = document.getElementById('staff-group-label');
   if(grupo) grupo.style.display = 'flex';
+  document.getElementById('nav-ecrm').style.display = 'none';
   document.getElementById('profile-dropdown-label').style.display = 'none';
   document.getElementById('profile-options').style.display = 'none';
   document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados</span>`;
@@ -4897,6 +4907,7 @@ function setRole(role){
     permitidas.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'flex'; });
     document.getElementById('staff-group-label').style.display = 'flex';
     document.getElementById('nav-prontuarios').style.display = 'none';
+    document.getElementById('nav-ecrm').style.display = 'none';
     document.getElementById('profile-dropdown-label').style.display = 'none';
     document.getElementById('profile-options').style.display = 'none';
     document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados (Equipe Interna)</span>`;
@@ -4923,6 +4934,8 @@ function setRole(role){
   document.getElementById('nav-analise').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-financeiro').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
+  /* eCRM é só da equipe interna de verdade: consultora e editor de vídeos não veem (nem na pré-visualização). */
+  document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
