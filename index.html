@@ -5033,6 +5033,7 @@ function goTo(view){
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
+  if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -10853,6 +10854,7 @@ async function msgRevalidar(forcar){
     const chave = msgUI.aberto;
     if(chave && MSG_CONVERSAS[chave]) MSG_CONVERSAS[chave]._completa = false;
     await msgBootstrap();
+    if(chave && msgNaTela() && document.visibilityState==='visible' && msgNaoLidasDaChave(chave)) msgEntrarNaConversa(chave);
     if(chave){
       await msgCarregarConversa(chave);
       msgMarcarLidas(chave);
@@ -11005,6 +11007,21 @@ function msgGuardarMarcador(chave){
   if(a){ const inf = MSG_ACOMP[a]; msgUI.marcador = (inf && inf.naoLidas) ? {chave, desde: inf.ultimaLeitura||null, ids:null} : null; return; }
   const ids = MSG_NAO_LIDAS.filter(m=>m.de===chave).map(m=>String(m.id));
   msgUI.marcador = ids.length ? {chave, desde:null, ids} : null;
+}
+/* Entrar numa conversa (clicando nela, vindo de outra tela, de um aviso, ou voltando ao app):
+   guarda onde começam as não lidas e pede que a conversa abra ali. Sem não lidas, abre no fim.
+   O pedido vale até a conversa estar carregada por completo, porque as mensagens mais antigas
+   chegam depois e empurram tudo para baixo. Se a pessoa rolar antes disso, o pedido é esquecido. */
+function msgEntrarNaConversa(chave){
+  if(!chave) return;
+  msgGuardarMarcador(chave);
+  msgUI.posInicial = chave;
+}
+function msgNaoLidasDaChave(chave){
+  const g = msgGrupoDaChave(chave), a = msgAcompDaChave(chave);
+  if(g) return g.naoLidas||0;
+  if(a) return (MSG_ACOMP[a]||{}).naoLidas||0;
+  return MSG_NAO_LIDAS.filter(m=>m.de===chave).length;
 }
 function msgPrimeiraNaoLida(chave, conversa, eu){
   const mk = msgUI.marcador;
@@ -11544,25 +11561,33 @@ function msgFecharPopup(chave){ const c = document.getElementById('msg-popups');
 function msgAbrirConversa(chave){
   if(msgUI.respondendo && msgUI.respondendo.chave!==chave) msgUI.respondendo = null;
   msgUI.aberto = chave;
-  msgGuardarMarcador(chave);
+  msgEntrarNaConversa(chave);
   msgFecharPopup(chave);
   const alvo = (msgSouMentorado() || (currentRole==='aluno' && msgEhAcomp(chave))) ? 'acompanhamento' : 'mensagens';
   if(currentView!==alvo) goTo(alvo); else renderMensagens();
 }
 
+/* Posição de quem acabou de entrar na conversa: na linha vermelha de não lidas, ou no fim. */
+function msgAplicarPosInicial(el, chave){
+  const corpo = el.querySelector('#msg-corpo');
+  if(!corpo) return;
+  const alvo = el.querySelector('#msg-marcador') ? { tipo:'marcador' } : { tipo:'fim' };
+  msgPosicionarRolagem(corpo, alvo, ()=>{ if(msgUI.posInicial===chave) msgUI.posInicial = null; });
+  if((MSG_CONVERSAS[chave]||{})._completa) setTimeout(()=>{ if(msgUI.posInicial===chave) msgUI.posInicial = null; }, 1200);
+}
 /* Onde a conversa deve parar quando é desenhada.
    No celular a altura da lista ainda está mudando no instante em que a mensagem entra: o
    teclado abre ou fecha, a caixa de texto volta a ter uma linha, áudio e imagem só informam o
    tamanho depois de carregar. Empurrar a rolagem uma única vez, como era antes, acertava o
    lugar antigo e a tela "pulava". Aqui o alvo é reaplicado enquanto a altura ainda mexe. */
-function msgPosicionarRolagem(corpo, alvo){
+function msgPosicionarRolagem(corpo, alvo, aoDesistir){
   if(!corpo) return;
   /* Assim que a pessoa mexe na rolagem — roda do mouse, dedo, teclado ou a barra lateral —
      a gente para de reposicionar. Sem isso, quem subia para reler algo era puxado de volta
      alguns instantes depois, e parecia que a barra "voltava sozinha". */
   let desistir = false;
   let ultimaPosta = -1;
-  const parar = ()=>{ desistir = true; limpar(); };
+  const parar = ()=>{ if(!desistir && aoDesistir) aoDesistir(); desistir = true; limpar(); };
   const limpar = ()=>{
     corpo.removeEventListener('wheel', parar);
     corpo.removeEventListener('touchstart', parar);
@@ -11581,8 +11606,10 @@ function msgPosicionarRolagem(corpo, alvo){
     if(alvo.tipo === 'fim'){
       corpo.scrollTop = corpo.scrollHeight;
     }else if(alvo.tipo === 'marcador'){
+      /* A distância é medida na tela, em relação à própria área das mensagens. O offsetTop que
+         era usado antes contava a partir de outro elemento da página, e a conversa parava no meio. */
       const m = corpo.querySelector('#msg-marcador');
-      corpo.scrollTop = m ? Math.max(0, m.offsetTop - 56) : corpo.scrollHeight;
+      corpo.scrollTop = m ? Math.max(0, corpo.scrollTop + m.getBoundingClientRect().top - corpo.getBoundingClientRect().top - 56) : corpo.scrollHeight;
     }else{
       corpo.scrollTop = alvo.valor || 0;
     }
@@ -11676,6 +11703,7 @@ function renderMensagens(){
   const chave = grupo ? msgChaveGrupo(grupo.id) : acompId ? msgChaveAcomp(acompId) : (outro ? outro.id : null);
   const acomp = !!acompId;
   const conversa = chave ? (MSG_CONVERSAS[chave]||[]) : [];
+  if(msgUI.entrando){ msgUI.entrando = false; if(chave) msgEntrarNaConversa(chave); }
   const taAntes = el.querySelector('#msg-texto');
   const corpoAntes = el.querySelector('#msg-corpo');
   /* A lista de pessoas/grupos é redesenhada inteira a cada render — sem isto, escolher alguém lá
@@ -11825,6 +11853,7 @@ function renderMensagens(){
      a pessoa tinha acabado de selecionar e devolviam a rolagem para o lugar calculado. Agora, se o
      conteúdo é o mesmo, a tela fica exatamente como está — seleção e rolagem intactas. */
   if(MSG_HTML_ANTERIOR[el.id] === novoHtml && el.firstElementChild){
+    if(chave && msgUI.posInicial===chave) msgAplicarPosInicial(el, chave);
     if(chave) msgMarcarLidas(chave);
     return;
   }
@@ -11843,7 +11872,7 @@ function renderMensagens(){
   el.querySelectorAll('[data-msg-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
     msgUI.aberto = b.dataset.msgAbrir;
     if(msgUI.respondendo && msgUI.respondendo.chave!==msgUI.aberto) msgUI.respondendo = null;
-    msgGuardarMarcador(msgUI.aberto);
+    msgEntrarNaConversa(msgUI.aberto);
     renderMensagens();
     await msgCarregarConversa(msgUI.aberto);
     msgMarcarLidas(msgUI.aberto);
@@ -11864,11 +11893,16 @@ function renderMensagens(){
        para na última mensagem. Já aberta: vai ao fim quando eu acabei de enviar ou quando eu já
        estava no fim, e em qualquer outro caso fica exatamente onde eu deixei. */
     const temMarcador = !!el.querySelector('#msg-marcador');
-    const alvo = (temMarcador && !mesmaConversa) ? { tipo:'marcador' }
-               : (pertoDoFim || msgUI.forcarFim) ? { tipo:'fim' }
-               : { tipo:'manter', valor: scrollAntes };
+    if(msgUI.posInicial===chave && !msgUI.forcarFim){
+      msgAplicarPosInicial(el, chave);
+    }else{
+      const alvo = (temMarcador && !mesmaConversa) ? { tipo:'marcador' }
+                 : (pertoDoFim || msgUI.forcarFim) ? { tipo:'fim' }
+                 : { tipo:'manter', valor: scrollAntes };
+      msgPosicionarRolagem(corpo, alvo);
+    }
+    if(msgUI.forcarFim && msgUI.posInicial===chave) msgUI.posInicial = null;
     msgUI.forcarFim = false;
-    msgPosicionarRolagem(corpo, alvo);
     if(!(MSG_CONVERSAS[chave]||{})._completa){ msgCarregarConversa(chave).then(()=>{ msgMarcarLidas(chave); if(msgUI.aberto===chave && msgNaTela()) renderMensagens(); }); }
     else msgMarcarLidas(chave);
     const ta = el.querySelector('#msg-texto'), btn = el.querySelector('#msg-enviar');
