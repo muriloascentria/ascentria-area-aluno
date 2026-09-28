@@ -11309,14 +11309,42 @@ function msgAudioUrlPronta(path, bucket){
   const c = MSG_AUDIO_URLS[(bucket||'mensagens-audio')+'/'+path];
   return (c && c.ate > Date.now()) ? c.url : null;
 }
-async function msgAudioUrl(path, bucket){
+/* Os arquivos das conversas ficam em pastas privadas e só abrem com um endereço assinado, que
+   vence. Antes ele valia 1 hora: quem deixava o app aberto em segundo plano e voltava depois
+   encontrava áudios e documentos que não abriam mais, e só resolvia fechando o app. Agora vale
+   6 horas, é renovado sozinho quando o app volta, e um áudio que falhar tenta de novo. */
+const MSG_URL_VIDA_SEG = 6*3600;
+const MSG_URL_GUARDA_MS = 5.5*3600*1000;
+const MSG_URL_PEDINDO = {};  // bucket/path -> promessa, para não pedir o mesmo endereço duas vezes
+async function msgAudioUrl(path, bucket, forcar){
   bucket = bucket || 'mensagens-audio';
   const k = bucket+'/'+path, c = MSG_AUDIO_URLS[k];
-  if(c && c.ate > Date.now()) return c.url;
-  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 3600);
-  if(error || !data){ console.error('msgAudioUrl', error); return null; }
-  MSG_AUDIO_URLS[k] = { url:data.signedUrl, ate: Date.now()+50*60*1000 };
-  return data.signedUrl;
+  if(!forcar && c && c.ate > Date.now()) return c.url;
+  if(!forcar && MSG_URL_PEDINDO[k]) return MSG_URL_PEDINDO[k];
+  const pedido = (async ()=>{
+    const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, MSG_URL_VIDA_SEG);
+    if(error || !data){ console.error('msgAudioUrl', error); return null; }
+    MSG_AUDIO_URLS[k] = { url:data.signedUrl, ate: Date.now()+MSG_URL_GUARDA_MS };
+    return data.signedUrl;
+  })();
+  MSG_URL_PEDINDO[k] = pedido;
+  try{ return await pedido; } finally { delete MSG_URL_PEDINDO[k]; }
+}
+/* Assina de uma vez todos os arquivos que estão na tela. Antes era um pedido ao servidor para
+   cada áudio e cada anexo, e numa conversa cheia isso deixava tudo lento para aparecer. */
+async function msgPreassinar(root){
+  const porBucket = { 'mensagens-audio': new Set(), 'mensagens-arquivos': new Set() };
+  root.querySelectorAll('[data-msg-audio]').forEach(b=>{ if(b.dataset.msgAudio) porBucket['mensagens-audio'].add(b.dataset.msgAudio); });
+  root.querySelectorAll('[data-msg-arquivo]').forEach(b=>{ if(b.dataset.msgArquivo) porBucket['mensagens-arquivos'].add(b.dataset.msgArquivo); });
+  await Promise.all(Object.entries(porBucket).map(async ([bucket, set])=>{
+    const faltam = [...set].filter(p=>{ const c = MSG_AUDIO_URLS[bucket+'/'+p]; return !(c && c.ate > Date.now()) && !MSG_URL_PEDINDO[bucket+'/'+p]; });
+    if(!faltam.length || typeof sb.storage.from(bucket).createSignedUrls !== 'function') return;
+    try{
+      const { data, error } = await sb.storage.from(bucket).createSignedUrls(faltam, MSG_URL_VIDA_SEG);
+      if(error || !Array.isArray(data)) return;
+      data.forEach(d=>{ if(d && d.signedUrl && d.path) MSG_AUDIO_URLS[bucket+'/'+d.path] = { url:d.signedUrl, ate: Date.now()+MSG_URL_GUARDA_MS }; });
+    }catch(e){ console.error('msgPreassinar', e); }
+  }));
 }
 /* ---- anexos: qualquer arquivo (áudio do WhatsApp, PDF, imagem, documento…) ---- */
 const MSG_ARQUIVO_MAX = 25*1024*1024;
@@ -11328,7 +11356,7 @@ function msgArquivoHtml(m){
   const base = `data-msg-arquivo="${escapeAttr(m.arquivoPath)}"`;
   if(msgArquivoEhAudio(m)) return `<div class="msg-audio msg-arq-audio" ${base} data-msg-arq-tipo="audio"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="metadata" controlsList="nodownload"></audio>${msgVelBotaoHtml()}<a class="msg-arq-baixar" download="${escapeAttr(m.arquivoNome)}" title="Baixar ${nome}">${icon('download','tiny')}</a><small class="msg-arq-nome">${nome} · ${tam}</small></div>`;
   if(msgArquivoEhImagem(m)) return `<a class="msg-arq-img" ${base} data-msg-arq-tipo="imagem" target="_blank" rel="noopener" title="${nome}"><img alt="${nome}"><small>${nome} · ${tam}</small></a>`;
-  return `<a class="msg-arq" ${base} data-msg-arq-tipo="arquivo" target="_blank" rel="noopener" download="${escapeAttr(m.arquivoNome)}"><span class="msg-arq-ic">${icon('file','tiny')}</span><span class="msg-arq-txt"><strong>${nome}</strong><small>${tam} · clique para abrir ou baixar</small></span></a>`;
+  return `<a class="msg-arq" ${base} data-msg-arq-tipo="arquivo" target="_blank" rel="noopener" download="${escapeAttr(m.arquivoNome)}"><span class="msg-arq-ic">${icon('file','tiny')}</span><span class="msg-arq-txt"><strong>${nome}</strong><small>${tam} · toque para abrir</small></span></a>`;
 }
 /* ---- indicar uma aula no Acompanhamento: vira um cartão que abre a aula direto (como nas Metas) ---- */
 function msgAulaHtml(m){
@@ -11450,18 +11478,30 @@ function msgVelBind(root){
 }
 function msgAudioVigiar(a, box){
   if(!a || a.dataset.vigiado) return; a.dataset.vigiado = '1';
-  a.addEventListener('error', ()=>{ box.classList.remove('carregando'); box.classList.add('erro'); }, { once:true });
+  /* Se o áudio falhar (endereço vencido, rede que caiu), pede um endereço novo e tenta outra vez
+     antes de mostrar o erro. É isso que antes obrigava a fechar e abrir o app. */
+  a.addEventListener('error', async ()=>{
+    const path = box.dataset.msgAudio || box.dataset.msgArquivo;
+    const bucket = box.dataset.msgAudio ? 'mensagens-audio' : 'mensagens-arquivos';
+    if(path && !a.dataset.tentouDeNovo){
+      a.dataset.tentouDeNovo = '1';
+      const url = await msgAudioUrl(path, bucket, true);
+      if(url && a.isConnected){ a.src = url; try{ a.load(); }catch(e){} return; }
+    }
+    box.classList.remove('carregando'); box.classList.add('erro');
+  });
   a.addEventListener('loadedmetadata', ()=>box.classList.remove('carregando'), { once:true });
   a.addEventListener('canplay', ()=>box.classList.remove('carregando'), { once:true });
   /* Rede lenta ou navegador que não avisa nada: o aviso de "preparando" não fica para sempre. */
   setTimeout(()=>box.classList.remove('carregando'), 8000);
 }
-function msgAudioCarregar(root){
+async function msgAudioCarregar(root){
   msgVelBind(root); msgVelAplicar(root);
+  await msgPreassinar(root);
   root.querySelectorAll('[data-msg-audio]').forEach(async box=>{
     const a = box.querySelector('audio');
     msgAudioVigiar(a, box);
-    if(a && a.getAttribute('src')) return;          // já veio pronto do próprio HTML
+    if(a && a.getAttribute('src')){ if(!box.dataset.urlAte){ const c = MSG_AUDIO_URLS['mensagens-audio/'+box.dataset.msgAudio]; if(c) box.dataset.urlAte = String(c.ate); } return; }  // já veio pronto do próprio HTML
     if(box.dataset.carregando) return;
     box.dataset.carregando = '1';
     box.classList.add('carregando');
@@ -11471,6 +11511,7 @@ function msgAudioCarregar(root){
     if(!url){ box.classList.remove('carregando'); box.classList.add('erro'); return; }
     const atual = box.querySelector('audio');
     if(atual && !atual.getAttribute('src')){ msgAudioVigiar(atual, box); atual.src = url; }
+    box.dataset.urlAte = String(Date.now()+MSG_URL_GUARDA_MS);
     const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, box.dataset.msgAudioNome);
     msgVelAplicar(box);
   });
@@ -11482,9 +11523,51 @@ function msgAudioCarregar(root){
     const nome = box.getAttribute('download') || (box.querySelector('.msg-arq-baixar') && box.querySelector('.msg-arq-baixar').getAttribute('download')) || '';
     if(t==='audio'){ const a = box.querySelector('audio'); if(a){ msgAudioVigiar(a, box); a.src = url; } const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, d.getAttribute('download')||nome); }
     else if(t==='imagem'){ box.href = url; const im = box.querySelector('img'); if(im) im.src = url; }
-    else box.href = urlParaBaixar(url, nome);
+    /* Documento abre direto no visualizador do aparelho (PDF, foto, Word…). O endereço de "baixar"
+       que era usado aqui fazia o celular abrir uma página do Supabase em branco, sem o arquivo. */
+    else box.href = url;
+    box.dataset.urlAte = String(Date.now()+MSG_URL_GUARDA_MS);
   });
 }
+/* Documento tocado antes de o endereço ficar pronto: abre a janela na hora (o celular só deixa
+   abrir janela no instante do toque) e coloca o arquivo nela assim que o endereço chega. Também
+   cobre o endereço que venceu enquanto o app ficou parado. */
+document.addEventListener('click', async (e)=>{
+  const a = e.target.closest && e.target.closest('a[data-msg-arquivo]');
+  if(!a) return;
+  const vencido = a.dataset.urlAte && Number(a.dataset.urlAte) < Date.now();
+  if(a.getAttribute('href') && !vencido) return;
+  e.preventDefault();
+  const w = window.open('', '_blank');
+  const url = await msgAudioUrl(a.dataset.msgArquivo, 'mensagens-arquivos', vencido);
+  if(!url){ if(w) w.close(); alert('Não foi possível abrir o arquivo agora. Tente de novo em instantes.'); return; }
+  a.href = url; a.dataset.urlAte = String(Date.now()+MSG_URL_GUARDA_MS);
+  if(w) w.location.href = url; else window.open(url, '_blank');
+}, true);
+/* Voltando ao app depois de muito tempo: renova os endereços que já venceram ou estão vencendo,
+   sem mexer no áudio que estiver tocando. */
+function msgRenovarMidias(){
+  const limite = Date.now() + 10*60*1000;
+  Object.keys(MSG_AUDIO_URLS).forEach(k=>{ if(MSG_AUDIO_URLS[k].ate < limite) delete MSG_AUDIO_URLS[k]; });
+  document.querySelectorAll('[data-msg-arquivo][data-url-ate], [data-msg-audio]').forEach(async box=>{
+    const ate = Number(box.dataset.urlAte || 0);
+    if(ate && ate > limite) return;
+    const a = box.querySelector('audio');
+    if(a && !a.paused) return;
+    const ehAudio = !!box.dataset.msgAudio;
+    const path = ehAudio ? box.dataset.msgAudio : box.dataset.msgArquivo;
+    if(!path) return;
+    if(ehAudio && !ate && !(a && a.getAttribute('src'))) return; // ainda nem carregou: o carregamento normal cuida
+    const url = await msgAudioUrl(path, ehAudio ? 'mensagens-audio' : 'mensagens-arquivos', true);
+    if(!url || !box.isConnected) return;
+    box.dataset.urlAte = String(Date.now()+MSG_URL_GUARDA_MS);
+    const t = box.dataset.msgArqTipo;
+    if(a){ a.dataset.tentouDeNovo = ''; a.src = url; const d = box.querySelector('.msg-arq-baixar'); if(d) d.href = urlParaBaixar(url, d.getAttribute('download') || box.dataset.msgAudioNome || ''); }
+    else if(t==='imagem'){ box.href = url; const im = box.querySelector('img'); if(im) im.src = url; }
+    else box.href = url;
+  });
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && msgNaTela()) msgRenovarMidias(); });
 
 /* ---- som de aviso (gerado no navegador, sem arquivo externo) ---- */
 let msgAudioCtx = null;
