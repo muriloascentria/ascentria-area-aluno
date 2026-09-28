@@ -10616,8 +10616,30 @@ function emojiInserir(campo, emoji){
 }
 function emojiFechar(){ const p = document.getElementById('emoji-painel'); if(p) p.remove(); document.removeEventListener('click', emojiForaClick); }
 function emojiForaClick(e){ const p = document.getElementById('emoji-painel'); if(p && !p.contains(e.target) && !e.target.closest('.emoji-btn')) emojiFechar(); }
+/* Qual caixa de texto o botão 😊 alimenta. Nos comentários a caixa fica embrulhada pelo recurso de
+   menções (@), então ela não é mais a vizinha direta do botão. Antes o botão só olhava a vizinha e,
+   nas respostas aos comentários, não achava a caixa e o emoji não entrava. */
+function emojiCampoDo(btn){
+  if(btn.dataset.emojiFor) return document.querySelector(btn.dataset.emojiFor);
+  const ehCampo = (el)=> el && /^(INPUT|TEXTAREA)$/.test(el.tagName) && el.type!=='hidden' && el.type!=='file';
+  for(let prev = btn.previousElementSibling; prev; prev = prev.previousElementSibling){
+    if(ehCampo(prev)) return prev;
+    const dentro = prev.querySelector && prev.querySelector('textarea, input:not([type=hidden]):not([type=file])');
+    if(dentro) return dentro;
+  }
+  return btn.parentElement ? btn.parentElement.querySelector('textarea, input:not([type=hidden]):not([type=file])') : null;
+}
+/* Se a tela for redesenhada com a janela de emojis aberta, a caixa antiga some. Aqui a gente acha
+   a caixa nova equivalente, para o emoji não "cair no vazio". */
+function emojiCampoAtual(alvo){
+  if(alvo && alvo.isConnected) return alvo;
+  if(!alvo) return null;
+  if(alvo.id) return document.getElementById(alvo.id);
+  if(alvo.dataset && alvo.dataset.commentInput) return document.querySelector(`[data-comment-input="${alvo.dataset.commentInput}"]`);
+  return null;
+}
 function emojiAbrir(btn){
-  const alvo = btn.dataset.emojiFor ? document.querySelector(btn.dataset.emojiFor) : (btn.previousElementSibling && /^(INPUT|TEXTAREA)$/.test(btn.previousElementSibling.tagName) ? btn.previousElementSibling : null);
+  const alvo = emojiCampoDo(btn);
   if(!alvo) return;
   const jaAberto = document.getElementById('emoji-painel');
   if(jaAberto){ const mesmo = jaAberto._btn===btn; emojiFechar(); if(mesmo) return; }
@@ -10628,7 +10650,7 @@ function emojiAbrir(btn){
   let left = Math.min(Math.max(8, r.left), window.innerWidth - pw - 8);
   let top = r.top - ph - 8; if(top < 8) top = Math.min(r.bottom + 8, window.innerHeight - ph - 8);
   p.style.left = left+'px'; p.style.top = top+'px';
-  p.querySelectorAll('[data-emoji]').forEach(b=>b.addEventListener('click', ()=>{ emojiInserir(alvo, b.dataset.emoji); }));
+  p.querySelectorAll('[data-emoji]').forEach(b=>b.addEventListener('click', ()=>{ emojiInserir(emojiCampoAtual(alvo), b.dataset.emoji); }));
   setTimeout(()=>document.addEventListener('click', emojiForaClick), 0);
 }
 document.addEventListener('click', e=>{ const b = e.target.closest('.emoji-btn'); if(b){ e.preventDefault(); e.stopPropagation(); emojiAbrir(b); } });
