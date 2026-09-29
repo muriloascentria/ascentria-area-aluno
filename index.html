@@ -4759,7 +4759,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgTotalNaoLidas() + (currentRole==='staff' ? ACOMP_ALERTAS.length : 0) : (msgSouMentorado() ? msgTotalNaoLidas() : 0);
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + (currentRole==='staff' ? ACOMP_ALERTAS.length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
   if(typeof appBadge==='function') appBadge(pend.length + tf);
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
@@ -10731,6 +10731,14 @@ function msgGrupoDaChave(chave){ return msgEhGrupo(chave) ? (MSG_GRUPOS.find(g=>
 function msgGrupo(id){ return MSG_GRUPOS.find(g=>g.id===id) || null; }
 function msgChave(m){ return m.grupoId ? msgChaveGrupo(m.grupoId) : m.alunoId ? msgChaveAcomp(m.alunoId) : (m.de===msgEu() ? m.para : m.de); }
 function msgSouAdminGrupos(){ return currentUserRole==='staff' && typeof tarefasSouAdmin==='function' && tarefasSouAdmin(); }
+/* Para o sininho e a bolinha do ícone do app: quantas CONVERSAS têm algo por ler, e não quantas
+   mensagens. Quem recebe 100 mensagens da mesma pessoa vê 1 aviso daquela pessoa, igual ao que
+   já aparece na lista do sininho (um item por pessoa, grupo ou Acompanhamento). */
+function msgConversasNaoLidas(){
+  return new Set(MSG_NAO_LIDAS.map(m=>m.de)).size
+       + MSG_GRUPOS.filter(g=>g.naoLidas).length
+       + Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length;
+}
 function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + MSG_GRUPOS.reduce((s,g)=>s+(g.naoLidas||0),0) + Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0); }
 function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgQuem(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
 function msgAvatarDe(id, tam){ const p = msgQuem(id); return p ? initialsAvatar(p.initials||'', p.color||'#8d916f', tam, p.avatarUrl||null) : msgGrupoAvatar(tam); }
