@@ -1795,6 +1795,19 @@
     input[type="time"],input[type="datetime-local"],input:not([type]),
     textarea, select, .ps-input{ font-size:16px; }
   }
+
+  /* Tarefas: linha de filtros com todas as caixas da mesma altura. As caixas de data têm altura e
+     preenchimento próprios no navegador (e ainda mais no iPhone), por isso ficavam mais altas e
+     fora do alinhamento. Aqui todas seguem a mesma medida. */
+  .tf-filtros .ps-input{height:38px;box-sizing:border-box;line-height:normal;padding-top:0;padding-bottom:0;}
+  .tf-filtros input[type="date"]{-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;}
+  .tf-filtros input[type="date"]::-webkit-date-and-time-value{text-align:left;margin:0;}
+  .tf-filtros input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:0;}
+  @media (max-width:880px), (pointer:coarse){
+    /* No celular: Criação/Conclusão e as duas datas dividem a mesma linha, sem nada sair da tela. */
+    .tf-periodo{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr);gap:6px;flex:1 1 100%;}
+    .tf-periodo .ps-input{min-width:0;width:100%;padding-left:8px;padding-right:6px;}
+  }
 </style>
 </head>
 <body>
