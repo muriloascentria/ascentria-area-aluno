@@ -12343,7 +12343,7 @@ let vendasBusca = '';
 let clientesBusca = '';
 let clientesOrdem = 'nome'; // 'nome' (A–Z) ou 'recentes'
 const CLIENTES_TAG_OPTS = ['Paciente Murilo','Paciente Sandra','Paciente Diego','Paciente Carmem','Mentoria Essência','Método Essência','Pós-Graduação','Constelação'];
-const VENDAS_VENDEDOR_OPTS = ['Carmem','Carmem e Diego','Diego','Viviane'];
+const VENDAS_VENDEDOR_OPTS = ['Adriana','Carmem','Carmem e Diego','Diego','Viviane'];
 const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
 const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'];
 const VENDAS_PRESENCA_OPTS = ['Show','No-show'];
@@ -12446,7 +12446,9 @@ function vendaMesLabel(key){
   return `${nomes[m-1]||key} ${y}`;
 }
 function renderVendas(){
-  const vendedores = Array.from(new Set(VENDA_SESSOES.map(v=>v.vendedor).filter(Boolean))).sort();
+  /* O filtro mostra todos os vendedores da equipe, mesmo quem ainda não tem sessão registrada (como
+     uma vendedora que acabou de entrar), e também qualquer nome antigo que já esteja nos registros. */
+  const vendedores = Array.from(new Set([...VENDAS_VENDEDOR_OPTS, ...VENDA_SESSOES.map(v=>v.vendedor).filter(Boolean)])).sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const resultados = Array.from(new Set(VENDA_SESSOES.map(v=>v.resultado).filter(Boolean))).sort();
   const meses = Array.from(new Set(VENDA_SESSOES.map(vendaMesKey).filter(Boolean))).sort().reverse();
   const busca = normTxt(vendasBusca).trim();
