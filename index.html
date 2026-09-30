@@ -3621,6 +3621,11 @@ async function bootstrapData(){
     (recRows||[]).forEach(c=>COURSES.push({id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration||'—', tint:[c.tint1||'#8d916f', c.tint2||'#bec6b1'], desc:c.description||'', videoLink:c.video_link||'', materiais:[]}));
     await carregarTreinamentoRegistros();
     await tarefasBootstrap();
+    /* Vendedora incluída no Acompanhamento: carrega só a lista de mentorados (nome e foto), para as
+       conversas aparecerem. O banco libera apenas o perfil dos mentorados, nada de fichas ou finanças. */
+    try{ const { data: podeAcomp } = await sb.rpc('pode_acompanhamento'); ACOMP_EXTRA = !!podeAcomp; }catch(e){ ACOMP_EXTRA = false; }
+    STUDENTS.length = 0;
+    if(ACOMP_EXTRA) profiles.filter(p=>p.role==='aluno' && (p.tier||'mentorado')!=='curso').forEach(p=>STUDENTS.push(mapProfileRow(p)));
     await msgBootstrap();
     currentStudentId = null;
     return;
@@ -10720,6 +10725,11 @@ function msgAcompInfo(alunoId){ return MSG_ACOMP[alunoId] || (MSG_ACOMP[alunoId]
 function msgAlunoAcomp(id){ const s = typeof getStudent==='function' ? getStudent(id) : null; if(s) return s; if(currentUserProfile && currentUserProfile.id===id) return currentUserProfile; return null; }
 /* Quem é essa pessoa? Equipe (MSG_EQUIPE), mentorado (STUDENTS), qualquer perfil já carregado (PEOPLE) ou eu. */
 function msgQuem(id){ return msgPessoa(id) || msgAlunoAcomp(id) || (typeof getPerson==='function' ? getPerson(id) : null) || null; }
+/* Quem vê e responde o Acompanhamento dos mentorados: a equipe interna completa (staff) e quem
+   o Murilo incluiu na lista acompanhamento_equipe (por exemplo, uma vendedora). O banco confere
+   a mesma regra (pode_acompanhamento); aqui é só para a tela mostrar as conversas. */
+let ACOMP_EXTRA = false;
+function msgPodeAcomp(){ return currentUserRole==='staff' || ACOMP_EXTRA; }
 function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
 let MSG_MAIOR_ID = 0;
@@ -10828,7 +10838,7 @@ async function msgBootstrap(){
       sb.rpc('equipe_interna'),
       sb.from('mensagens').select('id,de').eq('para', msgEu()).eq('lida', false),
       msgCarregarGrupos(),
-      currentUserRole==='staff' ? msgCarregarAcomp() : Promise.resolve(),
+      msgPodeAcomp() ? msgCarregarAcomp() : Promise.resolve(),
     ]);
     MSG_EQUIPE = (eq||[]).filter(p=>p.id!==msgEu()).map(p=>({id:p.id, name:p.name||'', initials:p.initials||'', color:p.color||'#8d916f', avatarUrl:p.avatar_url||null, role:p.role, cargo:p.cargo||''}));
     MSG_NAO_LIDAS = (nl||[]).map(m=>({id:m.id, de:m.de}));
@@ -11814,7 +11824,7 @@ function renderMensagens(){
   const admin = msgSouAdminGrupos();
   const pessoas = MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
   const grupos = MSG_GRUPOS.filter(g=>!q || normTxt(g.nome).includes(q));
-  const mentorados = (!solo && currentUserRole==='staff') ? msgMentorados().filter(s=>!q || normTxt(s.name).includes(q)) : [];
+  const mentorados = (!solo && msgPodeAcomp()) ? msgMentorados().filter(s=>!q || normTxt(s.name).includes(q)) : [];
   const ultima = (chave)=>{ const l = MSG_CONVERSAS[chave]||[]; return l.length ? l[l.length-1] : null; };
   const previa = (u, grupo)=>{ if(!u) return ''; const quem = u.de===eu ? 'Você: ' : (grupo ? msgNomeDe(u.de)+': ' : ''); return escapeHtml(quem+u.texto).slice(0,60); };
   const quando = (u)=> u ? `<small class="msg-quando">${tzDataCurta(tzDataHora(u.createdAt).split('/').reverse().join('-'))}</small>` : '';
