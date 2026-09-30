@@ -10729,6 +10729,7 @@ function msgQuem(id){ return msgPessoa(id) || msgAlunoAcomp(id) || (typeof getPe
    o Murilo incluiu na lista acompanhamento_equipe (por exemplo, uma vendedora). O banco confere
    a mesma regra (pode_acompanhamento); aqui é só para a tela mostrar as conversas. */
 let ACOMP_EXTRA = false;
+let ACOMP_EQUIPE_IDS = new Set(); // quem, fora do staff, foi incluído no Acompanhamento (para o @)
 function msgPodeAcomp(){ return currentUserRole==='staff' || ACOMP_EXTRA; }
 function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
@@ -10765,6 +10766,10 @@ async function msgCarregarAcomp(){
 function msgMencionaveis(chave){
   const g = msgGrupoDaChave(chave);
   if(g) return g.membros.filter(id=>id!==msgEu()).map(id=>msgQuem(id)).filter(Boolean);
+  /* Acompanhamento: a equipe pode marcar quem da equipe também acompanha os mentorados (staff e quem
+     foi incluído no Acompanhamento). O mentorado não marca ninguém. */
+  if(msgAcompDaChave(chave) && msgPodeAcomp() && !msgSouMentorado())
+    return MSG_EQUIPE.filter(p=>p.id!==msgEu() && (p.role==='staff' || ACOMP_EQUIPE_IDS.has(p.id)));
   return [];
 }
 function msgExtrairMencoes(texto, chave){
@@ -10775,7 +10780,7 @@ function msgExtrairMencoes(texto, chave){
 }
 function msgTextoHtml(m){
   let h = linkify(m.texto);
-  if(m.grupoId){ const nomes = new Set(msgMencionaveis(msgChaveGrupo(m.grupoId)).concat(currentUserProfile?[currentUserProfile]:[]).map(p=>normTxt(p.name.split(' ')[0]))); h = h.replace(/@([A-Za-zÀ-ÿ]+)/g, (m0,nome)=> nomes.has(normTxt(nome)) ? `<span class="tf-mencao">@${nome}</span>` : m0); }
+  if(m.grupoId || (m.alunoId && m.mencoes && m.mencoes.length)){ const nomes = new Set(msgMencionaveis(m.grupoId ? msgChaveGrupo(m.grupoId) : msgChaveAcomp(m.alunoId)).concat(m.alunoId ? (m.mencoes||[]).map(id=>msgQuem(id)).filter(Boolean) : []).concat(currentUserProfile?[currentUserProfile]:[]).map(p=>normTxt(p.name.split(' ')[0]))); h = h.replace(/@([A-Za-zÀ-ÿ]+)/g, (m0,nome)=> nomes.has(normTxt(nome)) ? `<span class="tf-mencao">@${nome}</span>` : m0); }
   return h;
 }
 function msgMeMenciona(m){ return !!(m.mencoes && m.mencoes.includes(msgEu())); }
@@ -10839,6 +10844,7 @@ async function msgBootstrap(){
       sb.from('mensagens').select('id,de').eq('para', msgEu()).eq('lida', false),
       msgCarregarGrupos(),
       msgPodeAcomp() ? msgCarregarAcomp() : Promise.resolve(),
+      msgPodeAcomp() ? sb.from('acompanhamento_equipe').select('user_id').then(({data})=>{ ACOMP_EQUIPE_IDS = new Set((data||[]).map(r=>r.user_id)); }).catch(()=>{}) : Promise.resolve(),
     ]);
     MSG_EQUIPE = (eq||[]).filter(p=>p.id!==msgEu()).map(p=>({id:p.id, name:p.name||'', initials:p.initials||'', color:p.color||'#8d916f', avatarUrl:p.avatar_url||null, role:p.role, cargo:p.cargo||''}));
     MSG_NAO_LIDAS = (nl||[]).map(m=>({id:m.id, de:m.de}));
