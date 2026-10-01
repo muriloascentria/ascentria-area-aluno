@@ -1489,6 +1489,7 @@
   .msg-aula-hd{display:flex;gap:6px;align-items:center;} .msg-aula-hd .ps-input{margin:0;flex:1;}
   .msg-aula-dica{font-size:11px;color:var(--text-mute);}
   .msg-aula-lista{max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+  .msg-painel-card[aria-disabled="true"]{cursor:default;}
   .msg-aula-cat{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);padding:6px 8px 2px;}
   .msg-aula-lista button{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;text-align:left;font:inherit;font-size:13px;color:var(--text);}
   .msg-aula-lista button:hover{background:rgba(141,145,111,.22);}
@@ -10743,7 +10744,7 @@ function msgPodeAcomp(){ return currentUserRole==='staff' || ACOMP_EXTRA; }
 function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
 let MSG_MAIOR_ID = 0;
-function mapMsgRow(r){ const _n = Number(r.id)||0; if(_n > MSG_MAIOR_ID) MSG_MAIOR_ID = _n; return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null, respondeA:r.responde_a||null, respondeDe:r.responde_de||null, respondeTexto:r.responde_texto||'' }; }
+function mapMsgRow(r){ const _n = Number(r.id)||0; if(_n > MSG_MAIOR_ID) MSG_MAIOR_ID = _n; return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null, painelTopico:r.painel_topico||null, respondeA:r.responde_a||null, respondeDe:r.responde_de||null, respondeTexto:r.responde_texto||'' }; }
 /* ---- grupos ---- */
 function msgChaveGrupo(id){ return 'g:'+id; }
 function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
@@ -11444,6 +11445,44 @@ async function msgEnviarAula(chave, aulaId, nota){
   if(msgNaTela() && msgUI.aberto===chave) renderMensagens();
   return true;
 }
+/* ---- indicar um lugar exato do Painel do Método (ex.: Missão, Visão e Valores) no Acompanhamento ----
+   A equipe escolhe o quadro; a aluna recebe um cartão que abre o Painel dela direto naquele quadro, pronto
+   para preencher. painel_topico = "<pilar>/<tópico>", os mesmos ids de QUADRANTS. */
+function msgPainelAlvo(ref){
+  const [qid, tid] = String(ref||'').split('/');
+  const q = QUADRANTS.find(x=>x.id===qid); const t = q && q.topics.find(x=>x.id===tid);
+  return q && t ? {q, t} : null;
+}
+function msgPainelHtml(m){
+  const a = msgPainelAlvo(m.painelTopico);
+  const nota = (m.texto||'').split('\n').slice(1).join('\n').trim();
+  const pode = msgSouMentorado();
+  return `${nota ? `<div class="msg-txt">${linkify(nota)}</div>` : ''}<button type="button" class="msg-aula msg-painel-card" data-msg-painel="${escapeAttr(m.painelTopico||'')}" ${pode ? '' : 'aria-disabled="true"'} title="${pode ? 'Abrir no Painel do Método' : 'A aluna abre este quadro direto no Painel do Método dela'}"><span class="msg-aula-ic">${icon(a ? a.q.icon : 'target','tiny')}</span><span class="msg-aula-txt"><small>${escapeHtml(a ? 'Painel do Método · '+a.q.title : 'Painel do Método')}</small><strong>${escapeHtml(a ? a.t.title : 'Quadro do Painel')}</strong><em>${pode ? 'Abrir e preencher' : 'Abre no Painel da aluna'}</em></span></button>`;
+}
+async function msgEnviarPainel(chave, ref, nota){
+  const a = msgPainelAlvo(ref); if(!a) return false;
+  nota = (nota||'').trim().slice(0, 1000);
+  const texto = ('📌 Painel do Método: '+a.t.title).slice(0,180) + (nota ? '\n'+nota : '');
+  const { data, error } = await sb.from('mensagens').insert(Object.assign({de:msgEu(), tipo:'painel', texto, painel_topico:ref}, msgDestino(chave))).select().single();
+  if(error){ console.error('msgEnviarPainel', error); alert('Não foi possível enviar: '+(error.message||'')); return false; }
+  msgGuardar(mapMsgRow(data));
+  msgUI.forcarFim = true;
+  if(msgNaTela() && msgUI.aberto===chave) renderMensagens();
+  return true;
+}
+function msgPainelListaHtml(q){
+  const n = normTxt(q||'').trim();
+  const grupos = QUADRANTS.map(qq=>({qq, ts: qq.topics.filter(t=>!n || normTxt(t.title).includes(n) || normTxt(qq.title).includes(n) || normTxt(t.desc||'').includes(n))})).filter(g=>g.ts.length);
+  if(!grupos.length) return '<div class="tf-vazio" style="padding:10px">Nenhum quadro com esse nome.</div>';
+  return grupos.map(g=>`<div class="msg-aula-cat">${escapeHtml(g.qq.title)}</div>${g.ts.map(t=>`<button type="button" data-msg-painel-enviar="${escapeAttr(g.qq.id+'/'+t.id)}">${icon(g.qq.icon,'tiny')} <span>${escapeHtml(t.title)}</span></button>`).join('')}`).join('');
+}
+/* A aluna tocou no cartão: abre o Painel do Método dela já no quadro indicado. */
+function msgAbrirPainel(ref){
+  const a = msgPainelAlvo(ref); if(!a || !msgSouMentorado()) return;
+  goTo('painel');
+  panelQuadrantId = a.q.id; renderPainel();
+  try{ openTopicModal(a.q, a.t.id); }catch(e){ console.error('msgAbrirPainel', e); }
+}
 function msgAulaPainelHtml(q){
   const n = normTxt(q||'').trim();
   const cats = orderedCourseCats();
@@ -11881,7 +11920,7 @@ function renderMensagens(){
     const podeApagar = minha || (!grupo && !acomp);
     const menciona = msgMeMenciona(m);
     if(idNaoLida && String(m.id)===idNaoLida) sep += `<div class="msg-naolidas" id="msg-marcador"><span>Não lidas</span></div>`;
-    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''} ${msgUI.destacado===String(m.id)?'piscando':''}" data-msg-id="${m.id}"><div class="msg-ferramentas"><button type="button" class="msg-ferr" data-msg-responder="${m.id}" title="Responder esta mensagem">${icon('reply','tiny')}</button>${podeApagar ? `<button type="button" class="msg-ferr" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}</div>${remetente}${msgCitacaoHtml(m)}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : m.tipo==='aula' ? msgAulaHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''} ${msgUI.destacado===String(m.id)?'piscando':''}" data-msg-id="${m.id}"><div class="msg-ferramentas"><button type="button" class="msg-ferr" data-msg-responder="${m.id}" title="Responder esta mensagem">${icon('reply','tiny')}</button>${podeApagar ? `<button type="button" class="msg-ferr" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}</div>${remetente}${msgCitacaoHtml(m)}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : m.tipo==='aula' ? msgAulaHtml(m) : m.tipo==='painel' ? msgPainelHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   const cabecalho = grupo
     ? `${msgGrupoAvatar(36, grupo)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
@@ -11973,6 +12012,11 @@ function renderMensagens(){
             <div class="msg-aula-hd"><input class="ps-input" type="text" id="msg-aula-busca" placeholder="Buscar aula pelo nome…"><button type="button" class="btn-mini" id="msg-aula-fechar">${icon('x','tiny')}</button></div>
             <small class="msg-aula-dica">Clique numa aula para enviar. O que estiver escrito na caixa de mensagem vai junto, como recado.</small>
             <div class="msg-aula-lista" id="msg-aula-lista"></div>
+          </div>
+          <div class="msg-aula-painel" id="msg-painel-painel" hidden>
+            <div class="msg-aula-hd"><input class="ps-input" type="text" id="msg-painel-busca" placeholder="Buscar quadro do Painel (ex.: missão)…"><button type="button" class="btn-mini" id="msg-painel-fechar">${icon('x','tiny')}</button></div>
+            <small class="msg-aula-dica">Clique num quadro do Painel do Método para enviar. A aluna abre direto nele para preencher. O que estiver escrito na caixa vai junto, como recado.</small>
+            <div class="msg-aula-lista" id="msg-painel-lista"></div>
           </div>` : ''}
           ${msgUI.respondendo && msgUI.respondendo.chave===chave ? `<div class="msg-respondendo">
             <div class="msg-respondendo-txt"><strong>${icon('reply','tiny')} Respondendo ${escapeHtml(msgUI.respondendo.de===eu ? 'você mesmo' : msgNomeDe(msgUI.respondendo.de))}</strong><small>${escapeHtml((msgUI.respondendo.texto||'').replace(/\s+/g,' ').slice(0,140))}</small></div>
@@ -11981,7 +12025,7 @@ function renderMensagens(){
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="${window.innerWidth<=560 ? 'Mensagem…' : 'Escreva uma mensagem…'}" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
-            ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<button type="button" class="msg-mic" id="msg-aula-btn" title="Indicar uma aula ao mentorado">${icon('film')}</button>` : ''}
+            ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<button type="button" class="msg-mic" id="msg-aula-btn" title="Indicar uma aula ao mentorado">${icon('film')}</button><button type="button" class="msg-mic" id="msg-painel-btn" title="Indicar um quadro do Painel do Método">${icon('target')}</button>` : ''}
             <button type="button" class="msg-mic" id="msg-anexo" title="Anexar arquivo (áudio, PDF, imagem, documento)">${icon('paperclip')}</button>
             <input type="file" id="msg-anexo-input" multiple hidden>
             <button type="button" class="msg-mic" id="msg-mic" title="Gravar mensagem de voz">${icon('mic')}</button>
@@ -12107,6 +12151,18 @@ function renderMensagens(){
       busca.addEventListener('keydown', e=>{ if(e.key==='Escape') painel.hidden = true; });
     }
     el.querySelectorAll('[data-msg-aula]').forEach(b=>b.addEventListener('click', ()=>openCourseModal(b.dataset.msgAula)));
+    // indicar quadro do Painel do Método (Acompanhamento, equipe): mesmo jeito do botão de aula
+    const painelBtn = el.querySelector('#msg-painel-btn');
+    if(painelBtn){
+      const pp = el.querySelector('#msg-painel-painel'), pl = el.querySelector('#msg-painel-lista'), pb = el.querySelector('#msg-painel-busca');
+      const desenhaP = ()=>{ pl.innerHTML = msgPainelListaHtml(pb.value); pl.querySelectorAll('[data-msg-painel-enviar]').forEach(b=>b.addEventListener('click', async ()=>{ b.disabled = true; const nota = ta.value; ta.value = ''; if(!(await msgEnviarPainel(chave, b.dataset.msgPainelEnviar, nota))){ ta.value = nota; b.disabled = false; } })); };
+      painelBtn.addEventListener('click', ()=>{ const ap = el.querySelector('#msg-aula-painel'); if(ap) ap.hidden = true; pp.hidden = !pp.hidden; if(!pp.hidden){ desenhaP(); pb.focus(); } });
+      el.querySelector('#msg-painel-fechar').addEventListener('click', ()=>{ pp.hidden = true; });
+      pb.addEventListener('input', desenhaP);
+      pb.addEventListener('keydown', e=>{ if(e.key==='Escape') pp.hidden = true; });
+      if(aulaBtn) aulaBtn.addEventListener('click', ()=>{ pp.hidden = true; });
+    }
+    el.querySelectorAll('[data-msg-painel]').forEach(b=>b.addEventListener('click', ()=>msgAbrirPainel(b.dataset.msgPainel)));
     // anexos: clipe, arrastar e soltar na conversa, colar arquivo/imagem na caixa de texto
     const anexoInp = el.querySelector('#msg-anexo-input');
     el.querySelector('#msg-anexo').addEventListener('click', ()=>anexoInp.click());
