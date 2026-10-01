@@ -11315,7 +11315,7 @@ let msgGrav = null; // {rec, chunks, inicio, timer, chave, mime, cancelado}
 const MSG_AUDIO_URLS = {}; // path -> {url, ate}
 function msgAudioMime(){
   if(!window.MediaRecorder) return '';
-  for(const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']){ if(MediaRecorder.isTypeSupported(t)) return t; }
+  for(const t of ['audio/mp4;codecs=mp4a.40.2','audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']){ if(MediaRecorder.isTypeSupported(t)) return t; }
   return '';
 }
 async function msgGravarIniciar(chave){
@@ -11523,6 +11523,10 @@ function msgAudioNomeArquivo(m){
 function msgAudioHtml(m){
   /* O player mostra o botão de download do próprio navegador e, ao lado, um atalho para baixar —
      o link leva o arquivo direto para o computador em vez de abrir numa aba. */
+  if(msgAudioPrecisaConverter(m.audioPath)){
+    const conv = MSG_AUDIO_CONV[m.audioPath];
+    return `<div class="msg-audio${conv ? ' pronto' : ''}" data-msg-audio="${escapeAttr(m.audioPath)}" data-msg-audio-nome="${escapeAttr(msgAudioNomeArquivo(m).replace(/\.[a-z0-9]+$/,'.wav'))}"${conv ? ' data-convertido="1"' : ''}><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="metadata"${conv ? ` src="${escapeAttr(conv)}"` : ''}></audio>${msgVelBotaoHtml()}<a class="msg-arq-baixar" title="Baixar este áudio"${conv ? ` href="${escapeAttr(conv)}" download="${escapeAttr(msgAudioNomeArquivo(m).replace(/\.[a-z0-9]+$/,'.wav'))}"` : ''}>${icon('download','tiny')}</a><small>${msgAudioDur(m.audioSeg)}</small></div>`;
+  }
   const pronta = msgAudioUrlPronta(m.audioPath);
   return `<div class="msg-audio${pronta ? ' pronto' : ''}" data-msg-audio="${escapeAttr(m.audioPath)}" data-msg-audio-nome="${escapeAttr(msgAudioNomeArquivo(m))}"><span class="msg-audio-ic">${icon('mic','tiny')}</span><audio controls preload="metadata"${pronta ? ` src="${escapeAttr(pronta)}"` : ''}></audio>${msgVelBotaoHtml()}<a class="msg-arq-baixar" target="_blank" rel="noopener" title="Baixar este áudio"${pronta ? ` href="${escapeAttr(urlParaBaixar(pronta, msgAudioNomeArquivo(m)))}"` : ''}>${icon('download','tiny')}</a><small>${msgAudioDur(m.audioSeg)}</small></div>`;
 }
@@ -11590,10 +11594,17 @@ function msgAudioVigiar(a, box){
   a.addEventListener('error', async ()=>{
     const path = box.dataset.msgAudio || box.dataset.msgArquivo;
     const bucket = box.dataset.msgAudio ? 'mensagens-audio' : 'mensagens-arquivos';
+    if(box.dataset.convertido) return;
     if(path && !a.dataset.tentouDeNovo){
       a.dataset.tentouDeNovo = '1';
       const url = await msgAudioUrl(path, bucket, true);
       if(url && a.isConnected){ a.src = url; try{ a.load(); }catch(e){} return; }
+    }
+    if(box.dataset.msgAudio && /\.(webm|ogg)$/i.test(box.dataset.msgAudio) && !box.dataset.tentouConverter){
+      box.dataset.tentouConverter = '1';
+      MSG_AUDIO_FORCAR_CONV.add(box.dataset.msgAudio);
+      const url = await msgAudioUrl(box.dataset.msgAudio, 'mensagens-audio');
+      if(url && await msgAudioConverterNaCaixa(box, url)) return;
     }
     box.classList.remove('carregando'); box.classList.add('erro');
   });
@@ -11601,6 +11612,158 @@ function msgAudioVigiar(a, box){
   a.addEventListener('canplay', ()=>box.classList.remove('carregando'), { once:true });
   /* Rede lenta ou navegador que não avisa nada: o aviso de "preparando" não fica para sempre. */
   setTimeout(()=>box.classList.remove('carregando'), 8000);
+}
+/* ---- Áudios gravados no Chrome (.webm) no iPhone/iPad e no Safari ----
+   O Chrome grava em WebM, formato que o Safari do iPhone não toca: o player ficava só
+   carregando. Nesses aparelhos o app baixa o arquivo, decodifica o som aqui mesmo (com o
+   decodificador Opus, carregado só quando precisa) e entrega ao player um WAV, que toca em
+   qualquer lugar. O resultado fica guardado enquanto o app estiver aberto. */
+const MSG_AUDIO_CONV = {};              // path -> URL local (blob) do WAV pronto
+const MSG_AUDIO_CONV_PROM = {};         // path -> conversão em andamento
+const MSG_AUDIO_FORCAR_CONV = new Set(); // paths que falharam no player e serão convertidos
+function msgAparelhoApple(){
+  const ua = navigator.userAgent || '';
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+function msgTocaWebm(){
+  if(msgTocaWebm.r !== undefined) return msgTocaWebm.r;
+  let r = false;
+  try{ r = !!document.createElement('audio').canPlayType('audio/webm; codecs="opus"'); }catch(e){}
+  if(msgAparelhoApple()) r = false;   // iPhone/iPad: mesmo quando diz que toca, costuma travar
+  return (msgTocaWebm.r = r);
+}
+function msgAudioPrecisaConverter(path){
+  if(!path || !/\.(webm|ogg)$/i.test(path)) return false;
+  return !!MSG_AUDIO_CONV[path] || MSG_AUDIO_FORCAR_CONV.has(path) || !msgTocaWebm();
+}
+function loadOpusDecoder(){
+  if(window['opus-decoder']) return Promise.resolve(window['opus-decoder']);
+  if(window.__opusCarregando) return window.__opusCarregando;
+  window.__opusCarregando = new Promise((resolve,reject)=>{
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/opus-decoder@0.7.12/dist/opus-decoder.min.js';
+    sc.onload = ()=> window['opus-decoder'] ? resolve(window['opus-decoder']) : reject(new Error('decodificador não carregou'));
+    sc.onerror = ()=>{ window.__opusCarregando = null; reject(new Error('decodificador não carregou')); };
+    document.head.appendChild(sc);
+  });
+  return window.__opusCarregando;
+}
+/* Lê o WebM (formato EBML) e devolve os pacotes Opus, na ordem. Cobre o que o Chrome grava:
+   uma faixa de áudio, blocos simples, sem "lacing". Também lê Ogg/Opus. */
+function msgWebmPacotes(buf){
+  const b = new Uint8Array(buf), n = b.length, pacotes = [];
+  let canais = 1, preSkip = 0;
+  if(n > 4 && b[0]===0x4F && b[1]===0x67 && b[2]===0x67 && b[3]===0x53) return msgOggPacotes(b);
+  const vint = (p, tirarMarca)=>{
+    const c = b[p]; if(c === undefined) return null;
+    let len = 1, m = 0x80; while(len <= 8 && !(c & m)){ len++; m >>= 1; }
+    if(len > 8 || p+len > n) return null;
+    let v = tirarMarca ? (c & (m-1)) : c, todos1 = (c & (m-1)) === (m-1);
+    for(let i=1;i<len;i++){ v = v*256 + b[p+i]; if(b[p+i] !== 0xFF) todos1 = false; }
+    return { v, len, desconhecido: tirarMarca && todos1 };
+  };
+  const MESTRES = new Set([0x18538067, 0x1F43B675, 0xA0, 0x1654AE6B, 0xAE]); // Segment, Cluster, BlockGroup, Tracks, TrackEntry
+  let p = 0;
+  while(p < n){
+    const id = vint(p, false); if(!id) break;
+    const tam = vint(p+id.len, true); if(!tam) break;
+    const ini = p + id.len + tam.len;
+    if(MESTRES.has(id.v)){ p = ini; continue; }
+    if(tam.desconhecido) break;
+    const fim = Math.min(n, ini + tam.v);
+    if(id.v === 0x63A2 && fim-ini >= 19 && b[ini]===0x4F && b[ini+1]===0x70){ // CodecPrivate = OpusHead
+      canais = b[ini+9] || 1; preSkip = b[ini+10] | (b[ini+11]<<8);
+    } else if(id.v === 0xA3 || id.v === 0xA1){ // SimpleBlock / Block
+      const tr = vint(ini, true);
+      if(tr){
+        const cab = ini + tr.len + 3;
+        if(cab < fim && !(b[ini+tr.len+2] & 0x06)) pacotes.push(b.slice(cab, fim));
+      }
+    }
+    p = fim;
+  }
+  return { pacotes, canais, preSkip };
+}
+function msgOggPacotes(b){
+  const pacotes = []; let canais = 1, preSkip = 0, p = 0, atual = [], pag = 0;
+  while(p + 27 <= b.length && b[p]===0x4F && b[p+1]===0x67){
+    const nseg = b[p+26], tabela = b.slice(p+27, p+27+nseg); let q = p+27+nseg;
+    for(let i=0;i<nseg;i++){
+      atual.push(b.slice(q, q+tabela[i])); q += tabela[i];
+      if(tabela[i] < 255){
+        const tot = atual.reduce((s,x)=>s+x.length,0), pk = new Uint8Array(tot); let o=0; atual.forEach(x=>{ pk.set(x,o); o+=x.length; }); atual = [];
+        if(pk[0]===0x4F && pk[1]===0x70 && pk[2]===0x75 && pk[3]===0x73 && pk[4]===0x48){ canais = pk[9]||1; preSkip = pk[10]|(pk[11]<<8); }
+        else if(!(pk[0]===0x4F && pk[1]===0x70 && pk[2]===0x75 && pk[3]===0x73 && pk[4]===0x54)) pacotes.push(pk);
+      }
+    }
+    p = q; pag++;
+  }
+  return { pacotes, canais, preSkip };
+}
+function msgWav(amostras, taxa){
+  const n = amostras.length, buf = new ArrayBuffer(44 + n*2), v = new DataView(buf);
+  const txt = (o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  txt(0,'RIFF'); v.setUint32(4, 36+n*2, true); txt(8,'WAVE'); txt(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,taxa,true); v.setUint32(28,taxa*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  txt(36,'data'); v.setUint32(40, n*2, true);
+  for(let i=0;i<n;i++){ const s = Math.max(-1, Math.min(1, amostras[i])); v.setInt16(44+i*2, s<0 ? s*0x8000 : s*0x7FFF, true); }
+  return new Blob([buf], {type:'audio/wav'});
+}
+async function msgAudioConverter(path, url){
+  if(MSG_AUDIO_CONV[path]) return MSG_AUDIO_CONV[path];
+  if(MSG_AUDIO_CONV_PROM[path]) return MSG_AUDIO_CONV_PROM[path];
+  MSG_AUDIO_CONV_PROM[path] = (async ()=>{
+    const [lib, resp] = await Promise.all([loadOpusDecoder(), fetch(url)]);
+    if(!resp.ok) throw new Error('download '+resp.status);
+    const { pacotes, canais, preSkip } = msgWebmPacotes(await resp.arrayBuffer());
+    if(!pacotes.length) throw new Error('áudio sem conteúdo');
+    const dec = new lib.OpusDecoder({ channels: Math.min(2, canais||1), preSkip });
+    await dec.ready;
+    const partes = []; let total = 0;
+    for(let i=0;i<pacotes.length;i+=200){       // em partes, para não travar a tela
+      const r = dec.decodeFrames(pacotes.slice(i, i+200));
+      if(r && r.channelData && r.channelData[0]){ partes.push(r.channelData[0].slice(0, r.samplesDecoded)); total += r.samplesDecoded; }
+      await new Promise(ok=>setTimeout(ok, 0));
+    }
+    try{ dec.free(); }catch(e){}
+    /* 48 kHz vira 24 kHz: a voz continua nítida e o arquivo fica com metade do tamanho. */
+    const meio = new Float32Array(Math.floor(total/2)); let k = 0, sobra = null;
+    partes.forEach(pt=>{
+      let i = 0;
+      if(sobra !== null && pt.length){ meio[k++] = (sobra + pt[0])/2; i = 1; sobra = null; }
+      for(; i+1 < pt.length; i+=2) meio[k++] = (pt[i]+pt[i+1])/2;
+      if(i < pt.length) sobra = pt[i];
+    });
+    const blobUrl = URL.createObjectURL(msgWav(meio.subarray(0, k), 24000));
+    MSG_AUDIO_CONV[path] = blobUrl;
+    return blobUrl;
+  })();
+  try{ return await MSG_AUDIO_CONV_PROM[path]; }
+  finally{ delete MSG_AUDIO_CONV_PROM[path]; }
+}
+async function msgAudioConverterNaCaixa(box, url){
+  const path = box.dataset.msgAudio;
+  box.classList.add('carregando');
+  let local = null;
+  try{ local = await msgAudioConverter(path, url); }
+  catch(e){ console.error('conversão do áudio', e); }
+  /* A tela pode ter sido redesenhada enquanto convertia: aplica em todas as caixas desse áudio. */
+  const caixas = [box, ...document.querySelectorAll('[data-msg-audio]')].filter((c,i,arr)=>c.dataset.msgAudio===path && arr.indexOf(c)===i && c.isConnected);
+  if(!local){
+    caixas.forEach(c=>{ c.classList.remove('carregando'); c.classList.add('erro'); });
+    return false;
+  }
+  caixas.forEach(c=>{
+    c.dataset.convertido = '1';
+    c.classList.remove('carregando','erro'); c.classList.add('pronto');
+    const a = c.querySelector('audio');
+    if(a && a.getAttribute('src') !== local){ a.src = local; try{ a.load(); }catch(e){} }
+    const d = c.querySelector('.msg-arq-baixar');
+    if(d){ d.href = local; d.removeAttribute('target'); d.setAttribute('download', (c.dataset.msgAudioNome||'audio').replace(/\.[a-z0-9]+$/i,'') + '.wav'); }
+    msgVelAplicar(c);
+  });
+  return true;
 }
 async function msgAudioCarregar(root){
   msgVelBind(root); msgVelAplicar(root);
@@ -11613,6 +11776,12 @@ async function msgAudioCarregar(root){
     box.dataset.carregando = '1';
     box.classList.add('carregando');
     const url = await msgAudioUrl(box.dataset.msgAudio);
+    if(url && msgAudioPrecisaConverter(box.dataset.msgAudio)){
+      const ok = await msgAudioConverterNaCaixa(box, url);
+      box.dataset.carregando = '';
+      if(!ok && box.isConnected){ box.classList.remove('carregando'); box.classList.add('erro'); }
+      return;
+    }
     box.dataset.carregando = '';
     if(!box.isConnected) return;                    // a tela foi redesenhada no meio do caminho
     if(!url){ box.classList.remove('carregando'); box.classList.add('erro'); return; }
@@ -11659,6 +11828,7 @@ function msgRenovarMidias(){
   document.querySelectorAll('[data-msg-arquivo][data-url-ate], [data-msg-audio]').forEach(async box=>{
     const ate = Number(box.dataset.urlAte || 0);
     if(ate && ate > limite) return;
+    if(box.dataset.convertido) return;
     const a = box.querySelector('audio');
     if(a && !a.paused) return;
     const ehAudio = !!box.dataset.msgAudio;
