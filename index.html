@@ -3626,6 +3626,15 @@ async function bootstrapData(){
     try{ const { data: podeAcomp } = await sb.rpc('pode_acompanhamento'); ACOMP_EXTRA = !!podeAcomp; }catch(e){ ACOMP_EXTRA = false; }
     STUDENTS.length = 0;
     if(ACOMP_EXTRA) profiles.filter(p=>p.role==='aluno' && (p.tier||'mentorado')!=='curso').forEach(p=>STUDENTS.push(mapProfileRow(p)));
+    /* E todas as aulas, para indicar uma aula ao mentorado pelo chat. O Treinamento Time continua
+       mostrando só as REC, porque ele mesmo filtra pelo título. */
+    if(ACOMP_EXTRA){
+      const { data: todasAulas } = await sb.from('courses').select('*').order('mod_id').order('order_index');
+      if(todasAulas && todasAulas.length){
+        COURSES.length = 0;
+        todasAulas.forEach(c=>COURSES.push({id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration||'—', tint:[c.tint1||'#8d916f', c.tint2||'#bec6b1'], desc:c.description||'', videoLink:c.video_link||'', materiais:[]}));
+      }
+    }
     await msgBootstrap();
     currentStudentId = null;
     return;
@@ -11960,7 +11969,7 @@ function renderMensagens(){
           </div>` : ''}
           <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe da mentoria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o mentorado e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
           <div class="msg-mencoes" id="msg-mencoes" hidden></div>
-          ${acomp && currentUserRole==='staff' ? `<div class="msg-aula-painel" id="msg-aula-painel" hidden>
+          ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<div class="msg-aula-painel" id="msg-aula-painel" hidden>
             <div class="msg-aula-hd"><input class="ps-input" type="text" id="msg-aula-busca" placeholder="Buscar aula pelo nome…"><button type="button" class="btn-mini" id="msg-aula-fechar">${icon('x','tiny')}</button></div>
             <small class="msg-aula-dica">Clique numa aula para enviar. O que estiver escrito na caixa de mensagem vai junto, como recado.</small>
             <div class="msg-aula-lista" id="msg-aula-lista"></div>
@@ -11972,7 +11981,7 @@ function renderMensagens(){
           <div class="msg-editor">
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="${window.innerWidth<=560 ? 'Mensagem…' : 'Escreva uma mensagem…'}" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
-            ${acomp && currentUserRole==='staff' ? `<button type="button" class="msg-mic" id="msg-aula-btn" title="Indicar uma aula ao mentorado">${icon('film')}</button>` : ''}
+            ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<button type="button" class="msg-mic" id="msg-aula-btn" title="Indicar uma aula ao mentorado">${icon('film')}</button>` : ''}
             <button type="button" class="msg-mic" id="msg-anexo" title="Anexar arquivo (áudio, PDF, imagem, documento)">${icon('paperclip')}</button>
             <input type="file" id="msg-anexo-input" multiple hidden>
             <button type="button" class="msg-mic" id="msg-mic" title="Gravar mensagem de voz">${icon('mic')}</button>
