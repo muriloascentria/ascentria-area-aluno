@@ -3455,6 +3455,7 @@ function estagioMentoria(mes){
 
 /* ================= AUTH / DATA BOOTSTRAP (Supabase) ================= */
 let currentUser = null;      // usuário autenticado no Supabase
+let STAFF_BLOQUEIOS = new Set(); // áreas da equipe interna bloqueadas para esta conta (tabela staff_restrito)
 let currentUserRole = null;  // papel REAL da conta ('aluno'|'staff') — não confundir com currentRole (visualização atual)
 let currentUserProfile = null; // linha de profiles do próprio usuário logado (fallback quando não há mentorados)
 
@@ -3582,6 +3583,13 @@ async function bootstrapData(){
 
   const me = profiles.find(p=>p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
+  /* Equipe interna com áreas bloqueadas (ex.: Suporte dos Mentorados sem Financeiro, Sessões 1:1 e eCRM).
+     O banco já não entrega esses dados; aqui é só para o menu e as telas não mostrarem a área. */
+  STAFF_BLOQUEIOS = new Set();
+  if(currentUserRole==='staff'){
+    try{ const { data: rest } = await sb.from('staff_restrito').select('bloqueios').eq('user_id', currentUser.id).maybeSingle();
+      if(rest && Array.isArray(rest.bloqueios)) STAFF_BLOQUEIOS = new Set(rest.bloqueios); }catch(e){}
+  }
   currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, aulasLiberadas:!!me.aulas_liberadas} : null;
 
   /* Papel 'vendas' (vendedora do time): acesso restrito ao Registro de Sessões 1:1 e nada mais.
@@ -4693,7 +4701,7 @@ function setupNav(){
   document.getElementById('logout-btn').innerHTML = `${icon('logout')}<span>Sair</span>`;
   document.getElementById('logout-btn').addEventListener('click', async ()=>{
     await sb.auth.signOut();
-    currentUser = null; currentUserRole = null; currentStudentId = null;
+    currentUser = null; currentUserRole = null; currentStudentId = null; STAFF_BLOQUEIOS = new Set();
     wfDraft = null; wfStep = 0; wfPhase = 'fill';
     document.getElementById('app').classList.remove('active');
     document.getElementById('login-screen').style.display='flex';
@@ -4965,6 +4973,10 @@ function setRole(role){
   document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
   /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
+  if(staffNav && STAFF_BLOQUEIOS.size){
+    STAFF_BLOQUEIOS.forEach(v=>{ const el = v==='ecrm' ? document.getElementById('nav-ecrm') : document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'none'; });
+    document.getElementById('role-consultora').style.display = 'none';
+  }
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
@@ -5059,6 +5071,7 @@ function goTo(view){
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
   { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = 'equipe'; }
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
+  if(STAFF_BLOQUEIOS.has(view)) view = 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
@@ -12392,7 +12405,7 @@ function renderEquipe(){
     ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && !STAFF_BLOQUEIOS.has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
