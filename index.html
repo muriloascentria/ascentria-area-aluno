@@ -11328,7 +11328,10 @@ let msgGrav = null; // {rec, chunks, inicio, timer, chave, mime, cancelado}
 const MSG_AUDIO_URLS = {}; // path -> {url, ate}
 function msgAudioMime(){
   if(!window.MediaRecorder) return '';
-  for(const t of ['audio/mp4;codecs=mp4a.40.2','audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']){ if(MediaRecorder.isTypeSupported(t)) return t; }
+  /* iPhone/iPad: grava no formato próprio do aparelho (M4A), que é o mais estável lá.
+     Nos outros aparelhos, WebM (o iPhone converte na hora de tocar). */
+  if(msgAparelhoApple() || msgSafari()){ for(const t of ['audio/mp4','audio/mp4;codecs=mp4a.40.2']){ try{ if(MediaRecorder.isTypeSupported(t)) return t; }catch(e){} } return ''; }
+  for(const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']){ try{ if(MediaRecorder.isTypeSupported(t)) return t; }catch(e){} }
   return '';
 }
 async function msgGravarIniciar(chave){
@@ -11338,11 +11341,19 @@ async function msgGravarIniciar(chave){
   try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
   catch(e){ alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.'); return; }
   const mime = msgAudioMime();
-  const rec = mime ? new MediaRecorder(stream, {mimeType:mime}) : new MediaRecorder(stream);
-  msgGrav = { rec, chunks:[], inicio:Date.now(), timer:null, chave, mime: rec.mimeType||mime||'audio/webm', cancelado:false, stream };
-  rec.ondataavailable = e=>{ if(e.data && e.data.size) msgGrav.chunks.push(e.data); };
-  rec.onstop = ()=>msgGravarFinalizou();
-  rec.start(250);
+  let rec;
+  try{ rec = mime ? new MediaRecorder(stream, {mimeType:mime}) : new MediaRecorder(stream); }
+  catch(e){ try{ rec = new MediaRecorder(stream); }catch(e2){ stream.getTracks().forEach(t=>t.stop()); alert('Este aparelho não conseguiu iniciar a gravação. Tente de novo.'); return; } }
+  const g = { rec, chunks:[], inicio:Date.now(), timer:null, chave, mime: rec.mimeType||mime||'audio/webm', cancelado:false, stream };
+  msgGrav = g;
+  /* Guarda os pedaços no objeto desta gravação (e não no msgGrav), porque no iPhone o último
+     pedaço chega junto com o "parar", quando msgGrav já foi limpo. */
+  rec.ondataavailable = e=>{ if(e.data && e.data.size) g.chunks.push(e.data); if(e.data && e.data.type && !g.tipoReal) g.tipoReal = e.data.type; };
+  rec.onstop = ()=>setTimeout(()=>msgGravarFinalizou(g), 0);
+  rec.onerror = ev=>{ console.error('gravação', ev && ev.error); };
+  /* iPhone/Safari: gravar em pedaços pequenos gera arquivos quebrados ou cortados. Lá a gravação
+     sai inteira no final; nos outros aparelhos continua em pedaços de 1 segundo. */
+  if(msgAparelhoApple() || msgSafari()) rec.start(); else rec.start(1000);
   msgGrav.timer = setInterval(()=>{
     const seg = Math.floor((Date.now()-msgGrav.inicio)/1000);
     const t = document.getElementById('msg-grav-tempo'); if(t) t.textContent = msgAudioDur(seg);
@@ -11352,17 +11363,24 @@ async function msgGravarIniciar(chave){
 }
 function msgGravarParar(cancelar){
   if(!msgGrav) return;
-  msgGrav.cancelado = !!cancelar;
-  clearInterval(msgGrav.timer);
-  try{ msgGrav.rec.stop(); }catch(e){ msgGravarFinalizou(); }
+  const g = msgGrav;
+  g.cancelado = !!cancelar;
+  g.fim = Date.now();
+  clearInterval(g.timer);
+  msgGravarUI(false);
+  const st = document.getElementById('msg-grav-status'); if(st && !cancelar){ st.hidden = false; st.textContent = 'Preparando áudio…'; }
+  try{ g.rec.stop(); }catch(e){ msgGravarFinalizou(g); }
 }
-async function msgGravarFinalizou(){
-  const g = msgGrav; if(!g) return;
-  msgGrav = null;
+async function msgGravarFinalizou(g){
+  g = g || msgGrav; if(!g || g.finalizado) return;
+  g.finalizado = true;
+  if(msgGrav === g) msgGrav = null;
   try{ g.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
   msgGravarUI(false);
-  const seg = Math.max(1, Math.round((Date.now()-g.inicio)/1000));
-  if(g.cancelado || !g.chunks.length || seg < 1) return;
+  const seg = Math.max(1, Math.round(((g.fim||Date.now())-g.inicio)/1000));
+  if(g.cancelado) return;
+  if(!g.chunks.length){ alert('O áudio não foi gravado. Confira se o app tem permissão para usar o microfone e tente de novo.'); return; }
+  if(g.tipoReal && !/^audio\/(webm|mp4|ogg|aac|mpeg|x-m4a)/.test(g.mime)) g.mime = g.tipoReal;
   const blob = new Blob(g.chunks, {type:g.mime});
   if(blob.size > 10*1024*1024){ alert('O áudio ficou grande demais. Grave um áudio mais curto.'); return; }
   const ext = /mp4/.test(g.mime) ? 'm4a' : /ogg/.test(g.mime) ? 'ogg' : 'webm';
@@ -11634,6 +11652,7 @@ function msgAudioVigiar(a, box){
 const MSG_AUDIO_CONV = {};              // path -> URL local (blob) do WAV pronto
 const MSG_AUDIO_CONV_PROM = {};         // path -> conversão em andamento
 const MSG_AUDIO_FORCAR_CONV = new Set(); // paths que falharam no player e serão convertidos
+function msgSafari(){ const ua = navigator.userAgent||''; return /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|Android/.test(ua); }
 function msgAparelhoApple(){
   const ua = navigator.userAgent || '';
   return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
