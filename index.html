@@ -4271,7 +4271,7 @@ function mapVendaSessaoRow(row){
     dataTexto: row.data_texto || (row.data_sessao ? formatDateBR(row.data_sessao) : ''),
     lead: row.lead_nome || '', vendedor: row.vendedor || '', produto: row.produto || '',
     upsell: !!row.upsell, formato: row.formato || '',
-    presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '', videoVenda: row.video_venda || '',
+    presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '', videoVenda: row.video_venda || '', transcricao: row.transcricao || '',
     valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
     objecoes: row.objecoes || '', objecoes2: row.objecoes2 || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
     contrato: row.contrato_texto || '',
@@ -13022,6 +13022,13 @@ function topPhrases(items, n){
   });
   return Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,n);
 }
+/* Gravação e transcrição da sessão (chegam sozinhas do eCRM quando o Google Meet anexa à reunião). */
+function vendaLinksReuniao(v){
+  const link = (url, txt) => /^https?:\/\//i.test(String(url||'').trim())
+    ? `<a class="link-btn" href="${escapeAttr(String(url).trim())}" target="_blank" rel="noopener">${txt}</a>` : '';
+  const html = [link(v.videoVenda, 'Gravação'), link(v.transcricao, 'Transcrição')].filter(Boolean).join(' ');
+  return html ? `<div class="vd-links" style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;font-weight:400">${html}</div>` : '';
+}
 function vendaTemRegistro(t, fallback){ return !!(t && String(t).trim() && String(t).trim()!==fallback); }
 /* Objeções e observações ficam recolhidas: a célula mostra só "Ver registro" e, ao clicar, abre o texto
    inteiro (as duas objeções juntas). Sem registro, mostra um traço. Deixa a tabela bem mais limpa. */
@@ -13227,7 +13234,7 @@ function renderVendas(){
             <tr class="${v.resultado==='Vendido'?'venda-vendido':''}">
               <td class="vendas-num-cell">${v.numero ?? ''}</td>
               <td>${escapeHtml(shortDateBR(v.dataTexto))}</td>
-              <td style="font-weight:600">${escapeHtml(v.lead)}${v.studentId && nomeAlunoTag(v.studentId)? `<br><span class="aluno-tag" title="Aluno vinculado">${icon('check','tiny')} ${escapeHtml(nomeAlunoTag(v.studentId))}</span>` : ''}</td>
+              <td style="font-weight:600">${escapeHtml(v.lead)}${v.studentId && nomeAlunoTag(v.studentId)? `<br><span class="aluno-tag" title="Aluno vinculado">${icon('check','tiny')} ${escapeHtml(nomeAlunoTag(v.studentId))}</span>` : ''}${vendaLinksReuniao(v)}</td>
               <td>${whatsappCell(v.whatsapp)}</td>
               <td>${escapeHtml(v.vendedor)}</td>
               <td>${escapeHtml(v.produto)}</td>
@@ -13379,6 +13386,10 @@ function openEditVendaModal(id){
         <textarea class="ps-input" id="ev-observacoes">${escapeHtml(v.observacoes)}</textarea>
         <label class="ps-label">Link do contrato</label>
         <input class="ps-input" type="text" id="ev-contrato" value="${escapeAttr(v.contrato)}" placeholder="https://...">
+        <label class="ps-label">Link da gravação da sessão</label>
+        <input class="ps-input" type="text" id="ev-video" value="${escapeAttr(v.videoVenda||'')}" placeholder="https://...">
+        <label class="ps-label">Link da transcrição da sessão</label>
+        <input class="ps-input" type="text" id="ev-transcricao" value="${escapeAttr(v.transcricao||'')}" placeholder="https://...">
       </div>
       <div class="ps-section">
         <div class="ps-h">Aluno vinculado (tag)</div>
@@ -13421,6 +13432,8 @@ function openEditVendaModal(id){
     v.objecoes2 = defaultIfEmpty(document.getElementById('ev-objecao2').value, VENDAS_SEM_OBJECAO);
     v.observacoes = defaultIfEmpty(document.getElementById('ev-observacoes').value, VENDAS_SEM_OBSERVACAO);
     v.contrato = document.getElementById('ev-contrato').value.trim();
+    v.videoVenda = document.getElementById('ev-video').value.trim();
+    v.transcricao = document.getElementById('ev-transcricao').value.trim();
     const alunoSel = document.getElementById('ev-aluno');
     if(alunoSel) v.studentId = alunoSel.value || null;
     syncVendaSessaoUpdate(v.id, {
@@ -13432,6 +13445,7 @@ function openEditVendaModal(id){
       resultado: v.resultado || null, valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
       objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, observacoes: v.observacoes || null,
       contrato_texto: v.contrato || null,
+      video_venda: v.videoVenda || null, transcricao: v.transcricao || null,
     });
     closeModal();
     renderVendas();
