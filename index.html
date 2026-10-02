@@ -1217,6 +1217,21 @@
   .vac-list{font-size:12.5px;color:var(--text-dim);}
   .vac-item{margin-bottom:5px;}
   .vendas-alert-card .vac-empty{font-size:12.5px;color:var(--text-mute);}
+  .vendas-meta{margin:0 0 16px;}
+  .vendas-meta.ok{background:var(--success-soft);border-color:rgba(34,197,94,0.35);}
+  .vendas-meta.ok .vac-title{color:var(--success);} .vendas-meta.ok .vac-title .icon{stroke:var(--success);}
+  .vm-base{font-weight:500;text-transform:none;letter-spacing:0;color:var(--text-mute);font-size:11.5px;margin-left:4px;}
+  .vm-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .vm-rot{font-size:11.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;}
+  .vm-num{font-size:13px;color:var(--text-dim);margin:3px 0 6px;}
+  .vm-num b{font-size:20px;color:var(--text);margin-right:2px;}
+  .vm-barra{height:8px;border-radius:6px;background:var(--bg-elev);overflow:hidden;}
+  .vm-barra i{display:block;height:100%;border-radius:6px;background:var(--individual);}
+  .vendas-meta.ok .vm-barra i{background:var(--success);}
+  .vm-falta{font-size:12.5px;color:var(--text-dim);margin-top:6px;}
+  .vm-falta b{color:var(--text);}
+  .vm-rodape{margin-top:12px;font-size:12.5px;color:var(--text-dim);border-top:1px solid rgba(171,111,48,0.25);padding-top:10px;}
+  @media (max-width:600px){ .vm-grid{grid-template-columns:1fr;gap:12px;} }
   .vendas-upsell-check{text-align:center;}
   .vendas-upsell-check .icon{width:14px;height:14px;stroke:var(--success);vertical-align:-2px;}
   .vendas-upsell-check .icon.x-danger{stroke:var(--danger);}
@@ -13083,6 +13098,46 @@ function vendaMesLabel(key){
   const nomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   return `${nomes[m-1]||key} ${y}`;
 }
+/* Meta do mês: o resultado de agosto/2026 (melhor mês do time) é a meta de cada mês. O quadro não muda
+   com os filtros da página: mostra sempre o mês atual inteiro, do time todo. */
+const VENDAS_META_MES_BASE = '2026-08';
+function vendasMetaHtml(){
+  const hoje = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Sao_Paulo'}));
+  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const doMes = k => VENDA_SESSOES.filter(v=>vendaMesKey(v)===k && v.resultado==='Vendido');
+  const base = doMes(VENDAS_META_MES_BASE), atual = doMes(mesAtual);
+  const metaQtd = base.length, metaFat = base.reduce((a,v)=>a+(v.valorNumerico||0),0);
+  if(!metaQtd) return '';
+  const qtd = atual.length, fat = atual.reduce((a,v)=>a+(v.valorNumerico||0),0);
+  const faltaQtd = Math.max(0, metaQtd-qtd), faltaFat = Math.max(0, metaFat-fat);
+  const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+  let uteis = 0; for(let d=hoje.getDate(); d<=ultimoDia; d++){ const w = new Date(hoje.getFullYear(), hoje.getMonth(), d).getDay(); if(w!==0 && w!==6) uteis++; }
+  const pctMes = hoje.getDate()/ultimoDia;
+  const pctQtd = Math.min(100, Math.round(qtd/metaQtd*100)), pctFat = Math.min(100, Math.round(fat/metaFat*100));
+  const esperado = Math.floor(metaQtd*pctMes);
+  const batida = !faltaQtd && !faltaFat;
+  const ritmo = batida ? 'Meta batida! 🎉' : qtd >= esperado ? 'No ritmo da meta' : `Abaixo do ritmo: o esperado até hoje era ${esperado} venda${esperado===1?'':'s'}`;
+  const porSemana = uteis ? Math.ceil(faltaQtd/Math.max(1, uteis/5)) : faltaQtd;
+  const barra = (pct)=>`<div class="vm-barra"><i style="width:${pct}%"></i></div>`;
+  return `<div class="vendas-alert-card vendas-meta ${batida?'ok':''}">
+    <div class="vac-title">${icon('target')} Meta de ${escapeHtml(vendaMesLabel(mesAtual))} <span class="vm-base">igual ao resultado de ${escapeHtml(vendaMesLabel(VENDAS_META_MES_BASE).toLowerCase())}</span></div>
+    <div class="vm-grid">
+      <div class="vm-bloco">
+        <div class="vm-rot">Vendas</div>
+        <div class="vm-num"><b>${qtd}</b> de ${metaQtd}</div>
+        ${barra(pctQtd)}
+        <div class="vm-falta">${faltaQtd ? `Faltam <b>${faltaQtd}</b> venda${faltaQtd===1?'':'s'}` : 'Meta de vendas batida'}</div>
+      </div>
+      <div class="vm-bloco">
+        <div class="vm-rot">Faturamento</div>
+        <div class="vm-num"><b>${formatBRL(fat)}</b> de ${formatBRL(metaFat)}</div>
+        ${barra(pctFat)}
+        <div class="vm-falta">${faltaFat ? `Faltam <b>${formatBRL(faltaFat)}</b>` : 'Meta de faturamento batida'}</div>
+      </div>
+    </div>
+    <div class="vm-rodape">${escapeHtml(ritmo)}${!batida && faltaQtd ? ` · ${uteis} dia${uteis===1?'':'s'} út${uteis===1?'il':'eis'} até o fim do mês: cerca de <b>${porSemana} venda${porSemana===1?'':'s'} por semana</b>.` : ''}</div>
+  </div>`;
+}
 function renderVendas(){
   /* O filtro mostra todos os vendedores da equipe, mesmo quem ainda não tem sessão registrada (como
      uma vendedora que acabou de entrar), e também qualquer nome antigo que já esteja nos registros. */
@@ -13119,7 +13174,7 @@ function renderVendas(){
   ].filter(Boolean).join(' · ');
 
   document.getElementById('view-vendas').innerHTML = `
-
+    ${vendasMetaHtml()}
     <div class="kpi-row">
       <div class="kpi-tile" title="Sessões em que o lead compareceu (Presença = Show). No-shows não entram aqui."><div class="label">Sessões realizadas</div><div class="value">${showSessoes.length}</div></div>
       <div class="kpi-tile"><div class="label">Vendas fechadas</div><div class="value">${fechadas.length}</div></div>
