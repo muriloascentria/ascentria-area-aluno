@@ -1749,10 +1749,30 @@
   .gt-item.neutro .gt-marca{border-style:dashed;}
   .gt-texto{flex:1;}
   .gt-const{font-size:11px;color:var(--text-mute);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .gt-barra-topo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+  .gt-barra-topo .gt-voltar{margin-bottom:0;}
+  .gt-editar{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;font-size:13px;}
+  .gt-edit-aviso{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;color:var(--text-dim);background:var(--accent-soft);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;}
+  .gt-bloco-tit small{font-weight:500;color:var(--text-mute);font-size:12px;margin-left:6px;}
+  .gt-edit-item{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-top:1px solid var(--border);}
+  .gt-lista > .gt-edit-item:first-child{border-top:none;}
+  .gt-edit-ordem{display:flex;flex-direction:column;gap:2px;}
+  .gt-ic{width:30px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;}
+  .gt-ic:disabled{opacity:.35;cursor:default;}
+  .gt-ic:not(:disabled):hover{border-color:var(--accent);color:var(--text);}
+  .gt-excluir:hover{border-color:var(--danger) !important;color:var(--danger) !important;}
+  .gt-edit-campos{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .gt-edit-texto{width:100%;resize:none;overflow:hidden;font:inherit;font-size:13.5px;line-height:1.45;min-height:38px;}
+  .gt-edit-linha{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .gt-edit-linha select{width:auto;font-size:12.5px;padding:6px 8px;}
+  .gt-edit-linha .btn-accent{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:13px;}
+  .gt-salvo{font-size:12px;color:var(--success);font-weight:600;}
+  .gt-vazio-edit{font-size:13px;color:var(--text-mute);padding:6px 0;}
+  .gt-add{margin-top:10px;padding-top:12px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:6px;}
   .gt-evid{margin-top:10px;font-size:12.5px;color:var(--text-dim);}
   @media (max-width:720px){
     .gt-topo{flex-direction:column;} .gt-atualizar{margin-top:0;}
-    .gt-grid{grid-template-columns:1fr;} .gt-painel{grid-template-columns:1fr;}
+    .gt-grid{grid-template-columns:minmax(0,1fr);} .gt-painel{grid-template-columns:minmax(0,1fr);} .gt-col small{overflow:hidden;max-width:100%;text-overflow:clip;}
     .gt-barras{gap:3px;} .gt-col small{font-size:9px;}
   }
   .equipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:16px;}
@@ -12460,7 +12480,8 @@ function renderMensagens(){
    item marcado pela pessoa aparece aqui, para acompanhar a evolução de cada um. */
 const GT_MURILO_UID = '8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3';
 function souMurilo(){ return !!(currentUser && currentUser.id===GT_MURILO_UID && currentUserRole==='staff'); }
-const GT = { dados:null, carregando:false, erro:null, pessoa:null, freq:'diaria' };
+const GT = { dados:null, carregando:false, erro:null, pessoa:null, freq:'diaria', editando:false };
+const GT_GRUPOS = ['Segunda-feira','Durante a semana','Sexta-feira','Até o 5º dia útil'];
 const GT_FREQS = [
   {id:'diaria',  rotulo:'Diárias',     envio:'Chegam todo dia às 7h.'},
   {id:'semanal', rotulo:'Semanais',    envio:'Chegam toda segunda-feira às 8h.'},
@@ -12568,16 +12589,18 @@ function gtRenderPessoa(el){
   const media = comDados.length ? Math.round(comDados.reduce((s,e)=>s+e.prog.pct,0)/comDados.length) : null;
   const ev = (GT.dados.evidencias||[]);
   el.innerHTML = `
-    <button type="button" class="btn-mini gt-voltar" id="gt-voltar">${icon('back','tiny')} Time</button>
+    <div class="gt-barra-topo"><button type="button" class="btn-mini gt-voltar" id="gt-voltar">${icon('back','tiny')} Time</button>
+      <button type="button" class="${GT.editando ? 'btn-accent' : 'btn-outline'} gt-editar" id="gt-editar">${GT.editando ? icon('check','tiny')+' Concluir edição' : icon('edit','tiny')+' Editar tarefas'}</button></div>
+    ${GT.editando ? `<div class="gt-edit-aviso">${icon('edit','tiny')} Modo de edição: altere o texto direto na caixa (salva sozinho ao sair do campo), mude a frequência, a ordem, exclua ou adicione tarefas. As mudanças valem a partir da próxima lista enviada.</div>` : ''}
     <div class="gt-pessoa-topo">${gtAvatar(p, 56)}<div><h2 class="section-title" style="margin:0">${escapeHtml(p.nome)}</h2><div class="gt-funcoes">${escapeHtml(p.funcoes||'')}</div></div></div>
     <div class="gt-resultados">
       ${papeis.map(pp=>`<div class="gt-resultado"><div class="gt-res-papel">${escapeHtml(pp.nome)}</div>${pp.resultado ? `<div><span class="gt-rotulo">Resultado principal</span> ${escapeHtml(pp.resultado)}</div>` : ''}${pp.nota ? `<div class="gt-nota">${escapeHtml(pp.nota)}</div>` : ''}</div>`).join('')}
     </div>
     <div class="community-filters gt-abas">
-      ${GT_FREQS.filter(f=>temItens(f.id)).map(f=>`<button type="button" class="filter-tab ${f.id===freq?'active':''}" data-gt-freq="${f.id}">${f.rotulo}</button>`).join('')}
+      ${GT_FREQS.filter(f=>GT.editando || temItens(f.id)).map(f=>`<button type="button" class="filter-tab ${f.id===freq?'active':''}" data-gt-freq="${f.id}">${f.rotulo}</button>`).join('')}
     </div>
     <p class="section-sub gt-envio">${escapeHtml(fInfo.envio)}${!p.recebe && freq!=='demanda' ? ` ${escapeHtml(p.nome)} ainda não tem acesso às Tarefas, então nada é enviado.` : ''}</p>
-    ${freq!=='demanda' ? `
+    ${freq!=='demanda' && !GT.editando ? `
       <div class="gt-painel">
         <div class="gt-atual">
           <div class="gt-rotulo">${escapeHtml(gtRotuloPeriodo(freq, periodos[0]))}</div>
@@ -12594,7 +12617,7 @@ function gtRenderPessoa(el){
           </div>
         </div>
       </div>` : ''}
-    ${papeis.filter(pp=>gtItens(pp.id, freq).length).map(pp=>{
+    ${GT.editando ? papeis.map(pp=>gtBlocoEdicaoHtml(pp, freq)).join('') : papeis.filter(pp=>gtItens(pp.id, freq).length).map(pp=>{
       const itens = gtItens(pp.id, freq);
       const evid = ev.find(e=>e.papel_id===pp.id && e.frequencia===freq);
       let grupoAnt = null;
@@ -12611,12 +12634,116 @@ function gtRenderPessoa(el){
         ${evid ? `<div class="gt-evid"><span class="gt-rotulo">Evidência</span> ${escapeHtml(evid.texto)}</div>` : ''}
       </div>`;
     }).join('')}`;
-  document.getElementById('gt-voltar').addEventListener('click', ()=>{ GT.pessoa = null; renderGestaoTime(); window.scrollTo(0,0); });
+  document.getElementById('gt-voltar').addEventListener('click', ()=>{ GT.pessoa = null; GT.editando = false; renderGestaoTime(); window.scrollTo(0,0); });
+  document.getElementById('gt-editar').addEventListener('click', ()=>{ GT.editando = !GT.editando; renderGestaoTime(); });
+  if(GT.editando) gtBindEdicao(el, freq);
   el.querySelectorAll('[data-gt-freq]').forEach(b=>b.addEventListener('click', ()=>{ GT.freq = b.dataset.gtFreq; renderGestaoTime(); }));
   el.querySelectorAll('[data-gt-tarefa]').forEach(b=>b.addEventListener('click', ()=>{
     goTo('tarefas');
     setTimeout(()=>{ try{ openTarefaModal(b.dataset.gtTarefa); }catch(e){ console.error(e); } }, 150);
   }));
+}
+
+/* ---- Edição das tarefas (Gestão do Time) ---- */
+function gtBlocoEdicaoHtml(pp, freq){
+  const itens = gtItens(pp.id, freq);
+  const grupoOpts = sel => `<option value="">Sem grupo</option>` + GT_GRUPOS.concat(sel && !GT_GRUPOS.includes(sel) ? [sel] : []).map(g=>`<option value="${escapeAttr(g)}" ${g===sel?'selected':''}>${escapeHtml(g)}</option>`).join('');
+  const freqOpts = sel => GT_FREQS.map(f=>`<option value="${f.id}" ${f.id===sel?'selected':''}>${f.rotulo}</option>`).join('');
+  return `<div class="gt-bloco gt-bloco-edit">
+    <div class="gt-bloco-tit">${escapeHtml(pp.nome)} <small>${itens.length} tarefa(s)</small></div>
+    <ul class="gt-lista">
+      ${itens.map((it,i)=>`<li class="gt-edit-item" data-gt-item="${it.id}">
+        <div class="gt-edit-ordem">
+          <button type="button" class="gt-ic" data-gt-mover="-1" title="Subir" ${i===0?'disabled':''}>${icon('up','tiny')}</button>
+          <button type="button" class="gt-ic" data-gt-mover="1" title="Descer" ${i===itens.length-1?'disabled':''}>${icon('down','tiny')}</button>
+        </div>
+        <div class="gt-edit-campos">
+          <textarea class="ps-input gt-edit-texto" rows="1" data-gt-texto>${escapeHtml(it.texto)}</textarea>
+          <div class="gt-edit-linha">
+            <select class="ps-input" data-gt-campo-freq title="Frequência">${freqOpts(it.frequencia)}</select>
+            <select class="ps-input" data-gt-campo-grupo title="Grupo (dia ou prazo)">${grupoOpts(it.grupo)}</select>
+            <span class="gt-salvo" hidden>Salvo</span>
+          </div>
+        </div>
+        <button type="button" class="gt-ic gt-excluir" data-gt-excluir title="Excluir tarefa">${icon('trash','tiny')}</button>
+      </li>`).join('') || `<li class="gt-vazio-edit">Nenhuma tarefa ${escapeHtml((GT_FREQS.find(f=>f.id===freq)||{}).rotulo||'').toLowerCase()} nesta função.</li>`}
+    </ul>
+    <div class="gt-add" data-gt-add="${pp.id}">
+      <textarea class="ps-input gt-edit-texto" rows="1" placeholder="Nova tarefa ${escapeAttr(((GT_FREQS.find(f=>f.id===freq)||{}).rotulo||'').toLowerCase().replace(/s$/,''))} para ${escapeAttr(pp.nome)}…" data-gt-novo-texto></textarea>
+      <div class="gt-edit-linha">
+        <select class="ps-input" data-gt-novo-grupo title="Grupo (dia ou prazo)">${grupoOpts(null)}</select>
+        <button type="button" class="btn-accent" data-gt-adicionar>${icon('plus','tiny')} Adicionar</button>
+      </div>
+    </div>
+  </div>`;
+}
+function gtItem(id){ return (GT.dados.itens||[]).find(i=>i.id===id); }
+function gtAutoAltura(t){ t.style.height = 'auto'; t.style.height = (t.scrollHeight+2)+'px'; }
+function gtSalvoAviso(li, txt){ const s = li && li.querySelector('.gt-salvo'); if(!s) return; s.textContent = txt||'Salvo'; s.hidden = false; clearTimeout(s._t); s._t = setTimeout(()=>{ s.hidden = true; }, 1600); }
+async function gtAtualizarItem(id, campos){
+  const { error } = await sb.from('gestao_itens').update(campos).eq('id', id);
+  if(error){ console.error('gestao_itens', error); alert('Não foi possível salvar: '+(error.message||'')); return false; }
+  const it = gtItem(id); if(it) Object.assign(it, campos);
+  return true;
+}
+function gtBindEdicao(el, freq){
+  el.querySelectorAll('.gt-edit-texto').forEach(gtAutoAltura);
+  el.querySelectorAll('[data-gt-item]').forEach(li=>{
+    const id = Number(li.dataset.gtItem);
+    const ta = li.querySelector('[data-gt-texto]');
+    ta.addEventListener('input', ()=>gtAutoAltura(ta));
+    ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ta.blur(); } });
+    ta.addEventListener('blur', async ()=>{
+      const v = ta.value.replace(/\s+/g,' ').trim(), it = gtItem(id);
+      if(!it || v===it.texto) return;
+      if(!v){ ta.value = it.texto; alert('A tarefa não pode ficar vazia. Para tirar, use a lixeira.'); return; }
+      if(await gtAtualizarItem(id, {texto:v})) gtSalvoAviso(li);
+    });
+    li.querySelector('[data-gt-campo-grupo]').addEventListener('change', async e=>{
+      if(await gtAtualizarItem(id, {grupo: e.target.value || null})) renderGestaoTime();
+    });
+    li.querySelector('[data-gt-campo-freq]').addEventListener('change', async e=>{
+      const nova = e.target.value;
+      if(await gtAtualizarItem(id, {frequencia:nova})){ renderGestaoTime(); }
+    });
+    li.querySelectorAll('[data-gt-mover]').forEach(b=>b.addEventListener('click', async ()=>{
+      const it = gtItem(id); if(!it) return;
+      const lista = gtItens(it.papel_id, it.frequencia), i = lista.findIndex(x=>x.id===id), j = i + Number(b.dataset.gtMover);
+      const outro = lista[j]; if(!outro) return;
+      const a = it.ordem, o = outro.ordem;
+      if(a===o){ if(!(await gtAtualizarItem(outro.id, {ordem:o+(j>i?-1:1)}))) return; }
+      else{ if(!(await gtAtualizarItem(id, {ordem:o}))) return; await gtAtualizarItem(outro.id, {ordem:a}); }
+      renderGestaoTime();
+    }));
+    li.querySelector('[data-gt-excluir]').addEventListener('click', async ()=>{
+      const it = gtItem(id); if(!it) return;
+      if(!confirm('Excluir esta tarefa?\n\n"'+it.texto+'"\n\nEla sai das próximas listas. O que já foi feito nas listas anteriores continua no histórico.')) return;
+      const { error } = await sb.from('gestao_itens').update({ativo:false}).eq('id', id);
+      if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
+      GT.dados.itens = (GT.dados.itens||[]).filter(x=>x.id!==id);
+      renderGestaoTime();
+    });
+  });
+  el.querySelectorAll('[data-gt-add]').forEach(box=>{
+    const papelId = Number(box.dataset.gtAdd);
+    const ta = box.querySelector('[data-gt-novo-texto]'), btn = box.querySelector('[data-gt-adicionar]');
+    ta.addEventListener('input', ()=>gtAutoAltura(ta));
+    const adicionar = async ()=>{
+      const v = ta.value.replace(/\s+/g,' ').trim(); if(!v){ ta.focus(); return; }
+      btn.disabled = true;
+      const lista = gtItens(papelId, freq);
+      const ordem = lista.length ? Math.max(...lista.map(x=>x.ordem)) + 1 : Math.max(0, ...(GT.dados.itens||[]).map(x=>x.ordem)) + 1;
+      const grupo = box.querySelector('[data-gt-novo-grupo]').value || null;
+      const { data, error } = await sb.from('gestao_itens').insert({papel_id:papelId, frequencia:freq, grupo, texto:v, ordem}).select().single();
+      btn.disabled = false;
+      if(error){ console.error(error); alert('Não foi possível adicionar: '+(error.message||'')); return; }
+      GT.dados.itens.push({id:data.id, papel_id:data.papel_id, frequencia:data.frequencia, grupo:data.grupo, texto:data.texto, ordem:data.ordem});
+      renderGestaoTime();
+      const nova = document.querySelector(`[data-gt-add="${papelId}"] [data-gt-novo-texto]`); if(nova) nova.focus();
+    };
+    btn.addEventListener('click', adicionar);
+    ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); adicionar(); } });
+  });
 }
 
 const EQUIPE_ATALHOS = [
