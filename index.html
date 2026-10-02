@@ -1698,6 +1698,63 @@
   .msg-popup-abrir{margin-top:6px;font-size:11.5px;font-weight:700;color:var(--accent);text-decoration:none;padding:0;}
   .msg-popup-abrir:hover{color:var(--text);}
   /* Início da equipe interna: grade de botões grandes, um por área do menu */
+  /* Gestão do Time */
+  .gt-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .gt-atualizar{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;margin-top:6px;}
+  .gt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+  .gt-card{display:flex;flex-direction:column;gap:12px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;color:var(--text);font:inherit;transition:border-color .15s,transform .15s;}
+  .gt-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .gt-card-topo,.gt-pessoa-topo{display:flex;align-items:center;gap:12px;}
+  .gt-nome{font-weight:700;font-size:16px;}
+  .gt-funcoes{color:var(--text-dim);font-size:12.5px;line-height:1.4;margin-top:2px;}
+  .gt-medidores{display:flex;flex-direction:column;gap:7px;}
+  .gt-medidor{display:grid;grid-template-columns:58px 1fr 44px;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);}
+  .gt-medidor b{text-align:right;color:var(--text);font-variant-numeric:tabular-nums;}
+  .gt-medidor b.gt-sem{grid-column:2 / 4;text-align:left;font-weight:500;color:var(--text-mute);}
+  .gt-barra{height:7px;border-radius:5px;background:var(--bg-elev);overflow:hidden;}
+  .gt-barra i{display:block;height:100%;border-radius:5px;}
+  .gt-aviso{font-size:12px;color:var(--text-mute);display:flex;gap:6px;align-items:flex-start;line-height:1.4;}
+  .gt-papeis{display:flex;flex-wrap:wrap;gap:5px;}
+  .gt-papeis span{font-size:11px;padding:3px 8px;border-radius:12px;background:var(--accent-soft);color:var(--text-dim);}
+  .gt-voltar{margin-bottom:14px;}
+  .gt-resultados{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin:16px 0 18px;}
+  .gt-resultado{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;line-height:1.5;}
+  .gt-res-papel{font-weight:700;margin-bottom:4px;}
+  .gt-rotulo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-mute);}
+  .gt-nota{margin-top:6px;color:var(--text-dim);font-style:italic;}
+  .gt-abas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .gt-envio{margin-top:0;}
+  .gt-painel{display:grid;grid-template-columns:minmax(200px,260px) 1fr;gap:14px;margin-bottom:18px;}
+  .gt-atual,.gt-evolucao{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:6px;}
+  .gt-atual-num{font-size:34px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .gt-atual-det{font-size:13px;color:var(--text-dim);}
+  .gt-atual .btn-mini{align-self:flex-start;margin-top:4px;}
+  .gt-media{margin-left:6px;text-transform:none;letter-spacing:0;color:var(--text-dim);}
+  .gt-barras{display:flex;align-items:flex-end;gap:6px;height:120px;margin-top:6px;}
+  .gt-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;min-width:0;}
+  .gt-col-area{flex:1;width:100%;max-width:26px;display:flex;align-items:flex-end;background:var(--bg-elev);border-radius:5px;overflow:hidden;}
+  .gt-col-area i{display:block;width:100%;border-radius:5px 5px 0 0;}
+  .gt-col-area i.gt-vazio{height:0;}
+  .gt-col small{font-size:10px;color:var(--text-mute);white-space:nowrap;}
+  .gt-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
+  .gt-bloco-tit{font-weight:700;margin-bottom:8px;}
+  .gt-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;}
+  .gt-grupo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-mute);margin:10px 0 4px;}
+  .gt-item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid var(--border);font-size:13.5px;line-height:1.45;}
+  .gt-grupo + .gt-item,.gt-lista > .gt-item:first-child{border-top:none;}
+  .gt-marca{flex:0 0 18px;height:18px;border-radius:5px;border:1.5px solid var(--border);display:inline-flex;align-items:center;justify-content:center;margin-top:1px;}
+  .gt-item.feito .gt-marca{background:var(--success);border-color:var(--success);color:#fff;}
+  .gt-item.feito .gt-marca .icon{width:12px;height:12px;stroke:#fff;}
+  .gt-item.pendente .gt-marca{border-color:var(--danger);}
+  .gt-item.neutro .gt-marca{border-style:dashed;}
+  .gt-texto{flex:1;}
+  .gt-const{font-size:11px;color:var(--text-mute);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .gt-evid{margin-top:10px;font-size:12.5px;color:var(--text-dim);}
+  @media (max-width:720px){
+    .gt-topo{flex-direction:column;} .gt-atualizar{margin-top:0;}
+    .gt-grid{grid-template-columns:1fr;} .gt-painel{grid-template-columns:1fr;}
+    .gt-barras{gap:3px;} .gt-col small{font-size:9px;}
+  }
   .equipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:16px;}
   .equipe-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 18px 16px;cursor:pointer;color:var(--text);font:inherit;transition:border-color .15s,transform .15s,background .15s;}
   .equipe-card:hover{border-color:var(--danger);transform:translateY(-2px);background:var(--bg-elev);}
@@ -1914,6 +1971,7 @@
     <button class="nav-item restrict" id="nav-clientes" data-view="clientes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
     <button class="nav-item restrict" id="nav-treinamento" data-view="treinamento" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-gestaotime" data-view="gestaotime" style="display:none"></button>
     <a class="nav-item restrict" id="nav-ecrm" href="https://www.ecrm.digital" target="_blank" rel="noopener" style="display:none">
       <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h3M8 17h6"/><circle cx="16.5" cy="15" r="1.5"/></svg>
       <span>eCRM</span>
@@ -1986,6 +2044,7 @@
       <div class="view" id="view-clientes"></div>
       <div class="view" id="view-financeiro"></div>
       <div class="view" id="view-treinamento"></div>
+      <div class="view" id="view-gestaotime"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -2071,6 +2130,7 @@ const NAV_LABELS = {
   clientes:['idcard','Registro de Clientes'],
   financeiro:['money','Financeiro'],
   treinamento:['play','Treinamento Time'],
+  gestaotime:['target','Gestão do Time'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
@@ -2078,7 +2138,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -4701,7 +4761,7 @@ function setupNav(){
   document.getElementById('logout-btn').innerHTML = `${icon('logout')}<span>Sair</span>`;
   document.getElementById('logout-btn').addEventListener('click', async ()=>{
     await sb.auth.signOut();
-    currentUser = null; currentUserRole = null; currentStudentId = null; STAFF_BLOQUEIOS = new Set();
+    currentUser = null; currentUserRole = null; currentStudentId = null; STAFF_BLOQUEIOS = new Set(); GT.dados = null; GT.pessoa = null;
     wfDraft = null; wfStep = 0; wfPhase = 'fill';
     document.getElementById('app').classList.remove('active');
     document.getElementById('login-screen').style.display='flex';
@@ -4971,6 +5031,7 @@ function setRole(role){
   document.getElementById('nav-analise').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-financeiro').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-gestaotime').style.display = (staffNav && souMurilo()) ? 'flex' : 'none';
   /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
   if(staffNav && STAFF_BLOQUEIOS.size){
@@ -5072,6 +5133,7 @@ function goTo(view){
   { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = 'equipe'; }
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(STAFF_BLOQUEIOS.has(view)) view = 'equipe';
+  if(view==='gestaotime' && !souMurilo()) view = 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
@@ -5093,7 +5155,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
@@ -12392,6 +12454,171 @@ function renderMensagens(){
 /* ================= VIEW: INÍCIO DA EQUIPE INTERNA ================= */
 /* Painel de entrada da equipe: um botão grande para cada área do menu lateral (mesma ordem), com uma
    linha explicando o que tem em cada uma. É onde a equipe cai ao entrar no sistema. */
+/* ================= GESTÃO DO TIME (só o Murilo) =================
+   Funções e responsabilidades de cada pessoa, e a rotina diária, semanal e mensal. As listas saem
+   sozinhas como Tarefas (diárias às 7h, semanais às 8h de segunda, mensais às 9h do dia 1º) e cada
+   item marcado pela pessoa aparece aqui, para acompanhar a evolução de cada um. */
+const GT_MURILO_UID = '8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3';
+function souMurilo(){ return !!(currentUser && currentUser.id===GT_MURILO_UID && currentUserRole==='staff'); }
+const GT = { dados:null, carregando:false, erro:null, pessoa:null, freq:'diaria' };
+const GT_FREQS = [
+  {id:'diaria',  rotulo:'Diárias',     envio:'Chegam todo dia às 7h.'},
+  {id:'semanal', rotulo:'Semanais',    envio:'Chegam toda segunda-feira às 8h.'},
+  {id:'mensal',  rotulo:'Mensais',     envio:'Chegam todo dia 1º às 9h.'},
+  {id:'demanda', rotulo:'Sob demanda', envio:'Não são enviadas: ficam aqui como referência.'},
+];
+const GT_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function gtHojeISO(){ return new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'}); }
+function gtISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function gtData(iso){ const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d); }
+/* Os últimos períodos (o atual primeiro): 14 dias, 8 semanas ou 6 meses. */
+function gtPeriodos(freq){
+  const hoje = gtData(gtHojeISO()), out = [];
+  if(freq==='diaria'){ for(let i=0;i<14;i++){ const d = new Date(hoje); d.setDate(d.getDate()-i); out.push(gtISO(d)); } }
+  else if(freq==='semanal'){ const seg = new Date(hoje); seg.setDate(seg.getDate() - ((seg.getDay()+6)%7)); for(let i=0;i<8;i++){ const d = new Date(seg); d.setDate(d.getDate()-7*i); out.push(gtISO(d)); } }
+  else if(freq==='mensal'){ for(let i=0;i<6;i++){ out.push(gtISO(new Date(hoje.getFullYear(), hoje.getMonth()-i, 1))); } }
+  return out;
+}
+function gtRotuloPeriodo(freq, iso, curto){
+  const d = gtData(iso);
+  if(freq==='diaria'){ const dd = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); return curto ? dd : (iso===gtHojeISO() ? 'Hoje, '+dd : dd); }
+  if(freq==='semanal') return (curto ? '' : 'Semana de ') + String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+  const m = GT_MESES[d.getMonth()]; return curto ? m.slice(0,3) : m.charAt(0).toUpperCase()+m.slice(1)+'/'+d.getFullYear();
+}
+function gtDisparo(pessoaId, freq, iso){ return ((GT.dados&&GT.dados.disparos)||[]).find(d=>d.pessoa_id===pessoaId && d.frequencia===freq && d.periodo===iso) || null; }
+function gtProgresso(d){ if(!d) return null; const tot = d.total || (d.itens||[]).length, f = (d.feitos||[]).length; return { tot, f, pct: tot ? Math.round(f*100/tot) : 0 }; }
+function gtPapeis(pessoaId){ return ((GT.dados&&GT.dados.papeis)||[]).filter(p=>p.pessoa_id===pessoaId).sort((a,b)=>a.ordem-b.ordem); }
+function gtItens(papelId, freq){ return ((GT.dados&&GT.dados.itens)||[]).filter(i=>i.papel_id===papelId && i.frequencia===freq).sort((a,b)=>a.ordem-b.ordem); }
+function gtCor(pct){ return pct>=80 ? 'var(--success)' : pct>=50 ? 'var(--individual)' : 'var(--danger)'; }
+function gtAvatar(p, tam){
+  const prof = p.user_id && PEOPLE[p.user_id];
+  const ini = (p.nome||'?').slice(0,1).toUpperCase();
+  return initialsAvatar(prof ? (prof.initials||ini) : ini, prof ? (prof.color||'#8d916f') : '#6b6e5a', tam, p.avatar_url || (prof && prof.avatarUrl) || null);
+}
+async function gtCarregar(forcar){
+  if(GT.carregando || (GT.dados && !forcar)) return;
+  GT.carregando = true; GT.erro = null;
+  try{
+    const { data, error } = await sb.rpc('gestao_painel');
+    if(error) throw error;
+    GT.dados = data;
+  }catch(e){ console.error('gestao_painel', e); GT.erro = (e && e.message) || 'erro'; }
+  GT.carregando = false;
+  if(currentView==='gestaotime') renderGestaoTime();
+}
+function gtMedidorHtml(rotulo, prog){
+  if(!prog) return `<div class="gt-medidor"><span>${rotulo}</span><b class="gt-sem">ainda não enviada</b></div>`;
+  return `<div class="gt-medidor"><span>${rotulo}</span><div class="gt-barra"><i style="width:${prog.pct}%;background:${gtCor(prog.pct)}"></i></div><b>${prog.f}/${prog.tot}</b></div>`;
+}
+function renderGestaoTime(){
+  const el = document.getElementById('view-gestaotime');
+  if(!souMurilo()){ el.innerHTML = '<div class="empty-state">Esta área é exclusiva do Murilo.</div>'; return; }
+  if(!GT.dados){
+    el.innerHTML = GT.erro ? `<div class="empty-state">Não foi possível carregar a Gestão do Time agora. <button type="button" class="btn-mini" id="gt-tentar">Tentar de novo</button></div>` : '<div class="empty-state">Carregando o time…</div>';
+    const t = document.getElementById('gt-tentar'); if(t) t.addEventListener('click', ()=>{ GT.erro = null; renderGestaoTime(); gtCarregar(true); });
+    if(!GT.erro) gtCarregar();
+    return;
+  }
+  if(GT.pessoa) return gtRenderPessoa(el);
+  const pessoas = (GT.dados.pessoas||[]);
+  const per = { diaria: gtPeriodos('diaria')[0], semanal: gtPeriodos('semanal')[0], mensal: gtPeriodos('mensal')[0] };
+  el.innerHTML = `
+    <div class="gt-topo">
+      <div>
+        <h2 class="section-title" style="margin-top:4px">Gestão do Time</h2>
+        <p class="section-sub">Funções e rotina de cada pessoa. As listas chegam sozinhas nas Tarefas de cada um: <b>diárias às 7h</b>, <b>semanais às 8h de segunda</b> e <b>mensais às 9h do dia 1º</b>. Toque numa pessoa para ver as tarefas e a evolução.</p>
+      </div>
+      <button type="button" class="btn-outline gt-atualizar" id="gt-atualizar">${icon('check','tiny')} Atualizar</button>
+    </div>
+    <div class="gt-grid">
+      ${pessoas.map(p=>{
+        const papeis = gtPapeis(p.id);
+        return `<button type="button" class="gt-card" data-gt-pessoa="${escapeAttr(p.id)}">
+          <div class="gt-card-topo">${gtAvatar(p, 42)}<div><div class="gt-nome">${escapeHtml(p.nome)}</div><div class="gt-funcoes">${escapeHtml(p.funcoes||'')}</div></div></div>
+          ${p.recebe ? `<div class="gt-medidores">
+              ${gtMedidorHtml('Hoje', gtProgresso(gtDisparo(p.id,'diaria',per.diaria)))}
+              ${gtMedidorHtml('Semana', gtProgresso(gtDisparo(p.id,'semanal',per.semanal)))}
+              ${gtMedidorHtml('Mês', gtProgresso(gtDisparo(p.id,'mensal',per.mensal)))}
+            </div>`
+          : `<div class="gt-aviso">${icon('lock','tiny')} Ainda sem acesso às Tarefas da plataforma: as listas não são enviadas para ${escapeHtml(p.nome)}.</div>`}
+          <div class="gt-papeis">${papeis.map(pp=>`<span>${escapeHtml(pp.nome)}</span>`).join('')}</div>
+        </button>`;
+      }).join('')}
+    </div>`;
+  el.querySelectorAll('[data-gt-pessoa]').forEach(b=>b.addEventListener('click', ()=>{ GT.pessoa = b.dataset.gtPessoa; GT.freq = 'diaria'; renderGestaoTime(); window.scrollTo(0,0); }));
+  document.getElementById('gt-atualizar').addEventListener('click', ()=>gtCarregar(true));
+}
+function gtRenderPessoa(el){
+  const p = (GT.dados.pessoas||[]).find(x=>x.id===GT.pessoa);
+  if(!p){ GT.pessoa = null; return renderGestaoTime(); }
+  const freq = GT.freq, fInfo = GT_FREQS.find(f=>f.id===freq);
+  const papeis = gtPapeis(p.id);
+  const temItens = f => papeis.some(pp=>gtItens(pp.id, f).length);
+  const periodos = freq==='demanda' ? [] : gtPeriodos(freq);
+  const atual = periodos[0] ? gtDisparo(p.id, freq, periodos[0]) : null;
+  const prog = gtProgresso(atual);
+  const feitoAgora = new Set((atual&&atual.feitos)||[]);
+  const noAtual = new Set((atual&&atual.itens)||[]);
+  /* Constância de cada item: em quantas das listas enviadas ele foi marcado. */
+  const disparos = periodos.map(iso=>gtDisparo(p.id, freq, iso)).filter(Boolean);
+  const const_ = {};
+  disparos.forEach(d=>{ const fs = new Set(d.feitos||[]); (d.itens||[]).forEach(id=>{ const c = const_[id] || (const_[id] = {f:0,t:0}); c.t++; if(fs.has(id)) c.f++; }); });
+  const evolucao = periodos.slice().reverse().map(iso=>({ iso, prog: gtProgresso(gtDisparo(p.id, freq, iso)) }));
+  const comDados = evolucao.filter(e=>e.prog);
+  const media = comDados.length ? Math.round(comDados.reduce((s,e)=>s+e.prog.pct,0)/comDados.length) : null;
+  const ev = (GT.dados.evidencias||[]);
+  el.innerHTML = `
+    <button type="button" class="btn-mini gt-voltar" id="gt-voltar">${icon('back','tiny')} Time</button>
+    <div class="gt-pessoa-topo">${gtAvatar(p, 56)}<div><h2 class="section-title" style="margin:0">${escapeHtml(p.nome)}</h2><div class="gt-funcoes">${escapeHtml(p.funcoes||'')}</div></div></div>
+    <div class="gt-resultados">
+      ${papeis.map(pp=>`<div class="gt-resultado"><div class="gt-res-papel">${escapeHtml(pp.nome)}</div>${pp.resultado ? `<div><span class="gt-rotulo">Resultado principal</span> ${escapeHtml(pp.resultado)}</div>` : ''}${pp.nota ? `<div class="gt-nota">${escapeHtml(pp.nota)}</div>` : ''}</div>`).join('')}
+    </div>
+    <div class="community-filters gt-abas">
+      ${GT_FREQS.filter(f=>temItens(f.id)).map(f=>`<button type="button" class="filter-tab ${f.id===freq?'active':''}" data-gt-freq="${f.id}">${f.rotulo}</button>`).join('')}
+    </div>
+    <p class="section-sub gt-envio">${escapeHtml(fInfo.envio)}${!p.recebe && freq!=='demanda' ? ` ${escapeHtml(p.nome)} ainda não tem acesso às Tarefas, então nada é enviado.` : ''}</p>
+    ${freq!=='demanda' ? `
+      <div class="gt-painel">
+        <div class="gt-atual">
+          <div class="gt-rotulo">${escapeHtml(gtRotuloPeriodo(freq, periodos[0]))}</div>
+          ${prog ? `<div class="gt-atual-num" style="color:${gtCor(prog.pct)}">${prog.pct}%</div><div class="gt-atual-det">${prog.f} de ${prog.tot} itens marcados${atual.status==='concluida' ? ' · lista concluída' : ''}</div>
+            ${atual.tarefa_id ? `<button type="button" class="btn-mini" data-gt-tarefa="${escapeAttr(atual.tarefa_id)}">${icon('externallink','tiny')} Abrir a tarefa</button>` : ''}`
+          : `<div class="gt-atual-det">${p.recebe ? 'A lista deste período ainda não foi enviada. '+escapeHtml(fInfo.envio) : 'Sem envio.'}</div>`}
+        </div>
+        <div class="gt-evolucao">
+          <div class="gt-rotulo">Evolução ${media!==null ? `<span class="gt-media">média ${media}%</span>` : ''}</div>
+          <div class="gt-barras">
+            ${evolucao.map(e=>`<div class="gt-col" title="${escapeAttr(gtRotuloPeriodo(freq, e.iso))}: ${e.prog ? e.prog.f+' de '+e.prog.tot : 'sem lista'}">
+              <div class="gt-col-area">${e.prog ? `<i style="height:${Math.max(4,e.prog.pct)}%;background:${gtCor(e.prog.pct)}"></i>` : '<i class="gt-vazio"></i>'}</div>
+              <small>${escapeHtml(gtRotuloPeriodo(freq, e.iso, true))}</small></div>`).join('')}
+          </div>
+        </div>
+      </div>` : ''}
+    ${papeis.filter(pp=>gtItens(pp.id, freq).length).map(pp=>{
+      const itens = gtItens(pp.id, freq);
+      const evid = ev.find(e=>e.papel_id===pp.id && e.frequencia===freq);
+      let grupoAnt = null;
+      return `<div class="gt-bloco">
+        <div class="gt-bloco-tit">${escapeHtml(pp.nome)}</div>
+        <ul class="gt-lista">
+          ${itens.map(it=>{
+            const cab = it.grupo && it.grupo!==grupoAnt ? `<li class="gt-grupo">${escapeHtml(it.grupo)}</li>` : ''; grupoAnt = it.grupo;
+            const c = const_[it.id];
+            const estado = freq==='demanda' || !noAtual.has(it.id) ? 'neutro' : (feitoAgora.has(it.id) ? 'feito' : 'pendente');
+            return cab + `<li class="gt-item ${estado}"><span class="gt-marca">${estado==='feito' ? icon('tick','tiny') : ''}</span><span class="gt-texto">${escapeHtml(it.texto)}</span>${c && c.t>1 ? `<span class="gt-const" title="Marcado em ${c.f} das ${c.t} últimas listas">${c.f}/${c.t}</span>` : ''}</li>`;
+          }).join('')}
+        </ul>
+        ${evid ? `<div class="gt-evid"><span class="gt-rotulo">Evidência</span> ${escapeHtml(evid.texto)}</div>` : ''}
+      </div>`;
+    }).join('')}`;
+  document.getElementById('gt-voltar').addEventListener('click', ()=>{ GT.pessoa = null; renderGestaoTime(); window.scrollTo(0,0); });
+  el.querySelectorAll('[data-gt-freq]').forEach(b=>b.addEventListener('click', ()=>{ GT.freq = b.dataset.gtFreq; renderGestaoTime(); }));
+  el.querySelectorAll('[data-gt-tarefa]').forEach(b=>b.addEventListener('click', ()=>{
+    goTo('tarefas');
+    setTimeout(()=>{ try{ openTarefaModal(b.dataset.gtTarefa); }catch(e){ console.error(e); } }, 150);
+  }));
+}
+
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
@@ -12404,6 +12631,7 @@ const EQUIPE_ATALHOS = [
   {view:'clientes',   desc:'Cadastro de clientes e pacientes, com TAGs e vínculo com alunos.'},
   {view:'financeiro', desc:'Extrato, contas a receber e a pagar, faturamento e anexos.'},
   {view:'treinamento',desc:'Aulas REC do time e o registro de aprendizados de cada pessoa.'},
+  {view:'gestaotime', desc:'Funções de cada pessoa e a rotina diária, semanal e mensal, com a evolução de cada um.'},
 ];
 /* O que cada papel interno pode abrir (a barra lateral e a trava do goTo seguem a mesma lista). */
 function viewsDoPapel(){
@@ -12424,7 +12652,7 @@ function renderEquipe(){
     ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && !STAFF_BLOQUEIOS.has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && !STAFF_BLOQUEIOS.has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
