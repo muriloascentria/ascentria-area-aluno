@@ -12558,7 +12558,7 @@ function souMurilo(){ return !!(currentUser && currentUser.id===GT_MURILO_UID &&
 const GT = { dados:null, carregando:false, erro:null, pessoa:null, freq:'diaria', editando:false };
 const GT_GRUPOS = ['Segunda-feira','Durante a semana','Sexta-feira','Até o 5º dia útil'];
 const GT_FREQS = [
-  {id:'diaria',  rotulo:'Diárias',     envio:'Chegam todo dia às 7h.'},
+  {id:'diaria',  rotulo:'Diárias',     envio:'Chegam de segunda a sexta às 7h.'},
   {id:'semanal', rotulo:'Semanais',    envio:'Chegam toda segunda-feira às 8h.'},
   {id:'mensal',  rotulo:'Mensais',     envio:'Chegam todo dia 1º às 9h.'},
   {id:'demanda', rotulo:'Sob demanda', envio:'Não são enviadas: ficam aqui como referência.'},
@@ -12567,10 +12567,10 @@ const GT_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho',
 function gtHojeISO(){ return new Date().toLocaleDateString('sv-SE', {timeZone:'America/Sao_Paulo'}); }
 function gtISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function gtData(iso){ const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d); }
-/* Os últimos períodos (o atual primeiro): 14 dias, 8 semanas ou 6 meses. */
+/* Os últimos períodos (o atual primeiro): 10 dias úteis, 8 semanas ou 6 meses. */
 function gtPeriodos(freq){
   const hoje = gtData(gtHojeISO()), out = [];
-  if(freq==='diaria'){ for(let i=0;i<14;i++){ const d = new Date(hoje); d.setDate(d.getDate()-i); out.push(gtISO(d)); } }
+  if(freq==='diaria'){ const d = new Date(hoje); while(out.length<10){ const w = d.getDay(); if(w!==0 && w!==6) out.push(gtISO(d)); d.setDate(d.getDate()-1); } }  // só dias úteis: as diárias não saem no fim de semana
   else if(freq==='semanal'){ const seg = new Date(hoje); seg.setDate(seg.getDate() - ((seg.getDay()+6)%7)); for(let i=0;i<8;i++){ const d = new Date(seg); d.setDate(d.getDate()-7*i); out.push(gtISO(d)); } }
   else if(freq==='mensal'){ for(let i=0;i<6;i++){ out.push(gtISO(new Date(hoje.getFullYear(), hoje.getMonth()-i, 1))); } }
   return out;
@@ -12622,7 +12622,7 @@ function renderGestaoTime(){
     <div class="gt-topo">
       <div>
         <h2 class="section-title" style="margin-top:4px">Gestão do Time</h2>
-        <p class="section-sub">Funções e rotina de cada pessoa. As listas chegam sozinhas nas Tarefas de cada um: <b>diárias às 7h</b>, <b>semanais às 8h de segunda</b> e <b>mensais às 9h do dia 1º</b>. Toque numa pessoa para ver as tarefas e a evolução.</p>
+        <p class="section-sub">Funções e rotina de cada pessoa. As listas chegam sozinhas nas Tarefas de cada um: <b>diárias às 7h, de segunda a sexta</b>, <b>semanais às 8h de segunda</b> e <b>mensais às 9h do dia 1º</b>. Toque numa pessoa para ver as tarefas e a evolução.</p>
       </div>
       <button type="button" class="btn-outline gt-atualizar" id="gt-atualizar">${icon('check','tiny')} Atualizar</button>
     </div>
@@ -12632,7 +12632,7 @@ function renderGestaoTime(){
         return `<button type="button" class="gt-card" data-gt-pessoa="${escapeAttr(p.id)}">
           <div class="gt-card-topo">${gtAvatar(p, 42)}<div><div class="gt-nome">${escapeHtml(p.nome)}</div><div class="gt-funcoes">${escapeHtml(p.funcoes||'')}</div></div></div>
           ${p.recebe ? `<div class="gt-medidores">
-              ${gtMedidorHtml('Hoje', gtProgresso(gtDisparo(p.id,'diaria',per.diaria)))}
+              ${gtMedidorHtml(per.diaria===gtHojeISO() ? 'Hoje' : 'Último dia', gtProgresso(gtDisparo(p.id,'diaria',per.diaria)))}
               ${gtMedidorHtml('Semana', gtProgresso(gtDisparo(p.id,'semanal',per.semanal)))}
               ${gtMedidorHtml('Mês', gtProgresso(gtDisparo(p.id,'mensal',per.mensal)))}
             </div>`
