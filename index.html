@@ -1620,6 +1620,36 @@
   .msg-grupo-av .icon{width:55%;height:55%;}
   .msg-secao{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px 4px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
   .msg-secao-n{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 5px;margin-left:5px;border-radius:8px;background:var(--danger);color:#fff;font-size:10px;}
+  .rd-kpis .rd-kpi{cursor:pointer;text-align:left;font:inherit;color:inherit;}
+  .rd-kpi .value{font-size:24px;font-weight:800;}
+  .rd-kpi-vermelho .value{color:var(--danger);} .rd-kpi-amarelo .value{color:var(--individual);} .rd-kpi-verde .value{color:var(--success);}
+  .rd-kpi.ativo{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
+  .rd-momentos{margin-top:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+  .rd-momentos-hd{display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:2px;}
+  .rd-momentos-hd .icon{width:16px;height:16px;color:var(--accent);}
+  .rd-momento{font-size:12.5px;color:var(--text-dim);line-height:1.4;}
+  .rd-momento .vg-nome-btn{font-size:12.5px;}
+  .rd-lista{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+  .rd-card{border:1px solid var(--border);border-left:4px solid var(--success);border-radius:var(--radius-sm);background:var(--bg-card);padding:12px 14px;min-width:0;}
+  .rd-card.rd-vermelho{border-left-color:var(--danger);} .rd-card.rd-amarelo{border-left-color:var(--individual);}
+  .rd-topo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .rd-sinal{width:12px;height:12px;border-radius:50%;background:var(--success);flex:0 0 auto;}
+  .rd-vermelho .rd-sinal{background:var(--danger);} .rd-amarelo .rd-sinal{background:var(--individual);}
+  .rd-nome{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 160px;}
+  .rd-nome .vg-nome-btn{white-space:normal;line-height:1.3;font-size:14px;}
+  .rd-nome small{font-size:11.5px;color:var(--text-mute);}
+  .rd-acoes{display:flex;gap:6px;flex-wrap:wrap;}
+  .rd-motivos{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px;}
+  .rd-motivos li{font-size:12px;line-height:1.3;padding:4px 9px;border-radius:999px;background:var(--individual-soft);color:var(--text);}
+  .rd-motivos li.rd-m2{background:var(--danger-soft);}
+  .rd-ok{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--success);}
+  .rd-mais{background:none;border:0;padding:0;margin-top:8px;font:inherit;font-size:12px;color:var(--text-mute);cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+  .rd-dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:8px;margin-top:10px;}
+  .rd-dado{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--bg-elev);border:1px solid var(--border);min-width:0;}
+  .rd-dado span{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);font-weight:700;}
+  .rd-dado strong{font-size:12.5px;font-weight:600;word-break:break-word;}
+  .rd-dado-vermelho{border-color:var(--danger);} .rd-dado-amarelo{border-color:var(--individual);}
+  .rd-legenda{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-top:16px;}
   .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
   .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
   .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
@@ -2058,6 +2088,7 @@
     <button class="nav-item restrict" id="nav-comunicacao" data-view="comunicacao" style="display:none"></button>
     <button class="nav-item restrict" id="nav-mensagens" data-view="mensagens" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-radar" data-view="radar" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
     <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
@@ -2140,6 +2171,7 @@
       <div class="view" id="view-financeiro"></div>
       <div class="view" id="view-treinamento"></div>
       <div class="view" id="view-gestaotime"></div>
+      <div class="view" id="view-radar"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -2162,6 +2194,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ================= ICONS ================= */
 const ICONS = {
+  radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1"/>',
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5-7 7-3-3-3 3"/>',
   gift:'<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12"/><path d="M12 9C10.5 6.5 9 5 7.5 5A2.5 2.5 0 0 0 7.5 10H12zM12 9c1.5-2.5 3-4 4.5-4a2.5 2.5 0 0 1 0 5H12z"/>',
   paperclip:'<path d="M21 12.5l-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.3-8.3"/>',
@@ -2226,6 +2259,7 @@ const NAV_LABELS = {
   financeiro:['money','Financeiro'],
   treinamento:['play','Treinamento Time'],
   gestaotime:['target','Gestão do Time'],
+  radar:['radar','Radar dos Mentorados'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
@@ -2233,7 +2267,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -3752,7 +3786,7 @@ async function bootstrapData(){
     try{ const { data: rest } = await sb.from('staff_restrito').select('bloqueios').eq('user_id', currentUser.id).maybeSingle();
       if(rest && Array.isArray(rest.bloqueios)) STAFF_BLOQUEIOS = new Set(rest.bloqueios); }catch(e){}
   }
-  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, aulasLiberadas:!!me.aulas_liberadas} : null;
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, aulasLiberadas:!!me.aulas_liberadas, contaTeste:!!me.conta_teste} : null;
 
   /* Papel 'vendas' (vendedora do time): acesso restrito ao Registro de Sessões 1:1 e nada mais.
      Carrega só essa lista — nenhum dado de aluno, comunidade, aulas, clientes ou financeiro chega ao
@@ -5139,6 +5173,7 @@ function setRole(role){
   document.getElementById('nav-financeiro').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-gestaotime').style.display = (staffNav && souMurilo()) ? 'flex' : 'none';
+  document.getElementById('nav-radar').style.display = (staffNav && radarPode()) ? 'flex' : 'none';
   /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
   if(staffNav && staffBloqueios().size){
@@ -5241,6 +5276,7 @@ function goTo(view){
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
+  if(view==='radar' && !radarPode()) view = 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
@@ -5262,7 +5298,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
@@ -12853,6 +12889,7 @@ const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
+  {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
@@ -12882,7 +12919,7 @@ function renderEquipe(){
     ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
@@ -13846,6 +13883,217 @@ function bindTierSelects(root, afterChange){
     });
   });
 }
+/* ================= RADAR DOS MENTORADOS (Sandra, Viviane e Murilo) =================
+   Um semáforo por mentorado com o motivo escrito ao lado, para a pessoa abrir a tela e saber quem
+   precisa de atenção hoje. Os dados que só o banco sabe (último acesso, quando marcou o último item
+   do dashboard, mensagens do Acompanhamento, comunidade, pagamentos e a próxima ação) vêm da função
+   radar_mentorados(); o ritmo no método é calculado aqui, com a mesma régua de 365 dias do
+   acompanhamento (proporcional à duração do contrato). */
+const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-bb26-eec09ba778c4','e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'];
+const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
+const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
+const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{} };
+function radarPode(){
+  return currentUserRole==='staff' && !!currentUser && (RADAR_UIDS.includes(currentUser.id) || !!(currentUserProfile && currentUserProfile.contaTeste));
+}
+function rdDiasDesde(iso){ if(!iso) return null; return Math.max(0, Math.floor((Date.now()-new Date(iso).getTime())/86400000)); }
+function rdHorasDesde(iso){ if(!iso) return null; return Math.max(0, Math.floor((Date.now()-new Date(iso).getTime())/3600000)); }
+function rdTempo(h){ return h < 48 ? `${h}h` : `${Math.floor(h/24)} dias`; }
+function rdDiasTxt(d){ return d===0 ? 'hoje' : d===1 ? 'ontem' : `há ${d} dias`; }
+function rdEstagioReal(s){
+  for(let i=0;i<MODULES.length;i++){
+    const m = MODULES[i];
+    let feitos = 0;
+    try{ feitos = (getModuleChecklistState(s.id, m.id)||[]).slice(0, m.total).filter(Boolean).length; }catch(e){}
+    if(feitos < m.total*0.8) return { idx:i, pct:Math.round(feitos/m.total*100) };
+  }
+  return { idx:5, pct:100 };
+}
+function rdDiasDeMatricula(s){
+  const c = s.cadastro||{};
+  if(!c.dataMatricula) return null;
+  const [y,m,d] = c.dataMatricula.split('-').map(Number);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  return Math.floor((hoje - new Date(y,m-1,d))/86400000);
+}
+/* Régua: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330,
+   depois Fechamento. Para contratos maiores que 12 meses, a régua estica na mesma proporção. */
+const RADAR_REGUA = [30,90,180,270,330];
+function rdFator(s){ const dur = ((s.cadastro||{}).duracaoMeses||12)*30.44; return 365/dur; }
+function rdEstagioEsperado(s){
+  const dias = rdDiasDeMatricula(s);
+  if(dias===null) return null;
+  const r = Math.max(0,dias)*rdFator(s);
+  let idx = RADAR_REGUA.findIndex(lim=>r<=lim); if(idx<0) idx = 5;
+  return { idx, dias };
+}
+function rdAvaliar(s, r){
+  const motivos = []; // nivel 2 = vermelho, 1 = amarelo
+  const add = (nivel, txt)=>motivos.push({nivel, txt});
+  // 1. Acesso
+  const dAcesso = rdDiasDesde(r.ultimo_acesso);
+  if(dAcesso===null) add(2, 'Nunca entrou no Plat');
+  else if(dAcesso>=14) add(2, `${dAcesso} dias sem entrar no Plat`);
+  else if(dAcesso>=7) add(1, `${dAcesso} dias sem entrar no Plat`);
+  // 2. Avanço no dashboard (a medição começou em 03/10)
+  const dAvanco = rdDiasDesde(r.ultimo_avanco || RADAR_INICIO_MEDICAO+'T00:00:00-03:00');
+  const txtAv = r.ultimo_avanco ? `${dAvanco} dias sem avançar no dashboard` : `Sem avançar no dashboard desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`;
+  if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv);
+  // 3. Mensagem do aluno esperando a equipe
+  const hEspera = rdHorasDesde(r.aguardando_desde);
+  if(hEspera!==null && hEspera>=48) add(2, `Esperando resposta da equipe há ${rdTempo(hEspera)}`);
+  else if(hEspera!==null && hEspera>=24) add(1, `Esperando resposta da equipe há ${rdTempo(hEspera)}`);
+  // 4. Aluno que parou de responder
+  if(r.ult_msg_equipe && (!r.ult_msg_aluno || new Date(r.ult_msg_aluno) < new Date(r.ult_msg_equipe))){
+    const d = r.ult_msg_aluno ? rdDiasDesde(r.ult_msg_aluno) : null;
+    if(d===null) add(1, 'Nunca respondeu no Acompanhamento');
+    else if(d>=14) add(1, `Não responde a equipe há ${d} dias`);
+  }
+  // 5. Contato pessoal da equipe (sem contar o checkpoint automático)
+  const dHumano = rdDiasDesde(r.ult_contato_humano);
+  if(dHumano===null) add(1, 'Nenhum contato pessoal da equipe no Acompanhamento');
+  else if(dHumano>=14) add(1, `Equipe sem contato pessoal há ${dHumano} dias`);
+  // 6. Pagamento (só para quem tem acesso ao Financeiro)
+  if(rdVerFinanceiro() && r.pag_atrasados>0) add(2, `${r.pag_atrasados} pagamento${r.pag_atrasados>1?'s':''} em atraso`);
+  // 7. Ritmo no método
+  const esp = rdEstagioEsperado(s), real = rdEstagioReal(s);
+  if(esp && diasRestantes(s)>=0){
+    const atraso = esp.idx - real.idx;
+    const txt = `Atrasado no método: deveria estar em ${RADAR_ESTAGIOS[esp.idx]}, está em ${RADAR_ESTAGIOS[real.idx]}`;
+    if(atraso>=2) add(2, txt); else if(atraso===1) add(1, txt);
+  }
+  // 8. Próxima ação vencida
+  const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
+  if(r.prazo && r.prazo < hojeISO) add(1, `Próxima ação vencida em ${tzDataCurta(r.prazo)}`);
+  const nivel = motivos.reduce((a,m)=>Math.max(a,m.nivel),0);
+  motivos.sort((a,b)=>b.nivel-a.nivel);
+  return { nivel, motivos, dAcesso, dAvanco, hEspera, dHumano, esp, real, semAcao:!(r.proxima_acao||'').trim() };
+}
+function rdVerFinanceiro(){ return !staffBloqueios().has('financeiro'); }
+/* Momentos-chave dos próximos dias: 30 dias de entrada, troca de módulo pelo cronograma e fim da mentoria. */
+function rdMomentos(s){
+  const out = [];
+  const dias = rdDiasDeMatricula(s);
+  if(dias!==null){
+    if(dias>=23 && dias<=30) out.push({em:30-dias, txt: dias===30 ? 'Completa 30 dias de mentoria hoje' : `Completa 30 dias de mentoria em ${30-dias} dia${30-dias>1?'s':''}`});
+    const f = rdFator(s);
+    const proxLim = RADAR_REGUA.find(lim=>lim > Math.max(0,dias)*f);
+    if(proxLim){
+      const diaTroca = Math.ceil(proxLim/f) + 1;
+      const falta = diaTroca - dias;
+      const prox = RADAR_ESTAGIOS[RADAR_REGUA.indexOf(proxLim)+1];
+      if(falta>=0 && falta<=7) out.push({em:falta, txt: falta===0 ? `Entra hoje em ${prox} pelo cronograma` : `Entra em ${prox} pelo cronograma em ${falta} dia${falta>1?'s':''}`});
+    }
+  }
+  try{
+    const rest = diasRestantes(s);
+    if(rest>=0 && rest<=30) out.push({em:rest, txt: rest===0 ? 'Mentoria termina hoje' : `Mentoria termina em ${rest} dia${rest>1?'s':''} (hora de falar de renovação e depoimento)`});
+  }catch(e){}
+  return out;
+}
+async function radarCarregar(){
+  RADAR_UI.carregando = true; RADAR_UI.erro = false;
+  try{
+    const { data, error } = await sb.rpc('radar_mentorados');
+    if(error) throw error;
+    RADAR_UI.rows = data || [];
+  }catch(e){ console.error('radar_mentorados', e); RADAR_UI.erro = true; RADAR_UI.rows = null; }
+  RADAR_UI.carregando = false;
+  if(currentView==='radar') renderRadar();
+}
+function renderRadar(){
+  const el = document.getElementById('view-radar');
+  if(!el) return;
+  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Relacionamento e do Customer Success.</div>'; return; }
+  if(RADAR_UI.rows===null && !RADAR_UI.carregando && !RADAR_UI.erro){ radarCarregar(); }
+  if(RADAR_UI.carregando && RADAR_UI.rows===null){ el.innerHTML = '<div class="empty-state">Carregando o radar…</div>'; return; }
+  if(RADAR_UI.erro){
+    el.innerHTML = `<div class="empty-state">Não consegui carregar o radar agora.<br><br><button type="button" class="btn-outline" id="rd-tentar">Tentar de novo</button></div>`;
+    document.getElementById('rd-tentar').addEventListener('click', ()=>{ RADAR_UI.erro = false; renderRadar(); });
+    return;
+  }
+  const verFin = rdVerFinanceiro();
+  const lista = (RADAR_UI.rows||[]).map(r=>{ const s = getStudent(r.aluno_id); return s ? { s, r, a: rdAvaliar(s, r) } : null; }).filter(Boolean);
+  lista.sort((x,y)=> y.a.nivel-x.a.nivel || y.a.motivos.filter(m=>m.nivel===2).length - x.a.motivos.filter(m=>m.nivel===2).length || y.a.motivos.length-x.a.motivos.length || x.s.name.localeCompare(y.s.name,'pt-BR'));
+  const qtd = n=>lista.filter(x=>x.a.nivel===n).length;
+  const semAcao = lista.filter(x=>x.a.semAcao).length;
+  const nBusca = normTxt(RADAR_UI.busca).trim();
+  const f = RADAR_UI.filtro;
+  const visiveis = lista.filter(x=>(f==='todos' || (f==='vermelho' && x.a.nivel===2) || (f==='amarelo' && x.a.nivel===1) || (f==='verde' && x.a.nivel===0) || (f==='semacao' && x.a.semAcao))
+    && (!nBusca || normTxt(x.s.name).includes(nBusca) || normTxt((x.s.cadastro||{}).nomeCompleto).includes(nBusca)));
+  const momentos = lista.flatMap(x=>rdMomentos(x.s).map(m=>Object.assign({s:x.s}, m))).sort((a,b)=>a.em-b.em);
+  const cor = n=> n===2 ? 'vermelho' : n===1 ? 'amarelo' : 'verde';
+  const tile = (chave, rotulo, valor, dica)=>`
+    <button type="button" class="kpi-tile rd-kpi rd-kpi-${chave} ${f===chave?'ativo':''}" data-rd-filtro="${chave}" title="${escapeAttr(dica)}">
+      <div class="label">${rotulo}</div><div class="value">${valor}</div>
+    </button>`;
+  const dado = (rotulo, valor, alerta)=>`<div class="rd-dado ${alerta?'rd-dado-'+alerta:''}"><span>${rotulo}</span><strong>${valor}</strong></div>`;
+  const nivelDe = (d, am, ve)=> d===null ? 'vermelho' : d>=ve ? 'vermelho' : d>=am ? 'amarelo' : '';
+  el.innerHTML = `
+    <p class="section-sub" style="margin-top:0">Vermelhos primeiro, com o motivo escrito ao lado. Os números são calculados na hora em que a tela abre.
+      <button type="button" class="link-btn" id="rd-atualizar">Atualizar</button></p>
+    <div class="kpi-row rd-kpis">
+      ${tile('vermelho','Em risco', qtd(2), 'Mostrar só os mentorados em vermelho')}
+      ${tile('amarelo','Atenção', qtd(1), 'Mostrar só os mentorados em amarelo')}
+      ${tile('verde','Em dia', qtd(0), 'Mostrar só os mentorados em verde')}
+      ${tile('semacao','Sem próxima ação', semAcao, 'Mentorados sem próxima ação registrada no acompanhamento')}
+    </div>
+    ${momentos.length ? `
+    <div class="rd-momentos">
+      <div class="rd-momentos-hd">${icon('calendar')} <strong>Momentos-chave dos próximos dias</strong></div>
+      ${momentos.map(m=>`<div class="rd-momento"><button type="button" class="vg-nome-btn" data-rd-acomp="${m.s.id}">${escapeHtml(m.s.name)}</button> <span>${escapeHtml(m.txt)}</span></div>`).join('')}
+    </div>` : ''}
+    <div class="busca-bar larga" style="margin-top:14px">
+      <input class="ps-input" type="text" id="rd-busca" value="${escapeAttr(RADAR_UI.busca)}" placeholder="Buscar mentorado pelo nome…">
+      ${f!=='todos' || RADAR_UI.busca.trim() ? `<button type="button" class="btn-outline" id="rd-limpar">${icon('x','tiny')} Mostrar todos</button>` : ''}
+    </div>
+    <div class="rd-lista">
+      ${visiveis.map(({s,r,a})=>{
+        const aberto = !!RADAR_UI.abertos[s.id];
+        const resp = r.proxima_acao_resp && PEOPLE[r.proxima_acao_resp] ? PEOPLE[r.proxima_acao_resp].name.split(' ')[0] : '';
+        const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
+        return `
+        <div class="rd-card rd-${cor(a.nivel)}">
+          <div class="rd-topo">
+            <span class="rd-sinal" title="${a.nivel===2?'Em risco':a.nivel===1?'Atenção':'Em dia'}"></span>
+            ${initialsAvatar(s.initials, s.color, 34, s.avatarUrl)}
+            <div class="rd-nome">
+              <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
+              <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método</small>
+            </div>
+            <div class="rd-acoes">
+              <button type="button" class="btn-mini" data-rd-conversa="${s.id}">${icon('comment','tiny')}<span> Conversa</span></button>
+              <button type="button" class="btn-mini" data-rd-acomp="${s.id}">${icon('chart','tiny')}<span> Acompanhamento</span></button>
+            </div>
+          </div>
+          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${escapeHtml(m.txt)}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
+          <button type="button" class="rd-mais" data-rd-abrir="${s.id}">${icon(aberto?'up':'down','tiny')} ${aberto?'Esconder detalhes':'Ver detalhes'}</button>
+          ${aberto ? `
+          <div class="rd-dados">
+            ${dado('Último acesso', a.dAcesso===null ? 'nunca' : rdDiasTxt(a.dAcesso), nivelDe(a.dAcesso,7,14))}
+            ${dado('Último avanço no dashboard', r.ultimo_avanco ? rdDiasTxt(a.dAvanco) : `sem registro desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`, a.dAvanco>=30?'vermelho':a.dAvanco>=14?'amarelo':'')}
+            ${dado('Ritmo', a.esp ? `deveria: ${RADAR_ESTAGIOS[a.esp.idx]} · está: ${RADAR_ESTAGIOS[a.real.idx]}` : 'sem data de matrícula', a.esp ? (a.esp.idx-a.real.idx>=2?'vermelho':a.esp.idx-a.real.idx===1?'amarelo':'') : '')}
+            ${dado('Mensagem esperando a equipe', a.hEspera===null ? 'nenhuma' : 'há '+rdTempo(a.hEspera), a.hEspera===null?'':a.hEspera>=48?'vermelho':a.hEspera>=24?'amarelo':'')}
+            ${dado('Última mensagem do aluno', r.ult_msg_aluno ? rdDiasTxt(rdDiasDesde(r.ult_msg_aluno)) : 'nunca escreveu', '')}
+            ${dado('Último contato pessoal da equipe', a.dHumano===null ? 'nenhum' : rdDiasTxt(a.dHumano), a.dHumano===null||a.dHumano>=14?'amarelo':'')}
+            ${dado('Próxima ação', a.semAcao ? 'não registrada' : `${escapeHtml(r.proxima_acao)}${r.prazo?` · até ${tzDataCurta(r.prazo)}`:''}${resp?` · ${escapeHtml(resp)}`:''}`, r.prazo && r.prazo<hojeISO ? 'amarelo' : '')}
+            ${dado('Comunidade (30 dias)', r.comunidade_ultimo ? `${r.comunidade_30d} participação${r.comunidade_30d===1?'':'ões'} · última ${rdDiasTxt(rdDiasDesde(r.comunidade_ultimo))}` : 'nunca participou', '')}
+            ${verFin ? dado('Pagamentos em atraso', r.pag_atrasados>0 ? `${r.pag_atrasados} · ${formatBRL(r.pag_valor)}` : 'nenhum', r.pag_atrasados>0?'vermelho':'') : ''}
+            ${(()=>{ try{ const d = diasRestantes(s); return dado('Fim da mentoria', d<0 ? 'encerrada' : `em ${d} dias`, ''); }catch(e){ return ''; } })()}
+          </div>` : ''}
+        </div>`; }).join('') || `<div class="empty-state">${lista.length ? 'Ninguém nesse filtro.' : 'Nenhum mentorado ainda.'}</div>`}
+    </div>
+    <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', ou pagamento em atraso':''}. Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal há 14 dias (o checkpoint automático não conta) e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
+  el.querySelectorAll('[data-rd-filtro]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.filtro = RADAR_UI.filtro===b.dataset.rdFiltro ? 'todos' : b.dataset.rdFiltro; renderRadar(); }));
+  const lim = document.getElementById('rd-limpar'); if(lim) lim.addEventListener('click', ()=>{ RADAR_UI.filtro = 'todos'; RADAR_UI.busca = ''; renderRadar(); });
+  document.getElementById('rd-atualizar').addEventListener('click', ()=>{ RADAR_UI.rows = null; renderRadar(); });
+  bindBuscaInput('rd-busca', v=>{ RADAR_UI.busca = v; }, renderRadar);
+  el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
+  el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
+  el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+  el.querySelectorAll('[data-open-staff]').forEach(b=>b.addEventListener('click', ()=>{ currentStudentId = b.dataset.openStaff; panelQuadrantId = null; setRole('aluno'); }));
+}
+
 /* ================= ACOMPANHAMENTO DA EVOLUÇÃO (Visão Geral → "Abrir acompanhamento") =================
    O mesmo acompanhamento da planilha "Acompanhamento Evolução Método Essência": a situação calculada
    pela plataforma (progresso, meta, dias, estágio esperado pela régua de 365 dias e alinhamento) e a
