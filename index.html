@@ -4792,7 +4792,7 @@ function renderLogin(){
       errEl.textContent = 'Código de acesso inválido ou já utilizado. Confira com a equipe interna.';
       errEl.style.display='block'; return;
     }
-    const { data, error } = await sb.auth.signUp({ email, password: senha, options:{ data:{ name: nome, initials } } });
+    const { data, error } = await sb.auth.signUp({ email, password: senha, options:{ data:{ name: nome, initials, access_code: codigo } } });
     btn.disabled = false; btn.textContent = 'Criar conta';
     if(error){
       errEl.textContent = /already/i.test(error.message||'') ? 'Este e-mail já está cadastrado.' : 'Não foi possível criar a conta.';
