@@ -2090,7 +2090,7 @@
           <button data-role="staff" title="Equipe interna">Equipe</button>
           <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem">Consultora</button>
           <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê">Editor</button>
-          <button data-role="cs" id="role-cs" style="display:none" title="Ver a plataforma como o Customer Success vê (sem Financeiro, Sessões 1:1, Análise e eCRM)">CS</button>
+          <button data-role="cs" id="role-cs" style="display:none" title="Ver a plataforma como o Customer Success vê (sem Comunicação, Financeiro, Sessões 1:1, Análise e eCRM)">CS</button>
         </div>
         <button class="icon-btn" id="notif-btn" title="Notificações">
           <span class="dot-alert" id="notif-dot"></span>
@@ -3612,7 +3612,7 @@ function estagioMentoria(mes){
 /* ================= AUTH / DATA BOOTSTRAP (Supabase) ================= */
 let currentUser = null;      // usuário autenticado no Supabase
 let PREVIEW_CS = false; // "Visualização CS": a equipe vê a plataforma como o Customer Success
-const CS_BLOQUEIOS = ['financeiro','vendas','analise','ecrm','gestaotime'];
+const CS_BLOQUEIOS = ['financeiro','vendas','analise','ecrm','gestaotime','comunicacao'];
 function staffBloqueios(){ return PREVIEW_CS ? new Set(CS_BLOQUEIOS) : STAFF_BLOQUEIOS; }
 let STAFF_BLOQUEIOS = new Set(); // áreas da equipe interna bloqueadas para esta conta (tabela staff_restrito)
 let currentUserRole = null;  // papel REAL da conta ('aluno'|'staff') — não confundir com currentRole (visualização atual)
