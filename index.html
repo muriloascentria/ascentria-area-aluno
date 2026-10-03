@@ -1158,6 +1158,10 @@
   .ae-rodape{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid var(--border);}
   .ae-atualizado{font-size:12px;color:var(--text-mute);}
   .ae-rodape .btn-accent{display:inline-flex;align-items:center;gap:6px;}
+  .ae-dash-tag{display:inline-flex;align-items:center;gap:4px;font-style:normal;font-size:11px;font-weight:600;color:var(--success);margin-top:4px;}
+  .ae-dash-tag .icon{width:11px;height:11px;stroke:var(--success);}
+  .ae-comp li.ae-dash label{cursor:default;}
+  .ae-comp input:disabled{opacity:1;}
   .ae-erro{font-size:12.5px;color:var(--danger);margin:10px 0;}
   .vg-nome-btn{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;}
   .vg-nome-btn:hover{color:var(--accent-2,var(--accent));text-decoration-color:currentColor;}
@@ -13842,6 +13846,21 @@ const AE_COMPETENCIAS = {
   FINALIZAR:{prazo:'1 mês', itens:[['Revisar toda a jornada','Diagnóstico final'],['Identificar lacunas e resultados','Pendências e resultados mapeados'],['Planejar continuidade','Plano de 90 dias']]},
 };
 
+/* Cada competência aponta para a tarefa do Dashboard que a comprova (módulo do Dashboard e número do item,
+   contando a partir de 1). Quando o aluno marca a tarefa no Dashboard, a competência aparece marcada
+   sozinha no acompanhamento. */
+const AE_COMP_DASH = {
+  ABERTURA:   ['introducao', [4,5,6]],
+  SER:        ['ser', [7,10,13,14,17,20,23,24,29,32,35,38,41,42]],
+  CONECTAR:   ['conectar', [6,7,8,9,10,11,21,26,33,48,51,52,53,54,55,56,57,58,59,60,61,62]],
+  TRANSFORMAR:['transformar', [7,10,13,20,27]],
+  GERENCIAR:  ['gerenciar', [3,6,9,12,15,18,21,24,30,33]],
+};
+function aeFeitoNoDashboard(sid, mod, i){
+  const m = AE_COMP_DASH[mod]; if(!m) return false;
+  const item = m[1][i]; if(!item) return false;
+  try{ const st = getModuleChecklistState(sid, m[0]); return !!(st && st[item-1]); }catch(e){ return false; }
+}
 const AE_NIVEIS = ['Não iniciado','Em desenvolvimento','Concluído','Precisa de apoio'];
 const AE_PRIORIDADES = ['Baixa','Média','Alta','Urgente'];
 const AE_UI = { sid:null, dados:null, carregando:false, abertos:{} };
@@ -13918,11 +13937,11 @@ function aeRender(){
         <div class="field"><label>Prazo da próxima ação</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(salvo.prazo||'')}"></div>
         <div class="field full"><label>Observações (Sandra)</label><textarea class="ps-input" id="ae-obs" rows="3">${escapeHtml(salvo.observacoes||'')}</textarea></div>
       </div>
-      <div class="ae-sec-tit">Competências por módulo <small>marque o que o mentorado já concluiu, com a evidência</small></div>
+      <div class="ae-sec-tit">Competências por módulo <small>marcadas sozinhas quando o aluno conclui a tarefa no Dashboard; a equipe pode marcar as demais</small></div>
       <div class="ae-modulos">
         ${AE_ESTAGIOS.map(e=>{
           const m = AE_COMPETENCIAS[e.mod];
-          const feitos = m.itens.filter((_,i)=>comp[e.mod+'-'+i]).length;
+          const feitos = m.itens.filter((_,i)=>comp[e.mod+'-'+i] || aeFeitoNoDashboard(s.id, e.mod, i)).length;
           const aberto = !!AE_UI.abertos[e.mod];
           return `<div class="ae-mod ${e.label===sit.atual?'atual':''}">
             <button type="button" class="ae-mod-cab" data-ae-mod="${e.mod}">
@@ -13930,7 +13949,7 @@ function aeRender(){
               ${e.label===sit.atual ? '<span class="ae-mod-agora">estágio atual</span>' : ''}
               <span class="ae-mod-cont ${feitos===m.itens.length?'ok':''}">${feitos}/${m.itens.length}</span>${icon(aberto?'up':'down','tiny')}
             </button>
-            ${aberto ? `<ul class="ae-comp">${m.itens.map(([c,ev],i)=>`<li><label><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${comp[e.mod+'-'+i]?'checked':''}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small></span></label></li>`).join('')}</ul>` : ''}
+            ${aberto ? `<ul class="ae-comp">${m.itens.map(([c,ev],i)=>{ const dash = aeFeitoNoDashboard(s.id, e.mod, i); return `<li class="${dash?'ae-dash':''}"><label title="${dash?'Marcada automaticamente: o aluno concluiu a tarefa no Dashboard':''}"><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${dash?'data-ae-dash="1" checked onclick="return false" tabindex="-1"':(comp[e.mod+'-'+i]?'checked':'')}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small>${dash?`<em class="ae-dash-tag">${icon('tick','tiny')} Tarefa concluída pelo aluno no Dashboard</em>`:''}</span></label></li>`; }).join('')}</ul>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -13944,7 +13963,7 @@ function aeRender(){
   /* Guarda o que foi digitado antes de redesenhar (abrir um módulo, trocar o estágio). */
   const coletar = ()=>{
     const comp2 = Object.assign({}, (AE_UI.dados||{}).competencias || {});
-    document.querySelectorAll('[data-ae-comp]').forEach(c=>{ if(c.checked) comp2[c.dataset.aeComp] = true; else delete comp2[c.dataset.aeComp]; });
+    document.querySelectorAll('[data-ae-comp]:not([data-ae-dash])').forEach(c=>{ if(c.checked) comp2[c.dataset.aeComp] = true; else delete comp2[c.dataset.aeComp]; });
     const est2 = document.getElementById('ae-estagio').value;
     const hab = document.getElementById('ae-habilidades').value.trim();
     return {
