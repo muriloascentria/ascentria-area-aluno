@@ -1620,6 +1620,63 @@
   .msg-grupo-av .icon{width:55%;height:55%;}
   .msg-secao{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px 4px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
   .msg-secao-n{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 5px;margin-left:5px;border-radius:8px;background:var(--danger);color:#fff;font-size:10px;}
+  .ep-intro{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:var(--radius);background:var(--shared-soft);border:1px solid var(--border);margin-bottom:14px;font-size:13px;color:var(--text-dim);}
+  .ep-intro strong{font-size:15px;color:var(--text);}
+  .ep-config{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:16px;}
+  .ep-config h3,.ep-sec-hd h3{display:flex;align-items:center;gap:8px;font-size:15px;margin:0;}
+  .ep-config h3 .icon,.ep-sec-hd h3 .icon{width:17px;height:17px;color:var(--accent);}
+  .ep-dias{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:8px;}
+  .ep-dia{border:1px solid var(--border);border-radius:12px;background:var(--bg-elev);padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0;}
+  .ep-dia.on{border-color:var(--accent);background:var(--accent-soft);}
+  .ep-dia-btn{display:flex;align-items:center;gap:8px;background:none;border:0;padding:4px;font:inherit;color:var(--text);cursor:pointer;text-align:left;}
+  .ep-dia-curto{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;border:1px solid var(--border);flex:0 0 auto;}
+  .ep-dia.on .ep-dia-curto{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .ep-dia-nome{font-size:13px;font-weight:600;}
+  .ep-dia-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px;}
+  .ep-dia-campos[hidden]{display:none;}
+  .ep-dia-campos label{display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:var(--text-mute);font-weight:700;text-transform:uppercase;letter-spacing:.3px;min-width:0;}
+  .ep-dia-campos .ps-input{padding:6px 6px;font-size:13px;min-width:0;width:100%;}
+  .ep-config-rodape{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--text-dim);}
+  .ep-aviso{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--individual);background:var(--individual-soft);font-size:13px;line-height:1.5;margin:12px 0;}
+  .ep-aviso .icon{width:17px;height:17px;flex:0 0 auto;margin-top:2px;color:var(--individual);}
+  .ep-aviso.ok{border-color:var(--success);background:var(--success-soft);} .ep-aviso.ok .icon{color:var(--success);}
+  .ep-sec-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .ep-sec-hd span{font-size:12px;color:var(--text-mute);}
+  .ep-hoje{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:14px;margin-top:14px;}
+  .ep-bloco{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border);}
+  .ep-hoje .ep-sec-hd + .ep-bloco,.ep-dia-hd + .ep-bloco{border-top:0;}
+  .ep-hora{display:flex;flex-direction:column;align-items:center;min-width:52px;font-weight:700;font-size:13px;}
+  .ep-hora small{font-weight:500;font-size:10.5px;color:var(--text-mute);}
+  .ep-txt{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;font-size:13px;line-height:1.35;}
+  .ep-mod{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);font-weight:700;}
+  .ep-aula{align-self:flex-start;font-size:12px;display:inline-flex;align-items:center;gap:4px;}
+  .ep-check{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);background:none;color:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;}
+  .ep-check .icon{width:16px;height:16px;}
+  .ep-check:hover{border-color:var(--success);color:var(--success);}
+  .ep-check.on{background:var(--success);border-color:var(--success);color:#fff;}
+  .ep-bloco.feito .ep-txt span:last-child{text-decoration:line-through;color:var(--text-mute);}
+  .ep-bloco.feito .ep-hora .icon{width:16px;height:16px;color:var(--success);}
+  .ep-continua{font-size:10.5px;color:var(--text-mute);flex:0 0 auto;}
+  .ep-vazio{font-size:13px;color:var(--text-dim);margin:6px 0 0;}
+  .ep-proximos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;}
+  .ep-dia-card{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);padding:10px 12px;min-width:0;}
+  .ep-dia-hd{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:2px;}
+  .ep-dia-hd span{font-size:11.5px;color:var(--text-mute);}
+  .ep-prev td{font-size:12.5px;}
+  .ep-ok{color:var(--success);font-size:11.5px;font-weight:700;margin-left:4px;}
+  .ep-atraso{color:var(--danger);font-size:11.5px;font-weight:700;margin-left:4px;}
+  .ep-nota{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-top:10px;}
+  .ep-inicio{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);cursor:pointer;margin:16px 0 4px;}
+  .ep-inicio.col{flex-direction:column;align-items:stretch;gap:8px;}
+  .ep-inicio > div{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+  .ep-inicio small{font-size:12px;color:var(--text-mute);}
+  .ep-inicio-ic{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .ep-inicio-ic .icon{width:18px;height:18px;color:var(--accent);}
+  .ep-inicio-topo{display:flex;align-items:center;gap:10px;}
+  .ep-inicio-topo strong{flex:1;}
+  .ep-inicio-item{display:flex;gap:10px;font-size:13px;line-height:1.35;}
+  .ep-inicio-item span{font-weight:700;min-width:44px;}
+  .ep-inicio-mais{padding-left:54px;}
   .rd-kpis .rd-kpi{cursor:pointer;text-align:left;font:inherit;color:inherit;}
   .rd-kpi .value{font-size:24px;font-weight:800;}
   .rd-kpi-vermelho .value{color:var(--danger);} .rd-kpi-amarelo .value{color:var(--individual);} .rd-kpi-verde .value{color:var(--success);}
@@ -2072,6 +2129,7 @@
     <div class="nav-group-label" id="nav-group-metodo">Meu Método</div>
     <button class="nav-item shared" data-view="dashboard"></button>
     <button class="nav-item shared" data-view="painel"></button>
+    <button class="nav-item shared" data-view="planner"></button>
 
     <div class="nav-group-label" id="nav-group-individual">Minha Área</div>
     <button class="nav-item individual" data-view="sessoes"></button>
@@ -2172,6 +2230,7 @@
       <div class="view" id="view-treinamento"></div>
       <div class="view" id="view-gestaotime"></div>
       <div class="view" id="view-radar"></div>
+      <div class="view" id="view-planner"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -2248,7 +2307,7 @@ const NAV_LABELS = {
   inicio:['home','Início'], aulas:['film','Aulas'], comunidade:['users','Comunidade'],
   ranking:['award','Ranking'],
   agenda:['calendar','Agenda ao Vivo'], materiais:['folder','Materiais'],
-  dashboard:['chart','Dashboard'], painel:['compass','Painel do Método'],
+  dashboard:['chart','Dashboard'], painel:['compass','Painel do Método'], planner:['calendar','ePLANNER'],
   sessoes:['video','Minhas Sessões 1:1'], metas:['target','Minhas Metas'],
   interno:['lock','Acompanhamento Interno'],
   conteudo:['upload','Gerenciar Conteúdo'],
@@ -2267,7 +2326,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -5194,7 +5253,7 @@ function setRole(role){
      tier de quem está sendo visto — a própria conta, ou o mentorado selecionado pela equipe interna. */
   const viewingTier = getViewingTier();
   const isCursoView = role==='aluno' && viewingTier==='curso';
-  ['ranking','painel','sessoes','metas','acompanhamento'].forEach(v=>{
+  ['ranking','painel','planner','sessoes','metas','acompanhamento'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   });
@@ -5240,8 +5299,8 @@ function setRole(role){
   renderProfile();
   updateNotifBadge();
   if(role==='aluno' && VIEWS_EQUIPE.includes(currentView)){ goTo(isCursoView ? 'aulas' : 'inicio'); }
-  if(role==='aluno' && isCursoView && ['ranking','painel','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
-  if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('equipe'); }
+  if(role==='aluno' && isCursoView && ['ranking','painel','planner','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
+  if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','planner','sessoes','metas'].includes(currentView)){ goTo('equipe'); }
 }
 
 function renderProfile(){
@@ -5280,6 +5339,7 @@ function goTo(view){
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
   if(view==='radar' && !radarPode()) view = 'equipe';
   if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
+  if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
@@ -5301,9 +5361,9 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
-  const NEEDS_STUDENT = ['inicio','dashboard','painel','sessoes','metas','interno'];
+  const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
     return;
@@ -5456,6 +5516,8 @@ function renderInicio(){
       <div class="stat-card"><div class="label">Próximo encontro ao vivo</div><div class="value accent" style="font-size:14px">${nextLive? nextLive.date+' · '+nextLive.time.split('·')[0] : '—'}</div></div>
       <div class="stat-card"><div class="label">Turma</div><div class="value" style="font-size:14px">${s.turma}</div></div>
     </div>
+
+    ${epInicioHtml(s)}
 
     ${essenciaBannerHtml()}
 
@@ -13886,6 +13948,319 @@ function bindTierSelects(root, afterChange){
     });
   });
 }
+/* ================= ePLANNER (só mentorados) =================
+   O mentorado escolhe os dias da semana em que estuda, o horário de início e quanto tempo tem em cada
+   dia. O planner pega as tarefas do Dashboard que ainda faltam, na ordem do Método, e distribui nesses
+   horários. Tudo é recalculado a cada abertura: se a pessoa adianta, o resto anda para frente; se
+   atrasa, a agenda se reorganiza sozinha a partir de hoje. Marcar uma tarefa aqui marca o mesmo item
+   no Dashboard. A configuração fica guardada em panel_data, no tópico "__eplanner" (não é um tópico
+   do Painel do Método, então não conta no preenchimento do Painel). */
+const EP_TOPIC = '__eplanner';
+const EP_DIAS = [
+  {d:1, curto:'Seg', nome:'Segunda'}, {d:2, curto:'Ter', nome:'Terça'}, {d:3, curto:'Qua', nome:'Quarta'},
+  {d:4, curto:'Qui', nome:'Quinta'}, {d:5, curto:'Sex', nome:'Sexta'}, {d:6, curto:'Sáb', nome:'Sábado'}, {d:0, curto:'Dom', nome:'Domingo'},
+];
+const EP_NOME_DIA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const EP_DURACOES = [30,45,60,90,120,150,180,240];
+const EP_REGUA = [30,90,180,270,330]; // fim de cada módulo pela régua de 365 dias do acompanhamento
+const EP_UI = { maisDias:0, editando:false, rascunho:null, salvo:false };
+
+function epConfig(sid){ const c = PANEL_DATA[sid+':'+EP_TOPIC]; return (c && c.dias) ? c : null; }
+function epConfigurado(cfg){ return !!(cfg && cfg.dias && Object.values(cfg.dias).some(x=>x && x.ativo && x.min>0)); }
+function epMinSemana(cfg){ return cfg && cfg.dias ? Object.values(cfg.dias).reduce((a,x)=>a+(x && x.ativo ? (+x.min||0) : 0),0) : 0; }
+function epDurTxt(min){ min = Math.round(min); if(min<60) return `${min} min`; const h = Math.floor(min/60), m = min%60; return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`; }
+function epHora(min){ min = ((Math.round(min)%1440)+1440)%1440; return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`; }
+function epMinDe(hhmm){ const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm||''); return m ? (+m[1])*60 + (+m[2]) : 19*60; }
+function epHoje(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function epAddDias(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function epISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function epDataTxt(d){ return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`; }
+function epDataLonga(d){ return `${EP_NOME_DIA[d.getDay()]}, ${epDataTxt(d)}`; }
+
+/* Tempo estimado de cada tarefa do Dashboard. Aula: a duração real do vídeo mais uma folga para
+   pausar e anotar. Resumo: 20 min. Tarefas: pelo tamanho do que pedem. */
+function epDuracaoAula(label, modName){
+  let c = null; try{ c = checklistLinkedCourse(label, modName); }catch(e){}
+  if(c && c.duration){
+    const m = /(\d+)\s*m/i.exec(c.duration), sg = /(\d+)\s*s/i.exec(c.duration);
+    const tot = (m ? +m[1] : 0) + (sg ? +sg[1]/60 : 0);
+    if(tot>0) return Math.max(10, Math.ceil((tot+5)/5)*5);
+  }
+  return 15;
+}
+function epDuracao(label, modName){
+  const t = String(label||'').trim();
+  if(/^assistir/i.test(t)) return epDuracaoAula(t, modName);
+  if(/^resumir/i.test(t)) return 20;
+  if(/eplanner/i.test(t)) return 15;
+  if(/^(entrar na comunidade|acessar essência)/i.test(t)) return 15;
+  const x = t.replace(/^tarefa:\s*/i,'');
+  if(/^(fazer|criar) (a |uma )?conta|página do facebook/i.test(x)) return 20;
+  if(/incluir tudo|subir no painel/i.test(x)) return 30;
+  if(/jornada|parcerias|comunidade|eventos?|palestras|ocupação|ambientes de decisão|pops|contrato|proteção jurídica|precificar|projetos mensais|indicação de 10|funil|manual|moodboard|papelaria|atuação especializada|cliente âncora|planilha de rotina|diferenciação|prontuário/i.test(x)) return 120;
+  return 60;
+}
+function epPendentes(s){
+  const out = [];
+  MODULES.forEach(m=>{
+    const itens = MODULE_CHECKLIST[m.id] || [];
+    let st = []; try{ st = getModuleChecklistState(s.id, m.id) || []; }catch(e){}
+    for(let i=0;i<Math.min(m.total, itens.length);i++){
+      if(!st[i]) out.push({ modId:m.id, modName:m.name, idx:i, label:itens[i], min:epDuracao(itens[i], m.name) });
+    }
+  });
+  return out;
+}
+/* O que foi marcado hoje pelo planner fica na lista de hoje como feito (e desconta o tempo do dia). */
+function epFeitosKey(sid){ return 'ascentria-ep-feitos:'+sid+':'+epISO(epHoje()); }
+function epFeitosHoje(sid){ try{ return JSON.parse(localStorage.getItem(epFeitosKey(sid))||'[]'); }catch(e){ return EP_UI['feitos:'+sid] || []; } }
+function epSalvarFeitos(sid, lista){ EP_UI['feitos:'+sid] = lista; try{ localStorage.setItem(epFeitosKey(sid), JSON.stringify(lista)); }catch(e){} }
+
+/* Distribui as tarefas pendentes a partir de hoje. Tarefa maior que o tempo do dia continua no próximo
+   dia de estudo (parte 2, parte 3...). Não começa um pedaço com menos de 15 minutos sobrando no dia. */
+function epAgenda(s, cfg, diasVisiveis){
+  const fila = epPendentes(s).map(it=>Object.assign({rest:it.min, parte:0}, it));
+  const totalMin = fila.reduce((a,it)=>a+it.min,0);
+  const feitos = epFeitosHoje(s.id).filter(f=>{ try{ return !!getModuleChecklistState(s.id, f.modId)[f.idx]; }catch(e){ return false; } });
+  const usadoHoje = feitos.reduce((a,f)=>a+(+f.min||0),0);
+  const hoje = epHoje();
+  const dias = []; const fimModulo = {}; let fimGeral = null;
+  const ultimoDoModulo = {}; fila.forEach(it=>{ ultimoDoModulo[it.modId] = it; });
+  if(!epConfigurado(cfg)) return { dias, fimModulo, fimGeral, totalMin, feitos };
+  for(let n=0; n<3650 && (fila.length || n<diasVisiveis); n++){
+    const data = epAddDias(hoje, n);
+    const c = cfg.dias[String(data.getDay())];
+    const dia = { data, blocos:[], ativo: !!(c && c.ativo && c.min>0), inicio: c ? epMinDe(c.inicio) : 0, cap: c ? (+c.min||0) : 0 };
+    if(dia.ativo){
+      let cap = dia.cap - (n===0 ? usadoHoje : 0);
+      let t = dia.inicio + (n===0 ? usadoHoje : 0);
+      while(cap>0 && fila.length){
+        const it = fila[0];
+        if(it.rest > cap && cap < 15) break;
+        const take = Math.min(it.rest, cap);
+        it.parte++;
+        const termina = take===it.rest;
+        dia.blocos.push({ it, ini:t, fim:t+take, min:take, parte:it.parte, ultimaParte:termina });
+        it.rest -= take; cap -= take; t += take;
+        if(termina){
+          fila.shift();
+          if(ultimoDoModulo[it.modId]===it) fimModulo[it.modId] = data;
+          if(!fila.length) fimGeral = data;
+        }
+      }
+    }
+    if(n<diasVisiveis) dias.push(dia);
+  }
+  return { dias, fimModulo, fimGeral, totalMin, feitos };
+}
+function epFatorRegua(s){ return 365/(((s.cadastro||{}).duracaoMeses||12)*30.44); }
+function epPrazoModulo(s, i){
+  const c = s.cadastro||{}; if(!c.dataMatricula) return null;
+  const [y,m,d] = c.dataMatricula.split('-').map(Number);
+  return epAddDias(new Date(y,m-1,d), Math.ceil(EP_REGUA[i]/epFatorRegua(s)));
+}
+function epMarcar(s, modId, idx, checked){
+  const st = getModuleChecklistState(s.id, modId);
+  if(!!st[idx]===!!checked) return;
+  st[idx] = !!checked;
+  s.moduleProgress[modId] = st.filter(Boolean).length;
+  syncModuleChecklist(s.id, modId, idx, !!checked);
+  syncModuleProgress(s.id, modId, s.moduleProgress[modId]);
+}
+function epBlocoHtml(b, comCheck){
+  const it = b.it;
+  let curso = null; try{ curso = checklistLinkedCourse(it.label, it.modName); }catch(e){}
+  const sufixo = (b.parte>1 || !b.ultimaParte) ? ` · parte ${b.parte}` : '';
+  return `
+    <div class="ep-bloco">
+      <div class="ep-hora">${epHora(b.ini)}<small>${epDurTxt(b.min)}</small></div>
+      <div class="ep-txt">
+        <span class="ep-mod">${escapeHtml(it.modName)}${sufixo}</span>
+        <span>${escapeHtml(it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</span>
+        ${curso ? `<button type="button" class="link-btn ep-aula" data-ep-aula="${escapeAttr(curso.id)}">${icon('film','tiny')} Abrir aula</button>` : ''}
+      </div>
+      ${comCheck && b.ultimaParte ? `<button type="button" class="ep-check" data-ep-marcar="${it.modId}:${it.idx}:${it.min}" title="Marcar como feito">${icon('tick')}</button>` : (comCheck ? `<span class="ep-continua" title="Continua no próximo dia de estudo">continua</span>` : '')}
+    </div>`;
+}
+function epConfigHtml(cfg){
+  const r = EP_UI.rascunho || JSON.parse(JSON.stringify((cfg && cfg.dias) || {}));
+  EP_UI.rascunho = r;
+  const total = Object.values(r).reduce((a,x)=>a+(x && x.ativo ? (+x.min||0) : 0),0);
+  return `
+    <div class="ep-config">
+      <h3>${icon('calendar')} Minha semana de estudos</h3>
+      <p class="section-sub" style="margin:2px 0 12px">Toque nos dias em que você consegue estudar e escolha o horário e quanto tempo tem em cada um. O ePLANNER encaixa as tarefas do seu Dashboard nesses horários.</p>
+      <div class="ep-dias">
+        ${EP_DIAS.map(({d,curto,nome})=>{ const x = r[String(d)] || {ativo:false, inicio:'19:00', min:60}; return `
+          <div class="ep-dia ${x.ativo?'on':''}">
+            <button type="button" class="ep-dia-btn" data-ep-dia="${d}" aria-pressed="${x.ativo?'true':'false'}"><span class="ep-dia-curto">${curto}</span><span class="ep-dia-nome">${nome}</span></button>
+            <div class="ep-dia-campos" ${x.ativo?'':'hidden'}>
+              <label>Começo<input class="ps-input" type="time" step="900" value="${escapeAttr(x.inicio||'19:00')}" data-ep-inicio="${d}"></label>
+              <label>Tempo<select class="ps-input" data-ep-min="${d}">${EP_DURACOES.map(m=>`<option value="${m}" ${(+x.min||60)===m?'selected':''}>${epDurTxt(m)}</option>`).join('')}</select></label>
+            </div>
+          </div>`; }).join('')}
+      </div>
+      <div class="ep-config-rodape">
+        <span>Total: <strong>${total ? epDurTxt(total) : '0h'}</strong> por semana</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${epConfigurado(cfg) ? `<button type="button" class="btn-outline" id="ep-cancelar">Cancelar</button>` : ''}
+          <button type="button" class="btn-accent" id="ep-salvar" ${total? '' : 'disabled'}>${icon('check','tiny')} Salvar minha semana</button>
+        </div>
+      </div>
+    </div>`;
+}
+function renderPlanner(){
+  const el = document.getElementById('view-planner');
+  if(!el) return;
+  const s = getStudent(currentStudentId);
+  if(!s){ el.innerHTML = '<div class="empty-state">Nenhum mentorado selecionado.</div>'; return; }
+  if(s.tier==='curso'){ el.innerHTML = '<div class="empty-state">O ePLANNER é exclusivo dos mentorados da Mentoria Essência.</div>'; return; }
+  const cfg = epConfig(s.id);
+  const configurado = epConfigurado(cfg);
+  if(!configurado || EP_UI.editando){
+    el.innerHTML = `
+      ${!configurado ? `<div class="ep-intro"><strong>Seu ePLANNER</strong><span>Diga quanto tempo você tem e em quais dias. Eu monto sua agenda com as tarefas do Método, na ordem certa, e ela se reorganiza sozinha conforme você avança.</span></div>` : ''}
+      ${epConfigHtml(cfg)}`;
+    epBindConfig(s, cfg);
+    return;
+  }
+  EP_UI.rascunho = null;
+  const diasVisiveis = 8 + EP_UI.maisDias;
+  const ag = epAgenda(s, cfg, diasVisiveis);
+  const hoje = ag.dias[0];
+  const proximos = ag.dias.slice(1).filter(d=>d.blocos.length);
+  const pend = epPendentes(s);
+  const minSem = epMinSemana(cfg);
+  const prazoFinal = epPrazoModulo(s, 4);
+  const hojeD = epHoje();
+  /* Sugestão inteligente: quanto tempo por semana seria preciso para terminar dentro do cronograma. */
+  let sugestao = '';
+  if(pend.length && ag.fimGeral && prazoFinal && ag.fimGeral > prazoFinal){
+    const semanas = Math.max(0, (prazoFinal - hojeD)/(7*86400000));
+    if(semanas >= 1){
+      const precisa = Math.ceil(ag.totalMin/semanas/15)*15;
+      sugestao = `<div class="ep-aviso">${icon('bell')}<div>No ritmo de hoje, você termina o Método em <strong>${epDataTxt(ag.fimGeral)}/${ag.fimGeral.getFullYear()}</strong>, depois do previsto no cronograma da mentoria (<strong>${epDataTxt(prazoFinal)}/${prazoFinal.getFullYear()}</strong>). Para chegar no prazo, você precisaria de cerca de <strong>${epDurTxt(precisa)} por semana</strong> (hoje são ${epDurTxt(minSem)}). Que tal acrescentar um dia ou um pouco mais de tempo? <button type="button" class="link-btn" data-ep-editar>Ajustar minha semana</button></div></div>`;
+    } else {
+      sugestao = `<div class="ep-aviso">${icon('bell')}<div>O cronograma da mentoria já está na reta final. Foque nas tarefas que faltam e combine as prioridades com a equipe pelo Acompanhamento.</div></div>`;
+    }
+  } else if(pend.length && ag.fimGeral && prazoFinal){
+    sugestao = `<div class="ep-aviso ok">${icon('check')}<div>No seu ritmo, você termina o Método em <strong>${epDataTxt(ag.fimGeral)}/${ag.fimGeral.getFullYear()}</strong>, dentro do cronograma da mentoria. Continue assim!</div></div>`;
+  }
+  const proxEstudo = !hoje.blocos.length ? ag.dias.slice(1).find(d=>d.blocos.length) : null;
+  el.innerHTML = `
+    ${EP_UI.salvo ? `<div class="ep-aviso ok">${icon('check')}<div>Semana salva! Sua agenda já foi montada com as tarefas do Dashboard.</div></div>` : ''}
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Hoje</div><div class="value" style="font-size:18px">${hoje.ativo ? epDurTxt(hoje.cap) : 'Descanso'}</div></div>
+      <div class="kpi-tile"><div class="label">Por semana</div><div class="value" style="font-size:18px">${epDurTxt(minSem)}</div></div>
+      <div class="kpi-tile"><div class="label">Tarefas que faltam</div><div class="value" style="font-size:18px">${pend.length}</div></div>
+      <div class="kpi-tile"><div class="label">Previsão de conclusão</div><div class="value" style="font-size:18px">${ag.fimGeral ? epDataTxt(ag.fimGeral)+'/'+String(ag.fimGeral.getFullYear()).slice(2) : (pend.length ? '—' : 'Concluído')}</div></div>
+    </div>
+    ${sugestao}
+    <div class="ep-hoje">
+      <div class="ep-sec-hd"><h3>${icon('calendar')} Hoje · ${epDataLonga(hoje.data)}</h3>${hoje.ativo ? `<span>${epHora(hoje.inicio)} às ${epHora(hoje.inicio+hoje.cap)}</span>` : ''}</div>
+      ${ag.feitos.map(f=>`
+        <div class="ep-bloco feito">
+          <div class="ep-hora">${icon('tick','tiny')}<small>${epDurTxt(f.min)}</small></div>
+          <div class="ep-txt"><span class="ep-mod">${escapeHtml(f.modName||'')}</span><span>${escapeHtml(String(f.label||'').replace(/^TAREFA:\s*/i,'Tarefa: '))}</span></div>
+          <button type="button" class="ep-check on" data-ep-desmarcar="${f.modId}:${f.idx}" title="Desmarcar">${icon('tick')}</button>
+        </div>`).join('')}
+      ${hoje.blocos.map(b=>epBlocoHtml(b, true)).join('')}
+      ${!hoje.blocos.length && !ag.feitos.length ? `<p class="ep-vazio">${!pend.length ? 'Você concluiu todas as tarefas do Dashboard. Parabéns! 🎉' : hoje.ativo ? 'Tempo de hoje já preenchido.' : `Hoje não é dia de estudo. ${proxEstudo ? `Próximo: <strong>${epDataLonga(proxEstudo.data)}, ${epHora(proxEstudo.inicio)}</strong>.` : ''}`}</p>` : ''}
+      ${!hoje.blocos.length && ag.feitos.length && pend.length ? `<p class="ep-vazio">Tudo de hoje feito. Muito bem!</p>` : ''}
+    </div>
+    ${proximos.length ? `
+    <div class="ep-sec-hd" style="margin-top:20px"><h3>Próximos dias</h3></div>
+    <div class="ep-proximos">
+      ${proximos.map(d=>`
+        <div class="ep-dia-card">
+          <div class="ep-dia-hd"><strong>${epDataLonga(d.data)}</strong><span>${epHora(d.inicio)} às ${epHora(d.inicio+d.cap)}</span></div>
+          ${d.blocos.map(b=>epBlocoHtml(b, false)).join('')}
+        </div>`).join('')}
+    </div>
+    ${pend.length ? `<button type="button" class="btn-outline" id="ep-mais" style="margin-top:10px">Ver mais 7 dias</button>` : ''}` : ''}
+    <div class="ep-sec-hd" style="margin-top:22px"><h3>${icon('chart')} Previsão por módulo</h3></div>
+    <div class="table-wrap">
+      <table class="check-table ep-prev">
+        <thead><tr><th>Módulo</th><th>Faltam</th><th>Você termina em</th><th>Cronograma</th></tr></thead>
+        <tbody>
+          ${MODULES.map((m,i)=>{
+            const faltam = pend.filter(p=>p.modId===m.id);
+            const fim = ag.fimModulo[m.id];
+            const prazo = epPrazoModulo(s, i);
+            const st = !faltam.length ? '<span class="ep-ok">Concluído</span>' : (fim && prazo ? (fim<=prazo ? '<span class="ep-ok">no prazo</span>' : '<span class="ep-atraso">depois do prazo</span>') : '');
+            return `<tr><td>${escapeHtml(m.name)}</td><td>${faltam.length ? `${faltam.length} · ${epDurTxt(faltam.reduce((a,p)=>a+p.min,0))}` : '—'}</td><td>${faltam.length ? (fim ? epDataTxt(fim)+'/'+String(fim.getFullYear()).slice(2) : '—') : '—'} ${st}</td><td>${prazo ? 'até '+epDataTxt(prazo)+'/'+String(prazo.getFullYear()).slice(2) : '—'}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="ep-nota">Os tempos são estimativas: aulas pela duração do vídeo com uma folga para anotar, resumos 20 min e tarefas conforme o tamanho. Tarefas que pedem ações fora do Plat (parcerias, eventos, jornada com cliente) ganham um horário para planejar e executar, e você marca quando concluir.</p>
+    <div style="margin-top:14px"><button type="button" class="btn-outline" data-ep-editar>${icon('edit','tiny')} Ajustar minha semana</button></div>`;
+  EP_UI.salvo = false;
+  el.querySelectorAll('[data-ep-editar]').forEach(b=>b.addEventListener('click', ()=>{ EP_UI.editando = true; EP_UI.rascunho = null; renderPlanner(); window.scrollTo(0,0); }));
+  const mais = document.getElementById('ep-mais'); if(mais) mais.addEventListener('click', ()=>{ EP_UI.maisDias += 7; renderPlanner(); });
+  el.querySelectorAll('[data-ep-aula]').forEach(b=>b.addEventListener('click', ()=>openCourseModal(b.dataset.epAula)));
+  el.querySelectorAll('[data-ep-marcar]').forEach(b=>b.addEventListener('click', ()=>{
+    const [modId, idx, min] = b.dataset.epMarcar.split(':');
+    const m = MODULES.find(x=>x.id===modId);
+    epMarcar(s, modId, +idx, true);
+    const lista = epFeitosHoje(s.id).filter(f=>!(f.modId===modId && f.idx===+idx));
+    lista.push({ modId, idx:+idx, min:+min, modName: m ? m.name : '', label: (MODULE_CHECKLIST[modId]||[])[+idx] || '' });
+    epSalvarFeitos(s.id, lista);
+    renderPlanner();
+  }));
+  el.querySelectorAll('[data-ep-desmarcar]').forEach(b=>b.addEventListener('click', ()=>{
+    const [modId, idx] = b.dataset.epDesmarcar.split(':');
+    epMarcar(s, modId, +idx, false);
+    epSalvarFeitos(s.id, epFeitosHoje(s.id).filter(f=>!(f.modId===modId && f.idx===+idx)));
+    renderPlanner();
+  }));
+}
+function epBindConfig(s, cfg){
+  const r = EP_UI.rascunho;
+  const el = document.getElementById('view-planner');
+  el.querySelectorAll('[data-ep-dia]').forEach(b=>b.addEventListener('click', ()=>{
+    const d = b.dataset.epDia; const x = r[d] || {ativo:false, inicio:'19:00', min:60};
+    x.ativo = !x.ativo; if(!x.inicio) x.inicio = '19:00'; if(!x.min) x.min = 60; r[d] = x;
+    renderPlanner();
+  }));
+  el.querySelectorAll('[data-ep-inicio]').forEach(i=>i.addEventListener('change', ()=>{ const x = r[i.dataset.epInicio]; if(x) x.inicio = i.value || '19:00'; }));
+  el.querySelectorAll('[data-ep-min]').forEach(sel=>sel.addEventListener('change', ()=>{ const x = r[sel.dataset.epMin]; if(x) x.min = +sel.value; renderPlanner(); }));
+  const canc = document.getElementById('ep-cancelar'); if(canc) canc.addEventListener('click', ()=>{ EP_UI.editando = false; EP_UI.rascunho = null; renderPlanner(); });
+  document.getElementById('ep-salvar').addEventListener('click', ()=>{
+    const dias = {};
+    Object.entries(r).forEach(([d,x])=>{ if(x) dias[d] = { ativo:!!x.ativo, inicio: x.inicio || '19:00', min: +x.min || 60 }; });
+    const novo = { dias, atualizadoEm: new Date().toISOString(), criadoEm: (cfg && cfg.criadoEm) || new Date().toISOString() };
+    PANEL_DATA[s.id+':'+EP_TOPIC] = novo;
+    syncPanelDataNow(s.id, EP_TOPIC, novo);
+    /* A própria Introdução pede "Desenhar rotina de estudos no ePLANNER": salvar a semana já cumpre. */
+    const intro = MODULE_CHECKLIST.introducao || [];
+    const iPlanner = intro.findIndex(t=>/eplanner/i.test(t));
+    if(iPlanner>-1 && currentRole==='aluno') epMarcar(s, 'introducao', iPlanner, true);
+    EP_UI.editando = false; EP_UI.rascunho = null; EP_UI.salvo = true; EP_UI.maisDias = 0;
+    renderPlanner(); window.scrollTo(0,0);
+  });
+}
+/* Cartão "Hoje no seu ePLANNER" no Início do mentorado. */
+function epInicioHtml(s){
+  if(!s || s.tier==='curso') return '';
+  const cfg = epConfig(s.id);
+  if(!epConfigurado(cfg)) return `
+    <div class="ep-inicio" data-goto="planner">
+      <span class="ep-inicio-ic">${icon('calendar')}</span>
+      <div><strong>Monte sua rotina de estudos no ePLANNER</strong><small>Escolha seus dias e horários e receba uma agenda com as tarefas do Método.</small></div>
+      <span class="btn-mini">Começar</span>
+    </div>`;
+  const ag = epAgenda(s, cfg, 1);
+  const hoje = ag.dias[0];
+  const lista = hoje.blocos.slice(0,3);
+  return `
+    <div class="ep-inicio col" data-goto="planner">
+      <div class="ep-inicio-topo"><span class="ep-inicio-ic">${icon('calendar')}</span><strong>Hoje no seu ePLANNER</strong><span class="btn-mini">Abrir</span></div>
+      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span>${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</div>`).join('') + (hoje.blocos.length>3 ? `<small class="ep-inicio-mais">e mais ${hoje.blocos.length-3}</small>` : '')
+        : `<small>${ag.feitos.length ? 'Tudo de hoje feito. Muito bem!' : hoje.ativo ? 'Nada pendente para hoje.' : 'Hoje é dia de descanso.'}</small>`}
+    </div>`;
+}
+
 /* ================= RADAR DOS MENTORADOS (Sandra, Viviane e Murilo) =================
    Um semáforo por mentorado com o motivo escrito ao lado, para a pessoa abrir a tela e saber quem
    precisa de atenção hoje. Os dados que só o banco sabe (último acesso, quando marcou o último item
