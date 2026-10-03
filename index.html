@@ -3737,10 +3737,13 @@ async function lerTudo(tabela, monta){
 }
 async function bootstrapData(){
   const PROFILE_SELECT = '*, student_cadastro(*), diagnostico(*), module_progress(*), checklist_items(*), sessions(*), contatos(*), course_progress(*)';
-  const { data: profiles, error: perr } = await sb.from('profiles').select(PROFILE_SELECT).order('name');
+  let { data: profiles, error: perr } = await sb.from('profiles').select(PROFILE_SELECT).order('name');
   if(perr) throw perr;
 
   const me = profiles.find(p=>p.id===currentUser.id);
+  /* Contas de teste do Murilo (uma por perfil de acesso): só ele e as próprias contas de teste as enxergam. */
+  const verTeste = currentUser.id==='8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3' || !!(me && me.conta_teste);
+  profiles = profiles.filter(p=>!p.conta_teste || verTeste || p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
   /* Equipe interna com áreas bloqueadas (ex.: Suporte dos Mentorados sem Financeiro, Sessões 1:1 e eCRM).
      O banco já não entrega esses dados; aqui é só para o menu e as telas não mostrarem a área. */
