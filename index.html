@@ -1161,7 +1161,9 @@
   .ae-erro{font-size:12.5px;color:var(--danger);margin:10px 0;}
   .vg-nome-btn{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;}
   .vg-nome-btn:hover{color:var(--accent-2,var(--accent));text-decoration-color:currentColor;}
-  .btn-acomp{white-space:nowrap;}
+  .btn-acomp{white-space:normal;text-align:left;line-height:1.25;max-width:118px;}
+  .vg-nome-cel{min-width:170px;max-width:240px;}
+  .vg-nome-cel .vg-nome-btn{white-space:normal;line-height:1.3;}
   @media (max-width:720px){ .ae-tiles{grid-template-columns:repeat(2,minmax(0,1fr));} .ae-form{grid-template-columns:minmax(0,1fr);} }
   .stage-tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap;text-transform:uppercase;}
   .stage-tag.abertura{background:rgba(155,164,186,0.15);color:var(--stage-abertura);}
@@ -14016,7 +14018,7 @@ function renderVisaoGeral(){
     <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-mentorados" value="${escapeAttr(vgBusca.mentorados)}" placeholder="Buscar mentorado pelo nome…">${vgBusca.mentorados.trim()? `<button type="button" class="btn-outline" data-vg-limpar="mentorados">${icon('x','tiny')} Limpar</button>` : ''}</div>
     <div class="table-wrap">
       <table class="check-table vg-table">
-        <thead><tr><th>Aluno</th><th>Turma / Nicho</th><th>Progresso</th><th>Meta pendente</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Progresso</th><th>Meta pendente</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
         <tbody>
           ${mentorados.map(s=>{
             const pct = overallProgress(s);
@@ -14025,24 +14027,23 @@ function renderVisaoGeral(){
             const estagio = estagioMentoria(mesPrograma(s));
             return `
               <tr>
-                <td style="white-space:nowrap">
+                <td class="vg-nome-cel">
                   <div style="display:flex;align-items:center;gap:8px">
                     ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
                     <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
                   </div>
                 </td>
-                <td>${s.turma}<br><span style="color:var(--text-mute);font-size:11.5px">${s.diagnostico.nicho}</span></td>
-                <td style="min-width:140px">
+                <td style="min-width:100px">
                   <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
                   <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
                 </td>
-                <td style="min-width:140px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}">Meta pendente</button>` : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
+                <td style="min-width:96px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}">Meta pendente</button>` : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
-                <td style="min-width:140px">${tierSelectHtml(s)}</td>
+                <td style="min-width:128px">${tierSelectHtml(s)}</td>
                 <td><button class="btn-mini btn-acomp" data-open-acomp="${s.id}">${icon('chart')} Abrir acompanhamento</button></td>
               </tr>`;
-          }).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${vgBusca.mentorados.trim()? 'Nenhum mentorado com esse nome.' : 'Nenhum mentorado ainda.'}</td></tr>`}
+          }).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">${vgBusca.mentorados.trim()? 'Nenhum mentorado com esse nome.' : 'Nenhum mentorado ainda.'}</td></tr>`}
         </tbody>
       </table>
     </div>
