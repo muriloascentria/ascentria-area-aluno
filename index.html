@@ -1139,6 +1139,8 @@
   .ae-form .field.full{grid-column:1 / -1;}
   .ae-form label{font-size:11.5px;font-weight:700;color:var(--text-dim);}
   .ae-form textarea{resize:vertical;font:inherit;font-size:13px;line-height:1.45;}
+  .ae-linha2{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  .ae-linha2 .ps-input{width:100%;box-sizing:border-box;}
   .ae-dica{font-size:11px;color:var(--text-mute);}
   .ae-restaurar{align-self:flex-start;font-size:11.5px;}
   .ae-modulos{display:flex;flex-direction:column;gap:8px;}
@@ -13861,7 +13863,7 @@ function aeFeitoNoDashboard(sid, mod, i){
   const item = m[1][i]; if(!item) return false;
   try{ const st = getModuleChecklistState(sid, m[0]); return !!(st && st[item-1]); }catch(e){ return false; }
 }
-/* Quem pode assinar a próxima ação: o time interno (papel staff), sem as vendedoras nem o editor. */
+/* Quem pode assinar como responsável por inserir a ação: o time interno (papel staff), sem as vendedoras nem o editor. */
 function aeResponsaveis(atual){
   const lista = Object.entries(PEOPLE||{}).map(([id,p])=>Object.assign({id}, p)).filter(p=>p.role==='staff' && p.name);
   if(atual && !lista.some(p=>p.id===atual) && PEOPLE[atual]) lista.push(Object.assign({id:atual}, PEOPLE[atual]));
@@ -13940,9 +13942,11 @@ function aeRender(){
         <div class="field full"><label>Habilidades a desenvolver agora</label><textarea class="ps-input" id="ae-habilidades" rows="2">${escapeHtml(habil)}</textarea>
           ${salvo.habilidades ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
         <div class="field full"><label>Próxima ação</label><textarea class="ps-input" id="ae-acao" rows="2" placeholder="O que o mentorado (ou a equipe) faz a seguir">${escapeHtml(salvo.proxima_acao||'')}</textarea></div>
-        <div class="field"><label>Prazo da próxima ação</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(salvo.prazo||'')}"></div>
-        <div class="field"><label>Responsável pela próxima ação</label>
-          <select class="ps-input" id="ae-resp"><option value="">—</option>${aeResponsaveis(salvo.proxima_acao_resp).map(p=>`<option value="${escapeAttr(p.id)}" ${p.id===salvo.proxima_acao_resp?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+        <div class="field full ae-linha2">
+          <div class="field"><label>Prazo da próxima ação</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(salvo.prazo||'')}"></div>
+          <div class="field"><label>Responsável por inserir a ação</label>
+            ${(()=>{ const sel = salvo.proxima_acao_resp || (currentUser && (PEOPLE[currentUser.id]||{}).role==='staff' ? currentUser.id : ''); return `<select class="ps-input" id="ae-resp"><option value="">—</option>${aeResponsaveis(sel).map(p=>`<option value="${escapeAttr(p.id)}" ${p.id===sel?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>`; })()}
+          </div>
         </div>
         <div class="field full"><label>Observações (Sandra)</label><textarea class="ps-input" id="ae-obs" rows="3">${escapeHtml(salvo.observacoes||'')}</textarea></div>
       </div>
