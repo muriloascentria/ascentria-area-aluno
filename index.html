@@ -1117,6 +1117,52 @@
   .diag-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:22px;}
   .diag-panel .ps-section:first-of-type .ps-h{margin-top:0;}
   .field-error{color:var(--danger);font-size:11.5px;margin:-6px 0 10px;}
+  /* Acompanhamento da evolução */
+  .modal:has(.ae-modal){max-width:860px;}
+  .ae-modal{position:relative;}
+  .ae-topo{display:flex;align-items:center;gap:14px;padding-right:36px;margin-bottom:6px;}
+  .ae-sub{font-size:12.5px;color:var(--text-dim);margin-top:2px;}
+  .ae-sec-tit{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:20px 0 10px;}
+  .ae-sec-tit small{text-transform:none;letter-spacing:0;font-weight:500;margin-left:6px;}
+  .ae-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  .ae-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;min-width:0;}
+  .ae-rot{font-size:11px;color:var(--text-mute);font-weight:600;margin-bottom:5px;}
+  .ae-val{font-size:15px;font-weight:700;}
+  .ae-extra{font-size:11px;color:var(--text-mute);margin-top:6px;}
+  .ae-extra .module-bar{margin:0;}
+  .ae-pill{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px;}
+  .ae-pill.ok{background:var(--success-soft);color:var(--success);}
+  .ae-pill.rev{background:var(--individual-soft);color:var(--individual);}
+  .ae-pill.ver{background:var(--bg-elev);color:var(--text-dim);}
+  .ae-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+  .ae-form .field{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .ae-form .field.full{grid-column:1 / -1;}
+  .ae-form label{font-size:11.5px;font-weight:700;color:var(--text-dim);}
+  .ae-form textarea{resize:vertical;font:inherit;font-size:13px;line-height:1.45;}
+  .ae-dica{font-size:11px;color:var(--text-mute);}
+  .ae-restaurar{align-self:flex-start;font-size:11.5px;}
+  .ae-modulos{display:flex;flex-direction:column;gap:8px;}
+  .ae-mod{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);overflow:hidden;}
+  .ae-mod.atual{border-color:var(--accent);}
+  .ae-mod-cab{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;background:none;border:0;color:var(--text);font:inherit;cursor:pointer;text-align:left;}
+  .ae-mod-prazo{font-size:12px;color:var(--text-mute);}
+  .ae-mod-agora{font-size:11px;font-weight:700;color:var(--accent-2,var(--accent));}
+  .ae-mod-cont{margin-left:auto;font-size:12px;font-weight:700;color:var(--text-dim);font-variant-numeric:tabular-nums;}
+  .ae-mod-cont.ok{color:var(--success);}
+  .ae-comp{list-style:none;margin:0;padding:0 12px 8px;}
+  .ae-comp li{border-top:1px solid var(--border);}
+  .ae-comp label{display:flex;gap:10px;align-items:flex-start;padding:9px 0;cursor:pointer;}
+  .ae-comp input{margin-top:3px;width:16px;height:16px;flex:0 0 auto;accent-color:var(--success);}
+  .ae-comp b{display:block;font-size:13px;font-weight:600;}
+  .ae-comp small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px;}
+  .ae-rodape{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid var(--border);}
+  .ae-atualizado{font-size:12px;color:var(--text-mute);}
+  .ae-rodape .btn-accent{display:inline-flex;align-items:center;gap:6px;}
+  .ae-erro{font-size:12.5px;color:var(--danger);margin:10px 0;}
+  .vg-nome-btn{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;}
+  .vg-nome-btn:hover{color:var(--accent-2,var(--accent));text-decoration-color:currentColor;}
+  .btn-acomp{white-space:nowrap;}
+  @media (max-width:720px){ .ae-tiles{grid-template-columns:repeat(2,minmax(0,1fr));} .ae-form{grid-template-columns:minmax(0,1fr);} }
   .stage-tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap;text-transform:uppercase;}
   .stage-tag.abertura{background:rgba(155,164,186,0.15);color:var(--stage-abertura);}
   .stage-tag.ser{background:rgba(130,137,102,0.15);color:var(--stage-ser);}
@@ -13763,6 +13809,177 @@ function bindTierSelects(root, afterChange){
     });
   });
 }
+/* ================= ACOMPANHAMENTO DA EVOLUÇÃO (Visão Geral → "Abrir acompanhamento") =================
+   O mesmo acompanhamento da planilha "Acompanhamento Evolução Método Essência": a situação calculada
+   pela plataforma (progresso, meta, dias, estágio esperado pela régua de 365 dias e alinhamento) e a
+   análise que a equipe preenche (pendências, habilidades, implementação, prioridade, próxima ação,
+   prazo, observações e as competências de cada módulo). */
+const AE_ESTAGIOS = [
+  {label:'Abertura', cls:'abertura', mod:'ABERTURA'},
+  {label:'Módulo Ser', cls:'ser', mod:'SER'},
+  {label:'Módulo Conectar', cls:'conectar', mod:'CONECTAR'},
+  {label:'Módulo Transformar', cls:'transformar', mod:'TRANSFORMAR'},
+  {label:'Módulo Gerenciar', cls:'gerenciar', mod:'GERENCIAR'},
+  {label:'Fechamento', cls:'fechamento', mod:'FINALIZAR'},
+];
+const AE_HABILIDADES = {
+  'Abertura':'Compreender o Método Essência; reconhecer ponto de partida; definir objetivo; executar Plano de 30 Dias; organizar rotina de execução.',
+  'Módulo Ser':'Cliente ideal; nicho; dados sociodemográficos; dores/desejos/medos/crenças; princípios do negócio; identidade de valor; transformação; identidade visual.',
+  'Módulo Conectar':'Presença digital; Instagram; níveis de consciência; funil e conteúdo; protocolo de mensagens; captação on/off-line; venda consultiva; condução até consulta.',
+  'Módulo Transformar':'Jornada do paciente; agendamento; registros; orientações; confirmação; pós-atendimento; avaliação; relacionamento; método de atendimento; diferenciação.',
+  'Módulo Gerenciar':'Prontuários; contratos; documentação; proteção jurídica; financeiro; contabilidade; precificação; gestão de pacientes; plano de crescimento.',
+  'Fechamento':'Revisar entregas de todos os módulos; identificar lacunas; avaliar resultados; consolidar autonomia; construir plano de continuidade de 90 dias.',
+};
+const AE_COMPETENCIAS = {
+  ABERTURA:{prazo:'1 mês', itens:[['Compreender jornada do Método Essência','Plano de 30 Dias elaborado'],['Reconhecer ponto de partida e objetivo','Objetivo e prioridades definidos'],['Organizar rotina de execução','Rotina mínima definida']]},
+  SER:{prazo:'2 meses', itens:[['Definir cliente ideal e nicho','Cliente ideal e nicho definidos'],['Mapear dados sociodemográficos','Perfil preenchido'],['Mapear dores, desejos, medos e crenças','Mapa do público concluído'],['Definir princípios e identidade de valor','Documento de identidade do negócio'],['Definir transformação que gera','Transformação descrita'],['Estruturar identidade visual','Arquétipo, moodboard, paleta, fontes e papelaria']]},
+  CONECTAR:{prazo:'3 meses', itens:[['Estruturar pontos de contato e Instagram','Presença digital estruturada'],['Dominar níveis de consciência e funil','Estratégia de conteúdo definida'],['Produzir e avaliar conteúdo','Rotina de conteúdo em execução'],['Criar protocolo de mensagens','Protocolo pronto'],['Realizar captação on/off-line','Estratégias em execução'],['Praticar venda consultiva','Processo comercial básico aplicado']]},
+  TRANSFORMAR:{prazo:'3 meses', itens:[['Desenhar jornada do paciente','Jornada documentada'],['Organizar agendamento, registro e confirmação','Fluxo operacional funcionando'],['Estruturar pós-atendimento e avaliação','Rotina definida'],['Estruturar método de atendimento','Método documentado'],['Definir diferenciação','Diferenciais organizados']]},
+  GERENCIAR:{prazo:'2 meses', itens:[['Organizar prontuários, contratos e documentos','Pasta operacional/documental organizada'],['Implantar controle financeiro','Financeiro atualizado'],['Definir precificação','Serviços/protocolos precificados'],['Organizar contabilidade e processos','Rotina de gestão definida'],['Planejar crescimento','Plano de crescimento']]},
+  FINALIZAR:{prazo:'1 mês', itens:[['Revisar toda a jornada','Diagnóstico final'],['Identificar lacunas e resultados','Pendências e resultados mapeados'],['Planejar continuidade','Plano de 90 dias']]},
+};
+const AE_NIVEIS = ['Não iniciado','Em desenvolvimento','Concluído','Precisa de apoio'];
+const AE_PRIORIDADES = ['Baixa','Média','Alta','Urgente'];
+const AE_UI = { sid:null, dados:null, carregando:false, abertos:{} };
+function aeEstagio(label){ return AE_ESTAGIOS.find(e=>e.label===label) || AE_ESTAGIOS[0]; }
+/* Situação calculada (as mesmas fórmulas da planilha). */
+function aeSituacao(s, salvo){
+  const dias = diasRestantes(s);
+  const consumidos = dias <= 365 ? 365 - dias : null;
+  const esperado = consumidos===null ? null : consumidos<=30 ? 'Abertura' : consumidos<=90 ? 'Módulo Ser' : consumidos<=180 ? 'Módulo Conectar' : consumidos<=270 ? 'Módulo Transformar' : consumidos<=330 ? 'Módulo Gerenciar' : 'Fechamento';
+  const estagioPlataforma = estagioMentoria(mesPrograma(s)).label;
+  const atual = (salvo && salvo.estagio_atual) || estagioPlataforma;
+  const alinhamento = esperado===null ? 'Verificar prazo' : (atual===esperado ? 'Alinhado' : 'Revisar');
+  const metaPendente = !!s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+  const sugerida = atual==='Fechamento' ? 'ALTA — fechamento/revisão final'
+    : dias <= 90 ? 'ALTA — concluir competências críticas'
+    : metaPendente ? 'ATENÇÃO — meta pendente' : 'ACOMPANHAR';
+  return { dias, consumidos, esperado, estagioPlataforma, atual, alinhamento, metaPendente, sugerida, progresso: overallProgress(s) };
+}
+async function abrirAcompanhamento(sid){
+  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.carregando = true; AE_UI.abertos = {};
+  aeRender();
+  document.getElementById('modal-backdrop').classList.add('open');
+  modalReturnTo = null; modalCloseGuard = null;
+  try{
+    const { data, error } = await sb.from('acompanhamento_evolucao').select('*').eq('student_id', sid).maybeSingle();
+    if(error) throw error;
+    AE_UI.dados = data || null;
+  }catch(e){ console.error('acompanhamento_evolucao', e); AE_UI.erro = true; }
+  AE_UI.carregando = false;
+  if(AE_UI.sid===sid) aeRender();
+}
+function aeRender(){
+  const s = getStudent(AE_UI.sid); if(!s) return;
+  const salvo = AE_UI.dados || {};
+  const sit = aeSituacao(s, salvo);
+  const est = aeEstagio(sit.atual);
+  const comp = salvo.competencias || {};
+  if(!(est.mod in AE_UI.abertos)) AE_UI.abertos[est.mod] = true;
+  const habil = salvo.habilidades || AE_HABILIDADES[sit.atual] || '';
+  const tile = (rot, val, extra)=>`<div class="ae-tile"><div class="ae-rot">${rot}</div><div class="ae-val">${val}</div>${extra? `<div class="ae-extra">${extra}</div>` : ''}</div>`;
+  const alinCls = sit.alinhamento==='Alinhado' ? 'ok' : sit.alinhamento==='Revisar' ? 'rev' : 'ver';
+  const quem = salvo.updated_by && (PEOPLE[salvo.updated_by] || {}).name;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal ae-modal">
+      <button class="modal-close" id="ae-fechar" title="Fechar">${icon('x')}</button>
+      <div class="ae-topo">${initialsAvatar(s.initials, s.color, 48, s.avatarUrl)}<div><div class="cat">Acompanhamento da evolução</div><h3 style="margin:2px 0 0">${escapeHtml(s.name)}</h3><div class="ae-sub">Turma ${escapeHtml(String(s.turma||'—'))}${s.diagnostico && s.diagnostico.nicho && s.diagnostico.nicho!=='—' ? ' · '+escapeHtml(s.diagnostico.nicho) : ''}</div></div></div>
+      ${AE_UI.carregando ? '<div class="empty-state">Carregando o acompanhamento…</div>' : `
+      ${AE_UI.erro ? '<div class="ae-erro">Não foi possível carregar o que já foi salvo. Tente fechar e abrir de novo.</div>' : ''}
+      <div class="ae-sec-tit">Situação na plataforma</div>
+      <div class="ae-tiles">
+        ${tile('Progresso na plataforma', sit.progresso+'%', `<div class="module-bar"><div class="fill" style="width:${sit.progresso}%"></div></div>`)}
+        ${tile('Meta', sit.metaPendente ? '<span class="ae-pill rev">Meta pendente</span>' : '<span class="ae-pill ok">Tudo em dia</span>')}
+        ${tile('Dias restantes', sit.dias<0 ? '<span style="color:var(--danger)">encerrada</span>' : sit.dias+' dias')}
+        ${tile('Dias consumidos', sit.consumidos===null ? '—' : sit.consumidos+' dias', 'régua de 365 dias')}
+        ${tile('Estágio esperado', sit.esperado ? `<span class="stage-tag ${aeEstagio(sit.esperado).cls}">${escapeHtml(sit.esperado)}</span>` : 'Verificar prazo')}
+        ${tile('Alinhamento', `<span class="ae-pill ${alinCls}">${sit.alinhamento}</span>`)}
+      </div>
+      <div class="ae-sec-tit">Análise da equipe</div>
+      <div class="ae-form">
+        <div class="field"><label>Estágio atual</label>
+          <select class="ps-input" id="ae-estagio">${AE_ESTAGIOS.map(e=>`<option value="${escapeAttr(e.label)}" ${e.label===sit.atual?'selected':''}>${escapeHtml(e.label)}${e.label===sit.estagioPlataforma?' (pelo calendário)':''}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Nível de implementação</label>
+          <select class="ps-input" id="ae-nivel"><option value="">—</option>${AE_NIVEIS.map(n=>`<option ${salvo.nivel===n?'selected':''}>${n}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>Prioridade</label>
+          <select class="ps-input" id="ae-prioridade"><option value="">Usar a sugerida</option>${AE_PRIORIDADES.map(n=>`<option ${salvo.prioridade===n?'selected':''}>${n}</option>`).join('')}</select>
+          <small class="ae-dica">Sugerida pela plataforma: <b>${escapeHtml(sit.sugerida)}</b></small>
+        </div>
+        <div class="field full"><label>Pendências anteriores</label><textarea class="ps-input" id="ae-pendencias" rows="2" placeholder="O que ficou pendente das etapas anteriores">${escapeHtml(salvo.pendencias||'')}</textarea></div>
+        <div class="field full"><label>Habilidades a desenvolver agora</label><textarea class="ps-input" id="ae-habilidades" rows="2">${escapeHtml(habil)}</textarea>
+          ${salvo.habilidades ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
+        <div class="field full"><label>Próxima ação</label><textarea class="ps-input" id="ae-acao" rows="2" placeholder="O que o mentorado (ou a equipe) faz a seguir">${escapeHtml(salvo.proxima_acao||'')}</textarea></div>
+        <div class="field"><label>Prazo da próxima ação</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(salvo.prazo||'')}"></div>
+        <div class="field full"><label>Observações (Sandra)</label><textarea class="ps-input" id="ae-obs" rows="3">${escapeHtml(salvo.observacoes||'')}</textarea></div>
+      </div>
+      <div class="ae-sec-tit">Competências por módulo <small>marque o que o mentorado já concluiu, com a evidência</small></div>
+      <div class="ae-modulos">
+        ${AE_ESTAGIOS.map(e=>{
+          const m = AE_COMPETENCIAS[e.mod];
+          const feitos = m.itens.filter((_,i)=>comp[e.mod+'-'+i]).length;
+          const aberto = !!AE_UI.abertos[e.mod];
+          return `<div class="ae-mod ${e.label===sit.atual?'atual':''}">
+            <button type="button" class="ae-mod-cab" data-ae-mod="${e.mod}">
+              <span class="stage-tag ${e.cls}">${escapeHtml(e.label)}</span><span class="ae-mod-prazo">${escapeHtml(m.prazo)}</span>
+              ${e.label===sit.atual ? '<span class="ae-mod-agora">estágio atual</span>' : ''}
+              <span class="ae-mod-cont ${feitos===m.itens.length?'ok':''}">${feitos}/${m.itens.length}</span>${icon(aberto?'up':'down','tiny')}
+            </button>
+            ${aberto ? `<ul class="ae-comp">${m.itens.map(([c,ev],i)=>`<li><label><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${comp[e.mod+'-'+i]?'checked':''}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small></span></label></li>`).join('')}</ul>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="ae-rodape">
+        <span class="ae-atualizado">${salvo.updated_at ? `Última atualização: ${escapeHtml(tzDataHora(salvo.updated_at, true))}${quem? ' por '+escapeHtml(quem.split(' ')[0]) : ''}` : 'Ainda sem análise registrada.'}</span>
+        <button type="button" class="btn-accent" id="ae-salvar">${icon('check','tiny')} Salvar acompanhamento</button>
+      </div>`}
+    </div>`;
+  document.getElementById('ae-fechar').addEventListener('click', closeModal);
+  if(AE_UI.carregando) return;
+  /* Guarda o que foi digitado antes de redesenhar (abrir um módulo, trocar o estágio). */
+  const coletar = ()=>{
+    const comp2 = Object.assign({}, (AE_UI.dados||{}).competencias || {});
+    document.querySelectorAll('[data-ae-comp]').forEach(c=>{ if(c.checked) comp2[c.dataset.aeComp] = true; else delete comp2[c.dataset.aeComp]; });
+    const est2 = document.getElementById('ae-estagio').value;
+    const hab = document.getElementById('ae-habilidades').value.trim();
+    return {
+      student_id: AE_UI.sid,
+      estagio_atual: est2===sit.estagioPlataforma ? null : est2,
+      nivel: document.getElementById('ae-nivel').value || null,
+      prioridade: document.getElementById('ae-prioridade').value || null,
+      pendencias: document.getElementById('ae-pendencias').value.trim() || null,
+      habilidades: (hab && hab!==AE_HABILIDADES[est2]) ? hab : null,
+      proxima_acao: document.getElementById('ae-acao').value.trim() || null,
+      prazo: document.getElementById('ae-prazo').value || null,
+      observacoes: document.getElementById('ae-obs').value.trim() || null,
+      competencias: comp2,
+    };
+  };
+  const rascunho = ()=>{ AE_UI.dados = Object.assign({}, AE_UI.dados||{}, coletar(), {updated_at:(AE_UI.dados||{}).updated_at, updated_by:(AE_UI.dados||{}).updated_by}); AE_UI.sujo = true; };
+  document.querySelectorAll('[data-ae-mod]').forEach(b=>b.addEventListener('click', ()=>{ rascunho(); AE_UI.abertos[b.dataset.aeMod] = !AE_UI.abertos[b.dataset.aeMod]; aeRender(); }));
+  document.getElementById('ae-estagio').addEventListener('change', e=>{
+    const habAtual = document.getElementById('ae-habilidades').value.trim();
+    const eraPadrao = !habAtual || Object.values(AE_HABILIDADES).includes(habAtual);
+    rascunho();
+    if(eraPadrao) AE_UI.dados.habilidades = null;   // acompanha o texto padrão do novo estágio
+    AE_UI.abertos[aeEstagio(e.target.value).mod] = true;
+    aeRender();
+  });
+  const rest = document.getElementById('ae-hab-padrao');
+  if(rest) rest.addEventListener('click', ()=>{ rascunho(); AE_UI.dados.habilidades = null; aeRender(); });
+  document.getElementById('ae-salvar').addEventListener('click', async ()=>{
+    const btn = document.getElementById('ae-salvar');
+    const row = Object.assign(coletar(), { updated_at: new Date().toISOString(), updated_by: currentUser.id });
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const { data, error } = await sb.from('acompanhamento_evolucao').upsert(row, { onConflict:'student_id' }).select().single();
+    if(error){ console.error(error); alert('Não foi possível salvar: '+(error.message||'')); btn.disabled = false; btn.innerHTML = `${icon('check','tiny')} Salvar acompanhamento`; return; }
+    AE_UI.dados = data || row; AE_UI.sujo = false;
+    aeRender();
+    const b2 = document.getElementById('ae-salvar'); if(b2){ b2.innerHTML = `${icon('check','tiny')} Salvo`; setTimeout(()=>{ const b3 = document.getElementById('ae-salvar'); if(b3) b3.innerHTML = `${icon('check','tiny')} Salvar acompanhamento`; }, 1800); }
+  });
+}
+
 function renderVisaoGeral(){
   const mentoradosTodos = STUDENTS.filter(s=>s.tier!=='curso');
   const cursoTodos = STUDENTS.filter(s=>s.tier==='curso');
@@ -13795,7 +14012,7 @@ function renderVisaoGeral(){
 
     ${secHead('mentorados','users','Mentorados', mentoradosTodos.length, mentorados.length)}
     <div id="vg-sec-mentorados" style="${vgAberto.mentorados?'':'display:none'}">
-    <p class="section-sub" style="margin-top:4px">Clique em "Abrir" para ver a plataforma como esse mentorado vê. O campo "Acesso" muda o aluno para o Curso Gravado (sem mentoria individual, só Aulas e uma comunidade própria).</p>
+    <p class="section-sub" style="margin-top:4px">Clique no nome para ver a plataforma como esse mentorado vê, e em "Abrir acompanhamento" para ver e registrar a evolução dele no Método. O campo "Acesso" muda o aluno para o Curso Gravado (sem mentoria individual, só Aulas e uma comunidade própria).</p>
     <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-mentorados" value="${escapeAttr(vgBusca.mentorados)}" placeholder="Buscar mentorado pelo nome…">${vgBusca.mentorados.trim()? `<button type="button" class="btn-outline" data-vg-limpar="mentorados">${icon('x','tiny')} Limpar</button>` : ''}</div>
     <div class="table-wrap">
       <table class="check-table vg-table">
@@ -13811,7 +14028,7 @@ function renderVisaoGeral(){
                 <td style="white-space:nowrap">
                   <div style="display:flex;align-items:center;gap:8px">
                     ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
-                    <span style="font-weight:600">${s.name}</span>
+                    <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
                   </div>
                 </td>
                 <td>${s.turma}<br><span style="color:var(--text-mute);font-size:11.5px">${s.diagnostico.nicho}</span></td>
@@ -13823,7 +14040,7 @@ function renderVisaoGeral(){
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
                 <td style="min-width:140px">${tierSelectHtml(s)}</td>
-                <td><button class="btn-mini" data-open-staff="${s.id}">${icon('idcard')} Abrir</button></td>
+                <td><button class="btn-mini btn-acomp" data-open-acomp="${s.id}">${icon('chart')} Abrir acompanhamento</button></td>
               </tr>`;
           }).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${vgBusca.mentorados.trim()? 'Nenhum mentorado com esse nome.' : 'Nenhum mentorado ainda.'}</td></tr>`}
         </tbody>
@@ -13837,7 +14054,7 @@ function renderVisaoGeral(){
     <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-curso" value="${escapeAttr(vgBusca.curso)}" placeholder="Buscar aluno do Método pelo nome…">${vgBusca.curso.trim()? `<button type="button" class="btn-outline" data-vg-limpar="curso">${icon('x','tiny')} Limpar</button>` : ''}</div>
     <div class="table-wrap">
       <table class="check-table vg-table">
-        <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th title="Ligado: todas as aulas abertas de uma vez, sem a liberação sequencial">Todas as aulas</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th title="Ligado: todas as aulas abertas de uma vez, sem a liberação sequencial">Todas as aulas</th></tr></thead>
         <tbody>
           ${cursoAlunos.map(s=>{
             const pct = courseCompletionPct(s);
@@ -13847,7 +14064,7 @@ function renderVisaoGeral(){
                 <td style="white-space:nowrap">
                   <div style="display:flex;align-items:center;gap:8px">
                     ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
-                    <span style="font-weight:600">${s.name}</span>
+                    <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
                   </div>
                 </td>
                 <td style="min-width:140px">
@@ -13857,9 +14074,8 @@ function renderVisaoGeral(){
                 <td>${next? escapeHtml(next.title) : '<span style="color:var(--text-mute)">Curso concluído</span>'}</td>
                 <td style="min-width:140px">${tierSelectHtml(s)}</td>
                 <td><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" data-aulas-liberadas="${s.id}" ${s.aulasLiberadas?'checked':''}> ${s.aulasLiberadas? 'Liberadas' : 'Sequencial'}</label></td>
-                <td><button class="btn-mini" data-open-staff="${s.id}">${icon('idcard')} Abrir</button></td>
               </tr>`;
-          }).join('') || `<tr><td colspan="6" style="color:var(--text-mute)">${vgBusca.curso.trim()? 'Nenhum aluno com esse nome.' : 'Nenhum aluno do curso ainda.'}</td></tr>`}
+          }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">${vgBusca.curso.trim()? 'Nenhum aluno com esse nome.' : 'Nenhum aluno do curso ainda.'}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -13956,6 +14172,7 @@ function renderVisaoGeral(){
       setRole('aluno');
     });
   });
+  document.querySelectorAll('[data-open-acomp]').forEach(btn=>btn.addEventListener('click', ()=>abrirAcompanhamento(btn.dataset.openAcomp)));
   document.querySelectorAll('[data-open-meta]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       currentStudentId = btn.dataset.openMeta;
