@@ -4985,12 +4985,12 @@ function notifItens(){
       const p = msgQuem(id); const l = MSG_CONVERSAS[id]||[]; const ult = l.filter(m=>m.de===id).pop();
       itens.push({ tipo:'mensagem', avatarDe:id, quando: ult ? ult.createdAt : null, titulo:`${p ? p.name.split(' ')[0] : 'Alguém'} te enviou ${porPessoa[id]} ${porPessoa[id]===1?'mensagem':'mensagens'}`, sub: ult ? ult.texto : 'Mensagem privada', acao: ()=>msgAbrirConversa(id) });
     });
-    MSG_GRUPOS.filter(g=>g.naoLidas).forEach(g=>{
+    msgGruposVisiveis().filter(g=>g.naoLidas).forEach(g=>{
       const l = MSG_CONVERSAS[msgChaveGrupo(g.id)]||[]; const ult = l.filter(m=>m.de!==eu).pop();
       const menc = l.some(m=>m.de!==eu && msgMeMenciona(m) && m.createdAt > (g.ultimaLeitura||''));
       itens.push({ tipo:'mensagem', grupo:g, quando: ult ? ult.createdAt : null, titulo: menc ? `Você foi mencionado em ${g.nome}` : `${g.naoLidas} ${g.naoLidas===1?'nova mensagem':'novas mensagens'} em ${g.nome}`, sub: ult ? `${msgNomeDe(ult.de)}: ${ult.texto}` : 'Grupo', acao: ()=>msgAbrirConversa(msgChaveGrupo(g.id)) });
     });
-    Object.values(MSG_ACOMP).filter(a=>a.naoLidas).forEach(a=>{
+    (msgPodeAcomp() ? Object.values(MSG_ACOMP) : []).filter(a=>a.naoLidas).forEach(a=>{
       const aluno = msgAlunoAcomp(a.alunoId); const quem = a.ultimaDe ? msgQuem(a.ultimaDe) : null;
       if(msgSouMentorado()) itens.push({ tipo:'mensagem', avatarDe:a.ultimaDe, quando:a.ultimaEm, titulo:`${quem ? quem.name.split(' ')[0] : 'A equipe'} respondeu no seu Acompanhamento`, sub:a.ultimaTexto||'', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
       else itens.push({ tipo:'mensagem', avatarDe:a.alunoId, quando:a.ultimaEm, titulo:`${aluno ? aluno.name.split(' ')[0] : 'Mentorado'} · ${a.naoLidas} ${a.naoLidas===1?'nova mensagem':'novas mensagens'} no Acompanhamento`, sub: a.ultimaTexto ? `${a.ultimaDe===a.alunoId ? '' : msgNomeDe(a.ultimaDe)+': '}${a.ultimaTexto}` : '', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
@@ -10919,7 +10919,15 @@ function msgQuem(id){ return msgPessoa(id) || msgAlunoAcomp(id) || (typeof getPe
    a mesma regra (pode_acompanhamento); aqui é só para a tela mostrar as conversas. */
 let ACOMP_EXTRA = false;
 let ACOMP_EQUIPE_IDS = new Set(); // quem, fora do staff, foi incluído no Acompanhamento (para o @)
-function msgPodeAcomp(){ return currentUserRole==='staff' || ACOMP_EXTRA; }
+/* Perfil Editor (de verdade ou na visualização "Editor"): nas Mensagens só as conversas diretas com a equipe. */
+function msgModoEditor(){ return currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor'); }
+/* Perfil Consultora de Vendas: nas Mensagens, a equipe e só o grupo VENDAS. */
+function msgModoConsultora(){ return currentUserRole==='vendas' || (currentUserRole==='staff' && currentRole==='consultora'); }
+function msgPodeAcomp(){
+  if(msgModoEditor()) return false;
+  if(currentUserRole==='staff' && currentRole==='consultora') return false;   // visualização igual à da consultora
+  return currentUserRole==='staff' || ACOMP_EXTRA;
+}
 function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
 let MSG_MAIOR_ID = 0;
@@ -10927,6 +10935,14 @@ function mapMsgRow(r){ const _n = Number(r.id)||0; if(_n > MSG_MAIOR_ID) MSG_MAI
 /* ---- grupos ---- */
 function msgChaveGrupo(id){ return 'g:'+id; }
 function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('g:'); }
+/* Perfil CS (Customer Success): os grupos internos da gestão não aparecem nas Mensagens. */
+const CS_GRUPOS_OCULTOS = ['TIME INTERNO','SÓCIOS','SOCIOS','GESTÃO DE CRISE','GESTAO DE CRISE','VENDAS','FINANCEIRO'];
+function msgGruposVisiveis(){
+  if(msgModoEditor()) return [];
+  if(msgModoConsultora()) return MSG_GRUPOS.filter(g=>String(g.nome||'').trim().toUpperCase()==='VENDAS');
+  const cs = (typeof PREVIEW_CS!=='undefined' && PREVIEW_CS) || (typeof STAFF_BLOQUEIOS!=='undefined' && STAFF_BLOQUEIOS.size>0);
+  return cs ? MSG_GRUPOS.filter(g=>!CS_GRUPOS_OCULTOS.includes(String(g.nome||'').trim().toUpperCase())) : MSG_GRUPOS;
+}
 function msgGrupoDaChave(chave){ return msgEhGrupo(chave) ? (MSG_GRUPOS.find(g=>g.id===chave.slice(2))||null) : null; }
 function msgGrupo(id){ return MSG_GRUPOS.find(g=>g.id===id) || null; }
 function msgChave(m){ return m.grupoId ? msgChaveGrupo(m.grupoId) : m.alunoId ? msgChaveAcomp(m.alunoId) : (m.de===msgEu() ? m.para : m.de); }
@@ -10936,10 +10952,10 @@ function msgSouAdminGrupos(){ return currentUserRole==='staff' && typeof tarefas
    já aparece na lista do sininho (um item por pessoa, grupo ou Acompanhamento). */
 function msgConversasNaoLidas(){
   return new Set(MSG_NAO_LIDAS.map(m=>m.de)).size
-       + MSG_GRUPOS.filter(g=>g.naoLidas).length
-       + Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length;
+       + msgGruposVisiveis().filter(g=>g.naoLidas).length
+       + (msgPodeAcomp() ? Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length : 0);
 }
-function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + MSG_GRUPOS.reduce((s,g)=>s+(g.naoLidas||0),0) + Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0); }
+function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + msgGruposVisiveis().reduce((s,g)=>s+(g.naoLidas||0),0) + (msgPodeAcomp() ? Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0) : 0); }
 function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgQuem(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
 function msgAvatarDe(id, tam){ const p = msgQuem(id); return p ? initialsAvatar(p.initials||'', p.color||'#8d916f', tam, p.avatarUrl||null) : msgGrupoAvatar(tam); }
 async function msgCarregarAcomp(){
@@ -12245,7 +12261,7 @@ function renderMensagens(){
   const eu = msgEu();
   const admin = msgSouAdminGrupos();
   const pessoas = MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
-  const grupos = MSG_GRUPOS.filter(g=>!q || normTxt(g.nome).includes(q));
+  const grupos = msgGruposVisiveis().filter(g=>!q || normTxt(g.nome).includes(q));
   const mentorados = (!solo && msgPodeAcomp()) ? msgMentorados().filter(s=>!q || normTxt(s.name).includes(q)) : [];
   const ultima = (chave)=>{ const l = MSG_CONVERSAS[chave]||[]; return l.length ? l[l.length-1] : null; };
   const previa = (u, grupo)=>{ if(!u) return ''; const quem = u.de===eu ? 'Você: ' : (grupo ? msgNomeDe(u.de)+': ' : ''); return escapeHtml(quem+u.texto).slice(0,60); };
@@ -12407,7 +12423,7 @@ function renderMensagens(){
             <button type="button" class="btn-accent" id="msg-grav-enviar">${icon('reply','tiny')} Enviar áudio</button>
             <span class="msg-grav-st" id="msg-grav-status" hidden></span>
           </div>`
-        : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${MSG_GRUPOS.length ? ', um grupo' : ''}${mentorados.length ? ' ou um mentorado' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe, e o acompanhamento de cada mentorado (visível para toda a equipe). Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
+        : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${msgGruposVisiveis().length ? ', um grupo' : ''}${mentorados.length ? ' ou um mentorado' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe, e o acompanhamento de cada mentorado (visível para toda a equipe). Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
       </section>
     </div>`;
 
