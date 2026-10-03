@@ -1656,7 +1656,10 @@
   .ep-check.on{background:var(--success);border-color:var(--success);color:#fff;}
   .ep-bloco.feito .ep-txt span:last-child{text-decoration:line-through;color:var(--text-mute);}
   .ep-bloco.feito .ep-hora .icon{width:16px;height:16px;color:var(--success);}
-  .ep-continua{font-size:10.5px;color:var(--text-mute);flex:0 0 auto;}
+  .ep-dia-card.passado{opacity:.92;}
+  .ep-hist-semana{margin-top:10px;}
+  .ep-hist-hd{font-size:12px;font-weight:700;color:var(--text-mute);margin:6px 0;text-transform:uppercase;letter-spacing:.3px;}
+  .ep-dia-hd .ep-ok{margin:0;}
   .ep-vazio{font-size:13px;color:var(--text-dim);margin:6px 0 0;}
   .ep-proximos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;}
   .ep-dia-card{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);padding:10px 12px;min-width:0;}
@@ -3141,6 +3144,7 @@ let replyTargets = {};
 let selectedPostType = 'interacao';
 let selectedCoursePostType = 'duvida'; // tipo padrão pré-selecionado no mural de comentários dentro de cada aula
 let CHECKLIST_STATE = {}; // in-memory, chave `${studentId}:${moduleId}` -> array de booleans
+let CHECKLIST_MARCADO = {}; // quando cada item foi marcado: `${studentId}:${moduleId}:${idx}` -> ISO (o ePLANNER usa para o histórico dos dias)
 let internoDiagTab = 'wispform';
 /* Fica fechado por padrão: a seção é longa e empurrava Checklist e Encontros pra fora da tela.
    A escolha de cada pessoa é lembrada no próprio navegador dela. */
@@ -3931,7 +3935,9 @@ async function bootstrapData(){
   WATCHED_LIVE = new Set((watchedRows||[]).map(r=>r.live_session_id));
 
   Object.keys(CHECKLIST_STATE).forEach(k=>delete CHECKLIST_STATE[k]);
+  CHECKLIST_MARCADO = {};
   (mcs||[]).forEach(row=>{
+    if(row.checked && row.marcado_em) CHECKLIST_MARCADO[row.student_id+':'+row.module_id+':'+row.item_idx] = row.marcado_em;
     const key = row.student_id+':'+row.module_id;
     if(!CHECKLIST_STATE[key]){
       const total = (MODULE_CHECKLIST[row.module_id]||[]).length;
@@ -4110,6 +4116,7 @@ function syncCourseWatch(sid, courseId, watchPct){
   debounceSync('watch:'+sid+':'+courseId, ()=>sb.from('course_progress').upsert({student_id:sid, course_id:courseId, watch_pct:watchPct}), 4000);
 }
 function syncModuleChecklist(sid, modId, idx, checked){
+  { const k = sid+':'+modId+':'+idx; if(checked){ if(!CHECKLIST_MARCADO[k]) CHECKLIST_MARCADO[k] = new Date().toISOString(); } else delete CHECKLIST_MARCADO[k]; }
   syncNow(sb.from('module_checklist_state').upsert({student_id:sid, module_id:modId, item_idx:idx, checked}));
 }
 function syncModuleProgress(sid, modId, done){
@@ -14011,17 +14018,30 @@ function epPendentes(s){
   });
   return out;
 }
-/* O que foi marcado hoje pelo planner fica na lista de hoje como feito (e desconta o tempo do dia). */
-function epFeitosKey(sid){ return 'ascentria-ep-feitos:'+sid+':'+epISO(epHoje()); }
-function epFeitosHoje(sid){ try{ return JSON.parse(localStorage.getItem(epFeitosKey(sid))||'[]'); }catch(e){ return EP_UI['feitos:'+sid] || []; } }
-function epSalvarFeitos(sid, lista){ EP_UI['feitos:'+sid] = lista; try{ localStorage.setItem(epFeitosKey(sid), JSON.stringify(lista)); }catch(e){} }
+/* Histórico: tudo o que o mentorado marcou (no planner, no Dashboard ou ao concluir a aula) fica no dia
+   em que foi marcado, mesmo que ele mude a semana depois. Vem de module_checklist_state.marcado_em. */
+function epMarcadosDe(sid){
+  const out = []; const pre = sid+':';
+  Object.entries(CHECKLIST_MARCADO).forEach(([k,iso])=>{
+    if(!k.startsWith(pre)) return;
+    const partes = k.split(':'); const modId = partes[1], idx = +partes[2];
+    const m = MODULES.find(x=>x.id===modId); if(!m || idx>=m.total) return;
+    let ok = false; try{ ok = !!getModuleChecklistState(sid, modId)[idx]; }catch(e){}
+    if(!ok) return;
+    const label = (MODULE_CHECKLIST[modId]||[])[idx] || '';
+    out.push({ modId, idx, quando:new Date(iso), label, modName:m.name, min:epDuracao(label, m.name) });
+  });
+  return out.sort((a,b)=>a.quando-b.quando);
+}
+function epFeitosNoDia(sid, data){ const iso = epISO(data); return epMarcadosDe(sid).filter(f=>epISO(f.quando)===iso); }
+function epInicioSemana(d){ const x = new Date(d); const dow = x.getDay(); x.setDate(x.getDate() - (dow===0 ? 6 : dow-1)); x.setHours(0,0,0,0); return x; }
 
 /* Distribui as tarefas pendentes a partir de hoje. Tarefa maior que o tempo do dia continua no próximo
    dia de estudo (parte 2, parte 3...). Não começa um pedaço com menos de 15 minutos sobrando no dia. */
 function epAgenda(s, cfg, diasVisiveis){
   const fila = epPendentes(s).map(it=>Object.assign({rest:it.min, parte:0}, it));
   const totalMin = fila.reduce((a,it)=>a+it.min,0);
-  const feitos = epFeitosHoje(s.id).filter(f=>{ try{ return !!getModuleChecklistState(s.id, f.modId)[f.idx]; }catch(e){ return false; } });
+  const feitos = epFeitosNoDia(s.id, epHoje());
   const usadoHoje = feitos.reduce((a,f)=>a+(+f.min||0),0);
   const hoje = epHoje();
   const dias = []; const fimModulo = {}; let fimGeral = null;
@@ -14079,7 +14099,15 @@ function epBlocoHtml(b, comCheck){
         <span>${escapeHtml(it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</span>
         ${curso ? `<button type="button" class="link-btn ep-aula" data-ep-aula="${escapeAttr(curso.id)}">${icon('film','tiny')} Abrir aula</button>` : ''}
       </div>
-      ${comCheck && b.ultimaParte ? `<button type="button" class="ep-check" data-ep-marcar="${it.modId}:${it.idx}:${it.min}" title="Marcar como feito">${icon('tick')}</button>` : (comCheck ? `<span class="ep-continua" title="Continua no próximo dia de estudo">continua</span>` : '')}
+      ${comCheck ? `<button type="button" class="ep-check" data-ep-marcar="${it.modId}:${it.idx}" title="${b.ultimaParte ? 'Marcar como feita' : 'Já terminei esta tarefa inteira'}">${icon('tick')}</button>` : ''}
+    </div>`;
+}
+function epFeitoHtml(f){
+  return `
+    <div class="ep-bloco feito">
+      <div class="ep-hora">${icon('tick','tiny')}<small>${epHora(f.quando.getHours()*60+f.quando.getMinutes())}</small></div>
+      <div class="ep-txt"><span class="ep-mod">${escapeHtml(f.modName||'')} · feita</span><span>${escapeHtml(String(f.label||'').replace(/^TAREFA:\s*/i,'Tarefa: '))}</span></div>
+      <button type="button" class="ep-check on" data-ep-desmarcar="${f.modId}:${f.idx}" title="Desmarcar">${icon('tick')}</button>
     </div>`;
 }
 function epConfigHtml(cfg){
@@ -14125,14 +14153,20 @@ function renderPlanner(){
     return;
   }
   EP_UI.rascunho = null;
-  const diasVisiveis = 8 + EP_UI.maisDias;
+  const hojeD = epHoje();
+  const iniSemana = epInicioSemana(hojeD);
+  const diasAteDomingo = Math.round((epAddDias(iniSemana, 6) - hojeD)/86400000);
+  const diasVisiveis = diasAteDomingo + 1 + 7 + EP_UI.maisDias;
   const ag = epAgenda(s, cfg, diasVisiveis);
   const hoje = ag.dias[0];
-  const proximos = ag.dias.slice(1).filter(d=>d.blocos.length);
+  const restoSemana = ag.dias.slice(1, diasAteDomingo+1);
+  const depois = ag.dias.slice(diasAteDomingo+1).filter(d=>d.blocos.length);
   const pend = epPendentes(s);
   const minSem = epMinSemana(cfg);
   const prazoFinal = epPrazoModulo(s, 4);
-  const hojeD = epHoje();
+  const marcados = epMarcadosDe(s.id);
+  const feitosSemana = marcados.filter(f=>f.quando >= iniSemana);
+  const historico = marcados.filter(f=>f.quando < iniSemana);
   /* Sugestão inteligente: quanto tempo por semana seria preciso para terminar dentro do cronograma. */
   let sugestao = '';
   if(pend.length && ag.fimGeral && prazoFinal && ag.fimGeral > prazoFinal){
@@ -14147,10 +14181,23 @@ function renderPlanner(){
     sugestao = `<div class="ep-aviso ok">${icon('check')}<div>No seu ritmo, você termina o Método em <strong>${epDataTxt(ag.fimGeral)}/${ag.fimGeral.getFullYear()}</strong>, dentro do cronograma da mentoria. Continue assim!</div></div>`;
   }
   const proxEstudo = !hoje.blocos.length ? ag.dias.slice(1).find(d=>d.blocos.length) : null;
+  /* Um dia da semana atual: os que já passaram mostram o que foi feito; os próximos, o que está planejado. */
+  const diaCard = (data, conteudo, extraCls)=>`
+    <div class="ep-dia-card ${extraCls||''}">
+      <div class="ep-dia-hd"><strong>${epDataLonga(data)}</strong>${conteudo.hd||''}</div>
+      ${conteudo.corpo}
+    </div>`;
+  const diasPassados = [];
+  for(let d=new Date(iniSemana); d<hojeD; d=epAddDias(d,1)){
+    const feitos = feitosSemana.filter(f=>epISO(f.quando)===epISO(d));
+    diasPassados.push(diaCard(d, { hd: feitos.length ? `<span class="ep-ok">${feitos.length} feita${feitos.length>1?'s':''}</span>` : '', corpo: feitos.length ? feitos.map(epFeitoHtml).join('') : '<p class="ep-vazio">Nenhuma tarefa marcada neste dia.</p>' }, 'passado'));
+  }
+  const semanasHist = {};
+  historico.forEach(f=>{ const k = epISO(epInicioSemana(f.quando)); (semanasHist[k] = semanasHist[k] || []).push(f); });
   el.innerHTML = `
-    ${EP_UI.salvo ? `<div class="ep-aviso ok">${icon('check')}<div>Semana salva! Sua agenda já foi montada com as tarefas do Dashboard.</div></div>` : ''}
+    ${EP_UI.salvo ? `<div class="ep-aviso ok">${icon('check')}<div>Semana salva! Sua agenda foi montada de novo a partir de hoje. O que você já fez continua marcado nos dias em que fez.</div></div>` : ''}
     <div class="kpi-row">
-      <div class="kpi-tile"><div class="label">Hoje</div><div class="value" style="font-size:18px">${hoje.ativo ? epDurTxt(hoje.cap) : 'Descanso'}</div></div>
+      <div class="kpi-tile"><div class="label">Feitas esta semana</div><div class="value" style="font-size:18px">${feitosSemana.length}</div></div>
       <div class="kpi-tile"><div class="label">Por semana</div><div class="value" style="font-size:18px">${epDurTxt(minSem)}</div></div>
       <div class="kpi-tile"><div class="label">Tarefas que faltam</div><div class="value" style="font-size:18px">${pend.length}</div></div>
       <div class="kpi-tile"><div class="label">Previsão de conclusão</div><div class="value" style="font-size:18px">${ag.fimGeral ? epDataTxt(ag.fimGeral)+'/'+String(ag.fimGeral.getFullYear()).slice(2) : (pend.length ? '—' : 'Concluído')}</div></div>
@@ -14158,26 +14205,31 @@ function renderPlanner(){
     ${sugestao}
     <div class="ep-hoje">
       <div class="ep-sec-hd"><h3>${icon('calendar')} Hoje · ${epDataLonga(hoje.data)}</h3>${hoje.ativo ? `<span>${epHora(hoje.inicio)} às ${epHora(hoje.inicio+hoje.cap)}</span>` : ''}</div>
-      ${ag.feitos.map(f=>`
-        <div class="ep-bloco feito">
-          <div class="ep-hora">${icon('tick','tiny')}<small>${epDurTxt(f.min)}</small></div>
-          <div class="ep-txt"><span class="ep-mod">${escapeHtml(f.modName||'')}</span><span>${escapeHtml(String(f.label||'').replace(/^TAREFA:\s*/i,'Tarefa: '))}</span></div>
-          <button type="button" class="ep-check on" data-ep-desmarcar="${f.modId}:${f.idx}" title="Desmarcar">${icon('tick')}</button>
-        </div>`).join('')}
+      ${ag.feitos.map(epFeitoHtml).join('')}
       ${hoje.blocos.map(b=>epBlocoHtml(b, true)).join('')}
       ${!hoje.blocos.length && !ag.feitos.length ? `<p class="ep-vazio">${!pend.length ? 'Você concluiu todas as tarefas do Dashboard. Parabéns! 🎉' : hoje.ativo ? 'Tempo de hoje já preenchido.' : `Hoje não é dia de estudo. ${proxEstudo ? `Próximo: <strong>${epDataLonga(proxEstudo.data)}, ${epHora(proxEstudo.inicio)}</strong>.` : ''}`}</p>` : ''}
       ${!hoje.blocos.length && ag.feitos.length && pend.length ? `<p class="ep-vazio">Tudo de hoje feito. Muito bem!</p>` : ''}
     </div>
-    ${proximos.length ? `
+    ${(diasPassados.length || restoSemana.length) ? `
+    <div class="ep-sec-hd" style="margin-top:20px"><h3>Esta semana</h3></div>
+    <div class="ep-proximos">
+      ${diasPassados.join('')}
+      ${restoSemana.map(d=>diaCard(d.data, { hd: d.blocos.length ? `<span>${epHora(d.inicio)} às ${epHora(d.inicio+d.cap)}</span>` : '', corpo: d.blocos.length ? d.blocos.map(b=>epBlocoHtml(b, true)).join('') : `<p class="ep-vazio">${d.ativo ? 'Nada pendente.' : 'Dia livre.'}</p>` })).join('')}
+    </div>` : ''}
+    ${depois.length ? `
     <div class="ep-sec-hd" style="margin-top:20px"><h3>Próximos dias</h3></div>
     <div class="ep-proximos">
-      ${proximos.map(d=>`
-        <div class="ep-dia-card">
-          <div class="ep-dia-hd"><strong>${epDataLonga(d.data)}</strong><span>${epHora(d.inicio)} às ${epHora(d.inicio+d.cap)}</span></div>
-          ${d.blocos.map(b=>epBlocoHtml(b, false)).join('')}
-        </div>`).join('')}
+      ${depois.map(d=>diaCard(d.data, { hd:`<span>${epHora(d.inicio)} às ${epHora(d.inicio+d.cap)}</span>`, corpo: d.blocos.map(b=>epBlocoHtml(b, true)).join('') })).join('')}
     </div>
     ${pend.length ? `<button type="button" class="btn-outline" id="ep-mais" style="margin-top:10px">Ver mais 7 dias</button>` : ''}` : ''}
+    ${historico.length ? `
+    <div class="ep-sec-hd" style="margin-top:22px"><h3>${icon('check')} Semanas anteriores</h3><button type="button" class="link-btn" id="ep-hist">${EP_UI.verHist ? 'Esconder' : `Ver o que você já fez (${historico.length})`}</button></div>
+    ${EP_UI.verHist ? Object.keys(semanasHist).sort().reverse().map(k=>{
+      const ini = new Date(k+'T00:00:00'); const fim = epAddDias(ini,6); const lista = semanasHist[k];
+      const porDia = {}; lista.forEach(f=>{ const dk = epISO(f.quando); (porDia[dk] = porDia[dk] || []).push(f); });
+      return `<div class="ep-hist-semana"><div class="ep-hist-hd">Semana de ${epDataTxt(ini)} a ${epDataTxt(fim)} · ${lista.length} feita${lista.length>1?'s':''}</div>
+        <div class="ep-proximos">${Object.keys(porDia).sort().map(dk=>diaCard(new Date(dk+'T00:00:00'), { hd:'', corpo: porDia[dk].map(epFeitoHtml).join('') }, 'passado')).join('')}</div></div>`;
+    }).join('') : ''}` : ''}
     <div class="ep-sec-hd" style="margin-top:22px"><h3>${icon('chart')} Previsão por módulo</h3></div>
     <div class="table-wrap">
       <table class="check-table ep-prev">
@@ -14193,25 +14245,21 @@ function renderPlanner(){
         </tbody>
       </table>
     </div>
-    <p class="ep-nota">Os tempos são estimativas: aulas pela duração do vídeo com uma folga para anotar, resumos 20 min e tarefas conforme o tamanho. Tarefas que pedem ações fora do Plat (parcerias, eventos, jornada com cliente) ganham um horário para planejar e executar, e você marca quando concluir.</p>
+    <p class="ep-nota">Marcar uma tarefa aqui marca também no Dashboard e no acompanhamento da equipe. Se você fizer uma tarefa antes do dia planejado, pode marcar direto no dia em que ela está: ela passa para hoje como feita e a agenda anda para frente. O que não foi feito volta a ser distribuído a partir de hoje. Os tempos são estimativas: aulas pela duração do vídeo com uma folga para anotar, resumos 20 min e tarefas conforme o tamanho.</p>
     <div style="margin-top:14px"><button type="button" class="btn-outline" data-ep-editar>${icon('edit','tiny')} Ajustar minha semana</button></div>`;
   EP_UI.salvo = false;
   el.querySelectorAll('[data-ep-editar]').forEach(b=>b.addEventListener('click', ()=>{ EP_UI.editando = true; EP_UI.rascunho = null; renderPlanner(); window.scrollTo(0,0); }));
   const mais = document.getElementById('ep-mais'); if(mais) mais.addEventListener('click', ()=>{ EP_UI.maisDias += 7; renderPlanner(); });
+  const hist = document.getElementById('ep-hist'); if(hist) hist.addEventListener('click', ()=>{ EP_UI.verHist = !EP_UI.verHist; renderPlanner(); });
   el.querySelectorAll('[data-ep-aula]').forEach(b=>b.addEventListener('click', ()=>openCourseModal(b.dataset.epAula)));
   el.querySelectorAll('[data-ep-marcar]').forEach(b=>b.addEventListener('click', ()=>{
-    const [modId, idx, min] = b.dataset.epMarcar.split(':');
-    const m = MODULES.find(x=>x.id===modId);
+    const [modId, idx] = b.dataset.epMarcar.split(':');
     epMarcar(s, modId, +idx, true);
-    const lista = epFeitosHoje(s.id).filter(f=>!(f.modId===modId && f.idx===+idx));
-    lista.push({ modId, idx:+idx, min:+min, modName: m ? m.name : '', label: (MODULE_CHECKLIST[modId]||[])[+idx] || '' });
-    epSalvarFeitos(s.id, lista);
     renderPlanner();
   }));
   el.querySelectorAll('[data-ep-desmarcar]').forEach(b=>b.addEventListener('click', ()=>{
     const [modId, idx] = b.dataset.epDesmarcar.split(':');
     epMarcar(s, modId, +idx, false);
-    epSalvarFeitos(s.id, epFeitosHoje(s.id).filter(f=>!(f.modId===modId && f.idx===+idx)));
     renderPlanner();
   }));
 }
