@@ -2087,9 +2087,10 @@
       <div class="topbar-right">
         <div class="role-toggle" id="role-toggle">
           <button data-role="aluno">Aluno</button>
-          <button data-role="staff"><span class="lg">Equipe Interna</span><span class="sm">Equipe</span></button>
-          <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem"><span class="lg">Visualização Consultora</span><span class="sm">Consultora</span></button>
-          <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê"><span class="lg">Visualização Editor</span><span class="sm">Editor</span></button>
+          <button data-role="staff" title="Equipe interna">Equipe</button>
+          <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem">Consultora</button>
+          <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê">Editor</button>
+          <button data-role="cs" id="role-cs" style="display:none" title="Ver a plataforma como o Customer Success vê (sem Financeiro, Sessões 1:1, Análise e eCRM)">CS</button>
         </div>
         <button class="icon-btn" id="notif-btn" title="Notificações">
           <span class="dot-alert" id="notif-dot"></span>
@@ -3610,6 +3611,9 @@ function estagioMentoria(mes){
 
 /* ================= AUTH / DATA BOOTSTRAP (Supabase) ================= */
 let currentUser = null;      // usuário autenticado no Supabase
+let PREVIEW_CS = false; // "Visualização CS": a equipe vê a plataforma como o Customer Success
+const CS_BLOQUEIOS = ['financeiro','vendas','analise','ecrm','gestaotime'];
+function staffBloqueios(){ return PREVIEW_CS ? new Set(CS_BLOQUEIOS) : STAFF_BLOQUEIOS; }
 let STAFF_BLOQUEIOS = new Set(); // áreas da equipe interna bloqueadas para esta conta (tabela staff_restrito)
 let currentUserRole = null;  // papel REAL da conta ('aluno'|'staff') — não confundir com currentRole (visualização atual)
 let currentUserProfile = null; // linha de profiles do próprio usuário logado (fallback quando não há mentorados)
@@ -5079,14 +5083,19 @@ window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 2
 
 function setRole(role){
   if(currentUserRole==='vendas' || currentUserRole==='editor'){ setRoleVendas(); return; }
+  /* "CS" é a Equipe Interna com as áreas que o Customer Success não abre escondidas. */
+  PREVIEW_CS = role==='cs' && currentUserRole==='staff';
+  const botaoAtivo = role;
+  if(role==='cs') role = 'staff';
   currentRole = role;
   document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
   setTimeout(ajustarTituloTopo, 0);
   const podePrever = currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id);
   document.getElementById('role-consultora').style.display = podePrever ? '' : 'none';
   document.getElementById('role-editor').style.display = podePrever ? '' : 'none';
+  document.getElementById('role-cs').style.display = podePrever ? '' : 'none';
   document.querySelectorAll('#role-toggle [data-role]').forEach(b=>{
-    const active = b.dataset.role===role;
+    const active = b.dataset.role===botaoAtivo;
     b.classList.toggle('active', active);
     b.classList.toggle('staff-active', active && role!=='aluno');
   });
@@ -5129,9 +5138,9 @@ function setRole(role){
   document.getElementById('nav-gestaotime').style.display = (staffNav && souMurilo()) ? 'flex' : 'none';
   /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
-  if(staffNav && STAFF_BLOQUEIOS.size){
-    STAFF_BLOQUEIOS.forEach(v=>{ const el = v==='ecrm' ? document.getElementById('nav-ecrm') : document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'none'; });
-    document.getElementById('role-consultora').style.display = 'none';
+  if(staffNav && staffBloqueios().size){
+    staffBloqueios().forEach(v=>{ const el = v==='ecrm' ? document.getElementById('nav-ecrm') : document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'none'; });
+    if(STAFF_BLOQUEIOS.size) document.getElementById('role-consultora').style.display = 'none';
   }
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
@@ -5227,7 +5236,7 @@ function goTo(view){
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
   { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = 'equipe'; }
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
-  if(STAFF_BLOQUEIOS.has(view)) view = 'equipe';
+  if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
@@ -12854,7 +12863,7 @@ function renderEquipe(){
     ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && !STAFF_BLOQUEIOS.has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
