@@ -13861,6 +13861,12 @@ function aeFeitoNoDashboard(sid, mod, i){
   const item = m[1][i]; if(!item) return false;
   try{ const st = getModuleChecklistState(sid, m[0]); return !!(st && st[item-1]); }catch(e){ return false; }
 }
+/* Quem pode assinar a próxima ação: o time interno (papel staff), sem as vendedoras nem o editor. */
+function aeResponsaveis(atual){
+  const lista = Object.entries(PEOPLE||{}).map(([id,p])=>Object.assign({id}, p)).filter(p=>p.role==='staff' && p.name);
+  if(atual && !lista.some(p=>p.id===atual) && PEOPLE[atual]) lista.push(Object.assign({id:atual}, PEOPLE[atual]));
+  return lista.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+}
 const AE_NIVEIS = ['Não iniciado','Em desenvolvimento','Concluído','Precisa de apoio'];
 const AE_PRIORIDADES = ['Baixa','Média','Alta','Urgente'];
 const AE_UI = { sid:null, dados:null, carregando:false, abertos:{} };
@@ -13935,6 +13941,9 @@ function aeRender(){
           ${salvo.habilidades ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
         <div class="field full"><label>Próxima ação</label><textarea class="ps-input" id="ae-acao" rows="2" placeholder="O que o mentorado (ou a equipe) faz a seguir">${escapeHtml(salvo.proxima_acao||'')}</textarea></div>
         <div class="field"><label>Prazo da próxima ação</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(salvo.prazo||'')}"></div>
+        <div class="field"><label>Responsável pela próxima ação</label>
+          <select class="ps-input" id="ae-resp"><option value="">—</option>${aeResponsaveis(salvo.proxima_acao_resp).map(p=>`<option value="${escapeAttr(p.id)}" ${p.id===salvo.proxima_acao_resp?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+        </div>
         <div class="field full"><label>Observações (Sandra)</label><textarea class="ps-input" id="ae-obs" rows="3">${escapeHtml(salvo.observacoes||'')}</textarea></div>
       </div>
       <div class="ae-sec-tit">Competências por módulo <small>marcadas sozinhas quando o aluno conclui a tarefa no Dashboard; a equipe pode marcar as demais</small></div>
@@ -13974,6 +13983,7 @@ function aeRender(){
       pendencias: document.getElementById('ae-pendencias').value.trim() || null,
       habilidades: (hab && hab!==AE_HABILIDADES[est2]) ? hab : null,
       proxima_acao: document.getElementById('ae-acao').value.trim() || null,
+      proxima_acao_resp: document.getElementById('ae-resp').value || null,
       prazo: document.getElementById('ae-prazo').value || null,
       observacoes: document.getElementById('ae-obs').value.trim() || null,
       competencias: comp2,
