@@ -5118,6 +5118,9 @@ function ajustarTituloTopo(){
 window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
+/* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
+function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 function setRole(role){
   if(currentUserRole==='vendas' || currentUserRole==='editor'){ setRoleVendas(); return; }
   /* "CS" é a Equipe Interna com as áreas que o Customer Success não abre escondidas. */
@@ -5154,11 +5157,10 @@ function setRole(role){
     if(!permitidas.includes(currentView)) goTo('equipe'); else renderCurrentView();
     return;
   }
-  /* Os itens da equipe interna ficam disponíveis o tempo todo para quem é da equipe — inclusive
-     enquanto ela está vendo a plataforma como um aluno. Assim, abrir um aluno (pelo "Abrir" da Visão
-     Geral ou pelo nome no menu de perfil) não fecha a parte interna: os dois lados convivem na barra
-     lateral. Quem é aluno de verdade (currentUserRole!=='staff') nunca vê nada disso. */
-  const staffNav = currentUserRole==='staff';
+  /* No modo "Aluno" a equipe vê exatamente o que o aluno vê: nada da equipe interna aparece na barra
+     lateral, nem avisos e janelinhas de mensagens da equipe. Para voltar, só pelo botão lá em cima.
+     Quem é aluno de verdade (currentUserRole!=='staff') nunca vê nada disso. */
+  const staffNav = currentUserRole==='staff' && role!=='aluno';
   document.getElementById('staff-group-label').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-equipe').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-tarefas').style.display = (staffNav && tarefasSouMembro()) ? 'flex' : 'none';
@@ -5237,7 +5239,7 @@ function setRole(role){
     : `${icon('idcard')}<span>${currentUserRole==='staff'? 'Dados do Aluno Selecionado' : 'Meus Dados Cadastrais'}</span>`;
   renderProfile();
   updateNotifBadge();
-  if(role==='aluno' && ['interno','conteudo','visaogeral','vendas','clientes','financeiro'].includes(currentView)){ goTo('inicio'); }
+  if(role==='aluno' && VIEWS_EQUIPE.includes(currentView)){ goTo(isCursoView ? 'aulas' : 'inicio'); }
   if(role==='aluno' && isCursoView && ['ranking','painel','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
   if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','sessoes','metas'].includes(currentView)){ goTo('equipe'); }
 }
@@ -5277,6 +5279,7 @@ function goTo(view){
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
   if(view==='radar' && !radarPode()) view = 'equipe';
+  if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
@@ -11253,9 +11256,9 @@ async function msgChegou(m){
   } else {
     updateNotifBadge();
     if(msgNaTela()) renderMensagens();
-    msgPopup(m);
+    if(!equipeNoModoAluno()) msgPopup(m);
   }
-  msgSom();
+  if(!equipeNoModoAluno()) msgSom();
 }
 async function msgMarcarLidas(chave){
   const alunoId = msgAcompDaChave(chave);
