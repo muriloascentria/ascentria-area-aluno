@@ -5804,9 +5804,12 @@ function renderWispformWizard(s){
   const flat = wispformFlatQuestions();
   const total = flat.length;
   if(wfDraft===null){
-    const w = getInternalAnswers(s.id,'wispform'), d = getInternalAnswers(s.id,'abertura');
+    /* Começa só com o que a própria pessoa já respondeu (nada de valores de exemplo, travessões ou
+       textos pré-preenchidos): o campo fica em branco e o microfone escreve direto nele. */
+    const w = INTERNAL_DIAG[s.id+':wispform'] || [], d = INTERNAL_DIAG[s.id+':abertura'] || [];
+    const limpo = v=>{ v = String(v||''); return /^[\s\-–—_.·]*$/.test(diagParse(v).texto) && !diagParse(v).audio ? '' : v; };
     const salvo = wfLerRascunho(s.id, total);
-    wfDraft = salvo ? salvo.d.slice() : flat.map(q=>(q.origem==='wispform' ? w : d)[q.idx] || '');
+    wfDraft = (salvo ? salvo.d.slice() : flat.map(q=>(q.origem==='wispform' ? w : d)[q.idx] || '')).map(limpo);
     wfStep = salvo ? Math.min(Math.max(0, salvo.p|0), total-1) : 0; wfPhase = 'fill';
   }
   const root = document.getElementById('view-inicio');
