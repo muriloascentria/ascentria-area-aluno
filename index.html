@@ -1710,6 +1710,37 @@
   .rd-dado strong{font-size:12.5px;font-weight:600;word-break:break-word;}
   .rd-dado-vermelho{border-color:var(--danger);} .rd-dado-amarelo{border-color:var(--individual);}
   .rd-legenda{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-top:16px;}
+  .gtf-btn b{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--bg-elev);border:1px solid var(--border);font-size:10.5px;}
+  .gtf-btn.alerta b{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .gtf-btn.ativo{border-color:var(--accent);}
+  .gtf-painel{border-bottom:1px solid var(--border);background:var(--bg-card);padding:10px 14px;max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+  .gtf-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .gtf-hd strong{display:flex;align-items:center;gap:6px;font-size:13.5px;}
+  .gtf-hd small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px;}
+  .gtf-lista{display:flex;flex-direction:column;gap:6px;}
+  .gtf-item{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg-elev);}
+  .gtf-item.minha{border-color:var(--individual);background:var(--individual-soft);}
+  .gtf-item.atrasada{border-color:var(--danger);}
+  .gtf-item.feita .gtf-txt > span{text-decoration:line-through;color:var(--text-mute);}
+  .gtf-check{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:none;color:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;margin-top:1px;}
+  .gtf-check:hover{border-color:var(--success);color:var(--success);}
+  .gtf-check.on{background:var(--success);border-color:var(--success);color:#fff;}
+  .gtf-txt{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;font-size:13px;line-height:1.35;word-break:break-word;}
+  .gtf-txt small{font-size:11.5px;color:var(--text-mute);}
+  .gtf-ir{align-self:flex-start;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;}
+  .gtf-del{background:none;border:0;color:var(--text-mute);cursor:pointer;padding:4px;flex:0 0 auto;}
+  .gtf-del:hover{color:var(--danger);}
+  .gtf-vazio{font-size:12.5px;color:var(--text-mute);margin:0;}
+  .gtf-feitas summary{font-size:12px;color:var(--text-mute);cursor:pointer;margin:2px 0 6px;}
+  .gtf-feitas .gtf-item{margin-bottom:6px;}
+  .gtf-form{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px dashed var(--border);}
+  .gtf-form-linha{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:6px;}
+  .gtf-form .ps-input{min-width:0;}
+  .gtf-form .btn-accent{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;}
+  .gtf-origem{font-size:11.5px;color:var(--text-dim);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .gtf-tag{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 6px;border-radius:9px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;vertical-align:middle;}
+  .gtf-tag .icon{width:11px;height:11px;}
+  @media (max-width:560px){ .gtf-form-linha{grid-template-columns:1fr 1fr;} .gtf-form-linha .btn-accent{grid-column:1 / -1;} }
   .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
   .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
   .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
@@ -5045,7 +5076,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + (currentRole==='staff' ? ACOMP_ALERTAS.length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (currentRole==='staff' ? ACOMP_ALERTAS.length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
   if(typeof appBadge==='function') appBadge(pend.length + tf);
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
@@ -5080,6 +5111,12 @@ function notifItens(){
     tarefasNaoLidas().forEach(n=>{
       const t = (typeof TAREFAS!=='undefined' ? TAREFAS : []).find(x=>x.id===n.tarefaId);
       itens.push({ tipo:'tarefa', icone:'check', quando:n.createdAt, titulo:n.texto||'Aviso de tarefa', sub: t ? t.titulo : 'Tarefas', acao: ()=>{ if(currentView!=='tarefas') goTo('tarefas'); openTarefaModal(n.tarefaId); } });
+    });
+  }
+  if(equipe){
+    gtfMinhasAbertas().forEach(t=>{
+      const g = msgGrupo(t.grupoId);
+      itens.push({ tipo:'gtarefa', icone:'check', quando:t.criadoEm, titulo:`Tarefa para você no grupo ${g ? g.nome : ''}`, sub:t.texto + (t.prazo ? ` · até ${tzDataCurta(t.prazo)}` : ''), acao: ()=>{ msgUI.gtfAberto = t.grupoId; msgAbrirConversa(msgChaveGrupo(t.grupoId)); } });
     });
   }
   if(equipe || msgSouMentorado()){
@@ -11200,6 +11237,124 @@ function msgGruposMudaram(){
   clearTimeout(msgGruposTimer);
   msgGruposTimer = setTimeout(async ()=>{ await msgCarregarGrupos(); updateNotifBadge(); if(msgNaTela()) renderMensagens(); }, 400);
 }
+/* ================= TAREFAS DO GRUPO =================
+   Cada grupo tem uma área de tarefas própria: surgiu uma pergunta no meio da conversa, vira uma
+   tarefa com responsável (e prazo, se quiser), ligada à mensagem de origem. Ela fica só no grupo,
+   não vai para a lista de Tarefas de ninguém, e acende um alerta para o responsável (no grupo, na
+   lista de conversas e no sininho) até ser concluída. */
+let MSG_GTAREFAS = [];
+function gtfMap(r){ return { id:r.id, grupoId:r.grupo_id, texto:r.texto||'', resp:r.responsavel_id||null, prazo:r.prazo||null, msgId:r.mensagem_id||null, criadoPor:r.criado_por, criadoEm:r.created_at, concluida:!!r.concluida, concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null }; }
+async function gtfCarregar(){
+  if(!msgSouEquipe()) return;
+  try{
+    const desde = new Date(Date.now()-7*86400000).toISOString();
+    const { data, error } = await sb.from('mensagens_grupo_tarefas').select('*').or(`concluida.eq.false,concluida_em.gte.${desde}`).order('created_at');
+    if(error) throw error;
+    MSG_GTAREFAS = (data||[]).map(gtfMap);
+  }catch(e){ console.error('gtfCarregar', e); }
+}
+function gtfDoGrupo(gid){ return MSG_GTAREFAS.filter(t=>t.grupoId===gid); }
+function gtfMinhasAbertas(gid){ const eu = msgEu(); return MSG_GTAREFAS.filter(t=>!t.concluida && t.resp===eu && (!gid || t.grupoId===gid) && msgGrupo(t.grupoId)); }
+function gtfMudou(payload){
+  if(payload.eventType==='DELETE'){ const id = payload.old && payload.old.id; MSG_GTAREFAS = MSG_GTAREFAS.filter(t=>t.id!==id); }
+  else if(payload.new){ const t = gtfMap(payload.new); const i = MSG_GTAREFAS.findIndex(x=>x.id===t.id); if(i>-1) MSG_GTAREFAS[i] = t; else MSG_GTAREFAS.push(t); }
+  updateNotifBadge();
+  if(msgNaTela()) renderMensagens();
+}
+async function gtfCriar(gid, texto, resp, prazo, msgId){
+  const { data, error } = await sb.from('mensagens_grupo_tarefas').insert({ grupo_id:gid, texto, responsavel_id:resp||null, prazo:prazo||null, mensagem_id:msgId||null, criado_por:msgEu() }).select().single();
+  if(error){ console.error('gtfCriar', error); alert('Não foi possível criar a tarefa: '+(error.message||'')); return false; }
+  const t = gtfMap(data);
+  if(!MSG_GTAREFAS.some(x=>x.id===t.id)) MSG_GTAREFAS.push(t);
+  return true;
+}
+async function gtfConcluir(t, feita){
+  const patch = feita ? { concluida:true, concluida_em:new Date().toISOString(), concluida_por:msgEu() } : { concluida:false, concluida_em:null, concluida_por:null };
+  Object.assign(t, { concluida:feita, concluidaEm:patch.concluida_em, concluidaPor:patch.concluida_por });
+  updateNotifBadge(); renderMensagens();
+  const { error } = await sb.from('mensagens_grupo_tarefas').update(patch).eq('id', t.id);
+  if(error){ console.error('gtfConcluir', error); alert('Não foi possível salvar. Tente de novo.'); await gtfCarregar(); renderMensagens(); updateNotifBadge(); }
+}
+async function gtfExcluir(t){
+  if(!confirmDelete('Excluir esta tarefa do grupo?')) return;
+  MSG_GTAREFAS = MSG_GTAREFAS.filter(x=>x!==t);
+  updateNotifBadge(); renderMensagens();
+  const { error } = await sb.from('mensagens_grupo_tarefas').delete().eq('id', t.id);
+  if(error){ console.error('gtfExcluir', error); alert('Não foi possível excluir.'); await gtfCarregar(); renderMensagens(); }
+}
+function gtfHojeISO(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function gtfItemHtml(t, admin){
+  const eu = msgEu();
+  const atrasada = !t.concluida && t.prazo && t.prazo < gtfHojeISO();
+  const podeExcluir = t.criadoPor===eu || admin;
+  const quem = t.resp ? (t.resp===eu ? 'você' : escapeHtml(msgNomeDe(t.resp).split(' ')[0])) : 'sem responsável';
+  return `
+    <div class="gtf-item ${t.concluida?'feita':''} ${!t.concluida && t.resp===eu?'minha':''} ${atrasada?'atrasada':''}">
+      <button type="button" class="gtf-check ${t.concluida?'on':''}" data-gtf-check="${t.id}" title="${t.concluida?'Reabrir':'Marcar como resolvida'}">${icon('tick','tiny')}</button>
+      <div class="gtf-txt">
+        <span>${linkify(t.texto)}</span>
+        <small>Responsável: <b>${quem}</b>${t.prazo ? ` · até ${tzDataCurta(t.prazo)}${atrasada?' (atrasada)':''}` : ''} · criada por ${t.criadoPor===eu ? 'você' : escapeHtml(msgNomeDe(t.criadoPor).split(' ')[0])}${t.concluida && t.concluidaPor ? ` · resolvida por ${t.concluidaPor===eu ? 'você' : escapeHtml(msgNomeDe(t.concluidaPor).split(' ')[0])}` : ''}</small>
+        ${t.msgId ? `<button type="button" class="link-btn gtf-ir" data-msg-ir="${t.msgId}">${icon('comment','tiny')} Ver mensagem de origem</button>` : ''}
+      </div>
+      ${podeExcluir ? `<button type="button" class="gtf-del" data-gtf-del="${t.id}" title="Excluir">${icon('trash','tiny')}</button>` : ''}
+    </div>`;
+}
+function gtfPainelHtml(grupo, admin){
+  const lista = gtfDoGrupo(grupo.id);
+  const eu = msgEu();
+  const abertas = lista.filter(t=>!t.concluida).sort((a,b)=> (b.resp===eu) - (a.resp===eu) || String(a.prazo||'9999').localeCompare(String(b.prazo||'9999')) || String(a.criadoEm).localeCompare(String(b.criadoEm)));
+  const feitas = lista.filter(t=>t.concluida).sort((a,b)=>String(b.concluidaEm).localeCompare(String(a.concluidaEm))).slice(0,8);
+  const r = (msgUI.gtfRascunho && msgUI.gtfRascunho.gid===grupo.id) ? msgUI.gtfRascunho : { gid:grupo.id, texto:'', resp:'', prazo:'', msgId:null };
+  const membros = Array.from(new Set((grupo.membros||[]).concat([eu]))).map(id=>({ id, nome: id===eu ? (msgNomeDe(id)+' (você)') : msgNomeDe(id) })).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const origem = r.msgId ? (MSG_CONVERSAS[msgChaveGrupo(grupo.id)]||[]).find(m=>String(m.id)===String(r.msgId)) : null;
+  return `
+    <div class="gtf-painel" id="gtf-painel">
+      <div class="gtf-hd"><div><strong>${icon('check','tiny')} Tarefas do grupo</strong><small>Ficam só aqui no grupo. Não vão para a lista de Tarefas de ninguém.</small></div><button type="button" class="btn-mini" id="gtf-fechar" title="Fechar">${icon('x','tiny')}</button></div>
+      <div class="gtf-lista">${abertas.map(t=>gtfItemHtml(t, admin)).join('') || '<p class="gtf-vazio">Nenhuma tarefa aberta neste grupo.</p>'}</div>
+      ${feitas.length ? `<details class="gtf-feitas" ${msgUI.gtfFeitasAberto?'open':''}><summary>Resolvidas nos últimos 7 dias (${feitas.length})</summary>${feitas.map(t=>gtfItemHtml(t, admin)).join('')}</details>` : ''}
+      <div class="gtf-form">
+        ${r.msgId ? `<div class="gtf-origem">${icon('comment','tiny')} Sobre a mensagem${origem ? ` de ${escapeHtml(msgNomeDe(origem.de).split(' ')[0])}: “${escapeHtml(String(origem.texto||'').slice(0,90))}${String(origem.texto||'').length>90?'…':''}”` : ''} <button type="button" class="link-btn" id="gtf-sem-origem">tirar</button></div>` : ''}
+        <input class="ps-input" id="gtf-texto" maxlength="500" placeholder="O que precisa ser resolvido?" value="${escapeAttr(r.texto)}">
+        <div class="gtf-form-linha">
+          <select class="ps-input" id="gtf-resp"><option value="">Responsável…</option>${membros.map(m=>`<option value="${m.id}" ${r.resp===m.id?'selected':''}>${escapeHtml(m.nome)}</option>`).join('')}</select>
+          <input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}" title="Prazo (opcional)">
+          <button type="button" class="btn-accent" id="gtf-criar">${icon('plus','tiny')} Criar</button>
+        </div>
+      </div>
+    </div>`;
+}
+function gtfBind(el, grupo){
+  const admin = msgSouAdminGrupos();
+  const tg = el.querySelector('#gtf-toggle'); if(tg) tg.addEventListener('click', ()=>{ msgUI.gtfAberto = msgUI.gtfAberto===grupo.id ? null : grupo.id; renderMensagens(); });
+  const pn = el.querySelector('#gtf-painel'); if(!pn) return;
+  const rasc = ()=>{ if(!msgUI.gtfRascunho || msgUI.gtfRascunho.gid!==grupo.id) msgUI.gtfRascunho = { gid:grupo.id, texto:'', resp:'', prazo:'', msgId:null }; return msgUI.gtfRascunho; };
+  pn.querySelector('#gtf-fechar').addEventListener('click', ()=>{ msgUI.gtfAberto = null; renderMensagens(); });
+  pn.querySelector('#gtf-texto').addEventListener('input', e=>{ rasc().texto = e.target.value; });
+  pn.querySelector('#gtf-texto').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); pn.querySelector('#gtf-criar').click(); } });
+  pn.querySelector('#gtf-resp').addEventListener('change', e=>{ rasc().resp = e.target.value; });
+  pn.querySelector('#gtf-prazo').addEventListener('change', e=>{ rasc().prazo = e.target.value; });
+  const so = pn.querySelector('#gtf-sem-origem'); if(so) so.addEventListener('click', ()=>{ rasc().msgId = null; renderMensagens(); });
+  const fd = pn.querySelector('.gtf-feitas'); if(fd) fd.addEventListener('toggle', ()=>{ msgUI.gtfFeitasAberto = fd.open; });
+  pn.querySelector('#gtf-criar').addEventListener('click', async (e)=>{
+    const r = rasc(); const texto = (pn.querySelector('#gtf-texto').value||'').trim();
+    if(!texto){ pn.querySelector('#gtf-texto').focus(); return; }
+    e.currentTarget.disabled = true;
+    const ok = await gtfCriar(grupo.id, texto, pn.querySelector('#gtf-resp').value, pn.querySelector('#gtf-prazo').value, r.msgId);
+    if(ok){ msgUI.gtfRascunho = null; updateNotifBadge(); }
+    renderMensagens();
+  });
+  pn.querySelectorAll('[data-gtf-check]').forEach(b=>b.addEventListener('click', ()=>{ const t = MSG_GTAREFAS.find(x=>String(x.id)===b.dataset.gtfCheck); if(t) gtfConcluir(t, !t.concluida); }));
+  pn.querySelectorAll('[data-gtf-del]').forEach(b=>b.addEventListener('click', ()=>{ const t = MSG_GTAREFAS.find(x=>String(x.id)===b.dataset.gtfDel); if(t) gtfExcluir(t); }));
+}
+function gtfDaMensagem(id){
+  const chave = msgUI.aberto; const g = msgGrupoDaChave(chave); if(!g) return;
+  const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===String(id));
+  const trecho = m ? String(m.texto||'').replace(/\s+/g,' ').trim().slice(0,140) : '';
+  msgUI.gtfAberto = g.id;
+  msgUI.gtfRascunho = { gid:g.id, texto: trecho ? 'Responder: '+trecho : '', resp: m && m.de!==msgEu() ? '' : '', prazo:'', msgId: m ? m.id : null };
+  renderMensagens();
+  setTimeout(()=>{ const i = document.getElementById('gtf-texto'); if(i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 30);
+}
 function msgAudioDur(seg){ seg = Math.max(0, Math.round(seg||0)); return Math.floor(seg/60)+':'+String(seg%60).padStart(2,'0'); }
 function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de Vendas' : p.role==='editor' ? 'Editor de Vídeos' : 'Equipe interna'); }
 
@@ -11218,6 +11373,7 @@ async function msgBootstrap(){
       sb.rpc('equipe_interna'),
       sb.from('mensagens').select('id,de').eq('para', msgEu()).eq('lida', false),
       msgCarregarGrupos(),
+      gtfCarregar(),
       msgPodeAcomp() ? msgCarregarAcomp() : Promise.resolve(),
       msgPodeAcomp() ? sb.from('acompanhamento_equipe').select('user_id').then(({data})=>{ ACOMP_EQUIPE_IDS = new Set((data||[]).map(r=>r.user_id)); }).catch(()=>{}) : Promise.resolve(),
     ]);
@@ -11237,7 +11393,8 @@ function msgAssinarTempoReal(){
     .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens'}, payload=>msgRemovida(payload.old));
   if(msgSouEquipe()) ch = ch
     .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupos'}, ()=>msgGruposMudaram())
-    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram());
+    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram())
+    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_tarefas'}, payload=>gtfMudou(payload));
   /* A ligação ao vivo cai calada em rede de celular: troca de wi-fi para dados, túnel, elevador,
      tela apagada. Sem tratar isso, o app continua "conectado" na aparência e as mensagens só
      aparecem quando alguém mexe na tela. Aqui a queda é percebida e a ligação é refeita. */
@@ -12326,17 +12483,19 @@ function msgAplicarPosInicial(el, chave){
    lugar antigo e a tela "pulava". Aqui o alvo é reaplicado enquanto a altura ainda mexe. */
 function msgPosicionarRolagem(corpo, alvo, aoDesistir){
   if(!corpo) return;
-  /* Assim que a pessoa mexe na rolagem — roda do mouse, dedo, teclado ou a barra lateral —
-     a gente para de reposicionar. Sem isso, quem subia para reler algo era puxado de volta
-     alguns instantes depois, e parecia que a barra "voltava sozinha". */
-  let desistir = false;
-  let ultimaPosta = -1;
+  /* Assim que a pessoa mexe na rolagem (roda do mouse, dedo, teclado, clique ou a barra lateral)
+     a gente para de reposicionar. Até lá, sempre que alguma mensagem muda de altura (imagem que
+     chega, áudio que termina de carregar, cartão que abre), o alvo é reaplicado. Antes isso só
+     acontecia nos primeiros instantes, e o que carregava depois empurrava a linha "Não lidas"
+     para fora do lugar. */
+  let desistir = false, agendado = false, obs = null;
   const parar = ()=>{ if(!desistir && aoDesistir) aoDesistir(); desistir = true; limpar(); };
   const limpar = ()=>{
     corpo.removeEventListener('wheel', parar);
     corpo.removeEventListener('touchstart', parar);
     corpo.removeEventListener('keydown', parar);
     corpo.removeEventListener('mousedown', parar);
+    if(obs){ obs.disconnect(); obs = null; }
   };
   corpo.addEventListener('wheel', parar, { passive:true });
   corpo.addEventListener('touchstart', parar, { passive:true });
@@ -12344,31 +12503,35 @@ function msgPosicionarRolagem(corpo, alvo, aoDesistir){
   corpo.addEventListener('mousedown', parar);
 
   const aplicar = ()=>{
-    if(desistir || !corpo.isConnected) return;
-    /* Saiu do lugar onde a gente mesmo tinha posto: foi a pessoa que rolou. */
-    if(ultimaPosta >= 0 && Math.abs(corpo.scrollTop - ultimaPosta) > 4){ parar(); return; }
+    agendado = false;
+    if(desistir) return;
+    if(!corpo.isConnected){ limpar(); return; }
+    const topo = corpo.getBoundingClientRect().top;
     if(alvo.tipo === 'fim'){
       corpo.scrollTop = corpo.scrollHeight;
     }else if(alvo.tipo === 'marcador'){
-      /* A distância é medida na tela, em relação à própria área das mensagens. O offsetTop que
-         era usado antes contava a partir de outro elemento da página, e a conversa parava no meio. */
       const m = corpo.querySelector('#msg-marcador');
-      corpo.scrollTop = m ? Math.max(0, corpo.scrollTop + m.getBoundingClientRect().top - corpo.getBoundingClientRect().top - 56) : corpo.scrollHeight;
+      corpo.scrollTop = m ? Math.max(0, corpo.scrollTop + m.getBoundingClientRect().top - topo - 56) : corpo.scrollHeight;
     }else{
-      corpo.scrollTop = alvo.valor || 0;
+      const a = alvo.ancora && corpo.querySelector(`.msg-bolha[data-msg-id="${alvo.ancora.id}"]`);
+      if(a) corpo.scrollTop = Math.max(0, corpo.scrollTop + a.getBoundingClientRect().top - topo - alvo.ancora.off);
+      else corpo.scrollTop = alvo.valor || 0;
     }
-    ultimaPosta = corpo.scrollTop;
   };
+  const agendar = ()=>{ if(!agendado && !desistir){ agendado = true; requestAnimationFrame(aplicar); } };
   aplicar();
   requestAnimationFrame(aplicar);
-  [60, 170, 340, 650].forEach(ms=>setTimeout(aplicar, ms));
-  setTimeout(limpar, 900);
-  if(alvo.tipo !== 'manter'){
-    corpo.querySelectorAll('img, audio, video').forEach(e=>{
-      e.addEventListener('load', aplicar, { once:true });
-      e.addEventListener('loadedmetadata', aplicar, { once:true });
-    });
+  [60, 170, 340, 650, 1200, 2000].forEach(ms=>setTimeout(agendar, ms));
+  if(typeof ResizeObserver === 'function'){
+    obs = new ResizeObserver(agendar);
+    Array.from(corpo.children).forEach(c=>obs.observe(c));
   }
+  corpo.querySelectorAll('img, audio, video').forEach(e=>{
+    e.addEventListener('load', agendar, { once:true });
+    e.addEventListener('loadedmetadata', agendar, { once:true });
+  });
+  /* Depois de alguns segundos tudo já carregou: deixa a conversa em paz. */
+  setTimeout(()=>{ if(!desistir){ desistir = true; limpar(); } }, 8000);
 }
 
 /* Arrastar o dedo para a direita volta para a lista de conversas, como em qualquer app de
@@ -12458,6 +12621,14 @@ function renderMensagens(){
   const mesmaConversa = corpoAntes && el.dataset.aberto===String(msgUI.aberto||'');
   const pertoDoFim = !mesmaConversa || (corpoAntes.scrollHeight - corpoAntes.scrollTop - corpoAntes.clientHeight < 60);
   const scrollAntes = corpoAntes ? corpoAntes.scrollTop : 0;
+  /* Mensagem que estava no topo da tela antes de redesenhar: depois do redesenho a conversa volta
+     a ela (e não a um número de pixels), porque imagens e áudios recriados mudam de altura. */
+  let ancoraAntes = null;
+  if(mesmaConversa){
+    const ct = corpoAntes.getBoundingClientRect().top;
+    const bolha = Array.from(corpoAntes.querySelectorAll('.msg-bolha[data-msg-id]')).find(b=>b.getBoundingClientRect().bottom > ct+1);
+    if(bolha) ancoraAntes = { id: bolha.dataset.msgId, off: bolha.getBoundingClientRect().top - ct };
+  }
   el.dataset.aberto = String(msgUI.aberto||'');
   const rascunho = taAntes ? taAntes.value : '';
   const tinhaFoco = !!taAntes && document.activeElement===taAntes;
@@ -12474,10 +12645,11 @@ function renderMensagens(){
     const podeApagar = minha || (!grupo && !acomp);
     const menciona = msgMeMenciona(m);
     if(idNaoLida && String(m.id)===idNaoLida) sep += `<div class="msg-naolidas" id="msg-marcador"><span>Não lidas</span></div>`;
-    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''} ${msgUI.destacado===String(m.id)?'piscando':''}" data-msg-id="${m.id}"><div class="msg-ferramentas"><button type="button" class="msg-ferr" data-msg-responder="${m.id}" title="Responder esta mensagem">${icon('reply','tiny')}</button>${podeApagar ? `<button type="button" class="msg-ferr" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}</div>${remetente}${msgCitacaoHtml(m)}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : m.tipo==='aula' ? msgAulaHtml(m) : m.tipo==='painel' ? msgPainelHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
+    return sep + `<div class="msg-bolha ${minha?'minha':''} ${menciona?'mencionado':''} ${msgUI.destacado===String(m.id)?'piscando':''}" data-msg-id="${m.id}"><div class="msg-ferramentas"><button type="button" class="msg-ferr" data-msg-responder="${m.id}" title="Responder esta mensagem">${icon('reply','tiny')}</button>${grupo ? `<button type="button" class="msg-ferr" data-msg-tarefa="${m.id}" title="Criar tarefa do grupo a partir desta mensagem">${icon('check','tiny')}</button>` : ''}${podeApagar ? `<button type="button" class="msg-ferr" data-msg-apagar="${m.id}" title="${minha ? 'Apagar para todos' : 'Apagar só para mim'}">${icon('trash','tiny')}</button>` : ''}</div>${remetente}${msgCitacaoHtml(m)}${m.tipo==='audio' ? msgAudioHtml(m) : m.tipo==='arquivo' ? msgArquivoHtml(m) : m.tipo==='aula' ? msgAulaHtml(m) : m.tipo==='painel' ? msgPainelHtml(m) : `<div class="msg-txt">${msgTextoHtml(m)}</div>`}<div class="msg-meta">${hora}${minha && !grupo && !acomp ? (m.lida? ' · lida' : '') : ''}</div></div>`;
   }).join('');
   const cabecalho = grupo
     ? `${msgGrupoAvatar(36, grupo)}<div class="msg-pessoa-txt"><strong>${escapeHtml(grupo.nome)}</strong><small>${escapeHtml(msgGrupoMembrosLabel(grupo))}: ${escapeHtml(grupo.membros.map(id=>msgNomeDe(id)).join(', '))}</small></div>
+       ${(()=>{ const ab = gtfDoGrupo(grupo.id).filter(t=>!t.concluida).length, minhas = gtfMinhasAbertas(grupo.id).length; return `<button type="button" class="btn-mini gtf-btn ${minhas?'alerta':''} ${msgUI.gtfAberto===grupo.id?'ativo':''}" id="gtf-toggle" title="Tarefas deste grupo">${icon('check','tiny')}<span> Tarefas</span>${ab ? `<b>${ab}</b>` : ''}</button>`; })()}
        ${admin ? `<button type="button" class="btn-mini" id="msg-grupo-gerir" title="Renomear, adicionar ou remover membros, excluir">${icon('gear','tiny')}<span> Gerenciar</span></button>` : ''}`
     : acomp && msgSouMentorado()
     ? `${msgGrupoAvatar(36)}<div class="msg-pessoa-txt"><strong>Acompanhamento</strong><small>Sua conversa com a equipe da mentoria — Murilo, Diego, Carmem, Sandra e Mariane</small></div>`
@@ -12491,11 +12663,12 @@ function renderMensagens(){
   const itemHtml = (o)=>`
     <button type="button" class="msg-pessoa ${o.cls||''} ${msgUI.aberto===o.chave?'ativa':''} ${o.n?'nao-lida':''}" data-msg-abrir="${o.chave}">
       ${o.avatar}
-      <span class="msg-pessoa-txt"><strong>${escapeHtml(o.titulo)}</strong><small>${o.sub}</small></span>
+      <span class="msg-pessoa-txt"><strong>${escapeHtml(o.titulo)}${o.extra||''}</strong><small>${o.sub}</small></span>
       ${o.n ? `<span class="msg-badge">${o.n}</span>` : quando(o.ultima)}
     </button>`;
   const itensGrupos = gruposOrd.map(g=>{ const k = msgChaveGrupo(g.id), u = ultima(k), n = g.naoLidas||0;
-    return {chave:k, n, ultima:u, cls:'msg-grupo', avatar:msgGrupoAvatar(36, g), titulo:g.nome, sub: u ? previa(u, true) : escapeHtml(msgGrupoMembrosLabel(g))}; });
+    const nt = gtfMinhasAbertas(g.id).length;
+    return {chave:k, n, ultima:u, cls:'msg-grupo', avatar:msgGrupoAvatar(36, g), titulo:g.nome, extra: nt ? ` <span class="gtf-tag" title="Tarefas do grupo esperando você">${icon('check','tiny')} ${nt}</span>` : '', sub: u ? previa(u, true) : escapeHtml(msgGrupoMembrosLabel(g))}; });
   const itensPessoas = ordenadas.map(p=>{ const u = ultima(p.id), n = msgNaoLidasDe(p.id);
     return {chave:p.id, n, ultima:u, cls:'', avatar:initialsAvatar(p.initials, p.color, 36, p.avatarUrl), titulo:p.name, sub: u ? previa(u, false) : escapeHtml(msgPapelLabel(p))}; });
   const itensMentorados = mentoradosOrd.map(st=>{ const k = msgChaveAcomp(st.id), a = acompDe(st), n = a ? a.naoLidas : 0;
@@ -12560,6 +12733,7 @@ function renderMensagens(){
             <div class="msg-config-linha"><span>Maiúscula automática no início das frases</span><label class="msg-switch"><input type="checkbox" id="msg-maiuscula" ${msgUI.maiuscula?'checked':''}><i></i></label></div>
             <div class="msg-config-linha"><span>Tamanho da letra</span><span class="msg-fonte"><button type="button" id="msg-fonte-menos" title="Diminuir">A−</button><b id="msg-fonte-valor">${msgUI.fonte}</b><button type="button" id="msg-fonte-mais" title="Aumentar">A+</button></span></div>
           </div>` : ''}
+          ${grupo && msgUI.gtfAberto===grupo.id ? gtfPainelHtml(grupo, admin) : ''}
           <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe da mentoria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o mentorado e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
           <div class="msg-mencoes" id="msg-mencoes" hidden></div>
           ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<div class="msg-aula-painel" id="msg-aula-painel" hidden>
@@ -12632,6 +12806,8 @@ function renderMensagens(){
   const limpar = el.querySelector('#msg-limpar'); if(limpar) limpar.addEventListener('click', ()=>msgLimparConversa(chave));
   el.querySelectorAll('[data-msg-apagar]').forEach(b=>b.addEventListener('click', ()=>{ const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===b.dataset.msgApagar); if(m) msgApagar(m); }));
   el.querySelectorAll('[data-msg-responder]').forEach(b=>b.addEventListener('click', ()=>msgResponderA(b.dataset.msgResponder)));
+  el.querySelectorAll('[data-msg-tarefa]').forEach(b=>b.addEventListener('click', ()=>gtfDaMensagem(b.dataset.msgTarefa)));
+  if(grupo) gtfBind(el, grupo);
   msgBindToqueLongo(el);
   el.querySelectorAll('[data-msg-ir]').forEach(b=>b.addEventListener('click', ()=>{ if(b.dataset.msgIr) msgIrParaMensagem(b.dataset.msgIr); }));
   const respCancelar = el.querySelector('#msg-resp-cancelar'); if(respCancelar) respCancelar.addEventListener('click', msgCancelarResposta);
@@ -12647,7 +12823,7 @@ function renderMensagens(){
     }else{
       const alvo = (temMarcador && !mesmaConversa) ? { tipo:'marcador' }
                  : (pertoDoFim || msgUI.forcarFim) ? { tipo:'fim' }
-                 : { tipo:'manter', valor: scrollAntes };
+                 : { tipo:'manter', valor: scrollAntes, ancora: ancoraAntes };
       msgPosicionarRolagem(corpo, alvo);
     }
     if(msgUI.forcarFim && msgUI.posInicial===chave) msgUI.posInicial = null;
