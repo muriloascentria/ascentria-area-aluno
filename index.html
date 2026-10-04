@@ -1778,6 +1778,43 @@
   .wf-review-sec{font-size:14px;margin:22px 0 6px;color:var(--accent);}
   .diag-audio-resp{margin-top:6px;}
   .diag-audio-resp .msg-audio,.wf-audio-ok .msg-audio,.wf-review-a .msg-audio{max-width:100%;}
+  .rd-abas{margin:0 0 12px;}
+  .nps-backdrop{position:fixed;inset:0;background:rgba(5,5,10,.72);display:flex;align-items:center;justify-content:center;z-index:330;padding:16px;}
+  .nps-card{width:100%;max-width:520px;max-height:92vh;overflow-y:auto;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 18px 44px rgba(0,0,0,.5);}
+  .nps-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .nps-selo{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--accent);}
+  .nps-x{background:none;border:0;color:var(--text-mute);cursor:pointer;padding:4px;}
+  .nps-card h3{margin:8px 0 2px;font-size:19px;}
+  .nps-sub{font-size:13px;color:var(--text-dim);margin:0 0 14px;}
+  .nps-q{display:block;font-size:14px;font-weight:600;margin:14px 0 8px;line-height:1.4;}
+  .nps-q small{font-weight:400;color:var(--text-mute);}
+  .nps-escala{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:4px;}
+  .nps-n{height:40px;border-radius:9px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font:inherit;font-weight:700;cursor:pointer;padding:0;}
+  .nps-n.on.det{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .nps-n.on.neu{background:var(--individual);border-color:var(--individual);color:#fff;}
+  .nps-n.on.pro{background:var(--success);border-color:var(--success);color:#fff;}
+  .nps-legenda{display:flex;justify-content:space-between;font-size:11px;color:var(--text-mute);margin-top:4px;}
+  .nps-dep{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin-top:12px;color:var(--text-dim);}
+  .nps-acoes{display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .nps-card textarea.erro{border-color:var(--danger);}
+  .nps-obrigado{text-align:center;padding:18px 6px;}
+  .nps-obrigado .icon{width:36px;height:36px;color:var(--success);}
+  .nps-obrigado p{color:var(--text-dim);font-size:14px;}
+  .nps-tile-sub{font-size:11px;color:var(--text-mute);margin-top:2px;}
+  .nps-filtros{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 10px;}
+  .nps-lista{display:flex;flex-direction:column;gap:8px;}
+  .nps-resp{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);}
+  .nps-nota{width:38px;height:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex:0 0 auto;}
+  .nps-nota.pro{background:var(--success);} .nps-nota.neu{background:var(--individual);} .nps-nota.det{background:var(--danger);}
+  .nps-resp-txt{flex:1;min-width:0;font-size:13px;line-height:1.45;}
+  .nps-resp-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .nps-resp-hd small{color:var(--text-mute);font-size:11.5px;}
+  .nps-resp-txt p{margin:6px 0 0;word-break:break-word;}
+  .nps-melhoria{color:var(--text-dim);}
+  .nps-tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:9px;background:var(--success-soft);color:var(--success);}
+  .nps-pend{display:flex;flex-wrap:wrap;gap:6px;}
+  .nps-pend-item{font-size:12.5px;padding:5px 10px;border:1px solid var(--border);border-radius:999px;background:var(--bg-card);}
+  .nps-pend-item small{color:var(--text-mute);}
   .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
   .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
   .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
@@ -3886,6 +3923,9 @@ function mapProfileRow(p){
     bonus: !!p.bonus,
     /* Aluno do curso com TODAS as aulas liberadas de uma vez (sem o bloqueio sequencial) — a equipe liga na Visão Geral. */
     aulasLiberadas: !!p.aulas_liberadas,
+    /* Início real (para o NPS de 4, 8 e 12 meses): a data de matrícula; sem ela, o dia em que a conta foi criada. */
+    contaTeste: !!p.conta_teste,
+    inicioReal: sc.data_matricula || String(p.created_at||'').slice(0,10) || null,
     cadastro:{
       nomeCompleto: sc.nome_completo || p.name || '',
       email: sc.email || '',
@@ -4191,6 +4231,7 @@ async function enterApp(){
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
   goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
   if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); }
+  if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
   setTimeout(pwaConvidarInstalar, 2500);
   setTimeout(pushConvidar, 6000);
 }
@@ -14735,6 +14776,144 @@ function epInicioHtml(s){
     </div>`;
 }
 
+/* ================= NPS (4, 8 e 12 meses) =================
+   Uma pesquisa curta que aparece sozinha para o mentorado e para o aluno do Método quando ele completa
+   4, 8 e 12 meses desde o início (data de matrícula; sem ela, a criação da conta). Se a pessoa já
+   passou de mais de um marco quando a pesquisa começou a existir, aparece só o mais recente. "Responder
+   depois" adia até o dia seguinte. As respostas ficam em nps_respostas e a equipe vê no Radar. */
+const NPS_MARCOS = [4, 8, 12];
+let NPS_MINHAS = null;
+function npsAddMeses(iso, m){ const [y,mo,d] = iso.split('-').map(Number); const dt = new Date(y, mo-1+m, d); dt.setHours(0,0,0,0); return dt; }
+function npsProduto(s){ return s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência'; }
+function npsMarcoDevido(s, respostas){
+  if(!s || !s.inicioReal) return null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const atingidos = NPS_MARCOS.filter(m=>npsAddMeses(s.inicioReal, m) <= hoje);
+  if(!atingidos.length) return null;
+  const ultimo = atingidos[atingidos.length-1];
+  const respondidos = new Set((respostas||[]).map(r=>r.marco));
+  if([...respondidos].some(m=>m >= ultimo)) return null;
+  return ultimo;
+}
+async function npsVerificar(){
+  if(currentUserRole!=='aluno' || !currentUser) return;
+  const s = getStudent(currentUser.id); if(!s) return;
+  if(s.tier!=='curso' && needsWispform(s)) return;
+  try{
+    const { data, error } = await sb.from('nps_respostas').select('marco').eq('aluno_id', currentUser.id);
+    if(error) throw error;
+    NPS_MINHAS = data || [];
+  }catch(e){ console.error('nps', e); return; }
+  const marco = npsMarcoDevido(s, NPS_MINHAS);
+  if(!marco) return;
+  try{ const ad = localStorage.getItem('ascentria-nps-depois:'+currentUser.id+':'+marco); if(ad && Number(ad) > Date.now()) return; }catch(e){}
+  if(document.querySelector('.nps-backdrop') || document.querySelector('.recado-backdrop')) return;
+  npsAbrir(s, marco);
+}
+function npsAbrir(s, marco){
+  const produto = npsProduto(s);
+  const st = { nota:null, motivo:'', melhoria:'', depoimento:false };
+  const wrap = document.createElement('div');
+  wrap.className = 'nps-backdrop';
+  const desenhar = ()=>{
+    wrap.innerHTML = `
+      <div class="nps-card" role="dialog" aria-modal="true" aria-label="Pesquisa de satisfação">
+        <div class="nps-topo"><span class="nps-selo">${marco} meses de ${escapeHtml(produto)}</span><button type="button" class="nps-x" id="nps-depois-x" title="Responder depois">${icon('x','tiny')}</button></div>
+        <h3>Como está sendo a sua experiência?</h3>
+        <p class="nps-sub">Leva menos de 1 minuto e ajuda a gente a cuidar melhor de você.</p>
+        <label class="nps-q">De 0 a 10, o quanto você recomendaria a ${escapeHtml(produto)} para um colega enfermeiro?</label>
+        <div class="nps-escala">${Array.from({length:11},(_,n)=>`<button type="button" class="nps-n ${st.nota===n?'on':''} ${n<=6?'det':n<=8?'neu':'pro'}" data-nps-n="${n}">${n}</button>`).join('')}</div>
+        <div class="nps-legenda"><span>Nada provável</span><span>Muito provável</span></div>
+        ${st.nota!==null ? `
+          <label class="nps-q">${st.nota>=9 ? 'Que bom! O que mais faz diferença para você?' : st.nota>=7 ? 'O que faltou para ser um 10?' : 'Sentimos muito. O que não está funcionando para você?'}</label>
+          <div class="wf-campo-mic longo"><textarea class="ps-input" id="nps-motivo" rows="3" placeholder="Escreva ou fale">${escapeHtml(st.motivo)}</textarea>${wfDitadoDisponivel() ? `<button type="button" class="wf-mic-btn" data-nps-mic="nps-motivo" title="Falar">${icon('mic')}</button>` : ''}</div>
+          <label class="nps-q">Tem alguma sugestão de melhoria? <small>(opcional)</small></label>
+          <div class="wf-campo-mic longo"><textarea class="ps-input" id="nps-melhoria" rows="2" placeholder="Escreva ou fale">${escapeHtml(st.melhoria)}</textarea>${wfDitadoDisponivel() ? `<button type="button" class="wf-mic-btn" data-nps-mic="nps-melhoria" title="Falar">${icon('mic')}</button>` : ''}</div>
+          ${st.nota>=9 ? `<label class="nps-dep"><input type="checkbox" id="nps-dep" ${st.depoimento?'checked':''}> Autorizo usar meu comentário como depoimento.</label>` : ''}
+        ` : ''}
+        <div class="nps-acoes">
+          <button type="button" class="btn-outline" id="nps-depois">Responder depois</button>
+          <button type="button" class="btn-accent" id="nps-enviar" ${st.nota===null?'disabled':''}>Enviar</button>
+        </div>
+      </div>`;
+    const guardar = ()=>{ const m = wrap.querySelector('#nps-motivo'); if(m) st.motivo = m.value; const me = wrap.querySelector('#nps-melhoria'); if(me) st.melhoria = me.value; const d = wrap.querySelector('#nps-dep'); if(d) st.depoimento = d.checked; };
+    wrap.querySelectorAll('[data-nps-n]').forEach(b=>b.addEventListener('click', ()=>{ guardar(); st.nota = +b.dataset.npsN; npsDitarParar(); desenhar(); }));
+    const depois = ()=>{ npsDitarParar(); try{ localStorage.setItem('ascentria-nps-depois:'+currentUser.id+':'+marco, String(Date.now()+20*3600*1000)); }catch(e){} wrap.remove(); };
+    wrap.querySelector('#nps-depois').addEventListener('click', depois);
+    wrap.querySelector('#nps-depois-x').addEventListener('click', depois);
+    wrap.querySelectorAll('[data-nps-mic]').forEach(b=>b.addEventListener('click', ()=>npsDitar(b, wrap.querySelector('#'+b.dataset.npsMic))));
+    wrap.querySelector('#nps-enviar').addEventListener('click', async (e)=>{
+      guardar(); npsDitarParar();
+      if(st.nota===null) return;
+      if(!st.motivo.trim()){ const m = wrap.querySelector('#nps-motivo'); if(m){ m.focus(); m.classList.add('erro'); } return; }
+      e.currentTarget.disabled = true; e.currentTarget.textContent = 'Enviando...';
+      const { error } = await sb.from('nps_respostas').insert({ aluno_id:currentUser.id, marco, nota:st.nota, motivo:st.motivo.trim().slice(0,3000), melhoria:st.melhoria.trim().slice(0,3000), depoimento:!!st.depoimento, produto });
+      if(error && !/duplicate|unique/i.test(error.message||'')){ console.error('nps', error); alert('Não foi possível enviar agora. Tente de novo.'); desenhar(); return; }
+      wrap.querySelector('.nps-card').innerHTML = `<div class="nps-obrigado">${icon('check')}<h3>Obrigado!</h3><p>Sua resposta chegou para a equipe.${st.nota<=6 ? ' Alguém do time vai falar com você em breve.' : ''}</p><button type="button" class="btn-accent" id="nps-fechar">Fechar</button></div>`;
+      wrap.querySelector('#nps-fechar').addEventListener('click', ()=>wrap.remove());
+    });
+  };
+  desenhar();
+  document.body.appendChild(wrap);
+}
+let NPS_DITADO = null;
+function npsDitarParar(){ if(NPS_DITADO){ NPS_DITADO.ativo = false; try{ NPS_DITADO.r.stop(); }catch(e){} if(NPS_DITADO.btn) NPS_DITADO.btn.classList.remove('ouvindo'); NPS_DITADO = null; } }
+function npsDitar(btn, campo){
+  if(NPS_DITADO && NPS_DITADO.btn===btn){ npsDitarParar(); return; }
+  npsDitarParar();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SR || !campo) return;
+  const d = { ativo:true, btn, base: campo.value.replace(/\s+$/,''), finais:'' };
+  NPS_DITADO = d; btn.classList.add('ouvindo');
+  const iniciar = ()=>{
+    let r; try{ r = new SR(); }catch(e){ npsDitarParar(); return; }
+    r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
+    r.onresult = ev=>{ let it = ''; for(let i = ev.resultIndex; i < ev.results.length; i++){ const t = ev.results[i][0].transcript; if(ev.results[i].isFinal) d.finais += ' '+t; else it += ' '+t; }
+      let t = [d.base, d.finais.trim(), it.trim()].filter(Boolean).join(' ').replace(/\s{2,}/g,' '); if(!d.base && t) t = t.charAt(0).toUpperCase()+t.slice(1); campo.value = t; };
+    r.onerror = ev=>{ if(ev && /not-allowed|audio-capture|service-not-allowed/.test(ev.error||'')) npsDitarParar(); };
+    r.onend = ()=>{ if(d.ativo && NPS_DITADO===d) iniciar(); };
+    d.r = r; try{ r.start(); }catch(e){}
+  };
+  iniciar();
+}
+
+/* ---- Visão da equipe: aba NPS dentro do Radar ---- */
+const NPS_UI = { rows:null, carregando:false, filtro:'todos' };
+async function npsCarregarEquipe(){
+  NPS_UI.carregando = true;
+  try{ const { data, error } = await sb.from('nps_respostas').select('*').order('created_at', {ascending:false}); if(error) throw error; NPS_UI.rows = data || []; }
+  catch(e){ console.error('nps equipe', e); NPS_UI.rows = []; }
+  NPS_UI.carregando = false;
+  if(currentView==='radar') renderRadar();
+}
+function npsScore(lista){ if(!lista.length) return null; const p = lista.filter(r=>r.nota>=9).length, d = lista.filter(r=>r.nota<=6).length; return Math.round((p - d) / lista.length * 100); }
+function npsHtmlEquipe(){
+  if(NPS_UI.rows===null){ if(!NPS_UI.carregando) npsCarregarEquipe(); return '<div class="empty-state">Carregando o NPS…</div>'; }
+  const rows = NPS_UI.rows.filter(r=>getStudent(r.aluno_id));
+  const f = NPS_UI.filtro;
+  const vis = rows.filter(r=> f==='todos' || String(r.marco)===f || (f==='detratores' && r.nota<=6));
+  const tile = (rot, lista)=>{ const sc = npsScore(lista); return `<div class="kpi-tile"><div class="label">${rot}</div><div class="value" style="font-size:22px;color:${sc===null?'var(--text-mute)':sc>=50?'var(--success)':sc>=0?'var(--individual)':'var(--danger)'}">${sc===null?'—':sc}</div><div class="nps-tile-sub">${lista.length} resposta${lista.length===1?'':'s'}</div></div>`; };
+  /* Quem já está no período de responder e ainda não respondeu. */
+  const pendentes = STUDENTS.filter(st=>!st.contaTeste).map(st=>({ st, m: npsMarcoDevido(st, rows.filter(r=>r.aluno_id===st.id)) })).filter(x=>x.m);
+  const cor = n=> n>=9 ? 'pro' : n>=7 ? 'neu' : 'det';
+  return `
+    <p class="section-sub" style="margin-top:0">A pesquisa aparece sozinha para mentorados e alunos do Método aos 4, 8 e 12 meses. NPS = % de promotores (9 e 10) menos % de detratores (0 a 6), de −100 a 100.</p>
+    <div class="kpi-row">${tile('NPS geral', rows)}${tile('4 meses', rows.filter(r=>r.marco===4))}${tile('8 meses', rows.filter(r=>r.marco===8))}${tile('12 meses', rows.filter(r=>r.marco===12))}</div>
+    <div class="nps-filtros">${[['todos','Todas'],['4','4 meses'],['8','8 meses'],['12','12 meses'],['detratores','Detratores (0 a 6)']].map(([k,l])=>`<button type="button" class="filter-tab ${f===k?'active':''}" data-nps-f="${k}">${l}</button>`).join('')}</div>
+    <div class="nps-lista">
+      ${vis.map(r=>{ const st = getStudent(r.aluno_id); return `
+        <div class="nps-resp">
+          <span class="nps-nota ${cor(r.nota)}">${r.nota}</span>
+          <div class="nps-resp-txt">
+            <div class="nps-resp-hd"><button type="button" class="vg-nome-btn" data-rd-acomp="${st.id}">${escapeHtml(st.name)}</button><small>${r.marco} meses · ${escapeHtml(r.produto||npsProduto(st))} · ${tzDataCurta(String(r.created_at).slice(0,10))}</small>${r.depoimento ? '<span class="nps-tag">pode virar depoimento</span>' : ''}</div>
+            ${r.motivo ? `<p>${escapeHtml(r.motivo)}</p>` : ''}
+            ${r.melhoria ? `<p class="nps-melhoria"><b>Sugestão:</b> ${escapeHtml(r.melhoria)}</p>` : ''}
+          </div>
+        </div>`; }).join('') || '<div class="empty-state">Nenhuma resposta ainda.</div>'}
+    </div>
+    ${pendentes.length ? `<div class="ep-sec-hd" style="margin-top:18px"><h3>Aguardando resposta (${pendentes.length})</h3></div>
+      <div class="nps-pend">${pendentes.map(x=>`<span class="nps-pend-item"><button type="button" class="vg-nome-btn" data-rd-acomp="${x.st.id}">${escapeHtml(x.st.name)}</button> <small>${x.m} meses${x.st.tier==='curso'?' · Método':''}</small></span>`).join('')}</div>
+      <p class="rd-legenda">A pesquisa aparece para essas pessoas na próxima vez que entrarem no Plat. Quem tocou em "Responder depois" vê de novo no dia seguinte.</p>` : ''}`;
+}
 /* ================= RADAR DOS MENTORADOS (Sandra, Viviane e Murilo) =================
    Um semáforo por mentorado com o motivo escrito ao lado, para a pessoa abrir a tela e saber quem
    precisa de atenção hoje. Os dados que só o banco sabe (último acesso, quando marcou o último item
@@ -14744,7 +14923,9 @@ function epInicioHtml(s){
 const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-bb26-eec09ba778c4','e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'];
 const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
 const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
-const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{} };
+const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, aba:'mentorados' };
+function radarAbasHtml(){ return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${RADAR_UI.aba==='mentorados'?'active':''}" data-rd-aba="mentorados">Mentorados</button><button type="button" class="filter-tab ${RADAR_UI.aba==='nps'?'active':''}" data-rd-aba="nps">NPS</button></div>`; }
+function radarBindAbas(el){ el.querySelectorAll('[data-rd-aba]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.aba = b.dataset.rdAba; renderRadar(); })); }
 function radarPode(){
   return currentUserRole==='staff' && !!currentUser && (RADAR_UIDS.includes(currentUser.id) || !!(currentUserProfile && currentUserProfile.contaTeste));
 }
@@ -14814,7 +14995,11 @@ function rdAvaliar(s, r){
     const txt = `Atrasado no método: deveria estar em ${RADAR_ESTAGIOS[esp.idx]}, está em ${RADAR_ESTAGIOS[real.idx]}`;
     if(atraso>=2) add(2, txt); else if(atraso===1) add(1, txt);
   }
-  // 8. Próxima ação vencida
+  // 8. NPS: nota de 0 a 6 na última pesquisa respondida
+  const ultNps = (NPS_UI.rows||[]).filter(x=>x.aluno_id===s.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
+  if(ultNps && ultNps.nota<=6) add(2, `NPS ${ultNps.nota} aos ${ultNps.marco} meses (detrator)`);
+  else if(ultNps && ultNps.nota<=8) add(1, `NPS ${ultNps.nota} aos ${ultNps.marco} meses (neutro)`);
+  // 9. Próxima ação vencida
   const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
   if(r.prazo && r.prazo < hojeISO) add(1, `Próxima ação vencida em ${tzDataCurta(r.prazo)}`);
   const nivel = motivos.reduce((a,m)=>Math.max(a,m.nivel),0);
@@ -14857,6 +15042,14 @@ function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
   if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Relacionamento e do Customer Success.</div>'; return; }
+  if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
+  if(RADAR_UI.aba==='nps'){
+    el.innerHTML = radarAbasHtml() + npsHtmlEquipe();
+    radarBindAbas(el);
+    el.querySelectorAll('[data-nps-f]').forEach(b=>b.addEventListener('click', ()=>{ NPS_UI.filtro = b.dataset.npsF; renderRadar(); }));
+    el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+    return;
+  }
   if(RADAR_UI.rows===null && !RADAR_UI.carregando && !RADAR_UI.erro){ radarCarregar(); }
   if(RADAR_UI.carregando && RADAR_UI.rows===null){ el.innerHTML = '<div class="empty-state">Carregando o radar…</div>'; return; }
   if(RADAR_UI.erro){
@@ -14881,7 +15074,7 @@ function renderRadar(){
     </button>`;
   const dado = (rotulo, valor, alerta)=>`<div class="rd-dado ${alerta?'rd-dado-'+alerta:''}"><span>${rotulo}</span><strong>${valor}</strong></div>`;
   const nivelDe = (d, am, ve)=> d===null ? 'vermelho' : d>=ve ? 'vermelho' : d>=am ? 'amarelo' : '';
-  el.innerHTML = `
+  el.innerHTML = radarAbasHtml() + `
     <p class="section-sub" style="margin-top:0">Vermelhos primeiro, com o motivo escrito ao lado. Os números são calculados na hora em que a tela abre.
       <button type="button" class="link-btn" id="rd-atualizar">Atualizar</button></p>
     <div class="kpi-row rd-kpis">
@@ -14935,7 +15128,8 @@ function renderRadar(){
           </div>` : ''}
         </div>`; }).join('') || `<div class="empty-state">${lista.length ? 'Ninguém nesse filtro.' : 'Nenhum mentorado ainda.'}</div>`}
     </div>
-    <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', ou pagamento em atraso':''}. Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal há 14 dias (o checkpoint automático não conta) e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
+    <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', pagamento em atraso':''} ou nota de 0 a 6 no último NPS (amarelo com 7 ou 8). Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal há 14 dias (o checkpoint automático não conta) e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
+  radarBindAbas(el);
   el.querySelectorAll('[data-rd-filtro]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.filtro = RADAR_UI.filtro===b.dataset.rdFiltro ? 'todos' : b.dataset.rdFiltro; renderRadar(); }));
   const lim = document.getElementById('rd-limpar'); if(lim) lim.addEventListener('click', ()=>{ RADAR_UI.filtro = 'todos'; RADAR_UI.busca = ''; renderRadar(); });
   document.getElementById('rd-atualizar').addEventListener('click', ()=>{ RADAR_UI.rows = null; renderRadar(); });
