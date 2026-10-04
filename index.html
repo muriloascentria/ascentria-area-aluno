@@ -1816,6 +1816,47 @@
   .nps-pend{display:flex;flex-wrap:wrap;gap:6px;}
   .nps-pend-item{font-size:12.5px;padding:5px 10px;border:1px solid var(--border);border-radius:999px;background:var(--bg-card);}
   .nps-pend-item small{color:var(--text-mute);}
+  .av-bloco{margin-top:14px;padding:12px 14px;border:1px solid var(--accent);border-radius:var(--radius-sm);background:var(--accent-soft);}
+  .av-hd strong{display:flex;align-items:center;gap:6px;font-size:14px;}
+  .av-hd small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px;}
+  .av-linha2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin:10px 0;}
+  .av-linha2 label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);}
+  .av-etapas{display:flex;flex-direction:column;gap:6px;}
+  .av-etapa{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;padding:6px 8px;border-radius:9px;background:var(--bg-elev);}
+  .av-notas{display:flex;gap:6px;}
+  .av-n{width:36px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font:inherit;font-weight:700;cursor:pointer;}
+  .av-n.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .av-total{margin:10px 0 4px;font-size:13px;color:var(--text-dim);}
+  .av-total b{font-size:16px;color:var(--text);}
+  .av-pill{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:var(--accent-soft);color:var(--text);font-size:10.5px;font-weight:700;vertical-align:middle;}
+  .av-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:16px 18px;margin-bottom:16px;}
+  .av-card-hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .av-card-hd h3{margin:0;font-size:18px;}
+  .av-card-hd span{font-size:12px;color:var(--text-mute);}
+  .av-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0;}
+  .av-kpis > div{background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .av-kpis small{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);font-weight:700;}
+  .av-kpis b{font-size:20px;}
+  .av-kpis b i{font-style:normal;font-size:12px;color:var(--text-mute);font-weight:500;}
+  .av-kpis b.sobe{color:var(--success);} .av-kpis b.desce{color:var(--danger);}
+  .av-kpis em{font-style:normal;font-size:10.5px;color:var(--text-mute);}
+  .av-graf-tit{font-size:12.5px;font-weight:700;margin:12px 0 4px;color:var(--text-dim);}
+  .av-graf-tit small{font-weight:400;color:var(--text-mute);}
+  .av-svg{width:100%;height:auto;display:block;}
+  .av-grade{stroke:var(--border);stroke-width:1;}
+  .av-eixo{fill:var(--text-mute);font-size:10px;}
+  .av-ult{fill:var(--text);font-size:11px;font-weight:700;}
+  .av-ponto:hover circle:last-of-type{r:6;}
+  .av-barras{display:flex;flex-direction:column;gap:6px;}
+  .av-barra{display:grid;grid-template-columns:minmax(0,130px) minmax(0,1fr) 34px;align-items:center;gap:8px;font-size:12.5px;}
+  .av-barra b{text-align:right;font-size:12px;}
+  .av-trilho{height:10px;border-radius:5px;background:var(--bg-elev);border:1px solid var(--border);overflow:hidden;}
+  .av-fill{height:100%;background:var(--accent);border-radius:4px;}
+  .av-tabela{margin-top:12px;font-size:12px;}
+  .av-tabela summary{cursor:pointer;color:var(--text-mute);}
+  .av-tabela table{margin-top:8px;font-size:11.5px;}
+  .av-tabela{overflow-x:auto;}
+  @media (max-width:560px){ .av-kpis b{font-size:16px;} .av-barra{grid-template-columns:minmax(0,96px) minmax(0,1fr) 30px;} }
   .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
   .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
   .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
@@ -2340,6 +2381,7 @@
       <div class="view" id="view-gestaotime"></div>
       <div class="view" id="view-radar"></div>
       <div class="view" id="view-planner"></div>
+      <div class="view" id="view-desempenho"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -2428,6 +2470,7 @@ const NAV_LABELS = {
   treinamento:['play','Treinamento Time'],
   gestaotime:['target','Gestão do Time'],
   radar:['radar','Radar dos Mentorados'],
+  desempenho:['chart','Desempenho das Consultoras'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
@@ -2435,7 +2478,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -4178,6 +4221,7 @@ async function bootstrapData(){
       lerTudo('analise_sessoes', q=>q.order('ordem',{ascending:false}).order('id')).then((anRows)=>{
         (anRows||[]).forEach(r=>ANALISE_SESSOES.push(mapAnaliseRow(r)));
       }),
+      avCarregar(),
       // Registro de Clientes — cadastros feitos pelo formulário público (sem login).
       lerTudo('registro_clientes', q=>q.order('created_at',{ascending:false}).order('id')).then((crRows)=>{
         (crRows||[]).forEach(r=>CLIENTES_REGISTRO.push(mapClienteRow(r)));
@@ -5336,7 +5380,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -5553,6 +5597,7 @@ function goTo(view){
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
   if(view==='radar' && !radarPode()) view = 'equipe';
+  if(view==='desempenho' && !avPode()) view = 'equipe';
   if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
   if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
@@ -5576,7 +5621,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
@@ -13429,6 +13474,7 @@ const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
+  {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
@@ -13459,7 +13505,7 @@ function renderEquipe(){
     ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && (a.view!=='desempenho' || avPode()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
@@ -14209,7 +14255,7 @@ function renderAnalise(){
       </tr></thead>
       <tbody>
         ${lista.map(a=>`<tr>
-          <td><span class="an-lead">${escapeHtml(a.leadNome||'—')}</span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
+          <td><span class="an-lead">${escapeHtml(a.leadNome||'—')}${avPode() && AVALIACOES[a.id] ? ` <span class="av-pill" title="Avaliação de ${escapeAttr(AVALIACOES[a.id].consultora)}">${AVALIACOES[a.id].total}/14</span>` : ''}</span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
           <td class="an-wpp">${whatsappCell(a.whatsapp)}</td>
           <td><div class="an-links">
             ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo') : ''}
@@ -14262,6 +14308,128 @@ function renderAnalise(){
       renderAnalise();
     });
   });
+}
+/* ================= AVALIAÇÃO DAS CONSULTORAS (Diego e Murilo) =================
+   Ao analisar o vídeo de uma venda, o Diego pontua de 0 a 2 cada etapa do roteiro. As notas ficam
+   na tabela avaliacao_vendas, que só Diego e Murilo leem e escrevem (nem as consultoras veem). O
+   quadro "Desempenho das Consultoras" mostra a evolução de cada uma. */
+const AV_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc'];
+const AV_ETAPAS = [
+  {k:'pacto', nome:'Pacto inicial'}, {k:'qualificacao', nome:'Qualificação'}, {k:'dor', nome:'Dor'},
+  {k:'ancoragem', nome:'Ancoragem'}, {k:'isolar', nome:'Isolar a objeção'}, {k:'resgate', nome:'Resgate'}, {k:'fechamento', nome:'Fechamento'},
+];
+const AV_CONSULTORAS = ['Adriana','Carmem'];
+let AVALIACOES = {}; // analise_id -> linha
+function avPode(){ return currentUserRole==='staff' && !!currentUser && AV_UIDS.includes(currentUser.id); }
+async function avCarregar(){
+  if(!avPode()) return;
+  try{ const { data, error } = await sb.from('avaliacao_vendas').select('*'); if(error) throw error; AVALIACOES = {}; (data||[]).forEach(r=>{ AVALIACOES[r.analise_id] = r; }); }
+  catch(e){ console.error('avaliacao_vendas', e); }
+}
+function avConsultoraPadrao(a){
+  const v = a.vendaSessaoId ? VENDA_SESSOES.find(x=>x.id==a.vendaSessaoId) : null;
+  const nome = v ? String(v.vendedor||'') : '';
+  return /adriana/i.test(nome) ? 'Adriana' : /carmem/i.test(nome) ? 'Carmem' : '';
+}
+function avDataPadrao(a){
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(a.dataVenda||'').trim());
+  if(m){ const y = m[3].length===2 ? '20'+m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+  return gtfHojeISO();
+}
+function avBlocoHtml(a){
+  const r = AVALIACOES[a.id] || null;
+  const cons = r ? r.consultora : avConsultoraPadrao(a);
+  const notas = {}; AV_ETAPAS.forEach(e=>{ notas[e.k] = r ? r[e.k] : null; });
+  const total = AV_ETAPAS.reduce((t,e)=>t+(notas[e.k]==null?0:notas[e.k]),0);
+  return `
+    <div class="av-bloco" id="av-bloco">
+      <div class="av-hd"><strong>${icon('chart','tiny')} Avaliação da consultora</strong><small>Só você e ${currentUser.id===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem estas notas.</small></div>
+      <div class="av-linha2">
+        <label>Consultora<select class="ps-input" id="av-consultora"><option value="">Escolha…</option>${AV_CONSULTORAS.map(c=>`<option ${cons===c?'selected':''}>${c}</option>`).join('')}</select></label>
+        <label>Data da venda<input class="ps-input" type="date" id="av-data" value="${escapeAttr(r ? r.data_ref : avDataPadrao(a))}"></label>
+      </div>
+      <div class="av-etapas">
+        ${AV_ETAPAS.map(e=>`
+          <div class="av-etapa"><span>${e.nome}</span>
+            <div class="av-notas" data-av-etapa="${e.k}">${[0,1,2].map(n=>`<button type="button" class="av-n ${notas[e.k]===n?'on':''} n${n}" data-av-n="${n}">${n}</button>`).join('')}</div>
+          </div>`).join('')}
+      </div>
+      <div class="av-total">Total: <b id="av-total">${total}</b> de 14</div>
+      <label class="ps-label">Observação (opcional)</label>
+      <textarea class="ps-input" id="av-obs" rows="2" placeholder="O que ela precisa treinar a partir desta venda">${escapeHtml(r && r.observacao || '')}</textarea>
+    </div>`;
+}
+function avBind(){
+  const bl = document.getElementById('av-bloco'); if(!bl) return;
+  bl.querySelectorAll('[data-av-etapa]').forEach(g=>g.querySelectorAll('[data-av-n]').forEach(b=>b.addEventListener('click', ()=>{
+    g.querySelectorAll('.av-n').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    const t = [...bl.querySelectorAll('.av-n.on')].reduce((s,x)=>s+Number(x.dataset.avN),0);
+    document.getElementById('av-total').textContent = t;
+  })));
+}
+/* Lê o bloco. Devolve null se nada foi pontuado, ou {erro} se estiver pela metade. */
+function avColetar(a){
+  const bl = document.getElementById('av-bloco'); if(!bl) return null;
+  const linha = { analise_id:a.id, consultora: document.getElementById('av-consultora').value, data_ref: document.getElementById('av-data').value || gtfHojeISO(), observacao: document.getElementById('av-obs').value.trim(), updated_at: new Date().toISOString() };
+  let marcadas = 0;
+  AV_ETAPAS.forEach(e=>{ const on = bl.querySelector(`[data-av-etapa="${e.k}"] .av-n.on`); if(on){ linha[e.k] = Number(on.dataset.avN); marcadas++; } });
+  if(!marcadas && !AVALIACOES[a.id]) return null;
+  if(marcadas < AV_ETAPAS.length) return { erro:'Dê uma nota (0, 1 ou 2) para todas as 7 etapas do roteiro antes de salvar a avaliação.' };
+  if(!linha.consultora) return { erro:'Escolha qual consultora fez a venda.' };
+  return linha;
+}
+async function avSalvar(linha){
+  const { data, error } = await sb.from('avaliacao_vendas').upsert(linha, { onConflict:'analise_id' }).select().single();
+  if(error){ console.error('avaliacao_vendas', error); alert('Não foi possível salvar a avaliação: '+(error.message||'')); return false; }
+  AVALIACOES[data.analise_id] = data;
+  return true;
+}
+/* ---- Quadro "Desempenho das Consultoras" ---- */
+function avGraficoSvg(lista, cor){
+  const W = 640, H = 220, pl = 34, pr = 14, pt = 14, pb = 30;
+  const n = lista.length;
+  const x = i => n<=1 ? pl + (W-pl-pr)/2 : pl + i*(W-pl-pr)/(n-1);
+  const y = v => pt + (14 - v)*(H-pt-pb)/14;
+  const grade = [0,7,14].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" class="av-grade"/><text x="${pl-8}" y="${y(v)+4}" text-anchor="end" class="av-eixo">${v}</text>`).join('');
+  const pts = lista.map((r,i)=>[x(i), y(r.total)]);
+  const linha = pts.length>1 ? `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : '';
+  const passo = Math.max(1, Math.ceil(n/8));
+  const rotulos = lista.map((r,i)=> (i%passo===0 || i===n-1) ? `<text x="${x(i)}" y="${H-8}" text-anchor="middle" class="av-eixo">${tzDataCurta(r.data_ref).slice(0,5)}</text>` : '').join('');
+  const marcas = lista.map((r,i)=>`<g class="av-ponto"><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="11" fill="transparent"/><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="4.5" fill="${cor}" stroke="var(--bg-card)" stroke-width="2"/><title>${tzDataCurta(r.data_ref)}: ${r.total} de 14${r.lead ? ' · '+r.lead : ''}</title></g>`).join('');
+  const ult = n ? `<text x="${pts[n-1][0]}" y="${pts[n-1][1]-12}" text-anchor="middle" class="av-ult">${lista[n-1].total}</text>` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" class="av-svg" role="img" aria-label="Evolução da nota total">${grade}${linha}${marcas}${ult}${rotulos}</svg>`;
+}
+function renderDesempenho(){
+  const el = document.getElementById('view-desempenho'); if(!el) return;
+  if(!avPode()){ el.innerHTML = '<div class="empty-state">Área do Head de Vendas e do CEO.</div>'; return; }
+  const todas = Object.values(AVALIACOES).map(r=>{ const a = ANALISE_SESSOES.find(x=>x.id===r.analise_id); return Object.assign({ lead: a ? a.leadNome : '' }, r); });
+  const media = (l,k)=> l.length ? l.reduce((t,r)=>t+r[k],0)/l.length : null;
+  const fmt = v=> v==null ? '—' : (Math.round(v*10)/10).toString().replace('.',',');
+  el.innerHTML = `
+    <p class="section-sub" style="margin-top:0">Nota de cada venda analisada (soma das 7 etapas do roteiro, de 0 a 14). As notas vêm da avaliação feita na Análise Sessões 1:1. Só você e ${currentUser.id===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem este quadro.</p>
+    ${AV_CONSULTORAS.map(c=>{
+      const l = todas.filter(r=>r.consultora===c).sort((a,b)=>String(a.data_ref).localeCompare(String(b.data_ref)) || String(a.created_at).localeCompare(String(b.created_at)));
+      const ini = l.slice(0,3), fim = l.slice(-3);
+      const mIni = media(ini,'total'), mFim = media(fim,'total');
+      const delta = (l.length>=4 && mIni!=null) ? mFim - mIni : null;
+      return `
+      <div class="av-card">
+        <div class="av-card-hd"><h3>${escapeHtml(c)}</h3><span>${l.length} venda${l.length===1?'':'s'} avaliada${l.length===1?'':'s'}</span></div>
+        ${l.length ? `
+          <div class="av-kpis">
+            <div><small>Última nota</small><b>${l[l.length-1].total}<i>/14</i></b></div>
+            <div><small>Média das últimas 3</small><b>${fmt(mFim)}</b></div>
+            <div><small>Evolução</small><b class="${delta==null?'':delta>0?'sobe':delta<0?'desce':''}">${delta==null ? '—' : (delta>0?'+':'')+fmt(delta)}</b><em>${delta==null ? 'a partir de 4 avaliações' : 'últimas 3 x primeiras 3'}</em></div>
+          </div>
+          <div class="av-graf-tit">Evolução da nota total</div>
+          ${avGraficoSvg(l, 'var(--accent)')}
+          <div class="av-graf-tit">Média por etapa <small>(últimas 3 avaliações, de 0 a 2)</small></div>
+          <div class="av-barras">${AV_ETAPAS.map(e=>{ const v = media(fim, e.k); return `<div class="av-barra"><span>${e.nome}</span><div class="av-trilho"><div class="av-fill" style="width:${v==null?0:v/2*100}%"></div></div><b>${fmt(v)}</b></div>`; }).join('')}</div>
+          <details class="av-tabela"><summary>Ver todas as avaliações</summary>
+            <table class="check-table"><thead><tr><th>Data</th><th>Lead</th>${AV_ETAPAS.map(e=>`<th title="${e.nome}">${e.nome.split(' ')[0]}</th>`).join('')}<th>Total</th></tr></thead>
+            <tbody>${l.slice().reverse().map(r=>`<tr><td>${tzDataCurta(r.data_ref)}</td><td>${escapeHtml(r.lead||'—')}</td>${AV_ETAPAS.map(e=>`<td>${r[e.k]}</td>`).join('')}<td><b>${r.total}</b></td></tr>`).join('')}</tbody></table>
+          </details>` : `<div class="empty-state" style="padding:24px 10px">Nenhuma venda avaliada ainda. Abra uma sessão na Análise Sessões 1:1 e preencha a avaliação.</div>`}
+      </div>`; }).join('')}`;
 }
 function openAnaliseModal(id){
   const a = ANALISE_SESSOES.find(x=>x.id===id);
@@ -14318,15 +14486,20 @@ function openAnaliseModal(id){
           : (t1||t2 ? `${t1? `<div class="num">1</div><div class="txt">${escapeHtml(t1)}</div>` : ''}${t2? `<div class="num">2</div><div class="txt">${escapeHtml(t2)}</div>` : ''}` : `<div class="vazio">${a[v.assistiu]? 'Assistiu, mas ainda não registrou.' : 'Ainda não analisou.'}</div>`)}
         </div>`;
       }).join('')}
+      ${avPode() ? avBlocoHtml(a) : ''}
       <div class="modal-actions">
-        ${(podeLead || minha) ? `<button class="btn-accent" id="an-save">Salvar</button>` : ''}
+        ${(podeLead || minha || avPode()) ? `<button class="btn-accent" id="an-save">Salvar</button>` : ''}
         <button class="btn-outline" id="modal-close-2">Fechar</button>
       </div>
     </div>`;
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  avBind();
   const saveBtn = document.getElementById('an-save');
-  if(saveBtn) saveBtn.addEventListener('click', ()=>{
+  if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+    const av = avPode() ? avColetar(a) : null;
+    if(av && av.erro){ alert(av.erro); return; }
+    if(av){ saveBtn.disabled = true; const ok = await avSalvar(av); saveBtn.disabled = false; if(!ok) return; }
     const campos = {};
     if(podeLead){
       a.leadNome = document.getElementById('an-lead').value.trim();
@@ -14346,7 +14519,7 @@ function openAnaliseModal(id){
       campos[v.campoAp[1]] = a[v.ap[1]];
     }
     /* Só o que esta pessoa pode alterar vai para o banco — e o banco confere de novo (gatilho analise_sessoes_guard). */
-    syncAnaliseUpdateNow(a.id, campos);
+    if(Object.keys(campos).length) syncAnaliseUpdateNow(a.id, campos);
     closeModal();
     renderAnalise();
   });
