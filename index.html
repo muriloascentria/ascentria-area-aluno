@@ -1778,7 +1778,8 @@
   .wf-review-sec{font-size:14px;margin:22px 0 6px;color:var(--accent);}
   .diag-audio-resp{margin-top:6px;}
   .diag-audio-resp .msg-audio,.wf-audio-ok .msg-audio,.wf-review-a .msg-audio{max-width:100%;}
-  .rd-abas{margin:0 0 12px;}
+  .rd-abas{margin:0 0 12px;display:flex;gap:10px;flex-wrap:wrap;}
+  .nps-filtros{gap:8px;}
   .nps-backdrop{position:fixed;inset:0;background:rgba(5,5,10,.72);display:flex;align-items:center;justify-content:center;z-index:330;padding:16px;}
   .nps-card{width:100%;max-width:520px;max-height:92vh;overflow-y:auto;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 18px 44px rgba(0,0,0,.5);}
   .nps-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -13645,10 +13646,19 @@ function renderComunicacao(){
     <p class="section-sub" style="margin-top:2px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
     ${recado || `<div class="tf-vazio" style="padding:14px">O recado do dia é escrito pela administração. Você vê a janela com o recado ao abrir o sistema.</div>`}
     ${checkpointHtml()}
-    ${envioBlocoHtml()}`;
+    ${envioBlocoHtml()}
+    <div class="com-nps" id="com-nps">
+      <h2 class="section-title" style="margin-top:28px">${icon('chart')} NPS dos alunos</h2>
+      ${npsHtmlEquipe()}
+    </div>`;
   bindRecadoPainel();
   bindCheckpoint();
   bindEnvioBloco();
+  const nps = document.getElementById('com-nps');
+  if(nps){
+    nps.querySelectorAll('[data-nps-f]').forEach(b=>b.addEventListener('click', ()=>{ NPS_UI.filtro = b.dataset.npsF; renderComunicacao(); document.getElementById('com-nps')?.scrollIntoView({block:'start'}); }));
+    nps.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+  }
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
@@ -14884,6 +14894,7 @@ async function npsCarregarEquipe(){
   catch(e){ console.error('nps equipe', e); NPS_UI.rows = []; }
   NPS_UI.carregando = false;
   if(currentView==='radar') renderRadar();
+  if(currentView==='comunicacao') renderComunicacao();
 }
 function npsScore(lista){ if(!lista.length) return null; const p = lista.filter(r=>r.nota>=9).length, d = lista.filter(r=>r.nota<=6).length; return Math.round((p - d) / lista.length * 100); }
 function npsHtmlEquipe(){
