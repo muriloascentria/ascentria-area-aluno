@@ -1741,6 +1741,17 @@
   .gtf-tag{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 6px;border-radius:9px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;vertical-align:middle;}
   .gtf-tag .icon{width:11px;height:11px;}
   @media (max-width:560px){ .gtf-form-linha{grid-template-columns:1fr 1fr;} .gtf-form-linha .btn-accent{grid-column:1 / -1;} }
+  .wf-campo-mic{position:relative;}
+  .wf-campo-mic .ps-input{padding-right:56px;width:100%;}
+  .wf-campo-mic.longo textarea{min-height:120px;}
+  .wf-mic-btn{position:absolute;right:8px;bottom:8px;width:42px;height:42px;border-radius:50%;border:0;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  .wf-campo-mic:not(.longo) .wf-mic-btn{top:50%;bottom:auto;transform:translateY(-50%);width:36px;height:36px;}
+  .wf-mic-btn .icon{width:20px;height:20px;}
+  .wf-mic-btn.ouvindo{background:var(--danger);animation:wfPulso 1.2s ease-in-out infinite;}
+  @keyframes wfPulso{0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,.55);}50%{box-shadow:0 0 0 10px rgba(244,63,94,0);}}
+  .wf-mic-dica{display:block;font-size:12px;color:var(--text-mute);line-height:1.45;margin-top:8px;}
+  .wf-mic-dica.destaque{color:var(--text-dim);}
+  .wf-mic-dica.ouvindo{color:var(--danger);font-weight:600;}
   .wf-audio{display:flex;flex-direction:column;gap:8px;margin:12px 0;}
   .wf-audio.destaque{margin:0 0 6px;}
   .wf-mic-area{display:flex;flex-direction:column;gap:6px;}
@@ -5728,123 +5739,66 @@ function wfInputHtml(q, val){
 function wfChaveRascunho(sid){ return 'ascentria-diag-rascunho:'+sid; }
 function wfSalvarRascunho(sid){ try{ localStorage.setItem(wfChaveRascunho(sid), JSON.stringify({ d:wfDraft, p:wfStep, n:wispformFlatQuestions().length })); }catch(e){} }
 function wfLerRascunho(sid, total){ try{ const r = JSON.parse(localStorage.getItem(wfChaveRascunho(sid))||'null'); if(r && Array.isArray(r.d) && r.n===total) return r; }catch(e){} return null; }
-let wfGrav = null;
-const WF_AUDIO_MAX_SEG = 300;
-async function wfGravarIniciar(s){
-  if(wfGrav) return;
-  if(!navigator.mediaDevices || !window.MediaRecorder){ alert('Este navegador não permite gravar áudio. Escreva sua resposta, por favor.'); return; }
-  let stream;
-  try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch(e){ alert('Não foi possível acessar o microfone. Libere a permissão do microfone para o Plat e tente de novo.'); return; }
-  const mime = msgAudioMime();
-  let rec;
-  try{ rec = mime ? new MediaRecorder(stream, {mimeType:mime}) : new MediaRecorder(stream); }
-  catch(e){ try{ rec = new MediaRecorder(stream); }catch(e2){ stream.getTracks().forEach(t=>t.stop()); alert('Este aparelho não conseguiu iniciar a gravação. Tente de novo.'); return; } }
-  const g = { rec, chunks:[], inicio:Date.now(), timer:null, mime: rec.mimeType||mime||'audio/webm', cancelado:false, stream, passo:wfStep, sid:s.id };
-  wfGrav = g;
-  rec.ondataavailable = e=>{ if(e.data && e.data.size) g.chunks.push(e.data); if(e.data && e.data.type && !g.tipoReal) g.tipoReal = e.data.type; };
-  rec.onstop = ()=>setTimeout(()=>wfGravarFinalizou(g, s), 0);
-  if(msgAparelhoApple() || msgSafari()) rec.start(); else rec.start(1000);
-  g.timer = setInterval(()=>{
-    const seg = Math.floor((Date.now()-g.inicio)/1000);
-    const t = document.getElementById('wf-grav-tempo'); if(t) t.textContent = msgAudioDur(seg);
-    if(seg >= WF_AUDIO_MAX_SEG) wfGravarParar(false);
-  }, 250);
-  wfGravarUI(true);
-  wfTranscreverIniciar(g);
+/* Microfone igual ao do WhatsApp: a pessoa toca (ou segura) o microfone, fala, e o texto vai
+   aparecendo no campo da resposta. Nada de áudio é guardado: só o texto, que ela pode corrigir antes
+   de seguir. Usa o reconhecimento de voz do próprio navegador, em português. */
+let wfDitado = null;
+function wfDitadoDisponivel(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+function wfDitarUI(){
+  const b = document.getElementById('wf-mic'), d = document.getElementById('wf-mic-dica');
+  const on = !!(wfDitado && wfDitado.ativo);
+  if(b){ b.classList.toggle('ouvindo', on); b.title = on ? 'Parar' : 'Falar a resposta'; }
+  if(d){ d.classList.toggle('ouvindo', on); if(on) d.textContent = 'Ouvindo… fale à vontade. Toque no microfone de novo para parar.'; else if(d.dataset.padrao) d.textContent = d.dataset.padrao; }
 }
-/* Transcrição automática: enquanto a pessoa fala, o reconhecimento de voz do próprio navegador
-   escreve o texto no campo da resposta (em português). O áudio continua sendo gravado e salvo
-   junto. Onde o aparelho não oferece esse recurso, fica só o áudio, como antes, com um aviso. */
-function wfTranscricaoDisponivel(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
-function wfTranscreverIniciar(g){
-  const nota = document.getElementById('wf-transc-nota');
+function wfDitarIniciar(s){
+  if(wfDitado && wfDitado.ativo) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ if(nota){ nota.hidden = false; nota.textContent = 'Este aparelho não transcreve automaticamente. O áudio será salvo e você pode escrever, se quiser.'; } return; }
+  if(!SR){ alert('Este navegador não transforma voz em texto. Use o microfone do teclado do celular, ou escreva sua resposta.'); return; }
   const campo = document.getElementById('wf-field');
-  g.base = campo ? campo.value.replace(/\s+$/,'') : diagParse(wfDraft[g.passo]).texto;
-  g.finais = '';
+  const d = { ativo:true, passo:wfStep, sid:s.id, base: campo ? campo.value.replace(/\s+$/,'') : '', finais:'' };
+  wfDitado = d;
   const montar = (interino)=>{
-    let t = [g.base, g.finais.trim(), (interino||'').trim()].filter(Boolean).join(' ');
-    t = t.replace(/\s{2,}/g,' ');
-    if(!g.base && t) t = t.charAt(0).toUpperCase() + t.slice(1);
+    let t = [d.base, d.finais.trim(), (interino||'').trim()].filter(Boolean).join(' ').replace(/\s{2,}/g,' ');
+    if(!d.base && t) t = t.charAt(0).toUpperCase() + t.slice(1);
     return t;
   };
   const iniciar = ()=>{
-    let r;
-    try{ r = new SR(); }catch(e){ return; }
+    let r; try{ r = new SR(); }catch(e){ d.ativo = false; wfDitarUI(); return; }
     r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
     r.onresult = (ev)=>{
       let interino = '';
       for(let i = ev.resultIndex; i < ev.results.length; i++){
         const txt = ev.results[i][0].transcript;
-        if(ev.results[i].isFinal) g.finais += ' ' + txt; else interino += ' ' + txt;
+        if(ev.results[i].isFinal) d.finais += ' ' + txt; else interino += ' ' + txt;
       }
       const texto = montar(interino);
       const c = document.getElementById('wf-field');
-      if(c && wfStep===g.passo){ c.value = texto; c.scrollTop = c.scrollHeight; }
-      g.transcrito = texto;
+      if(c && wfStep===d.passo){ c.value = texto; if(c.tagName==='TEXTAREA') c.scrollTop = c.scrollHeight; }
+      wfDraft[d.passo] = texto; wfSalvarRascunho(d.sid);
     };
     r.onerror = (ev)=>{
       const e = ev && ev.error;
-      if(e==='not-allowed' || e==='service-not-allowed' || e==='audio-capture' || e==='language-not-supported'){
-        g.srParou = true;
-        const n = document.getElementById('wf-transc-nota'); if(n){ n.hidden = false; n.textContent = 'A transcrição automática não funcionou neste aparelho. O áudio está sendo gravado normalmente.'; }
+      if(e==='not-allowed' || e==='service-not-allowed' || e==='audio-capture'){
+        d.ativo = false; wfDitarUI();
+        alert('Não foi possível usar o microfone. Libere a permissão do microfone para o Plat, ou escreva sua resposta.');
       }
     };
-    /* O reconhecimento encerra sozinho depois de uma pausa: enquanto a gravação continua, ele recomeça. */
-    r.onend = ()=>{ if(wfGrav===g && !g.srParou && !g.fim) iniciar(); };
-    g.sr = r;
-    try{ r.start(); if(nota){ nota.hidden = false; nota.textContent = 'Transcrevendo enquanto você fala. Depois você pode corrigir o texto.'; } }catch(e){}
+    /* O reconhecimento para sozinho depois de uma pausa: enquanto o microfone estiver ligado, recomeça. */
+    r.onend = ()=>{ if(d.ativo && wfDitado===d) iniciar(); else wfDitarUI(); };
+    d.r = r;
+    try{ r.start(); }catch(e){}
   };
   iniciar();
+  wfDitarUI();
 }
-function wfTranscreverParar(g){
-  if(!g || !g.sr) return;
-  g.srParou = true;
-  try{ g.sr.stop(); }catch(e){}
-}
-function wfGravarUI(gravando, status){
-  const box = document.getElementById('wf-grav'), mic = document.getElementById('wf-mic-area');
-  if(box) box.hidden = !gravando && !status;
-  if(mic) mic.hidden = gravando || !!status;
-  const st = document.getElementById('wf-grav-status'); if(st){ st.hidden = !status; st.textContent = status||''; }
-  const ctl = document.getElementById('wf-grav-ctl'); if(ctl) ctl.hidden = !gravando;
-}
-function wfGravarParar(cancelar){
-  const g = wfGrav; if(!g) return;
-  g.cancelado = !!cancelar; g.fim = Date.now();
-  clearInterval(g.timer);
-  wfTranscreverParar(g);
-  wfGravarUI(false, cancelar ? '' : 'Salvando o áudio…');
-  try{ g.rec.stop(); }catch(e){ wfGravarFinalizou(g); }
-}
-async function wfGravarFinalizou(g, s){
-  if(!g || g.finalizado) return; g.finalizado = true;
-  if(wfGrav===g) wfGrav = null;
-  try{ g.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
-  if(g.cancelado){ const c = document.getElementById('wf-field'); if(c && g.base!==undefined && wfStep===g.passo) c.value = g.base; wfGravarUI(false); return; }
-  const seg = Math.max(1, Math.round(((g.fim||Date.now())-g.inicio)/1000));
-  if(!g.chunks.length){
-    /* Alguns celulares não deixam gravar e transcrever ao mesmo tempo: se o texto saiu, ele fica como resposta. */
-    if(g.transcrito){ wfDraft[g.passo] = diagMontar(g.transcrito, diagParse(wfDraft[g.passo]).audio); wfSalvarRascunho(g.sid); renderCurrentView(); return; }
-    wfGravarUI(false); alert('O áudio não foi gravado. Confira a permissão do microfone e tente de novo.'); return;
-  }
-  if(g.tipoReal && !/^audio\/(webm|mp4|ogg|aac|mpeg|x-m4a)/.test(g.mime)) g.mime = g.tipoReal;
-  const blob = new Blob(g.chunks, {type:g.mime});
-  if(blob.size > 20*1024*1024){ wfGravarUI(false); alert('O áudio ficou grande demais. Grave um pouco mais curto.'); return; }
-  const ext = /mp4/.test(g.mime) ? 'm4a' : /ogg/.test(g.mime) ? 'ogg' : 'webm';
-  const eu = currentUser.id;
-  const path = `${eu}/a-${eu}/diag-${Date.now()}.${ext}`;
-  const { error } = await sb.storage.from('mensagens-audio').upload(path, blob, {upsert:false, contentType:g.mime});
-  if(error){ console.error('diag audio', error); wfGravarUI(false); alert('Não foi possível salvar o áudio: '+(error.message||'')+'. Tente de novo.'); return; }
-  try{ await msgAudioUrl(path); }catch(e){}
-  if(g.sr) await new Promise(r=>setTimeout(r, 400));
-  const campo = document.getElementById('wf-field');
-  const textoAtual = (campo && wfStep===g.passo) ? campo.value : (g.transcrito || diagParse(wfDraft[g.passo]).texto);
-  wfDraft[g.passo] = diagMontar(textoAtual, { path, seg, mime:g.mime });
-  wfSalvarRascunho(g.sid);
-  renderCurrentView();
+function wfDitarParar(){
+  const d = wfDitado; if(!d) return;
+  d.ativo = false;
+  try{ d.r && d.r.stop(); }catch(e){}
+  const c = document.getElementById('wf-field');
+  if(c && wfStep===d.passo){ wfDraft[d.passo] = c.value.trim(); wfSalvarRascunho(d.sid); }
+  wfDitado = null;
+  wfDitarUI();
 }
 function renderWispformWizard(s){
   const flat = wispformFlatQuestions();
@@ -5886,42 +5840,32 @@ function renderWispformWizard(s){
   const pct = Math.round(((wfStep)/total)*100);
   const aberta = q.type==='short' || q.type==='long';
   const atual = diagParse(wfDraft[wfStep]);
-  const audioPrimeiro = q.origem==='abertura' || q.type==='long';
-  const campoTexto = q.type==='long'
-    ? `<textarea class="ps-input" id="wf-field" rows="4" placeholder="${atual.audio ? 'Quer complementar por escrito? (opcional)' : 'Escreva sua resposta...'}">${escapeHtml(atual.texto)}</textarea>`
-    : `<input class="ps-input" type="text" id="wf-field" value="${escapeAttr(atual.texto)}" placeholder="${atual.audio ? 'Quer complementar por escrito? (opcional)' : 'Escreva sua resposta...'}">`;
-  const audioHtml = `
-    <div class="wf-audio ${audioPrimeiro?'destaque':''}">
-      ${atual.audio ? `
-        <div class="wf-audio-ok">
-          <div class="wf-audio-ok-hd">${icon('check','tiny')} Sua resposta em áudio${atual.texto ? ' e o texto transcrito logo abaixo (pode corrigir)' : ''}</div>
-          ${diagAudioHtml(atual.audio, s.id)}
-          <div class="wf-audio-acoes"><button type="button" class="btn-mini" id="wf-regravar">${icon('mic','tiny')} Gravar de novo</button><button type="button" class="btn-mini danger" id="wf-audio-del">${icon('trash','tiny')} Apagar áudio</button></div>
-        </div>` : `
-        <div id="wf-mic-area" class="wf-mic-area">
-          <button type="button" class="wf-mic" id="wf-mic">${icon('mic')} <span>${audioPrimeiro ? 'Responder por áudio' : 'Prefere falar? Grave um áudio'}</span></button>
-          <small>${audioPrimeiro ? 'Essa é uma pergunta para responder com calma. Fale à vontade, como se estivesse conversando com a gente (até 5 minutos).' : 'Você pode responder falando, em vez de escrever (até 5 minutos).'}${wfTranscricaoDisponivel() ? ' O que você falar já aparece escrito no campo da resposta.' : ''}</small>
-        </div>`}
-      <div class="wf-grav" id="wf-grav" hidden>
-        <div id="wf-grav-ctl"><span class="msg-grav-ponto"></span><span>Gravando</span> <b id="wf-grav-tempo">0:00</b>
-          <button type="button" class="btn-outline" id="wf-grav-cancelar">Cancelar</button>
-          <button type="button" class="btn-accent" id="wf-grav-parar">${icon('check','tiny')} Parar e salvar</button></div>
-        <span class="wf-grav-status" id="wf-grav-status" hidden></span>
-        <small class="wf-transc-nota" id="wf-transc-nota" hidden></small>
-      </div>
-    </div>`;
+  const destaque = q.origem==='abertura' || q.type==='long';
+  const temDitado = wfDitadoDisponivel();
+  const dicaPadrao = temDitado
+    ? (destaque ? 'Prefere falar? Toque no microfone e responda com calma, como se estivesse conversando com a gente. O texto aparece aqui e você pode corrigir antes de seguir.' : 'Toque no microfone para falar em vez de escrever.')
+    : 'Prefere falar? Use o microfone do teclado do seu celular para ditar a resposta.';
+  const campoTexto = `
+    <div class="wf-campo-mic ${q.type==='long'?'longo':''}">
+      ${q.type==='long'
+        ? `<textarea class="ps-input" id="wf-field" rows="5" placeholder="Escreva ou fale sua resposta...">${escapeHtml(atual.texto)}</textarea>`
+        : `<input class="ps-input" type="text" id="wf-field" value="${escapeAttr(atual.texto)}" placeholder="Escreva ou fale sua resposta...">`}
+      ${temDitado ? `<button type="button" class="wf-mic-btn" id="wf-mic" title="Falar a resposta" aria-label="Falar a resposta">${icon('mic')}</button>` : ''}
+    </div>
+    <small class="wf-mic-dica ${destaque?'destaque':''}" id="wf-mic-dica" data-padrao="${escapeAttr(dicaPadrao)}">${escapeHtml(dicaPadrao)}</small>
+    ${atual.audio ? `<div class="diag-audio-resp">${diagAudioHtml(atual.audio, s.id)}</div>` : ''}`;
   const secAtual = q.secao + 1;
   root.innerHTML = `
     <div class="wf-shell">
       <h1 style="margin-bottom:6px">Diagnóstico de Abertura</h1>
-      <p class="section-sub" style="margin-top:-4px;margin-bottom:22px">Antes de começar, conte para a gente sobre você e o seu consultório. É assim que a equipe entende o seu momento e monta o seu plano dentro do Método Essência. Nas perguntas abertas, você pode responder por áudio.</p>
+      <p class="section-sub" style="margin-top:-4px;margin-bottom:22px">Antes de começar, conte para a gente sobre você e o seu consultório. É assim que a equipe entende o seu momento e monta o seu plano dentro do Método Essência. Nas perguntas abertas, você pode falar a resposta pelo microfone em vez de escrever.</p>
       <div class="wf-progress"><div class="wf-progress-fill" style="width:${pct}%"></div></div>
       <div class="wf-step-label">Parte ${secAtual} de ${DIAG_SECOES.length} · ${escapeHtml(q.cat)} · pergunta ${wfStep+1} de ${total}</div>
       <div class="wf-question">${escapeHtml(q.text)}</div>
       <div class="wf-input">
-        ${aberta ? (audioPrimeiro ? audioHtml + `<div class="wf-ou">${atual.audio ? '' : 'ou escreva'}</div>` + campoTexto : campoTexto + audioHtml) : wfInputHtml(q, wfDraft[wfStep])}
+        ${aberta ? campoTexto : wfInputHtml(q, wfDraft[wfStep])}
       </div>
-      <div class="wf-error" id="wf-error" style="display:none">Responda essa pergunta para continuar${aberta ? ' (por escrito ou por áudio)' : ''}.</div>
+      <div class="wf-error" id="wf-error" style="display:none">Responda essa pergunta para continuar.</div>
       <div class="wf-nav">
         <button class="btn-outline" id="wf-back" ${wfStep===0?'disabled':''}>${icon('back')} Voltar</button>
         <button class="btn-primary" id="wf-next" style="width:auto;padding:12px 28px">${wfStep===total-1?'Revisar respostas':'Próxima'}</button>
@@ -5950,22 +5894,29 @@ function renderWispformWizard(s){
     });
   }
   const f = document.getElementById('wf-field'); if(f && aberta) f.addEventListener('input', ()=>{ wfDraft[wfStep] = diagMontar(f.value, diagParse(wfDraft[wfStep]).audio); wfSalvarRascunho(s.id); });
-  const mic = document.getElementById('wf-mic'); if(mic) mic.addEventListener('click', ()=>{ captureField(); wfGravarIniciar(s); });
-  const reg = document.getElementById('wf-regravar'); if(reg) reg.addEventListener('click', ()=>{ captureField(); wfGravarIniciar(s); });
-  const del = document.getElementById('wf-audio-del'); if(del) del.addEventListener('click', ()=>{
-    if(!confirm('Apagar o áudio desta resposta?')) return;
-    const el = document.getElementById('wf-field');
-    wfDraft[wfStep] = diagMontar(el ? el.value : atual.texto, null); wfSalvarRascunho(s.id); renderCurrentView();
-  });
-  const gp = document.getElementById('wf-grav-parar'); if(gp) gp.addEventListener('click', ()=>wfGravarParar(false));
-  const gc = document.getElementById('wf-grav-cancelar'); if(gc) gc.addEventListener('click', ()=>wfGravarParar(true));
+  const mic = document.getElementById('wf-mic');
+  if(mic){
+    /* Toque liga/desliga; segurar e soltar também funciona, como no WhatsApp. */
+    let apertouEm = 0, ligouAgora = false;
+    mic.addEventListener('pointerdown', e=>{
+      e.preventDefault(); apertouEm = Date.now(); ligouAgora = false;
+      if(!(wfDitado && wfDitado.ativo)){ wfDitarIniciar(s); ligouAgora = true; }
+    });
+    mic.addEventListener('pointerup', ()=>{
+      const segurou = Date.now() - apertouEm > 600;
+      if(ligouAgora){ if(segurou) wfDitarParar(); }
+      else wfDitarParar();
+    });
+    mic.addEventListener('click', e=>e.preventDefault());
+  }
   document.getElementById('wf-back').addEventListener('click',()=>{
-    if(wfStep===0 || wfGrav) return;
+    if(wfStep===0) return;
+    if(wfDitado) wfDitarParar();
     captureField();
     wfStep--; wfSalvarRascunho(s.id); renderCurrentView();
   });
   document.getElementById('wf-next').addEventListener('click',()=>{
-    if(wfGrav){ alert('Termine a gravação antes de seguir: toque em "Parar e salvar".'); return; }
+    if(wfDitado) wfDitarParar();
     captureField();
     const r = diagParse(wfDraft[wfStep]);
     if(!r.texto && !r.audio){ document.getElementById('wf-error').style.display='block'; return; }
