@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Ascentria · Método Essência — Área do Aluno</title>
+<title>Essência PLAT</title>
 <!-- App de celular: o mesmo sistema, instalado na tela inicial. Ver sw.js e manifest.webmanifest. -->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#171813">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Essência">
+<meta name="apple-mobile-web-app-title" content="Essência PLAT">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABDklEQVR42u2QzUrDUBCFz+Qm95LExmqqVFSoUlQKUle2IOLOp3Dp3hfyIdz7AiK4EqELcaWooBRN0jR/d1y01ijudNlve+bMnDPAlD8jAABEAABVWam78xuHTm3rSGfRVZFFyadWnitjAACY4dZaXa++c5pnwW2RBtc6j+ORVjIyw1SenFncPpjsBAB7ttEwHb+TBg/nJJSbho/3ukgZRADz6JJQ5Mw1O0K6zUH/7iyLX8JJjOrq3gmR+L2jrFhurbXrLXeP7era+k/dBABikgw9zmRAWK4lbX/Jsv02yFDp4Pkieu1dgnUpOH9VcPzNtnQW9rXO3wyCYuY4T95vkvCplw/7w29PHFea8o98AAChWBv0sPd7AAAAAElFTkSuQmCC">
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACkElEQVR42u1UTWgTQRidmd1s9scku5uYNDYG29gQgi2RBqEVFKXUFhShiKh40JMHz14VvHoQPBQ8KHgUxJPx4qHeGoq0lVKJRio1piTWJE272ST7Nx6S1CZNmvTsvsNc5vv2e9+b9xYAEyZMmPjfQXS8gRAAAAAirMjujd7ij5/94PBGnyCSzVal9CcA4OGnwf09ZMdCjAHt8Pt433hcU+RVKft5SlOkjOA/l5ZziVdqpVCukcC9TK7VYdw7S84ZGu0L3/jJCIGhxpW9b/SKK3h1HhEUPOzWiKAgKw6FD36C+uasGBwRT5xf0hRpy1DlBYYfuODwjb8mKdtwYX1uQldlresT7JGb4vpE5+BEHFnoY+XCWqxVmyZQnJt3BaYLW+l4BCGLg2RdF4GhF6vSxrtyYS3ZVfL6EgAAAAkK2r3Ruww/8FTKLl+SNlfjXXoJ4A7OrNi90WsHv2d3g3HOUMQdvv7dFZh+SdI83am3yYSsMzSGEbDuZBbf1D7YYjKMW0wH6yUNg0HACIGg7eipFxCRrp3M0mU5n0y0KtORAOccmpXzyXsYG/UGo70CcA8ZXIsqIwbOsGLoGUSkW84l7pT+fPmIDe1fT4cENBFAFjailH4vAwj3ZxY3DrwrAsV5eFY4edtq8z3CWE3Jua/3S7lvcWyouHnrzr5pImAY6hbFeSJKKTvXjjFEBLAwLsHq8E/SR/ofEBZ2WJU3nxfT86cr26lfu4Mag3vIfdOaDD8wyPePrZS3U4+VUva9oVeLEJE0abUHSUactFj5KQAJQVOKsWoxNVspri/qaklrl4CefxP7Y+gRbO6RhyQt3IQE6QGGUdFVeUGt5N9WpY2YImV+6Kqst/eECRMmTJg4PP4CZ7n8I7/53tEAAAAASUVORK5CYII=">
@@ -4962,6 +4962,7 @@ function setupNav(){
   });
   document.getElementById('logout-btn').innerHTML = `${icon('logout')}<span>Sair</span>`;
   document.getElementById('logout-btn').addEventListener('click', async ()=>{
+    try{ localStorage.removeItem(PT_CHAVE); }catch(e){}
     await sb.auth.signOut();
     currentUser = null; currentUserRole = null; currentStudentId = null; STAFF_BLOQUEIOS = new Set(); GT.dados = null; GT.pessoa = null;
     wfDraft = null; wfStep = 0; wfPhase = 'fill';
@@ -4978,7 +4979,7 @@ function setupNav(){
   });
   document.addEventListener('click',()=>document.getElementById('profile-dropdown').classList.remove('open'));
   document.querySelectorAll('#role-toggle [data-role]').forEach(btn=>{
-    btn.addEventListener('click',()=>setRole(btn.dataset.role));
+    btn.addEventListener('click',()=>ptCliqueToggle(btn.dataset.role));
   });
   document.getElementById('open-cadastro').addEventListener('click',(e)=>{
     e.stopPropagation();
@@ -5172,6 +5173,7 @@ function setRoleVendas(){
   document.getElementById('open-cadastro').innerHTML = `${icon('idcard')}<span>Meus Dados</span>`;
   renderProfile();
   if(!permitidas.includes(currentView)) goTo('equipe');
+  ptAjustarToggle();
 }
 /* O nome da tela na barra de cima so aparece se couber inteiro. Em celular estreito, com o
    seletor de visualizacao aberto, nao cabe — e meia letra cortada so atrapalha. */
@@ -5187,6 +5189,62 @@ window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 2
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
 const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
+/* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
+   No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
+   (uma por tipo de acesso), com as permissões reais de cada uma. A sessão do Murilo fica guardada neste
+   navegador e "Equipe" volta para ela sem pedir senha. Quem gera o acesso é a função
+   trocar-perfil-teste, que só atende o Murilo e as próprias contas de teste. */
+const PT_CHAVE = 'ascentria-sessao-murilo';
+const PT_NOMES = { aluno:'Teste Aluno', cs:'Teste CS', consultora:'Teste Consultora', editor:'Teste Editor', staff:'sua conta' };
+function ptSessaoMurilo(){ try{ return JSON.parse(localStorage.getItem(PT_CHAVE)||'null'); }catch(e){ return null; } }
+function ptEmTeste(){ return !!(currentUserProfile && currentUserProfile.contaTeste) && !!ptSessaoMurilo(); }
+function ptSouMuriloReal(){ return !!(currentUser && currentUser.id===GT_MURILO_UID); }
+function ptPerfilAtual(){ return currentUserRole==='aluno' ? 'aluno' : currentUserRole==='vendas' ? 'consultora' : currentUserRole==='editor' ? 'editor' : 'cs'; }
+function ptAjustarToggle(){
+  if(!ptEmTeste()) return;
+  const tg = document.getElementById('role-toggle');
+  tg.style.display = 'flex';
+  ['role-consultora','role-editor','role-cs'].forEach(id=>{ document.getElementById(id).style.display = ''; });
+  const atual = ptPerfilAtual();
+  tg.querySelectorAll('[data-role]').forEach(b=>{ const on = b.dataset.role===atual; b.classList.toggle('active', on); b.classList.toggle('staff-active', on && atual!=='aluno'); });
+  setTimeout(ajustarTituloTopo, 0);
+}
+function ptCliqueToggle(role){
+  if(ptEmTeste()){ if(role!==ptPerfilAtual()) ptTrocar(role); return; }
+  if(ptSouMuriloReal() && role!=='staff'){ ptTrocar(role); return; }
+  setRole(role);
+}
+async function ptTrocar(perfil){
+  const aviso = document.createElement('div');
+  aviso.className = 'recado-backdrop';
+  aviso.innerHTML = `<div class="recado-card" style="text-align:center"><strong>Entrando como ${escapeHtml(PT_NOMES[perfil]||perfil)}…</strong></div>`;
+  document.body.appendChild(aviso);
+  try{
+    if(perfil==='staff'){
+      const salvo = ptSessaoMurilo();
+      if(!salvo) throw new Error('sessão do Murilo não encontrada');
+      const { error } = await sb.auth.setSession({ access_token:salvo.access_token, refresh_token:salvo.refresh_token });
+      if(error) throw error;
+      try{ localStorage.removeItem(PT_CHAVE); }catch(e){}
+      location.reload(); return;
+    }
+    if(ptSouMuriloReal()){
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session) throw new Error('sem sessão');
+      localStorage.setItem(PT_CHAVE, JSON.stringify({ access_token:session.access_token, refresh_token:session.refresh_token }));
+    }
+    const { data, error } = await sb.functions.invoke('trocar-perfil-teste', { body:{ perfil } });
+    if(error || !data || !data.token_hash) throw (error || new Error((data && data.erro) || 'sem acesso'));
+    const r = await sb.auth.verifyOtp({ token_hash:data.token_hash, type:'magiclink' });
+    if(r.error) throw r.error;
+    location.reload();
+  }catch(e){
+    console.error('trocar perfil', e);
+    aviso.remove();
+    if(perfil==='staff') alert('Não consegui voltar para a sua conta automaticamente. Saia e entre de novo com o seu e-mail e senha.');
+    else alert('Não consegui trocar de perfil agora. Tente de novo em instantes.');
+  }
+}
 function setRole(role){
   if(currentUserRole==='vendas' || currentUserRole==='editor'){ setRoleVendas(); return; }
   /* "CS" é a Equipe Interna com as áreas que o Customer Success não abre escondidas. */
@@ -5308,6 +5366,7 @@ function setRole(role){
   if(role==='aluno' && VIEWS_EQUIPE.includes(currentView)){ goTo(isCursoView ? 'aulas' : 'inicio'); }
   if(role==='aluno' && isCursoView && ['ranking','painel','planner','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
   if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','planner','sessoes','metas'].includes(currentView)){ goTo('equipe'); }
+  ptAjustarToggle();
 }
 
 function renderProfile(){
@@ -15614,7 +15673,7 @@ function exportFinFaturamentoPDF(chartYear){
     <td>${formatBRL(r.faturamento)}</td>
     <td>${formatBRL(r.faturamentoTotalMes)}</td>
   </tr>`).join('');
-  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Faturamento — Ascentria</title>
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Faturamento — Essência PLAT</title>
     <style>
       @page{ margin:24mm 16mm; }
       body{ font-family:Arial,Helvetica,sans-serif; color:#1a1a1a; margin:0; padding:0 4mm; }
