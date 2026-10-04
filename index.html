@@ -1756,6 +1756,8 @@
   .wf-grav #wf-grav-ctl[hidden]{display:none;}
   .wf-grav #wf-grav-ctl .btn-accent{display:inline-flex;align-items:center;gap:5px;}
   .wf-grav-status{font-size:13px;color:var(--text-dim);}
+  .wf-transc-nota{font-size:12px;color:var(--text-dim);}
+  .wf-transc-nota[hidden]{display:none;}
   .wf-audio-ok{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;border:1px solid var(--success);background:var(--success-soft);}
   .wf-audio-ok-hd{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--success);}
   .wf-audio-acoes{display:flex;gap:8px;flex-wrap:wrap;}
@@ -5749,6 +5751,58 @@ async function wfGravarIniciar(s){
     if(seg >= WF_AUDIO_MAX_SEG) wfGravarParar(false);
   }, 250);
   wfGravarUI(true);
+  wfTranscreverIniciar(g);
+}
+/* Transcrição automática: enquanto a pessoa fala, o reconhecimento de voz do próprio navegador
+   escreve o texto no campo da resposta (em português). O áudio continua sendo gravado e salvo
+   junto. Onde o aparelho não oferece esse recurso, fica só o áudio, como antes, com um aviso. */
+function wfTranscricaoDisponivel(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+function wfTranscreverIniciar(g){
+  const nota = document.getElementById('wf-transc-nota');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ if(nota){ nota.hidden = false; nota.textContent = 'Este aparelho não transcreve automaticamente. O áudio será salvo e você pode escrever, se quiser.'; } return; }
+  const campo = document.getElementById('wf-field');
+  g.base = campo ? campo.value.replace(/\s+$/,'') : diagParse(wfDraft[g.passo]).texto;
+  g.finais = '';
+  const montar = (interino)=>{
+    let t = [g.base, g.finais.trim(), (interino||'').trim()].filter(Boolean).join(' ');
+    t = t.replace(/\s{2,}/g,' ');
+    if(!g.base && t) t = t.charAt(0).toUpperCase() + t.slice(1);
+    return t;
+  };
+  const iniciar = ()=>{
+    let r;
+    try{ r = new SR(); }catch(e){ return; }
+    r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
+    r.onresult = (ev)=>{
+      let interino = '';
+      for(let i = ev.resultIndex; i < ev.results.length; i++){
+        const txt = ev.results[i][0].transcript;
+        if(ev.results[i].isFinal) g.finais += ' ' + txt; else interino += ' ' + txt;
+      }
+      const texto = montar(interino);
+      const c = document.getElementById('wf-field');
+      if(c && wfStep===g.passo){ c.value = texto; c.scrollTop = c.scrollHeight; }
+      g.transcrito = texto;
+    };
+    r.onerror = (ev)=>{
+      const e = ev && ev.error;
+      if(e==='not-allowed' || e==='service-not-allowed' || e==='audio-capture' || e==='language-not-supported'){
+        g.srParou = true;
+        const n = document.getElementById('wf-transc-nota'); if(n){ n.hidden = false; n.textContent = 'A transcrição automática não funcionou neste aparelho. O áudio está sendo gravado normalmente.'; }
+      }
+    };
+    /* O reconhecimento encerra sozinho depois de uma pausa: enquanto a gravação continua, ele recomeça. */
+    r.onend = ()=>{ if(wfGrav===g && !g.srParou && !g.fim) iniciar(); };
+    g.sr = r;
+    try{ r.start(); if(nota){ nota.hidden = false; nota.textContent = 'Transcrevendo enquanto você fala. Depois você pode corrigir o texto.'; } }catch(e){}
+  };
+  iniciar();
+}
+function wfTranscreverParar(g){
+  if(!g || !g.sr) return;
+  g.srParou = true;
+  try{ g.sr.stop(); }catch(e){}
 }
 function wfGravarUI(gravando, status){
   const box = document.getElementById('wf-grav'), mic = document.getElementById('wf-mic-area');
@@ -5761,6 +5815,7 @@ function wfGravarParar(cancelar){
   const g = wfGrav; if(!g) return;
   g.cancelado = !!cancelar; g.fim = Date.now();
   clearInterval(g.timer);
+  wfTranscreverParar(g);
   wfGravarUI(false, cancelar ? '' : 'Salvando o áudio…');
   try{ g.rec.stop(); }catch(e){ wfGravarFinalizou(g); }
 }
@@ -5768,9 +5823,13 @@ async function wfGravarFinalizou(g, s){
   if(!g || g.finalizado) return; g.finalizado = true;
   if(wfGrav===g) wfGrav = null;
   try{ g.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
-  if(g.cancelado){ wfGravarUI(false); return; }
+  if(g.cancelado){ const c = document.getElementById('wf-field'); if(c && g.base!==undefined && wfStep===g.passo) c.value = g.base; wfGravarUI(false); return; }
   const seg = Math.max(1, Math.round(((g.fim||Date.now())-g.inicio)/1000));
-  if(!g.chunks.length){ wfGravarUI(false); alert('O áudio não foi gravado. Confira a permissão do microfone e tente de novo.'); return; }
+  if(!g.chunks.length){
+    /* Alguns celulares não deixam gravar e transcrever ao mesmo tempo: se o texto saiu, ele fica como resposta. */
+    if(g.transcrito){ wfDraft[g.passo] = diagMontar(g.transcrito, diagParse(wfDraft[g.passo]).audio); wfSalvarRascunho(g.sid); renderCurrentView(); return; }
+    wfGravarUI(false); alert('O áudio não foi gravado. Confira a permissão do microfone e tente de novo.'); return;
+  }
   if(g.tipoReal && !/^audio\/(webm|mp4|ogg|aac|mpeg|x-m4a)/.test(g.mime)) g.mime = g.tipoReal;
   const blob = new Blob(g.chunks, {type:g.mime});
   if(blob.size > 20*1024*1024){ wfGravarUI(false); alert('O áudio ficou grande demais. Grave um pouco mais curto.'); return; }
@@ -5780,8 +5839,9 @@ async function wfGravarFinalizou(g, s){
   const { error } = await sb.storage.from('mensagens-audio').upload(path, blob, {upsert:false, contentType:g.mime});
   if(error){ console.error('diag audio', error); wfGravarUI(false); alert('Não foi possível salvar o áudio: '+(error.message||'')+'. Tente de novo.'); return; }
   try{ await msgAudioUrl(path); }catch(e){}
+  if(g.sr) await new Promise(r=>setTimeout(r, 400));
   const campo = document.getElementById('wf-field');
-  const textoAtual = (campo && wfStep===g.passo) ? campo.value : diagParse(wfDraft[g.passo]).texto;
+  const textoAtual = (campo && wfStep===g.passo) ? campo.value : (g.transcrito || diagParse(wfDraft[g.passo]).texto);
   wfDraft[g.passo] = diagMontar(textoAtual, { path, seg, mime:g.mime });
   wfSalvarRascunho(g.sid);
   renderCurrentView();
@@ -5834,19 +5894,20 @@ function renderWispformWizard(s){
     <div class="wf-audio ${audioPrimeiro?'destaque':''}">
       ${atual.audio ? `
         <div class="wf-audio-ok">
-          <div class="wf-audio-ok-hd">${icon('check','tiny')} Sua resposta em áudio</div>
+          <div class="wf-audio-ok-hd">${icon('check','tiny')} Sua resposta em áudio${atual.texto ? ' e o texto transcrito logo abaixo (pode corrigir)' : ''}</div>
           ${diagAudioHtml(atual.audio, s.id)}
           <div class="wf-audio-acoes"><button type="button" class="btn-mini" id="wf-regravar">${icon('mic','tiny')} Gravar de novo</button><button type="button" class="btn-mini danger" id="wf-audio-del">${icon('trash','tiny')} Apagar áudio</button></div>
         </div>` : `
         <div id="wf-mic-area" class="wf-mic-area">
           <button type="button" class="wf-mic" id="wf-mic">${icon('mic')} <span>${audioPrimeiro ? 'Responder por áudio' : 'Prefere falar? Grave um áudio'}</span></button>
-          <small>${audioPrimeiro ? 'Essa é uma pergunta para responder com calma. Fale à vontade, como se estivesse conversando com a gente (até 5 minutos).' : 'Você pode responder falando, em vez de escrever (até 5 minutos).'}</small>
+          <small>${audioPrimeiro ? 'Essa é uma pergunta para responder com calma. Fale à vontade, como se estivesse conversando com a gente (até 5 minutos).' : 'Você pode responder falando, em vez de escrever (até 5 minutos).'}${wfTranscricaoDisponivel() ? ' O que você falar já aparece escrito no campo da resposta.' : ''}</small>
         </div>`}
       <div class="wf-grav" id="wf-grav" hidden>
         <div id="wf-grav-ctl"><span class="msg-grav-ponto"></span><span>Gravando</span> <b id="wf-grav-tempo">0:00</b>
           <button type="button" class="btn-outline" id="wf-grav-cancelar">Cancelar</button>
           <button type="button" class="btn-accent" id="wf-grav-parar">${icon('check','tiny')} Parar e salvar</button></div>
         <span class="wf-grav-status" id="wf-grav-status" hidden></span>
+        <small class="wf-transc-nota" id="wf-transc-nota" hidden></small>
       </div>
     </div>`;
   const secAtual = q.secao + 1;
