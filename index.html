@@ -14714,6 +14714,7 @@ function reuAtaHtml(r){
     <div class="reu-ata-cab"><div><span>Reunião</span><b>${escapeHtml(r.titulo)}</b></div><div><span>Data</span><b>${escapeHtml(reuDataTxt(r.data))}</b></div><div><span>Participantes</span><b>${escapeHtml(part.join(', ')||'—')}</b></div></div>
     ${a.resumo ? `<h4>Resumo</h4><p>${escapeHtml(a.resumo)}</p>` : ''}
     ${(a.pautas||[]).length ? `<h4>Assuntos tratados</h4>${a.pautas.map(p=>`<div class="reu-pauta-ata"><b>${escapeHtml(p.tema||'')}</b><p>${escapeHtml(p.discussao||'')}</p></div>`).join('')}` : ''}
+    ${(a.pautas_previstas||[]).length ? `<h4>Pautas previstas que foram tratadas</h4>${reuLista(a.pautas_previstas)}` : ''}
     <h4>Decisões</h4>${reuLista(a.decisoes)}
     <h4>Encaminhamentos</h4>${enc.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th></tr></thead><tbody>${enc.map(e=>`<tr><td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(e.prazo||'—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Nada registrado.</p>'}
     ${(a.pendencias||[]).length ? `<h4>Pendências e pontos em aberto</h4>${reuLista(a.pendencias)}` : ''}
