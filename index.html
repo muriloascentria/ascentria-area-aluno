@@ -1962,6 +1962,13 @@
   .pt-toggle::-webkit-scrollbar{display:none;}
   .pt-toggle button{flex:0 0 auto;}
   @media (max-width:880px){ .pt-toggle{max-width:calc(100vw - 150px);} }
+  .wf-opcoes{display:flex;flex-direction:column;gap:8px;}
+  .wf-opcoes.multi{flex-direction:row;flex-wrap:wrap;}
+  .wf-op{text-align:left;padding:14px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .wf-op:hover{border-color:var(--accent);}
+  .wf-op.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent) inset;}
+  .wf-opcoes.multi .wf-op{padding:10px 14px;font-size:14px;border-radius:999px;}
+  .wf-op .icon{width:14px;height:14px;color:var(--accent);}
   .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
   .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
   .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
@@ -3437,15 +3444,78 @@ const DIAG_SECOES = [
   {titulo:'Gerenciar · Gestão e Financeiro', w:4, d:4},
   {titulo:'Objetivos e Compromissos', w:5, d:5},
 ];
+/* Formulário enxuto: a maior parte das perguntas é de selecionar (mais rápido) e o microfone fica só
+   nas perguntas de resposta longa. Cada pergunta grava no lugar de origem ('wispform' ou 'abertura',
+   no mesmo índice de sempre), então as duas abas do Acompanhamento Interno continuam funcionando e o
+   que ficou de fora daqui a equipe completa na conversa de abertura. */
+const DIAG_FORM = [
+  // 1. Sobre você
+  {s:0, o:'wispform', i:0,  type:'short',  text:'Qual seu nome completo?'},
+  {s:0, o:'abertura', i:0,  type:'choice', text:'Há quanto tempo você atua como enfermeiro(a)?', options:['Menos de 2 anos','De 2 a 5 anos','De 5 a 10 anos','Mais de 10 anos']},
+  {s:0, o:'wispform', i:1,  type:'choice', text:'Há quanto tempo você tem consultório ou clínica própria?', options:['Ainda não tenho','Menos de 1 ano','De 1 a 3 anos','De 3 a 5 anos','Mais de 5 anos']},
+  {s:0, o:'wispform', i:2,  type:'yesno',  text:'O consultório é sua única fonte de renda hoje?'},
+  {s:0, o:'wispform', i:3,  type:'scale',  text:'De 0 a 10, o quanto seu negócio está "redondo" hoje?'},
+  // 2. Ser
+  {s:1, o:'wispform', i:4,  type:'short',  text:'Qual é o seu nicho e subnicho de atuação hoje?'},
+  {s:1, o:'wispform', i:5,  type:'choice', text:'Você já tem a persona definida (dores, desejos, medos e crenças)?', options:['Sim, completa','Em parte','Ainda não']},
+  {s:1, o:'wispform', i:6,  type:'choice', text:'Seus títulos de pós-graduação estão registrados no COREN?', options:['Sim','Não','Não tenho pós-graduação']},
+  {s:1, o:'wispform', i:7,  type:'choice', text:'Você tem uma frase de transformação clara nos seus materiais?', options:['Sim','Em parte','Ainda não']},
+  {s:1, o:'abertura', i:1,  type:'choice', text:'Missão, visão e valores do seu negócio:', options:['Estão formalizados','Estão só na minha cabeça','Ainda não pensei nisso']},
+  {s:1, o:'abertura', i:2,  type:'choice', text:'Sua identidade visual hoje é:', options:['Consistente em todos os canais','Cada canal de um jeito','Ainda não tenho']},
+  {s:1, o:'abertura', i:3,  type:'long',   text:'O que te diferencia de outros enfermeiros do mesmo nicho?'},
+  // 3. Conectar
+  {s:2, o:'wispform', i:8,  type:'multi',  text:'Quais canais você já tem ativos?', options:['Instagram','TikTok','Facebook','Google Meu Negócio','LinkedIn','YouTube','Site','WhatsApp Business','Nenhum ainda']},
+  {s:2, o:'wispform', i:9,  type:'choice', text:'Com que frequência você posta conteúdo hoje, na prática?', options:['Todos os dias','3 a 5 vezes por semana','1 a 2 vezes por semana','Raramente','Não posto']},
+  {s:2, o:'wispform', i:10, type:'multi',  text:'Como você atrai a maior parte dos seus pacientes hoje?', options:['Indicação','Instagram','Google','Parcerias com profissionais','Eventos e palestras','Convênios ou empresas','Ainda não atraio']},
+  {s:2, o:'wispform', i:11, type:'choice', text:'Em média, quantas conversas qualificadas (pessoas interessadas) você tem por mês?', options:['De 0 a 5','De 6 a 15','De 16 a 30','Mais de 30']},
+  {s:2, o:'abertura', i:6,  type:'choice', text:'Seu conteúdo tem função clara (atrair, educar, converter)?', options:['Sim, planejo cada post','Às vezes','São posts soltos']},
+  {s:2, o:'abertura', i:8,  type:'choice', text:'Você coleta depoimentos de pacientes?', options:['Sempre, e uso nos meus canais','Às vezes','Não coleto']},
+  // 4. Transformar
+  {s:3, o:'wispform', i:12, type:'yesno',  text:'Você já trabalha com protocolo ou programa terapêutico estruturado?'},
+  {s:3, o:'wispform', i:13, type:'yesno',  text:'A consulta de retorno faz parte natural do seu atendimento?'},
+  {s:3, o:'wispform', i:14, type:'choice', text:'De quem faz a primeira consulta, quantos fecham um protocolo?', options:['Menos de 20%','De 20% a 40%','De 40% a 60%','Mais de 60%','Não sei']},
+  {s:3, o:'abertura', i:11, type:'choice', text:'Como você se sente na venda consultiva?', options:['Seguro(a)','Mais ou menos','É meu ponto fraco']},
+  // 5. Gerenciar
+  {s:4, o:'wispform', i:15, type:'yesno',  text:'Você tem clareza dos custos fixos e variáveis do consultório?'},
+  {s:4, o:'wispform', i:16, type:'choice', text:'Qual seu faturamento médio mensal com o consultório?', options:['Ainda não faturo','Até R$ 3 mil','De R$ 3 a 6 mil','De R$ 6 a 10 mil','De R$ 10 a 20 mil','Mais de R$ 20 mil']},
+  {s:4, o:'wispform', i:17, type:'number', text:'Quantos pacientes ativos em acompanhamento você tem hoje?'},
+  {s:4, o:'wispform', i:18, type:'yesno',  text:'Você acompanha indicadores do negócio toda semana?'},
+  {s:4, o:'abertura', i:13, type:'choice', text:'Prontuários e contratos:', options:['Formalizados','Informais','Ainda não tenho']},
+  {s:4, o:'abertura', i:14, type:'choice', text:'Como você define o preço dos seus atendimentos?', options:['Pelo cálculo dos meus custos','Pelo que o mercado cobra','No feeling']},
+  {s:4, o:'abertura', i:16, type:'choice', text:'Sua rotina de trabalho hoje:', options:['Tenho blocos de produtividade definidos','Vivo apagando incêndio','Um pouco de cada']},
+  // 6. Objetivos
+  {s:5, o:'wispform', i:21, type:'choice', text:'Quantas horas por semana você consegue dedicar à mentoria e ao negócio?', options:['Até 3 horas','De 4 a 6 horas','De 7 a 10 horas','Mais de 10 horas']},
+  {s:5, o:'wispform', i:19, type:'long',   text:'Qual é hoje o seu maior gargalo?'},
+  {s:5, o:'wispform', i:20, type:'long',   text:'Se a mentoria funcionar muito bem, como fica o seu consultório em 12 meses?'},
+  {s:5, o:'abertura', i:19, type:'long',   text:'O que você espera de mim como mentor, e o que acha que depende só de você?'},
+  {s:5, o:'wispform', i:22, type:'long',   text:'Existe algo no seu contexto que eu precise saber para te ajudar de forma realista?', opcional:true},
+];
 function wispformFlatQuestions(){
-  const offs = groups=>{ const o = []; let n = 0; groups.forEach(g=>{ o.push(n); n += g.perguntas.length; }); return o; };
-  const ow = offs(WISPFORM_QUESTIONS), od = offs(DIAGNOSTICO_ABERTURA_QUESTIONS);
-  const flat = [];
-  DIAG_SECOES.forEach((sec, si)=>{
-    (WISPFORM_QUESTIONS[sec.w]||{perguntas:[]}).perguntas.forEach((q,i)=>flat.push({...q, cat:sec.titulo, secao:si, origem:'wispform', idx:ow[sec.w]+i}));
-    (DIAGNOSTICO_ABERTURA_QUESTIONS[sec.d]||{perguntas:[]}).perguntas.forEach((q,i)=>flat.push({...q, cat:sec.titulo, secao:si, origem:'abertura', idx:od[sec.d]+i}));
-  });
-  return flat;
+  return DIAG_FORM.map(q=>({ text:q.text, type:q.type, options:q.options, opcional:!!q.opcional, cat:DIAG_SECOES[q.s].titulo, secao:q.s, origem:q.o, idx:q.i }));
+}
+/* Ditado sem pontuação vira texto arrumado: comandos falados ("vírgula", "ponto final", "nova linha")
+   viram sinais, espaços são acertados, frases começam com maiúscula e o texto termina com ponto. */
+function textoArrumado(t){
+  t = String(t||'');
+  if(!t.trim()) return '';
+  const trocas = [
+    [/\s*\b(ponto de interrogação)\b/gi, '?'], [/\s*\b(ponto de exclamação)\b/gi, '!'],
+    [/\s*\b(ponto e vírgula)\b/gi, ';'], [/\s*\b(dois pontos)\b/gi, ':'],
+    [/\s*\b(ponto final|ponto parágrafo)\b/gi, '.'], [/\s*\bvírgula\b/gi, ','],
+    [/\s*\b(nova linha|próxima linha|novo parágrafo)\b\s*/gi, '\n'],
+  ];
+  trocas.forEach(([re, sub])=>{ t = t.replace(re, sub); });
+  t = t.replace(/[ \t]+/g, ' ')
+       .replace(/ +([,.;:!?])/g, '$1')
+       .replace(/([,.;:!?])(?=[^\s\d,.;:!?)\n])/g, '$1 ')
+       .replace(/([.!?]){2,}/g, '$1')
+       .replace(/ *\n */g, '\n')
+       .trim();
+  t = t.replace(/(^|[.!?]\s+|\n)([a-zà-ú])/g, (m, a, c)=>a + c.toUpperCase());
+  const nomes = { instagram:'Instagram', tiktok:'TikTok', 'tik tok':'TikTok', google:'Google', whatsapp:'WhatsApp', 'whats app':'WhatsApp', facebook:'Facebook', linkedin:'LinkedIn', youtube:'YouTube', coren:'COREN', cofen:'COFEN', sus:'SUS', plat:'Plat', 'método essência':'Método Essência', 'mentoria essência':'Mentoria Essência' };
+  Object.entries(nomes).forEach(([k,v])=>{ t = t.replace(new RegExp('(^|[^\\wÀ-ú])'+k+'(?![\\wÀ-ú])', 'gi'), (m, a)=>a+v); });
+  if(!/[.!?…:]$/.test(t)) t += '.';
+  return t;
 }
 /* Resposta em áudio: o texto (se houver) e, no fim, uma marca [[audio:caminho|segundos|tipo]]. */
 const DIAG_AUDIO_RE = /\n?\[\[audio:([^|\]]+)\|(\d+)\|([^\]]*)\]\]\s*$/;
@@ -6006,7 +6076,7 @@ function wfDitarParar(){
   d.ativo = false;
   try{ d.r && d.r.stop(); }catch(e){}
   const c = document.getElementById('wf-field');
-  if(c && wfStep===d.passo){ wfDraft[d.passo] = c.value.trim(); wfSalvarRascunho(d.sid); }
+  if(c && wfStep===d.passo){ c.value = textoArrumado(c.value); wfDraft[d.passo] = c.value; wfSalvarRascunho(d.sid); }
   wfDitado = null;
   wfDitarUI();
 }
@@ -6052,6 +6122,7 @@ function renderWispformWizard(s){
   const q = flat[wfStep];
   const pct = Math.round(((wfStep)/total)*100);
   const aberta = q.type==='short' || q.type==='long';
+  const comMic = q.type==='long';
   const atual = diagParse(wfDraft[wfStep]);
   const destaque = q.origem==='abertura' || q.type==='long';
   const temDitado = wfDitadoDisponivel();
@@ -6061,22 +6132,24 @@ function renderWispformWizard(s){
   const campoTexto = `
     <div class="wf-campo-mic ${q.type==='long'?'longo':''}">
       ${q.type==='long'
-        ? `<textarea class="ps-input" id="wf-field" rows="5" placeholder="Escreva ou fale sua resposta...">${escapeHtml(atual.texto)}</textarea>`
-        : `<input class="ps-input" type="text" id="wf-field" value="${escapeAttr(atual.texto)}" placeholder="Escreva ou fale sua resposta...">`}
-      ${temDitado ? `<button type="button" class="wf-mic-btn" id="wf-mic" title="Falar a resposta" aria-label="Falar a resposta">${icon('mic')}</button>` : ''}
+        ? `<textarea class="ps-input" id="wf-field" rows="5" placeholder="Escreva ou fale sua resposta${q.opcional?' (opcional)':''}...">${escapeHtml(atual.texto)}</textarea>`
+        : `<input class="ps-input" type="text" id="wf-field" value="${escapeAttr(atual.texto)}" placeholder="Escreva sua resposta...">`}
+      ${temDitado && comMic ? `<button type="button" class="wf-mic-btn" id="wf-mic" title="Falar a resposta" aria-label="Falar a resposta">${icon('mic')}</button>` : ''}
     </div>
-    <small class="wf-mic-dica ${destaque?'destaque':''}" id="wf-mic-dica" data-padrao="${escapeAttr(dicaPadrao)}">${escapeHtml(dicaPadrao)}</small>
+    ${comMic ? `<small class="wf-mic-dica ${destaque?'destaque':''}" id="wf-mic-dica" data-padrao="${escapeAttr(dicaPadrao)}">${escapeHtml(dicaPadrao)}</small>` : ''}
     ${atual.audio ? `<div class="diag-audio-resp">${diagAudioHtml(atual.audio, s.id)}</div>` : ''}`;
   const secAtual = q.secao + 1;
   root.innerHTML = `
     <div class="wf-shell">
       <h1 style="margin-bottom:6px">Diagnóstico de Abertura</h1>
-      <p class="section-sub" style="margin-top:-4px;margin-bottom:22px">Antes de começar, conte para a gente sobre você e o seu consultório. É assim que a equipe entende o seu momento e monta o seu plano dentro do Método Essência. Nas perguntas abertas, você pode falar a resposta pelo microfone em vez de escrever.</p>
+      <p class="section-sub" style="margin-top:-4px;margin-bottom:22px">Antes de começar, conte para a gente sobre você e o seu consultório. É assim que a equipe entende o seu momento e monta o seu plano dentro do Método Essência. Na maior parte das perguntas é só tocar na resposta. Nas poucas abertas, você pode falar pelo microfone.</p>
       <div class="wf-progress"><div class="wf-progress-fill" style="width:${pct}%"></div></div>
       <div class="wf-step-label">Parte ${secAtual} de ${DIAG_SECOES.length} · ${escapeHtml(q.cat)} · pergunta ${wfStep+1} de ${total}</div>
       <div class="wf-question">${escapeHtml(q.text)}</div>
       <div class="wf-input">
-        ${aberta ? campoTexto : wfInputHtml(q, wfDraft[wfStep])}
+        ${aberta ? campoTexto : q.type==='choice' ? `<div class="wf-opcoes">${q.options.map(op=>`<button type="button" class="wf-op ${wfDraft[wfStep]===op?'selected':''}" data-wf-op="${escapeAttr(op)}">${escapeHtml(op)}</button>`).join('')}</div>`
+          : q.type==='multi' ? (()=>{ const sel = String(wfDraft[wfStep]||'').split(', ').filter(Boolean); return `<div class="wf-opcoes multi">${q.options.map(op=>`<button type="button" class="wf-op ${sel.includes(op)?'selected':''}" data-wf-multi="${escapeAttr(op)}">${sel.includes(op)?icon('check','tiny')+' ':''}${escapeHtml(op)}</button>`).join('')}</div><small class="wf-mic-dica">Pode marcar mais de uma.</small>`; })()
+          : wfInputHtml(q, wfDraft[wfStep])}
       </div>
       <div class="wf-error" id="wf-error" style="display:none">Responda essa pergunta para continuar.</div>
       <div class="wf-nav">
@@ -6087,6 +6160,14 @@ function renderWispformWizard(s){
     </div>`;
   if(atual.audio) msgAudioCarregar(root);
 
+  /* Pergunta de selecionar: tocou na resposta, já vai para a próxima (com um respiro para ver a escolha). */
+  const wfAvancar = ()=>{
+    wfSalvarRascunho(s.id);
+    document.querySelectorAll('.wf-op,.wf-choice-btn,.wf-scale-btn').forEach(x=>x.disabled = true);
+    const marcado = document.querySelector(`[data-wf-op="${CSS.escape(String(wfDraft[wfStep]))}"],[data-wf-choice="${CSS.escape(String(wfDraft[wfStep]))}"],[data-wf-scale="${CSS.escape(String(wfDraft[wfStep]))}"]`);
+    if(marcado) marcado.classList.add('selected');
+    setTimeout(()=>{ if(wfStep < total-1){ wfStep++; } else wfPhase = 'review'; wfSalvarRascunho(s.id); renderCurrentView(); window.scrollTo(0,0); }, 220);
+  };
   const captureField = ()=>{
     if(q.type==='short'||q.type==='long'){
       const el = document.getElementById('wf-field');
@@ -6099,12 +6180,27 @@ function renderWispformWizard(s){
   };
   if(q.type==='yesno'){
     document.querySelectorAll('[data-wf-choice]').forEach(b=>{
-      b.addEventListener('click',()=>{ wfDraft[wfStep]=b.dataset.wfChoice; wfSalvarRascunho(s.id); renderCurrentView(); });
+      b.addEventListener('click',()=>{ wfDraft[wfStep]=b.dataset.wfChoice; wfAvancar(); });
     });
   } else if(q.type==='scale'){
     document.querySelectorAll('[data-wf-scale]').forEach(b=>{
-      b.addEventListener('click',()=>{ wfDraft[wfStep]=b.dataset.wfScale; wfSalvarRascunho(s.id); renderCurrentView(); });
+      b.addEventListener('click',()=>{ wfDraft[wfStep]=b.dataset.wfScale; wfAvancar(); });
     });
+  } else if(q.type==='choice'){
+    /* Escolheu, já vai para a próxima pergunta. */
+    document.querySelectorAll('[data-wf-op]').forEach(b=>b.addEventListener('click', ()=>{
+      wfDraft[wfStep] = b.dataset.wfOp; wfAvancar();
+    }));
+  } else if(q.type==='multi'){
+    document.querySelectorAll('[data-wf-multi]').forEach(b=>b.addEventListener('click', ()=>{
+      let sel = String(wfDraft[wfStep]||'').split(', ').filter(Boolean);
+      const op = b.dataset.wfMulti;
+      const exclusivo = /^(nenhum|ainda não)/i;
+      if(sel.includes(op)) sel = sel.filter(x=>x!==op);
+      else sel = exclusivo.test(op) ? [op] : sel.filter(x=>!exclusivo.test(x)).concat([op]);
+      sel = q.options.filter(o=>sel.includes(o));
+      wfDraft[wfStep] = sel.join(', '); wfSalvarRascunho(s.id); renderCurrentView();
+    }));
   }
   const f = document.getElementById('wf-field'); if(f && aberta) f.addEventListener('input', ()=>{ wfDraft[wfStep] = diagMontar(f.value, diagParse(wfDraft[wfStep]).audio); wfSalvarRascunho(s.id); });
   const mic = document.getElementById('wf-mic');
@@ -6132,7 +6228,7 @@ function renderWispformWizard(s){
     if(wfDitado) wfDitarParar();
     captureField();
     const r = diagParse(wfDraft[wfStep]);
-    if(!r.texto && !r.audio){ document.getElementById('wf-error').style.display='block'; return; }
+    if(!r.texto && !r.audio && !q.opcional){ document.getElementById('wf-error').style.display='block'; return; }
     if(wfStep < total-1){ wfStep++; wfSalvarRascunho(s.id); renderCurrentView(); window.scrollTo(0,0); }
     else { wfPhase='review'; renderCurrentView(); window.scrollTo(0,0); }
   });
@@ -15347,12 +15443,12 @@ function npsAbrir(s, marco){
   document.body.appendChild(wrap);
 }
 let NPS_DITADO = null;
-function npsDitarParar(){ if(NPS_DITADO){ NPS_DITADO.ativo = false; try{ NPS_DITADO.r.stop(); }catch(e){} if(NPS_DITADO.btn) NPS_DITADO.btn.classList.remove('ouvindo'); NPS_DITADO = null; } }
+function npsDitarParar(){ if(NPS_DITADO){ NPS_DITADO.ativo = false; try{ NPS_DITADO.r.stop(); }catch(e){} if(NPS_DITADO.btn) NPS_DITADO.btn.classList.remove('ouvindo'); if(NPS_DITADO.campo) NPS_DITADO.campo.value = textoArrumado(NPS_DITADO.campo.value); NPS_DITADO = null; } }
 function npsDitar(btn, campo){
   if(NPS_DITADO && NPS_DITADO.btn===btn){ npsDitarParar(); return; }
   npsDitarParar();
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SR || !campo) return;
-  const d = { ativo:true, btn, base: campo.value.replace(/\s+$/,''), finais:'' };
+  const d = { ativo:true, btn, campo, base: campo.value.replace(/\s+$/,''), finais:'' };
   NPS_DITADO = d; btn.classList.add('ouvindo');
   const iniciar = ()=>{
     let r; try{ r = new SR(); }catch(e){ npsDitarParar(); return; }
