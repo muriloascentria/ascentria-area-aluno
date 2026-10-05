@@ -4344,7 +4344,7 @@ async function bootstrapData(){
        conversas aparecerem. O banco libera apenas o perfil dos mentorados, nada de fichas ou finanças. */
     try{ const { data: podeAcomp } = await sb.rpc('pode_acompanhamento'); ACOMP_EXTRA = !!podeAcomp; }catch(e){ ACOMP_EXTRA = false; }
     STUDENTS.length = 0;
-    if(ACOMP_EXTRA) profiles.filter(p=>p.role==='aluno' && (p.tier||'mentorado')!=='curso').forEach(p=>STUDENTS.push(mapProfileRow(p)));
+    if(ACOMP_EXTRA) profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
     /* E todas as aulas, para indicar uma aula ao mentorado pelo chat. O Treinamento Time continua
        mostrando só as REC, porque ele mesmo filtra pelo título. */
     if(ACOMP_EXTRA){
@@ -5782,12 +5782,12 @@ function setRole(role){
      tier de quem está sendo visto — a própria conta, ou o mentorado selecionado pela equipe interna. */
   const viewingTier = getViewingTier();
   const isCursoView = role==='aluno' && viewingTier==='curso';
-  ['ranking','painel','planner','sessoes','metas','acompanhamento'].forEach(v=>{
+  ['ranking','painel','planner','sessoes','metas'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   });
-  /* Dashboard (progresso no Método, item a item) é liberado também pro aluno do Curso Gravado. */
-  ['inicio','aulas','comunidade','dashboard'].forEach(v=>{
+  /* Dashboard (progresso no Método, item a item) e Acompanhamento (mensagens com a equipe) são liberados também pro aluno do Curso Gravado. */
+  ['inicio','aulas','comunidade','dashboard','acompanhamento'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = role==='aluno' ? 'flex' : 'none';
   });
@@ -11694,7 +11694,9 @@ function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 /* Mentorado (aluno da mentoria, não do curso gravado): tem a janela "Acompanhamento" com a equipe. */
-function msgSouMentorado(){ return currentUserRole==='aluno' && !!currentUserProfile && (currentUserProfile.tier||'mentorado')!=='curso'; }
+/* Aluno com Acompanhamento (conversa com a equipe): mentorados e, desde 05/10/2026, também os alunos do Método. */
+function msgSouMentorado(){ return currentUserRole==='aluno' && !!currentUserProfile; }
+function msgSouMentoradoPleno(){ return msgSouMentorado() && (currentUserProfile.tier||'mentorado')!=='curso'; }
 function msgNaTela(){ return currentView==='mensagens' || currentView==='acompanhamento'; }
 function msgChaveAcomp(id){ return 'a:'+id; }
 function msgEhAcomp(chave){ return typeof chave==='string' && chave.startsWith('a:'); }
@@ -11717,7 +11719,7 @@ function msgPodeAcomp(){
   if(currentUserRole==='staff' && currentRole==='consultora') return false;   // visualização igual à da consultora
   return currentUserRole==='staff' || ACOMP_EXTRA;
 }
-function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).filter(s=>(s.tier||'mentorado')!=='curso'); }
+function msgMentorados(){ return (typeof STUDENTS!=='undefined' ? STUDENTS : []).slice(); }
 function msgNaoLidasDe(id){ return MSG_NAO_LIDAS.filter(m=>m.de===id).length; }
 let MSG_MAIOR_ID = 0;
 function mapMsgRow(r){ const _n = Number(r.id)||0; if(_n > MSG_MAIOR_ID) MSG_MAIOR_ID = _n; return { id:r.id, de:r.de, para:r.para||null, grupoId:r.grupo_id||null, alunoId:r.aluno_id||null, mencoes:r.mencoes||[], texto:r.texto||'', lida:!!r.lida, createdAt:r.created_at, tipo:r.tipo||'texto', audioPath:r.audio_path||null, audioSeg:r.audio_seg||0, audioMime:r.audio_mime||'', arquivoPath:r.arquivo_path||null, arquivoNome:r.arquivo_nome||'', arquivoTam:r.arquivo_tam||0, arquivoMime:r.arquivo_mime||'', aulaId:r.aula_id||null, painelTopico:r.painel_topico||null, respondeA:r.responde_a||null, respondeDe:r.responde_de||null, respondeTexto:r.responde_texto||'' }; }
@@ -12578,7 +12580,7 @@ function msgPainelAlvo(ref){
 function msgPainelHtml(m){
   const a = msgPainelAlvo(m.painelTopico);
   const nota = (m.texto||'').split('\n').slice(1).join('\n').trim();
-  const pode = msgSouMentorado();
+  const pode = msgSouMentoradoPleno();
   return `${nota ? `<div class="msg-txt">${linkify(nota)}</div>` : ''}<button type="button" class="msg-aula msg-painel-card" data-msg-painel="${escapeAttr(m.painelTopico||'')}" ${pode ? '' : 'aria-disabled="true"'} title="${pode ? 'Abrir no Painel do Método' : 'A aluna abre este quadro direto no Painel do Método dela'}"><span class="msg-aula-ic">${icon(a ? a.q.icon : 'target','tiny')}</span><span class="msg-aula-txt"><small>${escapeHtml(a ? 'Painel do Método · '+a.q.title : 'Painel do Método')}</small><strong>${escapeHtml(a ? a.t.title : 'Quadro do Painel')}</strong><em>${pode ? 'Abrir e preencher' : 'Abre no Painel da aluna'}</em></span></button>`;
 }
 async function msgEnviarPainel(chave, ref, nota){
@@ -12600,7 +12602,7 @@ function msgPainelListaHtml(q){
 }
 /* A aluna tocou no cartão: abre o Painel do Método dela já no quadro indicado. */
 function msgAbrirPainel(ref){
-  const a = msgPainelAlvo(ref); if(!a || !msgSouMentorado()) return;
+  const a = msgPainelAlvo(ref); if(!a || !msgSouMentoradoPleno()) return;
   goTo('painel');
   panelQuadrantId = a.q.id; renderPainel();
   try{ openTopicModal(a.q, a.t.id); }catch(e){ console.error('msgAbrirPainel', e); }
@@ -13169,7 +13171,7 @@ function renderMensagens(){
   const el = document.getElementById(solo ? 'view-acompanhamento' : 'view-mensagens');
   if(solo){
     const alvo = msgSouMentorado() ? msgEu() : (currentUserRole==='staff' ? currentStudentId : null);
-    if(!alvo || (!msgSouMentorado() && !(msgAlunoAcomp(alvo) && (msgAlunoAcomp(alvo).tier||'mentorado')!=='curso'))){ el.innerHTML = '<div class="empty-state">O Acompanhamento é o canal direto entre o mentorado e a equipe da mentoria.</div>'; return; }
+    if(!alvo || (!msgSouMentorado() && !msgAlunoAcomp(alvo))){ el.innerHTML = '<div class="empty-state">O Acompanhamento é o canal direto entre o aluno e a equipe.</div>'; return; }
     msgUI.aberto = msgChaveAcomp(alvo);
   } else if(!msgSouEquipe()){ el.innerHTML = '<div class="empty-state">As mensagens são só para a equipe interna.</div>'; return; }
   const q = normTxt(msgUI.busca).trim();
@@ -13234,7 +13236,7 @@ function renderMensagens(){
        ${(()=>{ const ab = gtfDoGrupo(grupo.id).filter(t=>!t.concluida).length, minhas = gtfMinhasAbertas(grupo.id).length; return `<button type="button" class="btn-mini gtf-btn ${minhas?'alerta':''} ${msgUI.gtfAberto===grupo.id?'ativo':''}" id="gtf-toggle" title="Tarefas deste grupo">${icon('check','tiny')}<span> Tarefas</span>${ab ? `<b>${ab}</b>` : ''}</button>`; })()}
        ${admin ? `<button type="button" class="btn-mini" id="msg-grupo-gerir" title="Renomear, adicionar ou remover membros, excluir">${icon('gear','tiny')}<span> Gerenciar</span></button>` : ''}`
     : acomp && msgSouMentorado()
-    ? `${msgGrupoAvatar(36)}<div class="msg-pessoa-txt"><strong>Acompanhamento</strong><small>Sua conversa com a equipe da mentoria — Murilo, Diego, Carmem, Sandra e Mariane</small></div>`
+    ? `${msgGrupoAvatar(36)}<div class="msg-pessoa-txt"><strong>Acompanhamento</strong><small>Sua conversa com a equipe Ascentria</small></div>`
     : acomp
     ? `${msgAvatarDe(acompId, 36)}<div class="msg-pessoa-txt"><strong>${escapeHtml(acompAluno ? acompAluno.name : 'Mentorado')}</strong><small>Acompanhamento · conversa compartilhada com toda a equipe</small></div>`
     : outro ? `${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}<div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>` : '';
@@ -13255,7 +13257,8 @@ function renderMensagens(){
     return {chave:p.id, n, ultima:u, cls:'', avatar:initialsAvatar(p.initials, p.color, 36, p.avatarUrl), titulo:p.name, sub: u ? previa(u, false) : escapeHtml(msgPapelLabel(p))}; });
   const itensMentorados = mentoradosOrd.map(st=>{ const k = msgChaveAcomp(st.id), a = acompDe(st), n = a ? a.naoLidas : 0;
     const u = ultima(k) || (a && a.ultimaEm ? {de:a.ultimaDe, texto:a.ultimaTexto, createdAt:a.ultimaEm} : null);
-    return {chave:k, n, ultima:u, cls:'msg-acomp', avatar:initialsAvatar(st.initials, st.color, 36, st.avatarUrl), titulo:st.name, sub: u ? previa(u, true) : 'Mentorado · sem mensagens ainda'}; });
+    const curso = (st.tier||'mentorado')==='curso';
+    return {chave:k, n, ultima:u, curso, cls:'msg-acomp', avatar:initialsAvatar(st.initials, st.color, 36, st.avatarUrl), titulo:st.name, sub: u ? previa(u, true) : (curso ? 'Aluno do Método · sem mensagens ainda' : 'Mentorado · sem mensagens ainda')}; });
   const todos = itensGrupos.concat(itensPessoas, itensMentorados);
   const naoLidas = todos.filter(i=>i.n).sort((a,b)=>String((b.ultima&&b.ultima.createdAt)||'').localeCompare(String((a.ultima&&a.ultima.createdAt)||'')));
   const lidos = (lista)=>lista.filter(i=>!i.n);
@@ -13268,8 +13271,10 @@ function renderMensagens(){
     lidos(itensGrupos).map(itemHtml).join('') || ((admin && !q && !gruposOrd.length) ? '<div class="tf-vazio" style="padding:8px 12px">Nenhum grupo ainda.</div>' : ''),
     (gruposOrd.length || admin) && lidos(itensPessoas).length ? secao('Pessoas') : '',
     lidos(itensPessoas).map(itemHtml).join(''),
-    lidos(itensMentorados).length ? secao('Acompanhamento · mentorados') : '',
-    lidos(itensMentorados).map(itemHtml).join(''),
+    lidos(itensMentorados).filter(i=>!i.curso).length ? secao('Acompanhamento · mentorados') : '',
+    lidos(itensMentorados).filter(i=>!i.curso).map(itemHtml).join(''),
+    lidos(itensMentorados).filter(i=>i.curso).length ? secao('Acompanhamento · alunos do Método') : '',
+    lidos(itensMentorados).filter(i=>i.curso).map(itemHtml).join(''),
     semNada ? '<div class="tf-vazio">Ninguém encontrado.</div>' : '',
   ].join('');
 
@@ -13316,7 +13321,7 @@ function renderMensagens(){
             <div class="msg-config-linha"><span>Tamanho da letra</span><span class="msg-fonte"><button type="button" id="msg-fonte-menos" title="Diminuir">A−</button><b id="msg-fonte-valor">${msgUI.fonte}</b><button type="button" id="msg-fonte-mais" title="Aumentar">A+</button></span></div>
           </div>` : ''}
           ${grupo && msgUI.gtfAberto===grupo.id ? gtfPainelHtml(grupo, admin) : ''}
-          <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe da mentoria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o mentorado e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
+          <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe Ascentria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o aluno e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
           <div class="msg-mencoes" id="msg-mencoes" hidden></div>
           ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<div class="msg-aula-painel" id="msg-aula-painel" hidden>
             <div class="msg-aula-hd"><input class="ps-input" type="text" id="msg-aula-busca" placeholder="Buscar aula pelo nome…"><button type="button" class="btn-mini" id="msg-aula-fechar">${icon('x','tiny')}</button></div>
