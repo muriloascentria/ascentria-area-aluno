@@ -2184,6 +2184,16 @@
   }
   @media (max-width:880px){ #view-mensagens,#view-acompanhamento{margin:-12px -8px 0;} }
   @media (max-width:560px){ .msg-editor .emoji-btn{display:none;} }
+  /* Caixa de mensagem, emoji, clipe, microfone e enviar com a mesma altura; no celular os botões são quadrados iguais. */
+  .msg-editor{align-items:flex-end;}
+  .msg-editor .ps-input{min-height:40px;box-sizing:border-box;}
+  .msg-editor .emoji-btn,.msg-editor .msg-mic,.msg-editor .btn-accent{height:40px;min-height:40px;box-sizing:border-box;flex-shrink:0;border-radius:10px;}
+  .msg-editor .emoji-btn,.msg-editor .msg-mic{width:40px;}
+  .msg-editor .msg-mic .icon,.msg-editor .btn-accent .icon{width:18px;height:18px;}
+  @media (max-width:880px){
+    .msg-editor .btn-accent{width:40px;padding:0;justify-content:center;}
+    .msg-editor .btn-accent span{display:none;}
+  }
   /* janelinhas no canto inferior direito */
   #msg-popups{position:fixed;right:16px;bottom:16px;z-index:290;isolation:isolate;display:flex;flex-direction:column;gap:10px;width:min(340px,calc(100vw - 32px));}
   .msg-popup{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.45);padding:10px 12px;animation:msgPop .25s ease-out;}
