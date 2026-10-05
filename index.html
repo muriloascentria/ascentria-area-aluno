@@ -15466,38 +15466,50 @@ function epInicioSemana(d){ const x = new Date(d); const dow = x.getDay(); x.set
 /* Distribui as tarefas pendentes a partir de hoje. Tarefa maior que o tempo do dia continua no próximo
    dia de estudo (parte 2, parte 3...). Não começa um pedaço com menos de 15 minutos sobrando no dia. */
 function epAgenda(s, cfg, diasVisiveis){
-  const fila = epPendentes(s).map(it=>Object.assign({rest:it.min, parte:0}, it));
-  const totalMin = fila.reduce((a,it)=>a+it.min,0);
+  /* O dia de hoje fica congelado: monta o plano de hoje como estava no começo do dia (o que está
+     pendente + o que já foi feito hoje) e mostra só o que desse plano ainda falta. Terminar cedo não
+     puxa tarefa de amanhã para hoje; quem quiser adiantar abre o dia seguinte e marca por lá. */
+  const pend = epPendentes(s);
+  const totalMin = pend.reduce((a,it)=>a+it.min,0);
   const feitos = epFeitosNoDia(s.id, epHoje());
-  const usadoHoje = feitos.reduce((a,f)=>a+(+f.min||0),0);
   const hoje = epHoje();
   const dias = []; const fimModulo = {}; let fimGeral = null;
-  const ultimoDoModulo = {}; fila.forEach(it=>{ ultimoDoModulo[it.modId] = it; });
   if(!epConfigurado(cfg)) return { dias, fimModulo, fimGeral, totalMin, feitos };
-  for(let n=0; n<3650 && (fila.length || n<diasVisiveis); n++){
-    const data = epAddDias(hoje, n);
-    const c = cfg.dias[String(data.getDay())];
-    const dia = { data, blocos:[], ativo: !!(c && c.ativo && c.min>0), inicio: c ? epMinDe(c.inicio) : 0, cap: c ? (+c.min||0) : 0 };
-    if(dia.ativo){
-      let cap = dia.cap - (n===0 ? usadoHoje : 0);
-      let t = dia.inicio + (n===0 ? usadoHoje : 0);
-      while(cap>0 && fila.length){
-        const it = fila[0];
-        if(it.rest > cap && cap < 15) break;
-        const take = Math.min(it.rest, cap);
-        it.parte++;
-        const termina = take===it.rest;
-        dia.blocos.push({ it, ini:t, fim:t+take, min:take, parte:it.parte, ultimaParte:termina });
-        it.rest -= take; cap -= take; t += take;
-        if(termina){
-          fila.shift();
-          if(ultimoDoModulo[it.modId]===it) fimModulo[it.modId] = data;
-          if(!fila.length) fimGeral = data;
-        }
-      }
+  const ordem = it=>{ const mi = MODULES.findIndex(m=>m.id===it.modId); return mi*10000 + it.idx; };
+  const chave = it=>it.modId+':'+it.idx;
+  const pendKeys = new Set(pend.map(chave));
+  const inicioDia = pend.concat(feitos.filter(f=>!pendKeys.has(chave(f))).map(f=>({modId:f.modId, modName:f.modName, idx:f.idx, label:f.label, min:f.min}))).sort((a,b)=>ordem(a)-ordem(b));
+  const diaCfg = data=>{ const c = cfg.dias[String(data.getDay())]; return { data, blocos:[], ativo: !!(c && c.ativo && c.min>0), inicio: c ? epMinDe(c.inicio) : 0, cap: c ? (+c.min||0) : 0 }; };
+  const encher = (dia, fila, aoTerminar)=>{
+    let cap = dia.cap, t = dia.inicio;
+    while(cap>0 && fila.length){
+      const it = fila[0];
+      if(it.rest > cap && cap < 15) break;
+      const take = Math.min(it.rest, cap);
+      it.parte++;
+      const termina = take===it.rest;
+      dia.blocos.push({ it, ini:t, fim:t+take, min:take, parte:it.parte, ultimaParte:termina });
+      it.rest -= take; cap -= take; t += take;
+      if(termina){ fila.shift(); if(aoTerminar) aoTerminar(it, dia.data); }
     }
+  };
+  // Hoje: plano do começo do dia, sem as que já foram feitas.
+  const dia0 = diaCfg(hoje);
+  const planoHoje = {};
+  if(dia0.ativo){ const sim = inicioDia.map(it=>Object.assign({rest:it.min, parte:0}, it)); encher(dia0, sim, null); dia0.blocos.forEach(b=>{ planoHoje[chave(b.it)] = b; }); }
+  dia0.blocos = dia0.blocos.filter(b=>pendKeys.has(chave(b.it)));
+  // Do próximo dia em diante: o que sobrou (uma tarefa dividida continua da parte seguinte).
+  const fila = pend.map(it=>{ const b = planoHoje[chave(it)]; return b ? (b.ultimaParte ? null : Object.assign({}, it, {rest:it.min - b.min, parte:b.parte})) : Object.assign({rest:it.min, parte:0}, it); }).filter(Boolean);
+  const ultimoDoModulo = {}; pend.forEach(it=>{ ultimoDoModulo[it.modId] = chave(it); });
+  dia0.blocos.forEach(b=>{ if(b.ultimaParte && ultimoDoModulo[b.it.modId]===chave(b.it)) fimModulo[b.it.modId] = hoje; });
+  if(!fila.length && dia0.blocos.length) fimGeral = hoje;
+  dias.push(dia0);
+  for(let n=1; n<3650 && (fila.length || n<diasVisiveis); n++){
+    const dia = diaCfg(epAddDias(hoje, n));
+    if(dia.ativo) encher(dia, fila, (it, data)=>{ if(ultimoDoModulo[it.modId]===chave(it)) fimModulo[it.modId] = data; if(!fila.length) fimGeral = data; });
     if(n<diasVisiveis) dias.push(dia);
   }
+  if(diasVisiveis<1) dias.length = 0;
   return { dias, fimModulo, fimGeral, totalMin, feitos };
 }
 function epFatorRegua(s){ return 365/(((s.cadastro||{}).duracaoMeses||12)*30.44); }
