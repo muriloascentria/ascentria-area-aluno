@@ -354,6 +354,84 @@
   .essencia-banner{display:block;margin-top:20px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);line-height:0;transition:opacity .15s, transform .15s;}
   .essencia-banner:hover{opacity:0.92;transform:translateY(-1px);}
   .essencia-banner img{display:block;width:100%;height:auto;}
+  /* ---- Prêmio Essência Experience 2026: banner no Início, página do formulário e aba da equipe ---- */
+  .premio-banner{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;margin-top:14px;padding:22px 26px;border-radius:var(--radius);border:1px solid rgba(11,11,10,.14);background:#FAF9F2;color:#0B0B0A;text-align:left;font:inherit;cursor:pointer;transition:opacity .15s, transform .15s;}
+  .premio-banner:hover{opacity:.94;transform:translateY(-1px);}
+  .premio-banner .pb-txt{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .premio-banner .pb-k{font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#6E6D67;}
+  .premio-banner .pb-t{font-family:Anton,'Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(22px,4.2vw,34px);line-height:1.02;text-transform:uppercase;letter-spacing:.01em;}
+  .premio-banner .pb-s{font-size:13px;color:#3a3936;line-height:1.45;}
+  .premio-banner .pb-cta{flex:none;display:inline-flex;align-items:center;gap:8px;background:#171716;color:#FAF9F2;border-radius:999px;padding:11px 18px;font-size:13px;font-weight:700;white-space:nowrap;}
+  .premio-banner .pb-cta .icon{stroke:#FAF9F2;width:16px;height:16px;}
+  @media (max-width:560px){ .premio-banner{flex-direction:column;align-items:flex-start;padding:20px;} }
+
+  .premio-page{color-scheme:light;position:fixed;inset:0;z-index:340;background:#FAF9F2;color:#0B0B0A;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:'Instrument Sans',Helvetica,Arial,sans-serif;}
+  .premio-page *{box-sizing:border-box;}
+  .pr-wrap{max-width:760px;margin:0 auto;padding:26px 20px 64px;}
+  .pr-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:1px solid rgba(11,11,10,.14);padding-bottom:18px;}
+  .pr-top img{width:min(200px,46vw);height:auto;display:block;}
+  .pr-voltar{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid rgba(11,11,10,.25);color:#0B0B0A;border-radius:999px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;}
+  .pr-voltar .icon{stroke:#0B0B0A;width:15px;height:15px;}
+  .pr-hero{background:#171716;color:#FAF9F2;padding:28px 26px;margin-top:22px;}
+  .pr-k{font-size:11px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:#A9ADB1;}
+  .pr-hero h1{font-family:Anton,'Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(34px,7vw,56px);line-height:1;margin:10px 0 12px;text-transform:uppercase;letter-spacing:.01em;}
+  .pr-hero p{margin:0;font-size:15px;line-height:1.55;color:#F2F0E6;max-width:560px;}
+  .pr-passos{display:flex;gap:8px;margin:24px 0 6px;}
+  .pr-passos span{flex:1;border-top:4px solid rgba(11,11,10,.16);padding-top:8px;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#6E6D67;}
+  .pr-passos span.on{border-top-color:#0B0B0A;color:#0B0B0A;}
+  .pr-sec-t{font-family:Anton,'Arial Narrow',Impact,sans-serif;font-weight:400;font-size:26px;text-transform:uppercase;margin:20px 0 4px;line-height:1.1;}
+  .pr-sec-s{font-size:14px;color:#3a3936;margin:0 0 12px;line-height:1.5;}
+  .pr-q{display:flex;justify-content:space-between;align-items:center;gap:14px;border-top:2px solid #0B0B0A;padding:16px 0;}
+  .pr-q:last-of-type{border-bottom:2px solid #0B0B0A;}
+  .pr-q p{margin:0;font-size:15.5px;line-height:1.45;}
+  .pr-q p b{font-weight:700;}
+  .pr-sn{display:flex;gap:6px;flex:none;}
+  .pr-sn button{min-width:64px;min-height:44px;border-radius:999px;border:1.5px solid #0B0B0A;background:transparent;color:#0B0B0A;font:inherit;font-size:14px;font-weight:700;cursor:pointer;}
+  .pr-sn button.on{background:#0B0B0A;color:#FAF9F2;}
+  @media (max-width:520px){ .pr-q{flex-direction:column;align-items:flex-start;} }
+  .pr-decl{display:flex;gap:12px;align-items:flex-start;background:#F2F0E6;padding:16px 18px;margin-top:18px;font-size:14.5px;line-height:1.5;cursor:pointer;}
+  .pr-decl input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:#0B0B0A;}
+  .pr-opcoes{display:flex;flex-direction:column;gap:8px;}
+  .pr-op{display:flex;gap:12px;align-items:center;border:1.5px solid rgba(11,11,10,.2);padding:14px 16px;font-size:15px;cursor:pointer;min-height:52px;}
+  .pr-op.on{border-color:#0B0B0A;background:#F2F0E6;}
+  .pr-op input{width:19px;height:19px;margin:0;flex:none;accent-color:#0B0B0A;}
+  .pr-in{width:100%;border:1.5px solid rgba(11,11,10,.25);background:#fff;color:#0B0B0A;font:inherit;font-size:15px;padding:12px 14px;border-radius:0;}
+  .pr-in:focus{outline:2px solid #0B0B0A;outline-offset:1px;}
+  .pr-in.erro{border-color:#b4233c;}
+  .pr-campo{position:relative;}
+  .pr-campo textarea{min-height:190px;resize:vertical;line-height:1.55;padding-right:52px;}
+  .pr-mic{position:absolute;right:8px;top:8px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(11,11,10,.25);background:#FAF9F2;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .pr-mic .icon{stroke:#0B0B0A;width:18px;height:18px;}
+  .pr-mic.ouvindo{background:#b4233c;border-color:#b4233c;}
+  .pr-mic.ouvindo .icon{stroke:#fff;}
+  .pr-erro{color:#b4233c;font-size:13.5px;margin:10px 0 0;min-height:1em;}
+  .pr-acoes{display:flex;justify-content:space-between;gap:10px;margin-top:22px;flex-wrap:wrap;}
+  .pr-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 24px;border-radius:999px;border:1.5px solid #0B0B0A;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;background:transparent;color:#0B0B0A;}
+  .pr-btn.cheio{background:#0B0B0A;color:#FAF9F2;margin-left:auto;}
+  .pr-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .pr-aviso{background:#F2F0E6;border-left:4px solid #0B0B0A;padding:12px 16px;font-size:13.5px;margin-top:16px;line-height:1.5;}
+  .pr-fim{text-align:center;padding:36px 8px 10px;}
+  .pr-fim h2{font-family:Anton,'Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(30px,6vw,44px);text-transform:uppercase;margin:0 0 10px;}
+  .pr-fim p{font-size:15px;line-height:1.55;color:#3a3936;max-width:520px;margin:0 auto 22px;}
+  .pr-resumo{border-top:2px solid #0B0B0A;border-bottom:2px solid #0B0B0A;padding:14px 0;margin-top:18px;font-size:14.5px;line-height:1.6;text-align:left;}
+  .pr-resumo b{font-weight:700;}
+  .pr-carregando{padding:40px 0;text-align:center;color:#6E6D67;font-size:14px;}
+
+  .pe-faixa{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.3px;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .pe-faixa.f30{background:var(--success);color:#fff;}
+  .pe-faixa.f20{background:var(--accent);color:#0b0b0a;}
+  .pe-faixa.f10{background:var(--individual);color:#fff;}
+  .pe-faixa.f5{background:var(--shared);color:#0b0b0a;}
+  .pe-faixa.f0{background:var(--bg-card-hover);color:var(--text-dim);border:1px solid var(--border);}
+  .pe-lista{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+  .pe-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+  .pe-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .pe-hd small{color:var(--text-mute);font-size:12px;}
+  .pe-como{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .pe-como span{font-size:11.5px;border:1px solid var(--border);border-radius:999px;padding:2px 9px;color:var(--text-dim);}
+  .pe-exp{margin:10px 0 0;font-size:13.5px;line-height:1.55;white-space:pre-wrap;color:var(--text);}
+  .pe-decl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--success);margin-top:8px;}
+  .pe-decl .icon{width:13px;height:13px;stroke:var(--success);}
   .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px;}
   .stat-card{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -5690,7 +5768,7 @@ const BACKUP_TABLES = [
   'live_sessions','live_session_watched',
   'venda_sessoes','contatos','registro_clientes',
   'fin_categorias','fin_contas','fin_formas','fin_lancamentos',
-  'access_codes',
+  'access_codes','premio_ee2026',
 ];
 async function fetchTableAll(table){
   const PAGE = 1000;
@@ -5779,11 +5857,13 @@ function renderInicioCurso(s){
     </div>
 
     ${essenciaBannerHtml()}
+    ${premioBannerHtml()}
 
     <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
     <div>${COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===getViewingTier()).slice(0,2).map(p=>postHtml(p,true,true)).join('') || '<p class="section-sub">Nenhuma interação na comunidade ainda.</p>'}</div>
   `;
   bindOpenCourseTags(document.getElementById('view-inicio'));
+  premioBindBanner(document.getElementById('view-inicio'));
 }
 function renderInicio(){
   const s = getStudent(currentStudentId);
@@ -5821,6 +5901,7 @@ function renderInicio(){
     ${epInicioHtml(s)}
 
     ${essenciaBannerHtml()}
+    ${premioBannerHtml()}
 
     <h2 class="section-title">Indicadores do consultório</h2>
     <div class="kpi-row">
@@ -5840,6 +5921,7 @@ function renderInicio(){
   bindCourseTiles();
   document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
   bindOpenCourseTags(document.getElementById('view-inicio'));
+  premioBindBanner(document.getElementById('view-inicio'));
 }
 
 /* ---- Formulário "Diagnóstico Inicial" — renderizado no lugar do Início até o aluno enviar ---- */
@@ -15323,6 +15405,279 @@ function npsHtmlEquipe(){
       <div class="nps-pend">${pendentes.map(x=>`<span class="nps-pend-item"><button type="button" class="vg-nome-btn" data-rd-acomp="${x.st.id}">${escapeHtml(x.st.name)}</button> <small>${x.m} meses${x.st.tier==='curso'?' · Método':''}</small></span>`).join('')}</div>
       <p class="rd-legenda">A pesquisa aparece para essas pessoas na próxima vez que entrarem no Plat. Quem tocou em "Responder depois" vê de novo no dia seguinte.</p>` : ''}`;
 }
+/* ================= PRÊMIO ESSÊNCIA EXPERIENCE 2026 =================
+   Banner no Início do aluno (logo abaixo do banner do evento). Ao tocar, abre uma página dentro do
+   Plat, com a identidade do Essência Experience, onde o aluno do Método ou mentorado conta os
+   resultados que teve: faixas de faturamento mensal, como faturou e uma experiência exitosa.
+   Uma resposta por aluno (tabela premio_ee2026). A equipe lê tudo no Radar, aba "Prêmio Essência
+   Experience 2026". */
+const PREMIO_FAIXAS = [
+  { k:'fat_5k',  v:'5 mil'  },
+  { k:'fat_10k', v:'10 mil' },
+  { k:'fat_20k', v:'20 mil' },
+  { k:'fat_30k', v:'30 mil' },
+];
+const PREMIO_COMO = [
+  { k:'planos',    t:'Vendendo planos de enfermagem' },
+  { k:'mentorias', t:'Vendendo mentorias, cursos e treinamentos' },
+  { k:'palestras', t:'Vendendo palestras e eventos' },
+  { k:'outros',    t:'Outros' },
+];
+function premioFontes(){
+  if(document.getElementById('premio-fontes')) return;
+  const l = document.createElement('link');
+  l.id = 'premio-fontes'; l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:wght@400;600;700&display=swap';
+  document.head.appendChild(l);
+}
+function premioBannerHtml(){
+  premioFontes();
+  return `
+    <button type="button" class="premio-banner" id="premio-banner" aria-label="Prêmio Essência Experience 2026: seus resultados podem ser premiados. Participar.">
+      <span class="pb-txt">
+        <span class="pb-k">Prêmio Essência Experience 2026</span>
+        <span class="pb-t">Seus resultados podem ser premiados</span>
+        <span class="pb-s">Conte o que você conquistou depois que entrou no Método Essência.</span>
+      </span>
+      <span class="pb-cta">Quero participar ${icon('award')}</span>
+    </button>`;
+}
+function premioBindBanner(root){
+  const b = (root||document).querySelector('#premio-banner');
+  if(b) b.addEventListener('click', ()=>premioAbrir());
+}
+/* Faixa máxima declarada, a partir das respostas sim/não. */
+function premioFaixa(r){
+  if(r.fat_30k) return { c:'f30', t:'Mais de R$ 30 mil/mês', n:4 };
+  if(r.fat_20k) return { c:'f20', t:'Mais de R$ 20 mil/mês', n:3 };
+  if(r.fat_10k) return { c:'f10', t:'Mais de R$ 10 mil/mês', n:2 };
+  if(r.fat_5k)  return { c:'f5',  t:'Mais de R$ 5 mil/mês',  n:1 };
+  return { c:'f0', t:'Até R$ 5 mil/mês', n:0 };
+}
+function premioComoTxt(r){
+  return (r.como||[]).map(k=>{ if(k==='outros') return r.como_outros ? 'Outros: '+r.como_outros : 'Outros'; const o = PREMIO_COMO.find(x=>x.k===k); return o ? o.t : k; });
+}
+let PREMIO_DITADO = null;
+function premioDitarParar(){ if(PREMIO_DITADO){ PREMIO_DITADO.ativo = false; try{ PREMIO_DITADO.r.stop(); }catch(e){} if(PREMIO_DITADO.btn) PREMIO_DITADO.btn.classList.remove('ouvindo'); PREMIO_DITADO = null; } }
+function premioDitar(btn, campo, aoMudar){
+  if(PREMIO_DITADO && PREMIO_DITADO.btn===btn){ premioDitarParar(); return; }
+  premioDitarParar();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SR || !campo) return;
+  const d = { ativo:true, btn, base: campo.value.replace(/\s+$/,''), finais:'' };
+  PREMIO_DITADO = d; btn.classList.add('ouvindo');
+  const iniciar = ()=>{
+    let r; try{ r = new SR(); }catch(e){ premioDitarParar(); return; }
+    r.lang = 'pt-BR'; r.continuous = true; r.interimResults = true;
+    r.onresult = ev=>{ let it = ''; for(let i = ev.resultIndex; i < ev.results.length; i++){ const t = ev.results[i][0].transcript; if(ev.results[i].isFinal) d.finais += ' '+t; else it += ' '+t; }
+      let t = [d.base, d.finais.trim(), it.trim()].filter(Boolean).join(' ').replace(/\s{2,}/g,' '); if(!d.base && t) t = t.charAt(0).toUpperCase()+t.slice(1); campo.value = t; if(aoMudar) aoMudar(t); };
+    r.onerror = ev=>{ if(ev && /not-allowed|audio-capture|service-not-allowed/.test(ev.error||'')) premioDitarParar(); };
+    r.onend = ()=>{ if(d.ativo && PREMIO_DITADO===d) iniciar(); };
+    d.r = r; try{ r.start(); }catch(e){}
+  };
+  iniciar();
+}
+async function premioAbrir(){
+  premioFontes();
+  if(document.querySelector('.premio-page')) return;
+  const s = getStudent(currentStudentId);
+  const souAluno = currentUserRole==='aluno' && !!currentUser;
+  const produto = s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência';
+  const st = { passo:1, fat:{ fat_5k:null, fat_10k:null, fat_20k:null, fat_30k:null }, decl:false, como:[], outros:'', exp:'', erro:'', enviando:false, existente:undefined };
+  const page = document.createElement('div');
+  page.className = 'premio-page';
+  page.setAttribute('role','dialog'); page.setAttribute('aria-modal','true'); page.setAttribute('aria-label','Prêmio Essência Experience 2026');
+  const fechar = ()=>{ premioDitarParar(); document.removeEventListener('keydown', esc); page.remove(); document.body.style.overflow = ''; };
+  const esc = e=>{ if(e.key==='Escape') fechar(); };
+  document.addEventListener('keydown', esc);
+  document.body.style.overflow = 'hidden';
+
+  const faixaOk = ()=>{
+    /* Pergunta em ordem crescente: um "não" encerra as faixas acima. */
+    for(const f of PREMIO_FAIXAS){ const v = st.fat[f.k]; if(v===null) return false; if(v===false) return true; }
+    return true;
+  };
+  const visiveis = ()=>{
+    const out = [];
+    for(const f of PREMIO_FAIXAS){ out.push(f); if(st.fat[f.k]!==true) break; }
+    return out;
+  };
+  const resumoHtml = r=>`
+    <div class="pr-resumo">
+      <div><b>Faturamento:</b> ${escapeHtml(premioFaixa(r).t)}</div>
+      <div><b>Como:</b> ${escapeHtml(premioComoTxt(r).join(' · ') || '—')}</div>
+      <div style="margin-top:6px"><b>Sua experiência:</b><br>${escapeHtml(r.experiencia||'').replace(/\n/g,'<br>')}</div>
+    </div>`;
+
+  const corpo = ()=>{
+    if(st.existente===undefined) return `<div class="pr-carregando">Carregando…</div>`;
+    if(st.existente){
+      return `<div class="pr-fim">
+        <h2>Participação recebida</h2>
+        <p>Você enviou sua participação em ${tzDataCurta(String(st.existente.created_at).slice(0,10))}. A equipe já tem as suas respostas. Os premiados serão anunciados no Essência Experience.</p>
+        ${resumoHtml(st.existente)}
+        <div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-pr="fechar">Voltar ao Plat</button></div>
+      </div>`;
+    }
+    const passos = `<div class="pr-passos" aria-hidden="true"><span class="${st.passo>=1?'on':''}">1 · Faturamento</span><span class="${st.passo>=2?'on':''}">2 · Como</span><span class="${st.passo>=3?'on':''}">3 · Sua história</span></div>`;
+    const aviso = souAluno ? '' : `<div class="pr-aviso">Você está vendo a página como equipe. O envio funciona só para alunos e mentorados.</div>`;
+    if(st.passo===1){
+      return passos + aviso + `
+        <h2 class="pr-sec-t">Seu faturamento</h2>
+        <p class="pr-sec-s">Responda pensando no faturamento mensal do seu consultório ou negócio depois que você entrou no Método Essência.</p>
+        ${visiveis().map(f=>`
+          <div class="pr-q">
+            <p>Você já faturou <b>mais de R$ ${f.v} por mês</b> depois que entrou no Método?</p>
+            <div class="pr-sn" role="group" aria-label="Mais de R$ ${f.v} por mês">
+              <button type="button" class="${st.fat[f.k]===true?'on':''}" data-pr-fat="${f.k}" data-v="1" aria-pressed="${st.fat[f.k]===true}">Sim</button>
+              <button type="button" class="${st.fat[f.k]===false?'on':''}" data-pr-fat="${f.k}" data-v="0" aria-pressed="${st.fat[f.k]===false}">Não</button>
+            </div>
+          </div>`).join('')}
+        ${faixaOk() ? `
+          <label class="pr-decl"><input type="checkbox" id="pr-decl" ${st.decl?'checked':''}> <span>Eu assumo ser verídica toda e qualquer informação fornecida por mim neste formulário.</span></label>` : ''}
+        <p class="pr-erro">${escapeHtml(st.erro)}</p>
+        <div class="pr-acoes"><button type="button" class="pr-btn cheio" data-pr="ir2">Continuar</button></div>`;
+    }
+    if(st.passo===2){
+      return passos + aviso + `
+        <h2 class="pr-sec-t">Como você fez esse faturamento?</h2>
+        <p class="pr-sec-s">Marque todas as opções que se aplicam.</p>
+        <div class="pr-opcoes">
+          ${PREMIO_COMO.map(o=>`<label class="pr-op ${st.como.includes(o.k)?'on':''}"><input type="checkbox" data-pr-como="${o.k}" ${st.como.includes(o.k)?'checked':''}> ${escapeHtml(o.t)}</label>`).join('')}
+        </div>
+        ${st.como.includes('outros') ? `<div style="margin-top:10px"><label class="pr-sec-s" for="pr-outros" style="display:block;margin-bottom:6px">Conte quais são os outros:</label><input type="text" class="pr-in" id="pr-outros" maxlength="500" value="${escapeHtml(st.outros)}" placeholder="Ex.: consultoria para clínicas"></div>` : ''}
+        <p class="pr-erro">${escapeHtml(st.erro)}</p>
+        <div class="pr-acoes"><button type="button" class="pr-btn" data-pr="volta1">Voltar</button><button type="button" class="pr-btn cheio" data-pr="ir3">Continuar</button></div>`;
+    }
+    if(st.passo===3){
+      return passos + aviso + `
+        <h2 class="pr-sec-t">Compartilhe uma experiência exitosa</h2>
+        <p class="pr-sec-s">Conte uma conquista que você viveu depois que entrou no Método Essência: o que você fez, o que mudou e qual foi o resultado.</p>
+        <div class="pr-campo">
+          <textarea class="pr-in" id="pr-exp" maxlength="5000" placeholder="Escreva ou fale">${escapeHtml(st.exp)}</textarea>
+          ${wfDitadoDisponivel() ? `<button type="button" class="pr-mic" id="pr-mic" title="Falar" aria-label="Falar em vez de digitar">${icon('mic')}</button>` : ''}
+        </div>
+        <p class="pr-erro">${escapeHtml(st.erro)}</p>
+        <div class="pr-acoes"><button type="button" class="pr-btn" data-pr="volta2">Voltar</button><button type="button" class="pr-btn cheio" data-pr="enviar" ${(!souAluno || st.enviando)?'disabled':''}>${st.enviando?'Enviando...':'Enviar respostas'}</button></div>`;
+    }
+    return `<div class="pr-fim">
+      <h2>Respostas enviadas!</h2>
+      <p>Obrigado por compartilhar a sua história. A equipe do Método Essência vai analisar todas as participações, e os premiados serão anunciados no Essência Experience.</p>
+      <div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-pr="fechar">Voltar ao Plat</button></div>
+    </div>`;
+  };
+
+  const desenhar = (rolarTopo)=>{
+    page.innerHTML = `
+      <div class="pr-wrap">
+        <div class="pr-top">
+          <img src="logo-essencia-experience.png" alt="Essência Experience">
+          <button type="button" class="pr-voltar" data-pr="fechar">${icon('back')} Voltar ao Plat</button>
+        </div>
+        <div class="pr-hero">
+          <div class="pr-k">Prêmio Essência Experience 2026</div>
+          <h1>Seus resultados podem ser premiados</h1>
+          <p>Os alunos e mentorados do Método Essência que mais transformaram a própria atuação serão reconhecidos no Essência Experience, em São Paulo. Conte para a gente o que você conquistou.</p>
+        </div>
+        ${corpo()}
+      </div>`;
+    if(rolarTopo) page.scrollTop = 0;
+    page.querySelectorAll('[data-pr="fechar"]').forEach(b=>b.addEventListener('click', fechar));
+    page.querySelectorAll('[data-pr-fat]').forEach(b=>b.addEventListener('click', ()=>{
+      const k = b.dataset.prFat, v = b.dataset.v==='1';
+      st.fat[k] = v; st.erro = '';
+      /* Mudou uma faixa: as de cima voltam a ficar em aberto (ou "não", se esta foi "não"). */
+      const i = PREMIO_FAIXAS.findIndex(f=>f.k===k);
+      PREMIO_FAIXAS.slice(i+1).forEach(f=>{ st.fat[f.k] = v ? null : false; });
+      desenhar();
+    }));
+    const decl = page.querySelector('#pr-decl'); if(decl) decl.addEventListener('change', ()=>{ st.decl = decl.checked; st.erro = ''; });
+    page.querySelectorAll('[data-pr-como]').forEach(c=>c.addEventListener('change', ()=>{
+      const k = c.dataset.prComo;
+      st.como = c.checked ? [...new Set([...st.como, k])] : st.como.filter(x=>x!==k);
+      st.erro = ''; desenhar();
+      if(k==='outros' && c.checked){ const o = page.querySelector('#pr-outros'); if(o) o.focus(); }
+    }));
+    const outros = page.querySelector('#pr-outros'); if(outros) outros.addEventListener('input', ()=>{ st.outros = outros.value; });
+    const exp = page.querySelector('#pr-exp'); if(exp) exp.addEventListener('input', ()=>{ st.exp = exp.value; });
+    const mic = page.querySelector('#pr-mic'); if(mic && exp) mic.addEventListener('click', ()=>premioDitar(mic, exp, t=>{ st.exp = t; }));
+    const acao = (nome, fn)=>{ const b = page.querySelector(`[data-pr="${nome}"]`); if(b) b.addEventListener('click', fn); };
+    acao('ir2', ()=>{
+      if(!faixaOk()){ st.erro = 'Responda às perguntas de faturamento para continuar.'; desenhar(); return; }
+      if(!st.decl){ st.erro = 'Para continuar, confirme que as informações são verídicas.'; desenhar(); return; }
+      st.erro = ''; st.passo = 2; desenhar(true);
+    });
+    acao('volta1', ()=>{ st.erro = ''; st.passo = 1; desenhar(true); });
+    acao('ir3', ()=>{
+      if(!st.como.length){ st.erro = 'Marque pelo menos uma opção.'; desenhar(); return; }
+      if(st.como.includes('outros') && !st.outros.trim()){ st.erro = 'Conte quais são os outros.'; desenhar(); const o = page.querySelector('#pr-outros'); if(o){ o.classList.add('erro'); o.focus(); } return; }
+      st.erro = ''; st.passo = 3; desenhar(true);
+    });
+    acao('volta2', ()=>{ premioDitarParar(); st.erro = ''; st.passo = 2; desenhar(true); });
+    acao('enviar', async ()=>{
+      premioDitarParar();
+      if(!souAluno) return;
+      if(!st.exp.trim()){ st.erro = 'Conte a sua experiência antes de enviar.'; desenhar(); const e = page.querySelector('#pr-exp'); if(e){ e.classList.add('erro'); e.focus(); } return; }
+      st.enviando = true; st.erro = ''; desenhar();
+      const linha = {
+        aluno_id: currentUser.id,
+        fat_5k: !!st.fat.fat_5k, fat_10k: !!st.fat.fat_10k, fat_20k: !!st.fat.fat_20k, fat_30k: !!st.fat.fat_30k,
+        como: st.como, como_outros: st.como.includes('outros') ? st.outros.trim().slice(0,500) : null,
+        experiencia: st.exp.trim().slice(0,5000), declaracao: true, produto,
+      };
+      const { error } = await sb.from('premio_ee2026').insert(linha);
+      st.enviando = false;
+      if(error){
+        if(/duplicate|unique/i.test(error.message||'')){ st.existente = { ...linha, created_at:new Date().toISOString() }; desenhar(true); return; }
+        console.error('premio', error); st.erro = 'Não foi possível enviar agora. Confira a internet e tente de novo.'; desenhar(); return;
+      }
+      st.passo = 4; desenhar(true);
+    });
+  };
+
+  desenhar();
+  document.body.appendChild(page);
+  page.focus && page.setAttribute('tabindex','-1'); page.focus();
+  if(souAluno){
+    try{
+      const { data, error } = await sb.from('premio_ee2026').select('*').eq('aluno_id', currentUser.id).maybeSingle();
+      if(error) throw error;
+      st.existente = data || null;
+    }catch(e){ console.error('premio', e); st.existente = null; }
+  } else st.existente = null;
+  if(document.body.contains(page)) desenhar();
+}
+
+/* ---- Visão da equipe: aba "Prêmio Essência Experience 2026" no Radar ---- */
+const PREMIO_UI = { rows:null, carregando:false, filtro:'todos' };
+async function premioCarregarEquipe(){
+  PREMIO_UI.carregando = true;
+  try{ const { data, error } = await sb.from('premio_ee2026').select('*').order('created_at', {ascending:false}); if(error) throw error; PREMIO_UI.rows = data || []; }
+  catch(e){ console.error('premio equipe', e); PREMIO_UI.rows = []; }
+  PREMIO_UI.carregando = false;
+  if(currentView==='radar') renderRadar();
+}
+function premioHtmlEquipe(){
+  if(PREMIO_UI.rows===null){ if(!PREMIO_UI.carregando) premioCarregarEquipe(); return '<div class="empty-state">Carregando as participações…</div>'; }
+  const rows = PREMIO_UI.rows.filter(r=>getStudent(r.aluno_id))
+    .sort((a,b)=> premioFaixa(b).n - premioFaixa(a).n || String(b.created_at).localeCompare(String(a.created_at)));
+  const f = PREMIO_UI.filtro;
+  const vis = rows.filter(r=> f==='todos' || premioFaixa(r).c===f);
+  const conta = c=> rows.filter(r=>premioFaixa(r).c===c).length;
+  const tile = (rot, n)=>`<div class="kpi-tile"><div class="label">${rot}</div><div class="value" style="font-size:22px">${n}</div></div>`;
+  return `
+    <p class="section-sub" style="margin-top:0">Respostas do formulário "Seus resultados podem ser premiados", aberto pelo banner no Início dos alunos do Método e dos mentorados. Cada pessoa envia uma vez e declara que as informações são verídicas.</p>
+    <div class="kpi-row">${tile('Participações', rows.length)}${tile('Mais de R$ 30 mil/mês', conta('f30'))}${tile('Mais de R$ 20 mil/mês', conta('f20'))}${tile('Mais de R$ 10 mil/mês', conta('f10'))}${tile('Mais de R$ 5 mil/mês', conta('f5'))}</div>
+    <div class="nps-filtros">${[['todos','Todas'],['f30','+ R$ 30 mil'],['f20','+ R$ 20 mil'],['f10','+ R$ 10 mil'],['f5','+ R$ 5 mil'],['f0','Até R$ 5 mil']].map(([k,l])=>`<button type="button" class="filter-tab ${f===k?'active':''}" data-pe-f="${k}">${l}</button>`).join('')}</div>
+    <div class="pe-lista">
+      ${vis.map(r=>{ const s = getStudent(r.aluno_id); const fx = premioFaixa(r); return `
+        <div class="pe-item">
+          <div class="pe-hd"><span class="pe-faixa ${fx.c}">${fx.t}</span><button type="button" class="vg-nome-btn" data-rd-acomp="${s.id}">${escapeHtml(s.name)}</button><small>${escapeHtml(r.produto || (s.tier==='curso'?'Método Essência':'Mentoria Essência'))} · ${tzDataCurta(String(r.created_at).slice(0,10))}</small></div>
+          <div class="pe-como">${premioComoTxt(r).map(t=>`<span>${escapeHtml(t)}</span>`).join('')}</div>
+          <p class="pe-exp">${escapeHtml(r.experiencia||'')}</p>
+          ${r.declaracao ? `<span class="pe-decl">${icon('check')} Declarou que as informações são verídicas</span>` : ''}
+        </div>`; }).join('') || '<div class="empty-state">Nenhuma participação ainda.</div>'}
+    </div>`;
+}
 /* ================= RADAR DOS MENTORADOS (Sandra, Viviane e Murilo) =================
    Um semáforo por mentorado com o motivo escrito ao lado, para a pessoa abrir a tela e saber quem
    precisa de atenção hoje. Os dados que só o banco sabe (último acesso, quando marcou o último item
@@ -15333,7 +15688,7 @@ const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-b
 const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
 const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
 const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, aba:'mentorados' };
-function radarAbasHtml(){ return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${RADAR_UI.aba==='mentorados'?'active':''}" data-rd-aba="mentorados">Mentorados</button><button type="button" class="filter-tab ${RADAR_UI.aba==='nps'?'active':''}" data-rd-aba="nps">NPS</button></div>`; }
+function radarAbasHtml(){ return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${RADAR_UI.aba==='mentorados'?'active':''}" data-rd-aba="mentorados">Mentorados</button><button type="button" class="filter-tab ${RADAR_UI.aba==='nps'?'active':''}" data-rd-aba="nps">NPS</button><button type="button" class="filter-tab ${RADAR_UI.aba==='premio'?'active':''}" data-rd-aba="premio">Prêmio Essência Experience 2026</button></div>`; }
 function radarBindAbas(el){ el.querySelectorAll('[data-rd-aba]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.aba = b.dataset.rdAba; renderRadar(); })); }
 function radarPode(){
   return currentUserRole==='staff' && !!currentUser && RADAR_UIDS.includes(idEfetivo());
@@ -15452,6 +15807,13 @@ function renderRadar(){
   if(!el) return;
   if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Relacionamento e do Customer Success.</div>'; return; }
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
+  if(RADAR_UI.aba==='premio'){
+    el.innerHTML = radarAbasHtml() + premioHtmlEquipe();
+    radarBindAbas(el);
+    el.querySelectorAll('[data-pe-f]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.filtro = b.dataset.peF; renderRadar(); }));
+    el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+    return;
+  }
   if(RADAR_UI.aba==='nps'){
     el.innerHTML = radarAbasHtml() + npsHtmlEquipe();
     radarBindAbas(el);
