@@ -13802,7 +13802,6 @@ function renderEquipe(){
   document.getElementById('view-equipe').innerHTML = `
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
-    ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
       ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && (a.view!=='desempenho' || avPode()) && (a.view!=='dre' || drePode()) && (a.view!=='reunioes' || reuPodeAbrir()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
@@ -13814,7 +13813,6 @@ function renderEquipe(){
     </div>`;
   reuPreparar();
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
-  bindAlertasAcomp();
 }
 
 /* ================= VIEW: COMUNICAÇÃO (equipe interna) =================
