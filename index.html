@@ -9960,7 +9960,7 @@ function resumoCell(texto, id){
 }
 function contatoTipoLabel(c){
   const t = c.tipo || (c.linkGravacao || c.linkTranscricao ? 'meet' : '');
-  return t==='meet' ? 'Google Meet' : t==='presencial' ? 'Presencial' : t==='whatsapp' ? 'WhatsApp' : '—';
+  return t==='meet' ? 'Google Meet' : t==='presencial' ? 'Presencial' : t==='whatsapp' ? 'WhatsApp' : t==='plat' ? 'Mensagem no Plat' : '—';
 }
 function renderInterno(){
   const s = getStudent(currentStudentId);
@@ -10081,7 +10081,7 @@ function renderInterno(){
 
     ${intHead('contatos', 'comment', 'Registro de Contatos', s.contatos.length)}
     ${intBody('contatos')}
-    <p class="section-sub" style="margin-top:0">Qualquer pessoa da equipe que teve contato com o mentorado — reunião no Google Meet, reunião presencial ou contato por WhatsApp — pode registrar aqui.</p>
+    <p class="section-sub" style="margin-top:0">Qualquer pessoa da equipe que teve contato com o mentorado — reunião no Google Meet, reunião presencial, contato por WhatsApp ou mensagem no Plat — pode registrar aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Data</th><th>Tipo</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th></th></tr></thead>
@@ -10110,6 +10110,7 @@ function renderInterno(){
           <option value="meet">Reunião no Google Meet</option>
           <option value="presencial">Reunião Presencial</option>
           <option value="whatsapp">Contato por WhatsApp</option>
+          <option value="plat">Mensagem no Plat</option>
         </select>
       </div>
       <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
