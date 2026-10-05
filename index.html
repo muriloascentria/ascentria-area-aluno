@@ -16287,7 +16287,7 @@ async function radarCarregar(){
 function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
-  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Relacionamento e do Customer Success.</div>'; return; }
+  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e do Customer Success.</div>'; return; }
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
   if(RADAR_UI.aba==='premio'){
     el.innerHTML = radarAbasHtml() + premioHtmlEquipe();
