@@ -1880,6 +1880,10 @@
   .dre-fora{margin:10px 12px 8px;font-size:12px;color:var(--text-dim);display:flex;flex-direction:column;gap:4px;}
   .dre-fora small{color:var(--text-mute);}
   .dre-fora div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--border);padding:3px 0;}
+  .pt-toggle{overflow-x:auto;scrollbar-width:none;max-width:min(640px, calc(100vw - 420px));}
+  .pt-toggle::-webkit-scrollbar{display:none;}
+  .pt-toggle button{flex:0 0 auto;}
+  @media (max-width:880px){ .pt-toggle{max-width:calc(100vw - 150px);} }
   .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
   .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
   .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
@@ -2354,6 +2358,7 @@
           <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê">Editor</button>
           <button data-role="cs" id="role-cs" style="display:none" title="Ver a plataforma como o Customer Success vê (sem Comunicação, Financeiro, Sessões 1:1, Análise e eCRM)">CS</button>
         </div>
+        <div class="role-toggle pt-toggle" id="pt-toggle" style="display:none"></div>
         <button class="icon-btn" id="notif-btn" title="Notificações">
           <span class="dot-alert" id="notif-dot"></span>
           <span class="notif-badge" id="notif-badge" style="display:none"></span>
@@ -4059,7 +4064,7 @@ async function bootstrapData(){
     try{ const { data: rest } = await sb.from('staff_restrito').select('bloqueios').eq('user_id', currentUser.id).maybeSingle();
       if(rest && Array.isArray(rest.bloqueios)) STAFF_BLOQUEIOS = new Set(rest.bloqueios); }catch(e){}
   }
-  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, aulasLiberadas:!!me.aulas_liberadas, contaTeste:!!me.conta_teste} : null;
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, aulasLiberadas:!!me.aulas_liberadas, contaTeste:!!me.conta_teste, espelhoDe:me.espelho_de||null, perfilTeste:me.perfil_teste||null} : null;
 
   /* Papel 'vendas' (vendedora do time): acesso restrito ao Registro de Sessões 1:1 e nada mais.
      Carrega só essa lista — nenhum dado de aluno, comunidade, aulas, clientes ou financeiro chega ao
@@ -5413,22 +5418,32 @@ function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole===
    navegador e "Equipe" volta para ela sem pedir senha. Quem gera o acesso é a função
    trocar-perfil-teste, que só atende o Murilo e as próprias contas de teste. */
 const PT_CHAVE = 'ascentria-sessao-murilo';
-const PT_NOMES = { aluno:'Teste Aluno', cs:'Teste CS', consultora:'Teste Consultora', editor:'Teste Editor', staff:'sua conta' };
+const PT_NOMES = { aluno:'Teste Aluno', diego:'Teste Diego', carmem:'Teste Carmem', sandra:'Teste Sandra', mariane:'Teste Mariane', viviane:'Teste Viviane', adriana:'Teste Adriana', editor:'Teste Editor', cs:'Teste Viviane', consultora:'Teste Adriana', staff:'sua conta' };
+/* Ordem do botão lá de cima: aluno, você, cada pessoa da equipe (numa conta de teste paralela, com o
+   mesmo acesso dela) e, por último, o editor. */
+const PT_PERFIS = [['aluno','Aluno'],['staff','Murilo'],['diego','Diego'],['carmem','Carmem'],['sandra','Sandra'],['mariane','Mariane'],['viviane','Viviane'],['adriana','Adriana'],['editor','Editor']];
+/* Quem a conta de teste espelha: as áreas pessoais (Radar, DRE, Desempenho...) seguem essa pessoa. */
+function idEfetivo(){ return (currentUserProfile && currentUserProfile.espelhoDe) || (currentUser && currentUser.id) || null; }
 function ptSessaoMurilo(){ try{ return JSON.parse(localStorage.getItem(PT_CHAVE)||'null'); }catch(e){ return null; } }
 function ptEmTeste(){ return !!(currentUserProfile && currentUserProfile.contaTeste) && !!ptSessaoMurilo(); }
 function ptSouMuriloReal(){ return !!(currentUser && currentUser.id===GT_MURILO_UID); }
-function ptPerfilAtual(){ return currentUserRole==='aluno' ? 'aluno' : currentUserRole==='vendas' ? 'consultora' : currentUserRole==='editor' ? 'editor' : 'cs'; }
+function ptPerfilAtual(){ return (currentUserProfile && currentUserProfile.perfilTeste) || (currentUserRole==='aluno' ? 'aluno' : currentUserRole==='vendas' ? 'adriana' : currentUserRole==='editor' ? 'editor' : 'viviane'); }
 function ptAjustarToggle(){
-  if(!ptEmTeste()) return;
-  const tg = document.getElementById('role-toggle');
-  tg.style.display = 'flex';
-  ['role-consultora','role-editor','role-cs'].forEach(id=>{ document.getElementById(id).style.display = ''; });
-  const atual = ptPerfilAtual();
-  tg.querySelectorAll('[data-role]').forEach(b=>{ const on = b.dataset.role===atual; b.classList.toggle('active', on); b.classList.toggle('staff-active', on && atual!=='aluno'); });
+  const pt = document.getElementById('pt-toggle'), tg = document.getElementById('role-toggle');
+  if(!pt || !tg) return;
+  const meu = ptSouMuriloReal() || ptEmTeste();
+  if(!meu){ pt.style.display = 'none'; return; }
+  tg.style.display = 'none';
+  pt.style.display = 'flex';
+  const atual = ptEmTeste() ? ptPerfilAtual() : (currentRole==='aluno' ? '' : 'staff');
+  pt.innerHTML = PT_PERFIS.map(([k,rot])=>`<button type="button" data-pt="${k}" class="${k===atual?'active':''} ${k===atual && k!=='aluno'?'staff-active':''}" title="${k==='staff' ? 'Sua conta' : k==='aluno' ? 'Conta de teste de aluno' : 'Conta de teste com o mesmo acesso de '+rot}">${rot}</button>`).join('');
+  pt.querySelectorAll('[data-pt]').forEach(b=>b.addEventListener('click', ()=>ptCliqueToggle(b.dataset.pt)));
+  const ativo = pt.querySelector('.active'); if(ativo && ativo.scrollIntoView) try{ ativo.scrollIntoView({block:'nearest', inline:'center'}); }catch(e){}
   setTimeout(ajustarTituloTopo, 0);
 }
 function ptCliqueToggle(role){
   if(ptEmTeste()){ if(role!==ptPerfilAtual()) ptTrocar(role); return; }
+  if(ptSouMuriloReal() && role==='staff'){ setRole('staff'); return; }
   if(ptSouMuriloReal() && role!=='staff'){ ptTrocar(role); return; }
   setRole(role);
 }
@@ -14345,7 +14360,7 @@ function renderAnalise(){
 const DRE_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b9b8-c021da4db519'];
 const DRE_UI = { salvos:null, carregando:false, mes:null, regime:'competencia', vendo:null };
 const DRE_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-function drePode(){ return currentUserRole==='staff' && !!currentUser && DRE_UIDS.includes(currentUser.id); }
+function drePode(){ return currentUserRole==='staff' && !!currentUser && DRE_UIDS.includes(idEfetivo()); }
 function dreMesNome(ym){ const [y,m] = ym.split('-').map(Number); return `${DRE_MESES[m-1]} de ${y}`; }
 function dreMesAtual(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 function dreMesAnterior(ym){ let [y,m] = ym.split('-').map(Number); m--; if(m<1){ m=12; y--; } return `${y}-${String(m).padStart(2,'0')}`; }
@@ -14473,7 +14488,7 @@ function renderDre(){
   let ini = datas[0] || anteriorMes; const meses = []; for(let m = atual; m >= ini; m = dreMesAnterior(m)){ meses.push(m); if(meses.length>36) break; }
   const pendente = !salvoDe(anteriorMes);
   el.innerHTML = `
-    <p class="section-sub" style="margin-top:0">O DRE é montado com os lançamentos do Financeiro do Plat. Gere o DRE de cada mês quando ele fechar: ele fica guardado aqui e pode ser gerado de novo se algum lançamento mudar. Só você e ${currentUser.id===DRE_UIDS[0] ? 'a Carmem' : 'o Murilo'} têm acesso.</p>
+    <p class="section-sub" style="margin-top:0">O DRE é montado com os lançamentos do Financeiro do Plat. Gere o DRE de cada mês quando ele fechar: ele fica guardado aqui e pode ser gerado de novo se algum lançamento mudar. Só você e ${idEfetivo()===DRE_UIDS[0] ? 'a Carmem' : 'o Murilo'} têm acesso.</p>
     ${pendente ? `<div class="ep-aviso">${icon('bell')}<div>O DRE de <strong>${dreMesNome(anteriorMes)}</strong> ainda não foi gerado. <button type="button" class="link-btn" data-dre-ir="${anteriorMes}">Abrir ${DRE_MESES[Number(anteriorMes.slice(5))-1]}</button></div></div>` : ''}
     <div class="dre-barra">
       <label>Mês<select class="ps-input" id="dre-mes">${meses.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${dreMesNome(m)}${salvoDe(m)?' ✓':''}${m===atual?' (em andamento)':''}</option>`).join('')}</select></label>
@@ -14530,7 +14545,7 @@ const AV_ETAPAS = [
 ];
 const AV_CONSULTORAS = ['Adriana','Carmem'];
 let AVALIACOES = {}; // analise_id -> linha
-function avPode(){ return currentUserRole==='staff' && !!currentUser && AV_UIDS.includes(currentUser.id); }
+function avPode(){ return currentUserRole==='staff' && !!currentUser && AV_UIDS.includes(idEfetivo()); }
 async function avCarregar(){
   if(!avPode()) return;
   try{ const { data, error } = await sb.from('avaliacao_vendas').select('*'); if(error) throw error; AVALIACOES = {}; (data||[]).forEach(r=>{ AVALIACOES[r.analise_id] = r; }); }
@@ -14553,7 +14568,7 @@ function avBlocoHtml(a){
   const total = AV_ETAPAS.reduce((t,e)=>t+(notas[e.k]==null?0:notas[e.k]),0);
   return `
     <div class="av-bloco" id="av-bloco">
-      <div class="av-hd"><strong>${icon('chart','tiny')} Avaliação da consultora</strong><small>Só você e ${currentUser.id===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem estas notas.</small></div>
+      <div class="av-hd"><strong>${icon('chart','tiny')} Avaliação da consultora</strong><small>Só você e ${idEfetivo()===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem estas notas.</small></div>
       <div class="av-linha2">
         <label>Consultora<select class="ps-input" id="av-consultora"><option value="">Escolha…</option>${AV_CONSULTORAS.map(c=>`<option ${cons===c?'selected':''}>${c}</option>`).join('')}</select></label>
         <label>Data da venda<input class="ps-input" type="date" id="av-data" value="${escapeAttr(r ? r.data_ref : avDataPadrao(a))}"></label>
@@ -14616,7 +14631,7 @@ function renderDesempenho(){
   const media = (l,k)=> l.length ? l.reduce((t,r)=>t+r[k],0)/l.length : null;
   const fmt = v=> v==null ? '—' : (Math.round(v*10)/10).toString().replace('.',',');
   el.innerHTML = `
-    <p class="section-sub" style="margin-top:0">Nota de cada venda analisada (soma das 7 etapas do roteiro, de 0 a 14). As notas vêm da avaliação feita na Análise Sessões 1:1. Só você e ${currentUser.id===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem este quadro.</p>
+    <p class="section-sub" style="margin-top:0">Nota de cada venda analisada (soma das 7 etapas do roteiro, de 0 a 14). As notas vêm da avaliação feita na Análise Sessões 1:1. Só você e ${idEfetivo()===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem este quadro.</p>
     ${AV_CONSULTORAS.map(c=>{
       const l = todas.filter(r=>r.consultora===c).sort((a,b)=>String(a.data_ref).localeCompare(String(b.data_ref)) || String(a.created_at).localeCompare(String(b.created_at)));
       const ini = l.slice(0,3), fim = l.slice(-3);
@@ -15321,7 +15336,7 @@ const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busc
 function radarAbasHtml(){ return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${RADAR_UI.aba==='mentorados'?'active':''}" data-rd-aba="mentorados">Mentorados</button><button type="button" class="filter-tab ${RADAR_UI.aba==='nps'?'active':''}" data-rd-aba="nps">NPS</button></div>`; }
 function radarBindAbas(el){ el.querySelectorAll('[data-rd-aba]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.aba = b.dataset.rdAba; renderRadar(); })); }
 function radarPode(){
-  return currentUserRole==='staff' && !!currentUser && (RADAR_UIDS.includes(currentUser.id) || !!(currentUserProfile && currentUserProfile.contaTeste));
+  return currentUserRole==='staff' && !!currentUser && RADAR_UIDS.includes(idEfetivo());
 }
 function rdDiasDesde(iso){ if(!iso) return null; return Math.max(0, Math.floor((Date.now()-new Date(iso).getTime())/86400000)); }
 function rdHorasDesde(iso){ if(!iso) return null; return Math.max(0, Math.floor((Date.now()-new Date(iso).getTime())/3600000)); }
