@@ -1381,6 +1381,15 @@
   .cell-collapse.expanded{display:block;-webkit-line-clamp:unset;overflow:visible;}
   .cell-collapse.resumo-oculto[hidden]{display:none;}
   .cell-collapse.resumo-oculto.expanded{margin-bottom:4px;}
+  .vd-reg{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:0;padding:0;vertical-align:middle;}
+  .vd-reg .icon{width:14px;height:14px;stroke-width:3;}
+  .vd-reg-nao{background:rgba(220,70,70,.14);} .vd-reg-nao .icon{stroke:var(--danger);}
+  .vd-reg-sim{background:rgba(60,160,90,.16);cursor:pointer;} .vd-reg-sim .icon{stroke:var(--success);} .vd-reg-sim.aberto{box-shadow:0 0 0 2px var(--success);}
+  .vd-reg-modal{line-height:1.55;font-size:14px;margin:6px 0 4px;white-space:pre-wrap;}
+  .vendas-table td:nth-child(10),.vendas-table td:nth-child(11),.vendas-table th:nth-child(10),.vendas-table th:nth-child(11){text-align:center;}
+  .vd-garantia{max-width:100%;font:inherit;font-size:10.5px;font-weight:600;padding:4px 0 4px 2px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:inherit;}
+  .vd-garantia.permaneceu{color:var(--success);border-color:rgba(60,160,90,.45);}
+  .vd-garantia.cancelou{color:var(--danger);border-color:rgba(220,70,70,.5);}
   .vd-obj{margin-bottom:4px;} .vd-obj b{color:var(--text-dim);font-weight:700;} .vd-sem{color:var(--text-mute);}
   .cc-toggle{display:block;margin-top:3px;background:none;border:none;padding:0;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline;}
   .link-btn{background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--accent);text-decoration:underline;cursor:pointer;}
@@ -1959,7 +1968,8 @@
   .dre-fora{margin:10px 12px 8px;font-size:12px;color:var(--text-dim);display:flex;flex-direction:column;gap:4px;}
   .dre-fora small{color:var(--text-mute);}
   .dre-fora div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--border);padding:3px 0;}
-  .pt-toggle{overflow-x:auto;scrollbar-width:none;max-width:min(640px, calc(100vw - 420px));}
+  .pt-toggle{overflow-x:auto;scrollbar-width:none;max-width:min(640px, calc(100vw - 720px));min-width:0;flex:0 1 auto;}
+  .topbar-right:has(.pt-toggle){flex-shrink:1;}
   .pt-toggle::-webkit-scrollbar{display:none;}
   .reu-badge{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:600;color:#fff;background:var(--danger);border-radius:20px;padding:3px 10px;}
   .reu-cont{display:inline-block;min-width:18px;padding:0 6px;border-radius:10px;background:var(--accent,#8d916f);color:#fff;font-size:11px;margin-left:4px;}
@@ -4884,7 +4894,7 @@ function mapVendaSessaoRow(row){
     presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '', videoVenda: row.video_venda || '', transcricao: row.transcricao || '',
     valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
     objecoes: row.objecoes || '', objecoes2: row.objecoes2 || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
-    contrato: row.contrato_texto || '',
+    contrato: row.contrato_texto || '', garantia: row.garantia || '',
     studentId: row.student_id || null, // tag do aluno — vínculo explícito, feito pela equipe no modal de edição
   };
 }
@@ -4896,7 +4906,7 @@ async function syncVendaSessaoInsert(v){
     presenca: v.presenca || null, resultado: v.resultado || null, whatsapp: v.whatsapp || null, video_venda: v.videoVenda || null,
     valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
     objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, problemas_sessao: v.problemas || null, observacoes: v.observacoes || null,
-    contrato_texto: v.contrato || null,
+    contrato_texto: v.contrato || null, garantia: v.resultado==='Vendido' ? (v.garantia||'Permaneceu') : (v.garantia||null),
     student_id: v.studentId || null,
   }).select().single();
   if(error) throw error;
@@ -14053,8 +14063,9 @@ function vendaTemRegistro(t, fallback){ return !!(t && String(t).trim() && Strin
 /* Objeções e observações ficam recolhidas: a célula mostra só "Ver registro" e, ao clicar, abre o texto
    inteiro (as duas objeções juntas). Sem registro, mostra um traço. Deixa a tabela bem mais limpa. */
 function vendasRegistroCell(html, cellId){
-  if(!html) return '<span class="vd-sem">—</span>';
-  return `<div class="cell-collapse resumo-oculto" data-cc="${cellId}" hidden>${html}</div><button type="button" class="cc-toggle" style="margin-top:0" data-cc-toggle="${cellId}" data-cc-abrir="Ver registro" data-cc-fechar="Ocultar registro">Ver registro</button>`;
+  /* Só o sinal: bolinha vermelha com X quando não foi registrado; check verde quando foi (clique mostra o texto). */
+  if(!html) return '<span class="vd-reg vd-reg-nao" title="Não registrado">'+icon('x')+'</span>';
+  return `<button type="button" class="vd-reg vd-reg-sim" data-vd-reg="${cellId}" title="Registrado. Clique para ver">${icon('tick')}</button><div class="vd-reg-texto" data-vd-reg-txt="${cellId}" style="display:none">${html}</div>`;
 }
 function vendasClampCell(html, plainText, cellId){
   if(!plainText || plainText.length<=80) return html || '';
@@ -14238,16 +14249,15 @@ function renderVendas(){
     <div class="table-wrap vendas-table-wrap">
       <table class="check-table vendas-table">
         <colgroup>
-          <col style="width:3%"><col style="width:6%"><col style="width:9%"><col style="width:8%"><col style="width:7%">
-          <col style="width:8%"><col style="width:4%"><col style="width:8%"><col style="width:6%">
-          <col style="width:6%"><col style="width:5%"><col style="width:12%"><col style="width:12%">
-          <col style="width:5%"><col style="width:4%">
+          <col style="width:4%"><col style="width:7%"><col style="width:10%"><col style="width:9%"><col style="width:7%">
+          <col style="width:5%"><col style="width:8%"><col style="width:7%"><col style="width:8%">
+          <col style="width:7%"><col style="width:8%"><col style="width:6%"><col style="width:10%"><col style="width:4%">
         </colgroup>
         <thead><tr>
           <th>Nº</th><th>Data</th><th>Lead</th><th>WhatsApp</th><th>Vendedor</th>
-          <th>Produto</th><th>Upsell</th><th>Formato</th><th>Presença</th>
-          <th>Resultado</th><th>Valor</th><th>Objeções</th><th>Observações</th>
-          <th colspan="2">Contrato</th>
+          <th>Upsell</th><th>Formato</th><th>Presença</th>
+          <th>Resultado</th><th>Objeções</th><th>Observações</th>
+          <th>Contrato</th><th title="Depois do prazo de garantia, a pessoa permaneceu ou cancelou">Garantia</th><th></th>
         </tr></thead>
         <tbody>
           ${filtradas.map(v=>`
@@ -14257,21 +14267,20 @@ function renderVendas(){
               <td style="font-weight:600">${escapeHtml(v.lead)}${v.studentId && nomeAlunoTag(v.studentId)? `<br><span class="aluno-tag" title="Aluno vinculado">${icon('check','tiny')} ${escapeHtml(nomeAlunoTag(v.studentId))}</span>` : ''}${vendaLinksReuniao(v)}</td>
               <td>${whatsappCell(v.whatsapp)}</td>
               <td>${escapeHtml(v.vendedor)}</td>
-              <td>${escapeHtml(v.produto)}</td>
               <td class="vendas-upsell-check">${v.upsell? icon('check','tiny') : icon('xcircle','tiny x-danger')}</td>
               <td>${escapeHtml(v.formato)}</td>
               <td>${escapeHtml(v.presenca)}</td>
               <td>${v.resultado? `<span class="resp-pill">${escapeHtml(v.resultado)}</span>` : ''}</td>
-              <td>${escapeHtml(v.valorTexto)}</td>
               <td>${vendasRegistroCell([v.objecoes,v.objecoes2].filter(o=>vendaTemRegistro(o, VENDAS_SEM_OBJECAO)).map((o,i)=>`<div class="vd-obj"><b>Objeção ${i+1}:</b> ${linkify(o)}</div>`).join(''), 'obj-'+v.id)}</td>
               <td>${vendasRegistroCell(vendaTemRegistro(v.observacoes, VENDAS_SEM_OBSERVACAO) ? linkify(v.observacoes) : '', 'obs-'+v.id)}</td>
               <td>${v.contrato? (/^https?:\/\//i.test(v.contrato.trim()) ? `<a href="${escapeAttr(v.contrato.trim())}" target="_blank" rel="noopener" class="link-btn">Clique aqui</a>` : escapeHtml(v.contrato)) : ''}</td>
+              <td>${v.resultado==='Vendido' ? `<select class="vd-garantia ${(v.garantia||'Permaneceu')==='Cancelou'?'cancelou':'permaneceu'}" data-vd-garantia="${v.id}"><option ${(v.garantia||'Permaneceu')==='Permaneceu'?'selected':''}>Permaneceu</option><option ${v.garantia==='Cancelou'?'selected':''}>Cancelou</option></select>` : '<span class="vd-sem">—</span>'}</td>
               <td class="vendas-actions-cell">
                 <button class="btn-mini icon-only" data-edit-venda="${v.id}" title="Editar">${icon('edit','tiny')}</button>
                 <button class="btn-mini icon-only danger" data-del-venda="${v.id}" title="Excluir">${icon('trash','tiny')}</button>
               </td>
             </tr>
-          `).join('') || `<tr><td colspan="15" style="color:var(--text-mute)">Nenhuma sessão encontrada com esses filtros.</td></tr>`}
+          `).join('') || `<tr><td colspan="14" style="color:var(--text-mute)">Nenhuma sessão encontrada com esses filtros.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -14310,6 +14319,18 @@ function renderVendas(){
   document.getElementById('vendas-filtro-mes').addEventListener('change', e=>{ vendasFiltroMes = e.target.value; renderVendas(); });
   bindBuscaInput('vendas-busca', v=>{ vendasBusca = v; }, renderVendas);
   document.getElementById('vendas-pdf-btn').addEventListener('click', ()=> exportVendasPDF(filtradas, indicadores));
+  document.querySelectorAll('#view-vendas [data-vd-reg]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const el = document.querySelector(`[data-vd-reg-txt="${btn.dataset.vdReg}"]`); if(!el) return;
+    const [tipo, id] = btn.dataset.vdReg.split('-'); const v = VENDA_SESSOES.find(x=>String(x.id)===id);
+    document.getElementById('modal').innerHTML = `<div class="modal-body form-modal"><div class="cat">${v ? escapeHtml(v.lead) : ''}</div><h3>${tipo==='obj' ? 'Objeções registradas' : 'Observações'}</h3><div class="vd-reg-modal">${el.innerHTML}</div><div class="modal-actions"><button class="btn-outline" id="vd-reg-fechar">Fechar</button></div></div>`;
+    document.getElementById('modal-backdrop').classList.add('open');
+    document.getElementById('vd-reg-fechar').addEventListener('click', closeModal);
+  }));
+  document.querySelectorAll('#view-vendas [data-vd-garantia]').forEach(sel=>sel.addEventListener('change', ()=>{
+    const v = VENDA_SESSOES.find(x=>String(x.id)===sel.dataset.vdGarantia); if(!v) return;
+    v.garantia = sel.value; sel.className = 'vd-garantia '+(sel.value==='Cancelou'?'cancelou':'permaneceu');
+    syncVendaSessaoUpdate(v.id, {garantia: sel.value});
+  }));
   document.querySelectorAll('[data-cc-toggle]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const id = btn.dataset.ccToggle;
@@ -14464,7 +14485,7 @@ function openEditVendaModal(id){
       presenca: v.presenca || null,
       resultado: v.resultado || null, valor_texto: v.valorTexto || null, valor_numerico: v.valorNumerico,
       objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, observacoes: v.observacoes || null,
-      contrato_texto: v.contrato || null,
+      contrato_texto: v.contrato || null, garantia: v.resultado==='Vendido' ? (v.garantia||'Permaneceu') : (v.garantia||null),
       video_venda: v.videoVenda || null, transcricao: v.transcricao || null,
     });
     closeModal();
