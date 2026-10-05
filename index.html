@@ -1620,7 +1620,7 @@
   #notif-painel{position:fixed;z-index:1200;width:380px;max-width:calc(100vw - 16px);max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.35);overflow:hidden;}
   #notif-painel[hidden]{display:none;}
   .notif-hd{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px;}
-  .notif-lista{overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;}
+  .notif-lista{overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;}
   .notif-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:none;border-bottom:1px solid var(--border);background:none;text-align:left;font:inherit;color:var(--text);cursor:pointer;}
   .notif-item:last-child{border-bottom:none;}
   .notif-item:hover{background:var(--bg-card);}
@@ -5498,7 +5498,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (currentRole==='staff' ? ACOMP_ALERTAS.length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
   if(typeof appBadge==='function') appBadge(pend.length + tf);
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
@@ -5559,14 +5559,6 @@ function notifItens(){
       else itens.push({ tipo:'mensagem', avatarDe:a.alunoId, quando:a.ultimaEm, titulo:`${aluno ? aluno.name.split(' ')[0] : 'Mentorado'} · ${a.naoLidas} ${a.naoLidas===1?'nova mensagem':'novas mensagens'} no Acompanhamento`, sub: a.ultimaTexto ? `${a.ultimaDe===a.alunoId ? '' : msgNomeDe(a.ultimaDe)+': '}${a.ultimaTexto}` : '', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
     });
   }
-  if(currentRole==='staff'){
-    ACOMP_ALERTAS.forEach(a=>{
-      itens.push({ tipo:'alerta', icone:'bell', quando:a.criadoEm, avatarDe:a.alunoId,
-        titulo:`${(a.nome||'').split(' ')[0]} não respondeu os dois últimos checkpoints`,
-        sub:'Vale um contato por fora do sistema — ligação, WhatsApp ou encontro.',
-        acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
-    });
-  }
   pendenciasDoSino().forEach(x=>{
     const c = x.course_id && typeof getCourse==='function' ? getCourse(x.course_id) : null;
     const onde = c ? `na aula "${c.title}"` : 'na Comunidade';
@@ -5602,7 +5594,10 @@ function notifPainelPosicionar(p){
 function notifPainelAtualizar(){
   const p = document.getElementById('notif-painel'); if(!p || p.hidden) return;
   const itens = notifItens();
+  /* Quando chega uma atualização com o painel aberto, mantém a rolagem onde a pessoa estava. */
+  const antes = p.querySelector('.notif-lista'); const rolagem = antes ? antes.scrollTop : 0;
   p.innerHTML = notifPainelHtml();
+  const depois = p.querySelector('.notif-lista'); if(depois && rolagem) depois.scrollTop = rolagem;
   p.querySelectorAll('[data-notif]').forEach(b=>b.addEventListener('click', ()=>{ const it = itens[+b.dataset.notif]; notifPainelFechar(); if(it) it.acao(); }));
   notifPainelPosicionar(p);
 }
