@@ -1857,6 +1857,29 @@
   .av-tabela table{margin-top:8px;font-size:11.5px;}
   .av-tabela{overflow-x:auto;}
   @media (max-width:560px){ .av-kpis b{font-size:16px;} .av-barra{grid-template-columns:minmax(0,96px) minmax(0,1fr) 30px;} }
+  .dre-barra{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:12px 0 6px;}
+  .dre-barra label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);min-width:0;flex:1 1 200px;}
+  .dre-acoes{display:flex;gap:8px;flex-wrap:wrap;}
+  .dre-acoes button{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+  .dre-status{font-size:12px;color:var(--text-mute);margin:6px 0 12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  .dre-status .icon{color:var(--success);}
+  .dre-previa{color:var(--individual);font-weight:700;}
+  .dre-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:6px 4px;margin-top:12px;overflow-x:auto;}
+  .dre-tab{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .dre-tab td{padding:8px 12px;border-bottom:1px solid var(--border);}
+  .dre-tab td:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .dre-tab .dre-grupo td{font-weight:700;}
+  .dre-tab .dre-grupo.neg td:last-child{color:var(--text-dim);}
+  .dre-tab .dre-det td{font-size:12.5px;color:var(--text-mute);padding-left:28px;border-bottom:1px dashed var(--border);}
+  .dre-tab .dre-total td{font-weight:800;background:var(--bg-elev);}
+  .dre-tab .dre-total small{font-weight:500;color:var(--text-mute);margin-left:6px;font-size:11.5px;}
+  .dre-tab .dre-final td{font-size:15px;color:var(--success);}
+  .dre-tab .neg-final td{color:var(--danger);}
+  .dre-delta{font-size:10.5px;font-weight:700;margin-left:6px;}
+  .dre-delta.sobe{color:var(--success);} .dre-delta.desce{color:var(--danger);}
+  .dre-fora{margin:10px 12px 8px;font-size:12px;color:var(--text-dim);display:flex;flex-direction:column;gap:4px;}
+  .dre-fora small{color:var(--text-mute);}
+  .dre-fora div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--border);padding:3px 0;}
   .alerta-bloco{background:rgba(220,80,80,.08);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
   .alerta-hd{display:flex;align-items:center;gap:8px;font-size:14px;}
   .alerta-hd .icon{width:17px;height:17px;color:var(--danger);}
@@ -2382,6 +2405,7 @@
       <div class="view" id="view-radar"></div>
       <div class="view" id="view-planner"></div>
       <div class="view" id="view-desempenho"></div>
+      <div class="view" id="view-dre"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -2471,6 +2495,7 @@ const NAV_LABELS = {
   gestaotime:['target','Gestão do Time'],
   radar:['radar','Radar dos Mentorados'],
   desempenho:['chart','Desempenho das Consultoras'],
+  dre:['money','DRE'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
@@ -2478,7 +2503,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -5380,7 +5405,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','dre','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -5598,6 +5623,7 @@ function goTo(view){
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
   if(view==='radar' && !radarPode()) view = 'equipe';
   if(view==='desempenho' && !avPode()) view = 'equipe';
+  if(view==='dre' && !drePode()) view = 'equipe';
   if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
   if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
@@ -5621,7 +5647,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
@@ -13474,6 +13500,7 @@ const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
+  {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
@@ -13505,7 +13532,7 @@ function renderEquipe(){
     ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && (a.view!=='desempenho' || avPode()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && (a.view!=='desempenho' || avPode()) && (a.view!=='dre' || drePode()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
@@ -14308,6 +14335,189 @@ function renderAnalise(){
       renderAnalise();
     });
   });
+}
+/* ================= DRE (Murilo e Carmem) =================
+   Demonstrativo de Resultado de cada mês, montado com os lançamentos do Financeiro do Plat. Cada
+   categoria cai numa linha do DRE pelo nome (receitas, impostos, devoluções, repasses e prestadores,
+   despesas, tarifas, retiradas). Transferências entre contas, empréstimos e aportes de sócios não são
+   resultado: aparecem à parte, só para conferência. "Gerar DRE" guarda a foto do mês em fin_dre (só
+   Murilo e Carmem leem), e dá para gerar de novo se algum lançamento mudar. */
+const DRE_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b9b8-c021da4db519'];
+const DRE_UI = { salvos:null, carregando:false, mes:null, regime:'competencia', vendo:null };
+const DRE_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function drePode(){ return currentUserRole==='staff' && !!currentUser && DRE_UIDS.includes(currentUser.id); }
+function dreMesNome(ym){ const [y,m] = ym.split('-').map(Number); return `${DRE_MESES[m-1]} de ${y}`; }
+function dreMesAtual(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function dreMesAnterior(ym){ let [y,m] = ym.split('-').map(Number); m--; if(m<1){ m=12; y--; } return `${y}-${String(m).padStart(2,'0')}`; }
+async function dreCarregar(){
+  DRE_UI.carregando = true;
+  try{ const { data, error } = await sb.from('fin_dre').select('*').order('mes', {ascending:false}); if(error) throw error; DRE_UI.salvos = data || []; }
+  catch(e){ console.error('fin_dre', e); DRE_UI.salvos = []; }
+  DRE_UI.carregando = false;
+  if(currentView==='dre') renderDre();
+}
+function dreGrupo(cat, tipo){
+  const n = normTxt(cat ? cat.nome : '');
+  if(/transferencia entre contas|emprestimo|recebido socios|aporte/.test(n)) return 'fora';
+  if(/retirada/.test(n)) return 'retiradas';
+  if(tipo==='receber') return 'receita';
+  if(/imposto|tributo|simples nacional|\bdas\b/.test(n)) return 'impostos';
+  if(/devolucao|estorno|reembolso/.test(n)) return 'devolucoes';
+  if(/repasse|prestador/.test(n)) return 'custos';
+  if(/tarifa|juros|iof|multa/.test(n)) return 'financeiras';
+  return 'despesas';
+}
+function dreCalcular(ym, regime){
+  const cats = {}; FIN_CATEGORIAS.forEach(c=>{ cats[c.id] = c; });
+  const grupos = { receita:{}, impostos:{}, devolucoes:{}, custos:{}, despesas:{}, financeiras:{}, retiradas:{}, fora_e:{}, fora_s:{} };
+  let n = 0;
+  FIN_LANCAMENTOS.forEach(l=>{
+    let data, valor;
+    if(regime==='caixa'){ if(!l.pagou) return; data = String(l.diaPagamento||l.dataVencimento||''); valor = l.valorPago!=null ? l.valorPago : l.valor; }
+    else { data = String(l.dataVencimento||''); valor = l.valor; }
+    if(data.slice(0,7)!==ym || !valor) return;
+    const cat = cats[l.categoriaId];
+    let g = dreGrupo(cat, l.tipo);
+    if(g==='fora') g = l.tipo==='receber' ? 'fora_e' : 'fora_s';
+    const nome = cat ? cat.nome : 'Sem categoria';
+    grupos[g][nome] = (grupos[g][nome]||0) + Number(valor);
+    n++;
+  });
+  const soma = g => Object.values(grupos[g]).reduce((a,b)=>a+b,0);
+  const t = {};
+  t.receitaBruta = soma('receita');
+  t.deducoes = soma('impostos') + soma('devolucoes');
+  t.receitaLiquida = t.receitaBruta - t.deducoes;
+  t.custos = soma('custos');
+  t.lucroBruto = t.receitaLiquida - t.custos;
+  t.despesas = soma('despesas');
+  t.resultadoOperacional = t.lucroBruto - t.despesas;
+  t.financeiras = soma('financeiras');
+  t.lucroLiquido = t.resultadoOperacional - t.financeiras;
+  t.retiradas = soma('retiradas');
+  t.aposRetiradas = t.lucroLiquido - t.retiradas;
+  t.margemBruta = t.receitaLiquida ? t.lucroBruto / t.receitaLiquida * 100 : null;
+  t.margemLiquida = t.receitaLiquida ? t.lucroLiquido / t.receitaLiquida * 100 : null;
+  /* Indicadores do próprio Plat no mês. */
+  const vendas = VENDA_SESSOES.filter(v=>String(v.dataSessao||'').slice(0,7)===ym && /^vendido$/i.test(v.resultado||''));
+  const ind = {
+    vendas: vendas.length,
+    valorVendas: vendas.reduce((a,v)=>a+(v.valorNumerico||0),0),
+    novosAlunos: STUDENTS.filter(st=>!st.contaTeste && String(st.inicioReal||'').slice(0,7)===ym).length,
+    mentoradosAtivos: STUDENTS.filter(st=>!st.contaTeste && st.tier!=='curso' && (()=>{ try{ return diasRestantes(st)>=0; }catch(e){ return false; } })()).length,
+  };
+  ind.ticketMedio = ind.vendas ? ind.valorVendas / ind.vendas : null;
+  return { mes:ym, regime, grupos, totais:t, indicadores:ind, lancamentos:n };
+}
+function dreValor(v){ return formatBRL(v||0); }
+function drePct(v){ return v==null ? '—' : (Math.round(v*10)/10).toString().replace('.',',')+'%'; }
+function dreTabelaHtml(d, anterior){
+  const t = d.totais, ta = anterior ? anterior.totais : null;
+  /* Seta para cima = valor maior que no mês anterior. Verde quando isso é bom (receita, lucro) e
+     vermelho quando é ruim (custos, despesas, impostos, retiradas). */
+  const CUSTO = ['deducoes','custos','despesas','financeiras','retiradas'];
+  const delta = k=>{ if(!ta || !ta[k]) return ''; const v = (t[k]-ta[k]) / Math.abs(ta[k]) * 100; const bom = CUSTO.includes(k) ? v<=0 : v>=0; return `<span class="dre-delta ${bom?'sobe':'desce'}" title="Comparado ao mês anterior">${v>=0?'▲':'▼'} ${drePct(Math.abs(v))}</span>`; };
+  const detalhe = (g, sinal)=> Object.entries(d.grupos[g]||{}).sort((a,b)=>b[1]-a[1]).map(([nome,v])=>`<tr class="dre-det"><td>${escapeHtml(nome)}</td><td>${sinal}${dreValor(v)}</td></tr>`).join('');
+  const linha = (rot, k, cls, sinal)=>`<tr class="${cls||''}"><td>${rot}</td><td>${sinal||''}${dreValor(t[k])} ${delta(k)}</td></tr>`;
+  return `
+    <table class="dre-tab">
+      <tbody>
+        ${linha('Receita bruta', 'receitaBruta', 'dre-grupo')}
+        ${detalhe('receita','')}
+        ${linha('(−) Deduções: impostos e devoluções', 'deducoes', 'dre-grupo neg', '− ')}
+        ${detalhe('impostos','− ')}${detalhe('devolucoes','− ')}
+        ${linha('= Receita líquida', 'receitaLiquida', 'dre-total')}
+        ${linha('(−) Custos dos serviços: repasses e prestadores', 'custos', 'dre-grupo neg', '− ')}
+        ${detalhe('custos','− ')}
+        ${linha(`= Lucro bruto <small>margem ${drePct(t.margemBruta)}</small>`, 'lucroBruto', 'dre-total')}
+        ${linha('(−) Despesas operacionais', 'despesas', 'dre-grupo neg', '− ')}
+        ${detalhe('despesas','− ')}
+        ${linha('= Resultado operacional', 'resultadoOperacional', 'dre-total')}
+        ${linha('(−) Despesas financeiras: tarifas e juros', 'financeiras', 'dre-grupo neg', '− ')}
+        ${detalhe('financeiras','− ')}
+        ${linha(`= Lucro líquido <small>margem ${drePct(t.margemLiquida)}</small>`, 'lucroLiquido', 'dre-total dre-final '+(t.lucroLiquido<0?'neg-final':''))}
+        ${linha('(−) Retiradas dos sócios', 'retiradas', 'dre-grupo neg', '− ')}
+        ${detalhe('retiradas','− ')}
+        ${linha('= Resultado após retiradas', 'aposRetiradas', 'dre-total '+(t.aposRetiradas<0?'neg-final':''))}
+      </tbody>
+    </table>
+    ${(Object.keys(d.grupos.fora_e||{}).length || Object.keys(d.grupos.fora_s||{}).length) ? `
+    <div class="dre-fora"><strong>Não entram no resultado</strong> <small>(movimentações de caixa, só para conferência)</small>
+      ${Object.entries(d.grupos.fora_e||{}).map(([n,v])=>`<div><span>${escapeHtml(n)} · entrada</span><b>${dreValor(v)}</b></div>`).join('')}
+      ${Object.entries(d.grupos.fora_s||{}).map(([n,v])=>`<div><span>${escapeHtml(n)} · saída</span><b>− ${dreValor(v)}</b></div>`).join('')}
+    </div>` : ''}`;
+}
+function dreIndicadoresHtml(d){
+  const i = d.indicadores || {};
+  return `<div class="kpi-row dre-kpis">
+    <div class="kpi-tile"><div class="label">Receita líquida</div><div class="value" style="font-size:17px">${dreValor(d.totais.receitaLiquida)}</div></div>
+    <div class="kpi-tile"><div class="label">Lucro líquido</div><div class="value" style="font-size:17px;color:${d.totais.lucroLiquido<0?'var(--danger)':'var(--success)'}">${dreValor(d.totais.lucroLiquido)}</div></div>
+    <div class="kpi-tile"><div class="label">Vendas fechadas no mês</div><div class="value" style="font-size:17px">${i.vendas||0}</div><div class="nps-tile-sub">${i.valorVendas ? dreValor(i.valorVendas)+' registrados' : 'Registro de Sessões 1:1'}</div></div>
+    <div class="kpi-tile"><div class="label">Novos alunos / mentorados ativos</div><div class="value" style="font-size:17px">${i.novosAlunos||0} / ${i.mentoradosAtivos||0}</div></div>
+  </div>`;
+}
+function renderDre(){
+  const el = document.getElementById('view-dre'); if(!el) return;
+  if(!drePode()){ el.innerHTML = '<div class="empty-state">Área do CEO e da Head Financeira.</div>'; return; }
+  if(DRE_UI.salvos===null){ if(!DRE_UI.carregando) dreCarregar(); el.innerHTML = '<div class="empty-state">Carregando…</div>'; return; }
+  const atual = dreMesAtual(), anteriorMes = dreMesAnterior(atual);
+  const salvoDe = ym => DRE_UI.salvos.find(r=>String(r.mes).slice(0,7)===ym);
+  if(!DRE_UI.mes) DRE_UI.mes = salvoDe(anteriorMes) ? (DRE_UI.salvos[0] ? String(DRE_UI.salvos[0].mes).slice(0,7) : anteriorMes) : anteriorMes;
+  const ym = DRE_UI.mes;
+  const salvo = salvoDe(ym);
+  const dados = salvo ? Object.assign({ gerado_em:salvo.gerado_em }, salvo.dados) : dreCalcular(ym, DRE_UI.regime);
+  const ant = salvoDe(dreMesAnterior(ym));
+  const antDados = ant ? ant.dados : null;
+  /* Meses disponíveis: do primeiro lançamento até o mês atual. */
+  const datas = FIN_LANCAMENTOS.map(l=>String(l.dataVencimento||'').slice(0,7)).filter(x=>/^\d{4}-\d{2}$/.test(x)).sort();
+  let ini = datas[0] || anteriorMes; const meses = []; for(let m = atual; m >= ini; m = dreMesAnterior(m)){ meses.push(m); if(meses.length>36) break; }
+  const pendente = !salvoDe(anteriorMes);
+  el.innerHTML = `
+    <p class="section-sub" style="margin-top:0">O DRE é montado com os lançamentos do Financeiro do Plat. Gere o DRE de cada mês quando ele fechar: ele fica guardado aqui e pode ser gerado de novo se algum lançamento mudar. Só você e ${currentUser.id===DRE_UIDS[0] ? 'a Carmem' : 'o Murilo'} têm acesso.</p>
+    ${pendente ? `<div class="ep-aviso">${icon('bell')}<div>O DRE de <strong>${dreMesNome(anteriorMes)}</strong> ainda não foi gerado. <button type="button" class="link-btn" data-dre-ir="${anteriorMes}">Abrir ${DRE_MESES[Number(anteriorMes.slice(5))-1]}</button></div></div>` : ''}
+    <div class="dre-barra">
+      <label>Mês<select class="ps-input" id="dre-mes">${meses.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${dreMesNome(m)}${salvoDe(m)?' ✓':''}${m===atual?' (em andamento)':''}</option>`).join('')}</select></label>
+      <label>Regime<select class="ps-input" id="dre-regime" ${salvo?'disabled':''}><option value="competencia" ${(salvo?salvo.regime:DRE_UI.regime)==='competencia'?'selected':''}>Competência (pelo vencimento)</option><option value="caixa" ${(salvo?salvo.regime:DRE_UI.regime)==='caixa'?'selected':''}>Caixa (pelo que foi pago e recebido)</option></select></label>
+      <div class="dre-acoes">
+        ${salvo ? `<button type="button" class="btn-outline" id="dre-regerar">${icon('edit','tiny')} Gerar de novo</button>` : `<button type="button" class="btn-accent" id="dre-gerar">${icon('check','tiny')} Gerar DRE de ${DRE_MESES[Number(ym.slice(5))-1]}</button>`}
+        <button type="button" class="btn-outline" id="dre-pdf">${icon('download','tiny')} PDF</button>
+      </div>
+    </div>
+    <div class="dre-status">${salvo ? `${icon('check','tiny')} DRE gerado em ${tzDataHora(salvo.gerado_em, true)} · regime ${salvo.regime==='caixa'?'de caixa':'de competência'} · ${dados.lancamentos||0} lançamentos` : `<span class="dre-previa">Prévia, ainda não gerada${ym===atual?' (o mês está em andamento)':''}</span> · ${dados.lancamentos} lançamentos`}${antDados ? ' · setas comparam com o mês anterior' : ''}</div>
+    ${dreIndicadoresHtml(dados)}
+    <div class="dre-card">${dreTabelaHtml(dados, antDados)}</div>
+    <p class="rd-legenda">Como as categorias entram: receitas na Receita bruta; Impostos e Tributos e Devoluções nas Deduções; Repasses e Prestador de Serviços nos Custos; Tarifas Bancárias nas Despesas financeiras; Retiradas dos sócios abaixo do lucro; o restante nas Despesas operacionais. Transferências entre contas, empréstimos e valores recebidos de sócios não contam como resultado. Categoria nova entra sozinha pela regra do nome.</p>`;
+  el.querySelector('#dre-mes').addEventListener('change', e=>{ DRE_UI.mes = e.target.value; renderDre(); });
+  el.querySelectorAll('[data-dre-ir]').forEach(b=>b.addEventListener('click', ()=>{ DRE_UI.mes = b.dataset.dreIr; renderDre(); }));
+  const rg = el.querySelector('#dre-regime'); if(rg) rg.addEventListener('change', e=>{ DRE_UI.regime = e.target.value; renderDre(); });
+  const gerar = async (regime)=>{
+    const d = dreCalcular(ym, regime);
+    const { data, error } = await sb.from('fin_dre').upsert({ mes: ym+'-01', regime, dados:d, gerado_em:new Date().toISOString(), gerado_por:currentUser.id }, { onConflict:'mes' }).select().single();
+    if(error){ console.error('fin_dre', error); alert('Não foi possível gerar o DRE: '+(error.message||'')); return; }
+    DRE_UI.salvos = DRE_UI.salvos.filter(r=>String(r.mes).slice(0,7)!==ym).concat([data]).sort((a,b)=>String(b.mes).localeCompare(String(a.mes)));
+    renderDre();
+  };
+  const g = el.querySelector('#dre-gerar'); if(g) g.addEventListener('click', ()=>{ g.disabled = true; gerar(DRE_UI.regime); });
+  const rgr = el.querySelector('#dre-regerar'); if(rgr) rgr.addEventListener('click', async ()=>{
+    const ok = await showAppConfirm(`Gerar de novo o DRE de ${dreMesNome(ym)} com os lançamentos de agora? O DRE guardado será substituído.`, {title:'Gerar de novo', confirmLabel:'Gerar de novo', cancelLabel:'Cancelar'});
+    if(ok){ rgr.disabled = true; gerar(salvo.regime); }
+  });
+  el.querySelector('#dre-pdf').addEventListener('click', ()=>dreExportar(dados, antDados));
+}
+function dreExportar(d, ant){
+  const win = window.open('', '_blank');
+  if(!win){ alert('Seu navegador bloqueou a abertura da aba de impressão. Permita pop-ups para este site e tente de novo.'); return; }
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>DRE ${dreMesNome(d.mes)} — essência PLAT</title>
+    <style>@page{margin:16mm 14mm;} body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;} h1{font-size:20px;margin:0 0 2px;} .sub{color:#666;font-size:12px;margin-bottom:16px;}
+    table{width:100%;border-collapse:collapse;font-size:12.5px;} td{padding:6px 8px;border-bottom:1px solid #eee;} td:last-child{text-align:right;white-space:nowrap;}
+    .dre-grupo td{font-weight:700;} .dre-det td{color:#555;font-size:11.5px;padding-left:22px;} .dre-total td{font-weight:800;background:#f6f1e8;} .dre-delta{display:none;} small{font-weight:400;color:#777;}
+    .dre-fora{margin-top:16px;font-size:11.5px;color:#555;} .dre-fora div{display:flex;justify-content:space-between;border-bottom:1px dashed #ddd;padding:4px 0;}</style></head><body>
+    <img src="${BRAND_LOGO_DATA_URI}" style="height:30px;margin-bottom:10px"><h1>DRE · ${dreMesNome(d.mes)}</h1>
+    <div class="sub">Regime ${d.regime==='caixa'?'de caixa':'de competência'} · ${d.lancamentos||0} lançamentos do Financeiro${d.gerado_em ? ' · gerado em '+tzDataHora(d.gerado_em, true) : ' · prévia'}</div>
+    ${dreTabelaHtml(d, ant)}</body></html>`);
+  win.document.close();
+  win.onload = ()=>{ win.focus(); win.print(); };
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 600);
 }
 /* ================= AVALIAÇÃO DAS CONSULTORAS (Diego e Murilo) =================
    Ao analisar o vídeo de uma venda, o Diego pontua de 0 a 2 cada etapa do roteiro. As notas ficam
