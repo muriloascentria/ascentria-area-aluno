@@ -1369,6 +1369,7 @@
   .vendas-upsell-check .icon.x-danger{stroke:var(--danger);}
   .vendas-table-wrap{overflow-x:visible;}
   .vendas-table{table-layout:fixed;width:100%;min-width:0;}
+  @media (max-width:700px){ .vendas-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;} .vendas-table{min-width:640px;} }
   .vendas-table td{white-space:normal;word-break:break-word;overflow-wrap:anywhere;padding:8px 7px;font-size:11.3px;}
   .vendas-table th{white-space:nowrap;padding:8px 5px;font-size:9px;letter-spacing:0.1px;}
   .vendas-actions-cell{text-align:center;}
@@ -1960,8 +1961,83 @@
   .dre-fora div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--border);padding:3px 0;}
   .pt-toggle{overflow-x:auto;scrollbar-width:none;max-width:min(640px, calc(100vw - 420px));}
   .pt-toggle::-webkit-scrollbar{display:none;}
+  .reu-badge{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:600;color:#fff;background:var(--danger);border-radius:20px;padding:3px 10px;}
+  .reu-cont{display:inline-block;min-width:18px;padding:0 6px;border-radius:10px;background:var(--accent,#8d916f);color:#fff;font-size:11px;margin-left:4px;}
+  .reu-tabela-wrap{margin-top:6px;}
+  .reu-tabela{min-width:720px;}
+  .reu-tabela tbody tr{cursor:pointer;}
+  .reu-tabela tbody tr:hover{background:var(--bg-hover, rgba(0,0,0,.03));}
+  .reu-tabela td{vertical-align:middle;}
+  .reu-tabela .icon{width:16px;height:16px;stroke:var(--success);}
+  .reu-td-data{white-space:nowrap;font-size:12.5px;}
+  .reu-pend td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
+  .reu-mini-alerta{font-size:11px;color:var(--danger);font-weight:600;margin-top:2px;}
+  .reu-ass{display:inline-block;padding:2px 9px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border);font-size:12px;font-weight:600;}
+  .reu-ass.ok{background:rgba(60,140,80,.12);border-color:transparent;color:var(--success);}
+  .reu-voltar{margin:4px 0 14px;display:inline-flex;align-items:center;gap:6px;}
+  .reu-det-cab{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start;margin-bottom:14px;}
+  .reu-det-cab h3{margin:0 0 4px;font-size:19px;}
+  .reu-links{display:flex;gap:8px;flex-wrap:wrap;}
+  .reu-links a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;}
+  .reu-aviso-assinar{display:flex;gap:8px;align-items:center;background:rgba(200,60,60,.08);color:var(--danger);border-radius:10px;padding:10px 14px;font-weight:600;font-size:13.5px;margin-bottom:14px;}
+  .reu-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm,12px);padding:16px;margin-bottom:14px;}
+  .reu-bloco-tit{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-bottom:12px;flex-wrap:wrap;}
+  .reu-mini{margin-left:auto;padding:5px 10px;font-size:12.5px;display:inline-flex;gap:5px;align-items:center;}
+  .reu-mini-link{margin-left:auto;font-size:12.5px;font-weight:500;}
+  .reu-video{position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000;}
+  .reu-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .reu-dica{font-size:12px;margin-top:8px;}
+  .reu-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .reu-acoes a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;}
+  .reu-ata h4{margin:16px 0 6px;font-size:13.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted,#777);}
+  .reu-ata p{margin:0 0 6px;line-height:1.55;}
+  .reu-ata-cab{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  .reu-ata-cab span{display:block;font-size:11.5px;color:var(--text-muted,#777);}
+  .reu-ata-cab b{font-size:13.5px;font-weight:600;}
+  .reu-pauta-ata{margin-bottom:10px;}
+  .reu-ul{margin:0;padding-left:20px;line-height:1.55;}
+  .reu-enc{min-width:480px;}
+  .reu-ata-edit label{display:block;font-weight:600;font-size:13px;margin-bottom:12px;}
+  .reu-ata-edit textarea{width:100%;margin-top:5px;font:inherit;font-weight:400;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:inherit;box-sizing:border-box;}
+  .reu-busca{width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;font:inherit;background:var(--bg);color:inherit;}
+  .reu-transc{max-height:460px;overflow-y:auto;padding-right:6px;font-size:13.5px;line-height:1.55;}
+  .reu-transc p{margin:0 0 6px;}
+  .reu-achou{background:rgba(240,200,60,.35);border-radius:4px;}
+  .reu-ts{font-size:11px;font-weight:700;color:var(--text-muted,#777);margin:12px 0 4px;}
+  .reu-assin-lista{display:flex;flex-direction:column;gap:8px;}
+  .reu-assin{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--border);border-radius:10px;}
+  .reu-assin.ok{border-color:rgba(60,140,80,.35);background:rgba(60,140,80,.06);}
+  .reu-assin-nome{font-weight:600;}
+  .reu-assin-st{font-size:12.5px;color:var(--success);display:inline-flex;gap:5px;align-items:flex-start;}
+  .reu-assin-st .icon{width:14px;height:14px;stroke:var(--success);}
+  .reu-assin-st.pend{color:var(--text-muted,#888);}
+  .reu-assinar{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:10px;}
+  .reu-assinar label{font-size:13px;font-weight:600;}
+  .reu-assinar input[type=text]{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-weight:400;background:var(--bg);color:inherit;}
+  .reu-chk{display:flex !important;gap:8px;align-items:center;font-weight:500 !important;font-size:13.5px;padding:4px 0;cursor:pointer;}
+  .reu-chk input{width:18px;height:18px;}
+  .reu-enviar{margin-top:14px;}
+  .reu-enviar-box{border:1px solid var(--border);border-radius:10px;padding:12px;}
+  .reu-enviar-box p{margin:4px 0 8px;font-size:12.5px;}
+  .reu-pauta-add{display:flex;gap:8px;margin:6px 0 14px;}
+  .reu-pauta-add input{flex:1;min-width:0;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font:inherit;background:var(--bg-card);color:inherit;}
+  .reu-pauta-add button{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;width:auto !important;flex:0 0 auto;padding:10px 16px;}
+  .reu-acoes .btn-primary,.reu-acoes .btn-outline{width:auto !important;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;}
+  .reu-assinar .btn-primary{width:100%;}
+  .reu-pautas{display:flex;flex-direction:column;gap:6px;}
+  .reu-pauta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+  .reu-pauta-chk{display:flex;gap:10px;align-items:flex-start;flex:1;min-width:200px;cursor:pointer;font-size:14px;}
+  .reu-pauta-chk input{width:20px;height:20px;margin-top:1px;flex:0 0 auto;}
+  .reu-pauta.feita .reu-pauta-chk span{text-decoration:line-through;color:var(--text-muted,#888);}
+  .reu-pauta-meta{font-size:11.5px;color:var(--text-muted,#888);}
+  .reu-pauta-x{background:none;border:0;cursor:pointer;padding:6px;border-radius:6px;min-width:32px;min-height:32px;}
+  .reu-pauta-x .icon{width:15px;height:15px;stroke:var(--text-muted,#888);}
+  .reu-feitas-tit{margin:20px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted,#777);}
+  @media (max-width:600px){ .reu-bloco{padding:12px;} .reu-det-cab h3{font-size:17px;} .reu-mini,.reu-mini-link{margin-left:0;} .reu-transc{max-height:60vh;} }
+
   .pt-toggle button{flex:0 0 auto;}
-  @media (max-width:880px){ .pt-toggle{max-width:calc(100vw - 150px);} }
+  @media (max-width:880px){ .pt-toggle{max-width:calc(100vw - 150px);flex:1 1 auto;min-width:0;} }
+  @media (max-width:480px){ .pt-toggle{max-width:calc(100vw - 170px);} }
   .wf-opcoes{display:flex;flex-direction:column;gap:8px;}
   .wf-opcoes.multi{flex-direction:row;flex-wrap:wrap;}
   .wf-op{text-align:left;padding:14px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
@@ -2496,6 +2572,7 @@
       <div class="view" id="view-planner"></div>
       <div class="view" id="view-desempenho"></div>
       <div class="view" id="view-dre"></div>
+      <div class="view" id="view-reunioes"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -2586,6 +2663,7 @@ const NAV_LABELS = {
   radar:['radar','Radar dos Mentorados'],
   desempenho:['chart','Desempenho das Consultoras'],
   dre:['money','DRE'],
+  reunioes:['file','Reuniões e Atas'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
@@ -2593,7 +2671,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', reunioes:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -4275,7 +4353,7 @@ async function bootstrapData(){
   profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
 
   PEOPLE = {};
-  profiles.forEach(p=>{ PEOPLE[p.id] = {id:p.id, name:p.name, initials:p.initials, color:p.color, avatarUrl:p.avatar_url||null, role:p.role}; });
+  profiles.forEach(p=>{ PEOPLE[p.id] = {id:p.id, name:p.name, initials:p.initials, color:p.color, avatarUrl:p.avatar_url||null, role:p.role, espelhoDe:p.espelho_de||null, contaTeste:!!p.conta_teste}; });
 
   const [{data:mcs},{data:pd},{data:po},{data:ida},{data:courseRows},{data:materialRows},{data:liveRows},{data:watchedRows},{data:meusLikes},{data:apresentacaoRows}] = await Promise.all([
     lerTudo('module_checklist_state', q=>q.order('student_id').order('module_id').order('item_idx')).then(data=>({data})),
@@ -5558,7 +5636,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','dre','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','dre','reunioes','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -5787,6 +5865,7 @@ function goTo(view){
   if(view==='radar' && !radarPode()) view = 'equipe';
   if(view==='desempenho' && !avPode()) view = 'equipe';
   if(view==='dre' && !drePode()) view = 'equipe';
+  if(view==='reunioes' && !reuPodeAbrir()) view = 'equipe';
   if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
   if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
@@ -5810,7 +5889,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
@@ -13693,6 +13772,7 @@ const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
+  {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
   {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
@@ -13710,8 +13790,8 @@ const EQUIPE_ATALHOS = [
 function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
-  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento'].concat(tarefasSouMembro()? ['tarefas'] : []);
-  if(papel==='editor') return ['equipe','mensagens','conteudo'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='editor') return ['equipe','mensagens','conteudo','reunioes'].concat(tarefasSouMembro()? ['tarefas'] : []);
   return null; // equipe interna: tudo
 }
 function renderEquipe(){
@@ -13725,13 +13805,14 @@ function renderEquipe(){
     ${alertasAcompHtml()}
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && (a.view!=='desempenho' || avPode()) && (a.view!=='dre' || drePode()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && (a.view!=='desempenho' || avPode()) && (a.view!=='dre' || drePode()) && (a.view!=='reunioes' || reuPodeAbrir()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
-          <span class="equipe-desc">${escapeHtml(a.desc)}</span>
+          <span class="equipe-desc">${escapeHtml(a.desc)}</span>${a.view==='reunioes' ? reuBadgeHtml() : ''}
         </button>`; }).join('')}
     </div>`;
+  reuPreparar();
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
   bindAlertasAcomp();
 }
@@ -14535,6 +14616,300 @@ function renderAnalise(){
    despesas, tarifas, retiradas). Transferências entre contas, empréstimos e aportes de sócios não são
    resultado: aparecem à parte, só para conferência. "Gerar DRE" guarda a foto do mês em fin_dre (só
    Murilo e Carmem leem), e dá para gerar de novo se algum lançamento mudar. */
+/* ================= VIEW: REUNIÕES E ATAS =================
+   Cada reunião da empresa (as que o Google Meet grava com anotações do Gemini) entra aqui sozinha:
+   uma tarefa agendada lê as anotações no Google Drive do Murilo, copia o link da gravação, a
+   transcrição e monta a ata. Os sócios (Murilo, Carmem, Diego e Sandra) veem todas. O resto do
+   time só vê a reunião que o Murilo mandar para ela concordar. Quem participou (ou recebeu) assina
+   a concordância com a ata. A aba "Pautas da próxima reunião" é dos sócios: escreve a pauta antes
+   e dá o check quando ela for tratada. */
+const REU_SOCIOS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b9b8-c021da4db519','8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc','a29026ae-d252-4456-bb26-eec09ba778c4'];
+const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'' };
+function reuSocio(){ return (currentUserRole==='staff' || currentUserRole==='vendas' || currentUserRole==='editor') && !!currentUser && REU_SOCIOS.includes(idEfetivo()); }
+function reuSouMurilo(){ return !!currentUser && (currentUser.id===REU_SOCIOS[0] || (!!(currentUserProfile&&currentUserProfile.contaTeste) && (!currentUserProfile.espelhoDe || currentUserProfile.espelhoDe===REU_SOCIOS[0]))); }
+function reuPodeAbrir(){ if(!currentUser || currentUserRole==='aluno') return false; if(reuSocio()) return true; return (REU_UI.envios||[]).some(e=>e.user_id===currentUser.id && e.ativo); }
+async function reuCarregar(){
+  if(REU_UI.carregando) return; REU_UI.carregando = true; REU_UI.erro = false;
+  try{
+    const [r, e, a] = await Promise.all([
+      sb.from('reunioes').select('id,titulo,data,meet_link,evento_link,video_url,transcricao_url,notas_url,participantes,ata,status,updated_at').eq('ativo', true).order('data', {ascending:false}),
+      sb.from('reuniao_envios').select('*'),
+      sb.from('reuniao_assinaturas').select('*'),
+    ]);
+    if(r.error) throw r.error;
+    REU_UI.lista = r.data || []; REU_UI.envios = (e && e.data) || []; REU_UI.assin = (a && a.data) || [];
+  }catch(err){ console.error('reunioes', err); REU_UI.erro = true; if(REU_UI.lista===null) REU_UI.lista = []; }
+  REU_UI.carregando = false;
+  if(currentView==='reunioes') renderReunioes();
+  if(currentView==='equipe'){ const b = document.querySelector('#view-equipe [data-equipe-go="reunioes"]'); if(b || reuPodeAbrir()) renderEquipe(); }
+}
+let REU_PREPARADO = false;
+function reuPreparar(){ if(REU_PREPARADO || !currentUser || currentUserRole==='aluno') return; REU_PREPARADO = true; reuCarregar(); }
+/* Quem deve assinar: participantes com conta no sistema + quem recebeu do Murilo. */
+function reuEsperados(r){
+  const m = new Map();
+  (r.participantes||[]).forEach(p=>{ if(p && p.user_id) m.set(p.user_id, {id:p.user_id, nome:p.nome||p.email||'Participante', origem:'participou'}); });
+  (REU_UI.envios||[]).filter(e=>e.reuniao_id===r.id && e.ativo).forEach(e=>{ if(!m.has(e.user_id)){ const pp = PEOPLE[e.user_id]; m.set(e.user_id, {id:e.user_id, nome:pp?pp.name:'Pessoa do time', origem:'enviada'}); } });
+  return [...m.values()];
+}
+function reuAssinaturas(r){ return (REU_UI.assin||[]).filter(a=>a.reuniao_id===r.id); }
+function reuAssinouEsperado(r, uid){ return reuAssinaturas(r).find(a=>a.user_id===uid || (PEOPLE[a.user_id] && PEOPLE[a.user_id].espelhoDe===uid)); }
+function reuDevoAssinar(r){
+  if(!currentUser || !r.ata) return false;
+  const eu = currentUser.id, ef = idEfetivo();
+  if(reuAssinaturas(r).some(a=>a.user_id===eu)) return false;
+  return reuEsperados(r).some(x=>x.id===eu || x.id===ef);
+}
+function reuPendentesMeus(){ return (REU_UI.lista||[]).filter(reuDevoAssinar).length; }
+function reuBadgeHtml(){ const n = reuPendentesMeus(); return n ? `<span class="reu-badge">${n} ${n===1?'ata aguarda':'atas aguardam'} sua concordância</span>` : ''; }
+function reuDataTxt(iso){ const d = new Date(iso); const sem = d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''); return `${sem}, ${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`; }
+function reuDriveId(url){ const m = String(url||'').match(/\/d\/([A-Za-z0-9_-]{10,})/) || String(url||'').match(/[?&]id=([A-Za-z0-9_-]{10,})/); return m ? m[1] : null; }
+function reuUrlOk(u){ return /^https:\/\//i.test(String(u||'')) ? u : null; }
+function reuAbas(){
+  if(!reuSocio()) return '';
+  const np = (REU_UI.pautas||[]).filter(p=>!p.concluida).length;
+  return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${REU_UI.aba==='reunioes'?'active':''}" data-reu-aba="reunioes">Reuniões e atas</button><button type="button" class="filter-tab ${REU_UI.aba==='pautas'?'active':''}" data-reu-aba="pautas">Pautas da próxima reunião${np?` <span class="reu-cont">${np}</span>`:''}</button></div>`;
+}
+function renderReunioes(){
+  const el = document.getElementById('view-reunioes'); if(!el) return;
+  if(!reuPodeAbrir()){ el.innerHTML = '<div class="empty-state">Área dos sócios. Quando o Murilo enviar uma ata para você, ela aparece aqui.</div>'; return; }
+  if(REU_UI.lista===null){ reuCarregar(); el.innerHTML = '<h2 class="section-title">Reuniões e Atas</h2><div class="empty-state">Carregando as reuniões…</div>'; return; }
+  if(reuSocio() && REU_UI.pautas===null && !REU_UI.pautasCarregando) reuPautasCarregar();
+  if(REU_UI.aba==='pautas' && reuSocio()){ el.innerHTML = `<h2 class="section-title">Reuniões e Atas</h2>${reuAbas()}${reuPautasHtml()}`; reuBindAbas(el); reuPautasBind(el); return; }
+  const r = REU_UI.aberta && (REU_UI.lista||[]).find(x=>x.id===REU_UI.aberta);
+  if(r){ el.innerHTML = `<h2 class="section-title">Reuniões e Atas</h2>${reuAbas()}${reuDetalheHtml(r)}`; reuBindAbas(el); reuDetalheBind(el, r); return; }
+  REU_UI.aberta = null;
+  const lista = REU_UI.lista||[];
+  const linhas = lista.map(x=>{
+    const esp = reuEsperados(x), ass = esp.filter(p=>reuAssinouEsperado(x, p.id)).length;
+    const minha = reuDevoAssinar(x);
+    return `<tr data-reu-abrir="${x.id}" class="${minha?'reu-pend':''}">
+      <td class="reu-td-data">${escapeHtml(reuDataTxt(x.data))}</td>
+      <td><b>${escapeHtml(x.titulo)}</b>${minha?'<div class="reu-mini-alerta">Aguardando sua concordância</div>':''}</td>
+      <td>${reuUrlOk(x.meet_link||x.evento_link) ? `<a href="${escapeHtml(x.meet_link||x.evento_link)}" target="_blank" rel="noopener" data-stop>Abrir</a>` : '<span class="muted">—</span>'}</td>
+      <td>${reuUrlOk(x.video_url) ? icon('video') : '<span class="muted">aguardando</span>'}</td>
+      <td>${x.status==='transcricao_parcial' ? '<span class="muted">chegando</span>' : icon('file')}</td>
+      <td>${x.ata ? icon('check') : '<span class="muted">—</span>'}</td>
+      <td><span class="reu-ass ${esp.length && ass===esp.length ? 'ok':''}">${ass}/${esp.length}</span></td>
+    </tr>`; }).join('');
+  el.innerHTML = `<h2 class="section-title">Reuniões e Atas</h2>
+    <p class="section-sub" style="margin-top:-6px">${reuSocio() ? 'As reuniões entram aqui sozinhas depois que terminam (segunda e quarta às 8h, sexta às 13h). Clique numa linha para ver vídeo, transcrição, ata e concordâncias.' : 'Atas que o Murilo enviou para você ler e dar a sua concordância.'}</p>
+    ${reuAbas()}
+    ${REU_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="reu-tentar">Tentar de novo</button></div>' : ''}
+    ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela"><thead><tr><th>Data</th><th>Reunião</th><th>Link</th><th>Vídeo</th><th>Transcrição</th><th>Ata</th><th>Concordância</th></tr></thead><tbody>${linhas}</tbody></table></div>`
+      : '<div class="empty-state">Nenhuma reunião ainda. A primeira aparece aqui assim que terminar e o Google Meet salvar as anotações.</div>'}`;
+  reuBindAbas(el);
+  const t = el.querySelector('#reu-tentar'); if(t) t.addEventListener('click', ()=>{ REU_UI.lista = null; renderReunioes(); });
+  el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
+  el.querySelectorAll('[data-reu-abrir]').forEach(tr=>tr.addEventListener('click', ()=>{ REU_UI.aberta = tr.dataset.reuAbrir; REU_UI.verVideo = false; REU_UI.editando = false; REU_UI.enviando = false; renderReunioes(); window.scrollTo(0,0); }));
+}
+function reuBindAbas(el){ el.querySelectorAll('[data-reu-aba]').forEach(b=>b.addEventListener('click', ()=>{ REU_UI.aba = b.dataset.reuAba; if(b.dataset.reuAba==='reunioes') REU_UI.aberta = null; renderReunioes(); })); }
+function reuLista(arr){ arr = (arr||[]).filter(x=>x && String(typeof x==='string'?x:'').trim()!=='' || (x && typeof x==='object')); return arr.length ? `<ul class="reu-ul">${arr.map(x=>`<li>${escapeHtml(typeof x==='string'?x:JSON.stringify(x))}</li>`).join('')}</ul>` : '<p class="muted">Nada registrado.</p>'; }
+function reuAtaHtml(r){
+  const a = r.ata;
+  if(!a) return '<p class="muted">A ata é montada assim que a transcrição chega.</p>';
+  const part = (r.participantes||[]).map(p=>p.nome||p.email).filter(Boolean);
+  const enc = (a.encaminhamentos||[]);
+  return `<div class="reu-ata">
+    <div class="reu-ata-cab"><div><span>Reunião</span><b>${escapeHtml(r.titulo)}</b></div><div><span>Data</span><b>${escapeHtml(reuDataTxt(r.data))}</b></div><div><span>Participantes</span><b>${escapeHtml(part.join(', ')||'—')}</b></div></div>
+    ${a.resumo ? `<h4>Resumo</h4><p>${escapeHtml(a.resumo)}</p>` : ''}
+    ${(a.pautas||[]).length ? `<h4>Assuntos tratados</h4>${a.pautas.map(p=>`<div class="reu-pauta-ata"><b>${escapeHtml(p.tema||'')}</b><p>${escapeHtml(p.discussao||'')}</p></div>`).join('')}` : ''}
+    <h4>Decisões</h4>${reuLista(a.decisoes)}
+    <h4>Encaminhamentos</h4>${enc.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th></tr></thead><tbody>${enc.map(e=>`<tr><td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(e.prazo||'—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Nada registrado.</p>'}
+    ${(a.pendencias||[]).length ? `<h4>Pendências e pontos em aberto</h4>${reuLista(a.pendencias)}` : ''}
+    ${a.observacoes ? `<h4>Observações</h4><p>${escapeHtml(a.observacoes)}</p>` : ''}
+    ${a.editada_em ? `<p class="muted reu-edit-info">Ata ajustada manualmente em ${escapeHtml(fmtDataHora(a.editada_em))}.</p>` : ''}
+  </div>`;
+}
+function reuAtaEditorHtml(r){
+  const a = r.ata || {};
+  const ls = v=>escapeHtml((v||[]).join('\n'));
+  const enc = (a.encaminhamentos||[]).map(e=>[e.acao||'', e.responsavel||'', e.prazo||''].join(' | ')).join('\n');
+  const pts = (a.pautas||[]).map(p=>(p.tema||'')+' | '+(p.discussao||'')).join('\n');
+  return `<div class="reu-ata reu-ata-edit">
+    <label>Resumo<textarea id="reu-e-resumo" rows="4">${escapeHtml(a.resumo||'')}</textarea></label>
+    <label>Assuntos tratados <span class="muted">(um por linha: assunto | o que foi conversado)</span><textarea id="reu-e-pautas" rows="6">${escapeHtml(pts)}</textarea></label>
+    <label>Decisões <span class="muted">(uma por linha)</span><textarea id="reu-e-dec" rows="5">${ls(a.decisoes)}</textarea></label>
+    <label>Encaminhamentos <span class="muted">(um por linha: o que fazer | responsável | prazo)</span><textarea id="reu-e-enc" rows="6">${escapeHtml(enc)}</textarea></label>
+    <label>Pendências <span class="muted">(uma por linha)</span><textarea id="reu-e-pend" rows="3">${ls(a.pendencias)}</textarea></label>
+    <label>Observações<textarea id="reu-e-obs" rows="3">${escapeHtml(a.observacoes||'')}</textarea></label>
+    <div class="reu-acoes"><button type="button" class="btn-primary" id="reu-e-salvar">Salvar ata</button><button type="button" class="btn-outline" id="reu-e-cancelar">Cancelar</button></div>
+  </div>`;
+}
+function reuTranscHtml(txt){
+  const busca = normTxt(REU_UI.busca||'');
+  return String(txt||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+    const ts = l.match(/^\[?(\d{1,2}:\d{2}:\d{2})\]?$/);
+    if(ts) return `<div class="reu-ts">${ts[1]}</div>`;
+    const m = l.match(/^([^:]{2,40}):\s(.*)$/);
+    const achou = busca && normTxt(l).includes(busca);
+    return `<p class="${achou?'reu-achou':''}">${m ? `<b>${escapeHtml(m[1])}:</b> ${escapeHtml(m[2])}` : escapeHtml(l)}</p>`;
+  }).join('');
+}
+function reuDetalheHtml(r){
+  const vid = reuDriveId(r.video_url);
+  const esp = reuEsperados(r), ass = reuAssinaturas(r);
+  const devo = reuDevoAssinar(r);
+  const t = REU_UI.transc[r.id];
+  const ataEditavel = reuSocio() && !ass.length;
+  const naoSocios = Object.values(PEOPLE||{}).filter(p=>p && ['staff','vendas','editor'].includes(p.role) && !REU_SOCIOS.includes(p.espelhoDe||p.id) && !(p.contaTeste && !reuSouMurilo()));
+  const jaEnv = new Set((REU_UI.envios||[]).filter(e=>e.reuniao_id===r.id && e.ativo).map(e=>e.user_id));
+  return `<button type="button" class="btn-outline reu-voltar" id="reu-voltar">${icon('back')} Todas as reuniões</button>
+  <div class="reu-det-cab"><div><h3>${escapeHtml(r.titulo)}</h3><div class="muted">${escapeHtml(reuDataTxt(r.data))}</div></div>
+    <div class="reu-links">
+      ${reuUrlOk(r.meet_link) ? `<a class="btn-outline" href="${escapeHtml(r.meet_link)}" target="_blank" rel="noopener">${icon('externallink')} Link da reunião</a>` : ''}
+      ${reuUrlOk(r.evento_link) ? `<a class="btn-outline" href="${escapeHtml(r.evento_link)}" target="_blank" rel="noopener">${icon('calendar')} Evento na agenda</a>` : ''}
+      ${reuUrlOk(r.notas_url) ? `<a class="btn-outline" href="${escapeHtml(r.notas_url)}" target="_blank" rel="noopener">${icon('file')} Anotações originais</a>` : ''}
+    </div></div>
+  ${devo ? `<div class="reu-aviso-assinar">${icon('edit')} Leia a ata abaixo e registre a sua concordância no final da página.</div>` : ''}
+  <section class="reu-bloco"><div class="reu-bloco-tit">${icon('video')} Vídeo da reunião</div>
+    ${vid ? (REU_UI.verVideo ? `<div class="reu-video"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(vid)}/preview" allow="autoplay; fullscreen" allowfullscreen></iframe></div><p class="muted reu-dica">O vídeo abre pelo Google Drive. Se aparecer pedido de acesso, entre com o e-mail da Ascentria.</p>`
+      : `<div class="reu-acoes"><button type="button" class="btn-primary" id="reu-ver-video">${icon('play')} Assistir aqui</button><a class="btn-outline" href="${escapeHtml(r.video_url)}" target="_blank" rel="noopener">${icon('externallink')} Abrir no Google Drive</a></div>`)
+      : '<p class="muted">A gravação ainda está sendo processada pelo Google. Ela entra aqui sozinha.</p>'}
+  </section>
+  <section class="reu-bloco"><div class="reu-bloco-tit">${icon('check')} Ata da reunião ${ataEditavel && r.ata && !REU_UI.editando ? `<button type="button" class="btn-outline reu-mini" id="reu-editar">${icon('edit')} Ajustar ata</button>` : ''}</div>
+    ${REU_UI.editando ? reuAtaEditorHtml(r) : reuAtaHtml(r)}
+    ${reuSocio() && ass.length && r.ata ? '<p class="muted reu-dica">A ata não pode mais ser alterada porque já tem concordância registrada.</p>' : ''}
+  </section>
+  <section class="reu-bloco"><div class="reu-bloco-tit">${icon('file')} Transcrição ${reuUrlOk(r.transcricao_url) ? `<a class="reu-mini-link" href="${escapeHtml(r.transcricao_url)}" target="_blank" rel="noopener">abrir no Google Docs</a>` : ''}</div>
+    ${t===undefined ? `<button type="button" class="btn-outline" id="reu-ver-transc">Mostrar transcrição completa</button>`
+      : t===null ? '<p class="muted">Carregando…</p>'
+      : t ? `<input type="search" class="reu-busca" id="reu-busca" placeholder="Procurar uma palavra na transcrição" value="${escapeHtml(REU_UI.busca)}"><div class="reu-transc" id="reu-transc">${reuTranscHtml(t)}</div>` : '<p class="muted">Transcrição ainda não chegou.</p>'}
+  </section>
+  <section class="reu-bloco"><div class="reu-bloco-tit">${icon('users')} Concordância com a ata</div>
+    ${esp.length ? `<div class="reu-assin-lista">${esp.map(p=>{ const a = reuAssinouEsperado(r, p.id); return `<div class="reu-assin ${a?'ok':''}"><span class="reu-assin-nome">${escapeHtml(p.nome)}${p.origem==='enviada'?' <span class="muted">(enviada pelo Murilo)</span>':''}</span>${a ? `<span class="reu-assin-st">${icon('tick')} Concordou em ${escapeHtml(fmtDataHora(a.assinado_em))}${a.observacao?`<br><i>"${escapeHtml(a.observacao)}"</i>`:''}</span>` : '<span class="reu-assin-st pend">Aguardando</span>'}</div>`; }).join('')}</div>` : '<p class="muted">Ninguém com conta no sistema foi identificado nessa reunião.</p>'}
+    ${ass.filter(a=>!esp.some(p=>p.id===a.user_id || (PEOPLE[a.user_id]&&PEOPLE[a.user_id].espelhoDe===p.id))).map(a=>`<div class="reu-assin ok"><span class="reu-assin-nome">${escapeHtml(a.nome)}</span><span class="reu-assin-st">${icon('tick')} Concordou em ${escapeHtml(fmtDataHora(a.assinado_em))}</span></div>`).join('')}
+    ${devo && r.ata ? `<div class="reu-assinar"><label>Observação (opcional)<input type="text" id="reu-obs" maxlength="300" placeholder="Algum comentário sobre a ata?"></label>
+      <label class="reu-chk"><input type="checkbox" id="reu-li"> Li a ata e concordo com o que foi registrado.</label>
+      <button type="button" class="btn-primary" id="reu-assinar" disabled>Assinar concordância como ${escapeHtml((currentUserProfile||{}).name||'')}</button></div>` : ''}
+    ${reuSouMurilo() ? `<div class="reu-enviar">
+      ${REU_UI.enviando ? `<div class="reu-enviar-box"><b>Enviar para concordância</b><p class="muted">A pessoa passa a ver esta reunião (vídeo, transcrição e ata) e assina a concordância.</p>
+        ${naoSocios.length ? naoSocios.map(p=>`<label class="reu-chk"><input type="checkbox" data-reu-env="${p.id}" ${jaEnv.has(p.id)?'checked disabled':''}> ${escapeHtml(p.name)}${jaEnv.has(p.id)?' <span class="muted">(já enviada)</span>':''}</label>`).join('') : '<p class="muted">Nenhuma outra pessoa do time encontrada.</p>'}
+        <div class="reu-acoes"><button type="button" class="btn-primary" id="reu-env-ok">Enviar</button><button type="button" class="btn-outline" id="reu-env-cancel">Cancelar</button></div></div>`
+      : `<button type="button" class="btn-outline" id="reu-env-abrir">${icon('send')} Enviar para alguém do time concordar</button>`}
+    </div>` : ''}
+  </section>`;
+}
+function reuLinhas(id){ return (document.getElementById(id).value||'').split('\n').map(x=>x.trim()).filter(Boolean); }
+function reuDetalheBind(el, r){
+  const on = (id, fn, ev)=>{ const b = el.querySelector('#'+id); if(b) b.addEventListener(ev||'click', fn); };
+  on('reu-voltar', ()=>{ REU_UI.aberta = null; REU_UI.busca = ''; renderReunioes(); });
+  on('reu-ver-video', ()=>{ REU_UI.verVideo = true; renderReunioes(); });
+  on('reu-ver-transc', async ()=>{
+    REU_UI.transc[r.id] = null; renderReunioes();
+    const { data, error } = await sb.from('reunioes').select('transcricao').eq('id', r.id).maybeSingle();
+    REU_UI.transc[r.id] = error ? undefined : ((data && data.transcricao) || '');
+    if(error) alert('Não consegui carregar a transcrição agora.');
+    renderReunioes();
+  });
+  on('reu-busca', e=>{ REU_UI.busca = e.target.value; const box = el.querySelector('#reu-transc'); if(!box) return; box.innerHTML = reuTranscHtml(REU_UI.transc[r.id]); const f = box.querySelector('.reu-achou'); if(f) box.scrollTop = f.offsetTop - box.offsetTop - 20; }, 'input');
+  on('reu-editar', ()=>{ REU_UI.editando = true; renderReunioes(); });
+  on('reu-e-cancelar', ()=>{ REU_UI.editando = false; renderReunioes(); });
+  on('reu-e-salvar', async ()=>{
+    const ata = Object.assign({}, r.ata||{}, {
+      resumo: document.getElementById('reu-e-resumo').value.trim(),
+      pautas: reuLinhas('reu-e-pautas').map(l=>{ const [tema, ...d] = l.split('|'); return {tema:(tema||'').trim(), discussao:d.join('|').trim()}; }),
+      decisoes: reuLinhas('reu-e-dec'),
+      encaminhamentos: reuLinhas('reu-e-enc').map(l=>{ const [acao, resp, prazo] = l.split('|').map(x=>(x||'').trim()); return {acao, responsavel:resp||'', prazo:prazo||''}; }),
+      pendencias: reuLinhas('reu-e-pend'),
+      observacoes: document.getElementById('reu-e-obs').value.trim(),
+      editada_em: new Date().toISOString(),
+    });
+    const { error } = await sb.from('reunioes').update({ata, updated_at:new Date().toISOString()}).eq('id', r.id);
+    if(error){ alert('Não consegui salvar a ata. Tente de novo.'); return; }
+    r.ata = ata; REU_UI.editando = false; renderReunioes();
+  });
+  const li = el.querySelector('#reu-li'), bt = el.querySelector('#reu-assinar');
+  if(li && bt) li.addEventListener('change', ()=>{ bt.disabled = !li.checked; });
+  on('reu-assinar', async ()=>{
+    bt.disabled = true;
+    const obs = (el.querySelector('#reu-obs').value||'').trim();
+    const row = { reuniao_id:r.id, user_id:currentUser.id, nome:(currentUserProfile||{}).name||'', observacao: obs||null };
+    const { data, error } = await sb.from('reuniao_assinaturas').insert(row).select().maybeSingle();
+    if(error){ alert('Não consegui registrar a concordância. Tente de novo.'); bt.disabled = false; return; }
+    REU_UI.assin.push(data || Object.assign({assinado_em:new Date().toISOString()}, row)); renderReunioes();
+  });
+  on('reu-env-abrir', ()=>{ REU_UI.enviando = true; renderReunioes(); });
+  on('reu-env-cancel', ()=>{ REU_UI.enviando = false; renderReunioes(); });
+  on('reu-env-ok', async ()=>{
+    const ids = [...el.querySelectorAll('[data-reu-env]:checked:not(:disabled)')].map(c=>c.dataset.reuEnv);
+    if(!ids.length){ REU_UI.enviando = false; renderReunioes(); return; }
+    const rows = ids.map(user_id=>({reuniao_id:r.id, user_id, enviado_por:currentUser.id, ativo:true, enviado_em:new Date().toISOString()}));
+    const { error } = await sb.from('reuniao_envios').upsert(rows, {onConflict:'reuniao_id,user_id'});
+    if(error){ alert('Não consegui enviar agora. Tente de novo.'); return; }
+    rows.forEach(x=>{ const i = REU_UI.envios.findIndex(e=>e.reuniao_id===x.reuniao_id && e.user_id===x.user_id); if(i>=0) REU_UI.envios[i] = x; else REU_UI.envios.push(x); });
+    REU_UI.enviando = false; renderReunioes();
+  });
+}
+/* ---------- Pautas da próxima reunião (só sócios) ---------- */
+async function reuPautasCarregar(){
+  REU_UI.pautasCarregando = true;
+  try{ const { data, error } = await sb.from('reuniao_pautas').select('*').eq('ativo', true).order('ordem'); if(error) throw error; REU_UI.pautas = data || []; }
+  catch(e){ console.error('reuniao_pautas', e); REU_UI.pautas = []; }
+  REU_UI.pautasCarregando = false;
+  if(currentView==='reunioes') renderReunioes();
+  reuTempoReal();
+}
+let REU_CANAL = null;
+/* Durante a reunião mais de um sócio pode dar check: as mudanças aparecem na hora para todos. */
+function reuTempoReal(){
+  if(REU_CANAL || !sb || !sb.channel) return;
+  try{
+    REU_CANAL = sb.channel('reuniao-pautas')
+      .on('postgres_changes', {event:'*', schema:'public', table:'reuniao_pautas'}, payload=>{
+        const n = payload.new; if(!n || !n.id || !REU_UI.pautas) return;
+        const i = REU_UI.pautas.findIndex(x=>x.id===n.id);
+        if(!n.ativo){ if(i>=0) REU_UI.pautas.splice(i,1); } else if(i>=0) REU_UI.pautas[i] = n; else REU_UI.pautas.push(n);
+        if(currentView==='reunioes' && REU_UI.aba==='pautas' && !(document.activeElement && document.activeElement.id==='reu-pauta-nova' && document.activeElement.value)) renderReunioes();
+      })
+      .on('postgres_changes', {event:'INSERT', schema:'public', table:'reuniao_assinaturas'}, payload=>{
+        const n = payload.new; if(!n || REU_UI.assin.some(a=>a.reuniao_id===n.reuniao_id && a.user_id===n.user_id)) return;
+        REU_UI.assin.push(n); if(currentView==='reunioes') renderReunioes();
+      })
+      .subscribe();
+  }catch(e){ console.error('reu realtime', e); }
+}
+function reuNomeCurto(uid){ const p = PEOPLE[uid]; return p ? String(p.name||'').split(' ')[0] : ''; }
+function reuPautasHtml(){
+  if(REU_UI.pautas===null) return '<div class="empty-state">Carregando as pautas…</div>';
+  const abertas = REU_UI.pautas.filter(p=>!p.concluida);
+  const feitas = REU_UI.pautas.filter(p=>p.concluida).sort((a,b)=>String(b.concluida_em).localeCompare(String(a.concluida_em))).slice(0,30);
+  const linha = p=>`<div class="reu-pauta ${p.concluida?'feita':''}">
+      <label class="reu-pauta-chk"><input type="checkbox" data-reu-pchk="${p.id}" ${p.concluida?'checked':''}><span>${escapeHtml(p.texto)}</span></label>
+      <span class="reu-pauta-meta">${p.concluida ? `tratada${reuNomeCurto(p.concluida_por)?' · check de '+escapeHtml(reuNomeCurto(p.concluida_por)):''} · ${escapeHtml(fmtDataHora(p.concluida_em))}` : `${reuNomeCurto(p.criado_por)?'de '+escapeHtml(reuNomeCurto(p.criado_por))+' · ':''}${escapeHtml(fmtDataHora(p.criado_em))}`}</span>
+      ${!p.concluida ? `<button type="button" class="reu-pauta-x" data-reu-prem="${p.id}" title="Tirar da pauta" aria-label="Tirar da pauta">${icon('x')}</button>` : ''}
+    </div>`;
+  return `<p class="section-sub" style="margin-top:0">Escreva aqui o que precisa ser falado na próxima reunião. Durante a reunião, dê o check em cada pauta tratada.</p>
+    <div class="reu-pauta-add"><input type="text" id="reu-pauta-nova" maxlength="400" placeholder="Nova pauta para a próxima reunião"><button type="button" class="btn-primary" id="reu-pauta-ok">${icon('plus')} Adicionar</button></div>
+    <div class="reu-pautas">${abertas.length ? abertas.map(linha).join('') : '<p class="muted">Nenhuma pauta em aberto.</p>'}</div>
+    ${feitas.length ? `<h4 class="reu-feitas-tit">Já tratadas</h4><div class="reu-pautas">${feitas.map(linha).join('')}</div>` : ''}`;
+}
+function reuPautasBind(el){
+  const inp = el.querySelector('#reu-pauta-nova');
+  const add = async ()=>{
+    const texto = (inp.value||'').trim(); if(!texto) return;
+    inp.value = '';
+    const { data, error } = await sb.from('reuniao_pautas').insert({texto, criado_por:currentUser.id}).select().maybeSingle();
+    if(error){ alert('Não consegui adicionar a pauta.'); inp.value = texto; return; }
+    REU_UI.pautas.push(data); renderReunioes();
+    const n = document.getElementById('reu-pauta-nova'); if(n) n.focus();
+  };
+  if(inp){ inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } }); el.querySelector('#reu-pauta-ok').addEventListener('click', add); }
+  el.querySelectorAll('[data-reu-pchk]').forEach(c=>c.addEventListener('change', async ()=>{
+    const p = REU_UI.pautas.find(x=>x.id===c.dataset.reuPchk); if(!p) return;
+    const upd = c.checked ? {concluida:true, concluida_por:currentUser.id, concluida_em:new Date().toISOString()} : {concluida:false, concluida_por:null, concluida_em:null};
+    const { error } = await sb.from('reuniao_pautas').update(upd).eq('id', p.id);
+    if(error){ alert('Não consegui salvar o check.'); c.checked = !c.checked; return; }
+    Object.assign(p, upd); renderReunioes();
+  }));
+  el.querySelectorAll('[data-reu-prem]').forEach(b=>b.addEventListener('click', async ()=>{
+    const p = REU_UI.pautas.find(x=>x.id===b.dataset.reuPrem); if(!p) return;
+    const { error } = await sb.from('reuniao_pautas').update({ativo:false}).eq('id', p.id);
+    if(error){ alert('Não consegui tirar a pauta.'); return; }
+    REU_UI.pautas = REU_UI.pautas.filter(x=>x.id!==p.id); renderReunioes();
+  }));
+}
+
 const DRE_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b9b8-c021da4db519'];
 const DRE_UI = { salvos:null, carregando:false, mes:null, regime:'competencia', vendo:null };
 const DRE_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
