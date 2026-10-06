@@ -877,6 +877,10 @@
   .ps-section:last-of-type{border-bottom:none;margin-bottom:6px;padding-bottom:0;}
   .ps-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--shared);margin-bottom:10px;}
   .ps-label{display:block;font-size:11.5px;font-weight:600;color:var(--text-dim);margin-bottom:4px;margin-top:10px;}
+  .ps-label-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;}
+  .ps-nao-tenho{font:inherit;font-size:11px;font-weight:600;padding:3px 10px;margin-bottom:4px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
+  .ps-nao-tenho:hover{border-color:var(--accent);color:var(--accent);}
+  .ps-locked .ps-nao-tenho{display:none;}
   .ps-label:first-of-type{margin-top:0;}
   .ps-input{
     width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -8014,7 +8018,7 @@ function sectionFilled(section, data){
   if(section.type==='fields') return section.fields.every(f=>(val[f.key]||'').trim()!=='');
   if(section.type==='list') return val.some(v=>(v||'').trim()!=='');
   if(section.type==='checklist') return val.length>0 && val.every(it=>(it.text||'').trim()!=='');
-  if(section.type==='swatches') return val.every(v=>/^#([0-9a-f]{3}){1,2}$/i.test(v||''));
+  if(section.type==='swatches') return val.every(v=>/^#([0-9a-f]{3}){1,2}$/i.test(String(v||'').replace(/\s+/g,'')));
   /* "Totalmente completo": TODAS as linhas precisam ter TODAS as colunas reais preenchidas — não
      basta preencher uma célula em uma linha (ex.: só marcar o Status de um dia no Funil de
      Conteúdo). "__label" é o rótulo automático da linha (dia da semana, nome da ação fixa) e não
@@ -8040,6 +8044,16 @@ function sectionFilled(section, data){
      nunca fica "Pendente" lá fora na lista de tópicos — sempre conta como preenchido. */
   if(section.type==='crm') return true;
   return true;
+}
+/* O que ainda falta num tópico, em palavras (para o aviso "ainda faltam campos"). */
+function topicFaltando(topic, data){
+  const out = [];
+  (topic.sections||[]).forEach(sec=>{
+    if(sectionFilled(sec, data)) return;
+    if(sec.type==='fields'){ const v = sectionValue(data, sec); sec.fields.forEach(f=>{ if(!(v[f.key]||'').trim()) out.push(f.label); }); }
+    else out.push(sec.label || 'uma seção');
+  });
+  return out;
 }
 function topicFilled(quadrant, topic, idx, s){
   const data = getTopicData(s.id, topic.id);
@@ -8356,7 +8370,7 @@ function renderSectionHTML(section, data){
     return `<div class="ps-section">
       <h4 class="ps-h">${section.label}</h4>
       ${section.fields.map(f=>`
-        <label class="ps-label">${f.label}</label>
+        <div class="ps-label-row"><label class="ps-label">${f.label}</label>${(val[f.key]||'').trim() ? '' : `<button type="button" class="ps-nao-tenho" data-nao-tenho="${section.key}|${f.key}" title="Marque se você não tem ou não usa isso">Não tenho</button>`}</div>
         ${f.gabarito? `<div class="gabarito">${f.gabarito}</div>`:''}
         <textarea class="ps-input" rows="1" data-fkind="fields" data-skey="${section.key}" data-fkey="${f.key}">${escapeAttr(val[f.key]||'')}</textarea>
       `).join('')}
@@ -8707,6 +8721,12 @@ function renderSectionHTML(section, data){
 function bindSectionEvents(sections, data, rerender, saveKey){
   const modalEl = document.getElementById('modal');
   const persist = ()=>{ if(saveKey) syncPanelData(saveKey.sid, saveKey.topicId, data); };
+  modalEl.querySelectorAll('[data-nao-tenho]').forEach(b=>b.addEventListener('click', ()=>{
+    const [skey, fkey] = b.dataset.naoTenho.split('|');
+    const section = sections.find(x=>x.key===skey); if(!section) return;
+    sectionValue(data, section)[fkey] = 'Não tenho';
+    persist(); rerender();
+  }));
   modalEl.querySelectorAll('[data-fkind]').forEach(inp=>{
     const evtName = inp.tagName==='SELECT' ? 'change' : 'input';
     inp.addEventListener(evtName,()=>{
@@ -9134,7 +9154,7 @@ function openTopicModal(quadrant, topicId){
         <h3>${topic.title}</h3>
         ${topic.desc? `<p class="desc">${topic.desc}</p>` : ''}
         ${(topic.intro||[]).map(t=>`<div class="topic-note">${t}</div>`).join('')}
-        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : 'Salvo — ainda faltam campos para aparecer como concluído lá fora. Clique em Editar para continuar.'}</div>` : ''}
+        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : `Salvo — ainda falta preencher: <strong>${escapeHtml(topicFaltando(topic, data).join(', '))}</strong>. Se algum item não se aplica a você, clique em Editar e use o botão "Não tenho".`}</div>` : ''}
         <div class="${editing? '' : 'ps-locked'}">
           ${(topic.sections||[]).map(sec=>renderSectionHTML(sec, data)).join('')}
         </div>
