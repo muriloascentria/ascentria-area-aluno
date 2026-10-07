@@ -8046,6 +8046,35 @@ function sectionFilled(section, data){
   return true;
 }
 /* O que ainda falta num tópico, em palavras (para o aviso "ainda faltam campos"). */
+/* Publicação automática (Funil de Conteúdo -> Avaliação de Conteúdo): linha com Status "Publicado"
+   e link preenchido sobe o link para a tabela de destino, uma vez só e sem duplicar link igual. */
+function autoPublicarLinha(ap, row, sid){
+  const link = String(row[ap.linkKey]||'').trim();
+  if(!link || row[ap.flagKey] || row[ap.statusKey]!==ap.publishedValue) return false;
+  const targetData = getTopicData(sid, ap.targetTopicId);
+  if(!Array.isArray(targetData[ap.targetKey])) targetData[ap.targetKey] = [];
+  const lista = targetData[ap.targetKey];
+  if(!lista.some(r=>String((r||{})[ap.linkKey]||'').trim()===link)){
+    const vazia = lista.find(r=>r && !Object.keys(r).some(k=>String(r[k]||'').trim()!==''));
+    if(vazia) vazia[ap.linkKey] = link; else lista.push({[ap.linkKey]: link});
+  }
+  row[ap.flagKey] = true;
+  syncPanelData(sid, ap.targetTopicId, targetData);
+  return true;
+}
+/* Confere de novo todas as linhas já publicadas (corrige as que ficaram para trás antes desta regra). */
+function reconciliarAutoPublish(sid){
+  if(!sid) return;
+  QUADRANTS.forEach(q=>q.topics.forEach(t=>(t.sections||[]).forEach(sec=>{
+    if(!sec.autoPublish) return;
+    const key = sid+':'+t.id; if(!PANEL_DATA[key]) return;
+    const data = getTopicData(sid, t.id); const rows = data[sec.key];
+    if(!Array.isArray(rows)) return;
+    let mudou = false;
+    rows.forEach(r=>{ if(r && typeof r==='object' && autoPublicarLinha(sec.autoPublish, r, sid)) mudou = true; });
+    if(mudou) syncPanelData(sid, t.id, data);
+  })));
+}
 function topicFaltando(topic, data){
   const out = [];
   (topic.sections||[]).forEach(sec=>{
@@ -8776,17 +8805,9 @@ function bindSectionEvents(sections, data, rerender, saveKey){
            preenchido, sobe sozinho (só o link) para a tabela de destino (ex.: Avaliação de
            Conteúdo) — sem duplicar se a linha já foi enviada antes, e sem mexer no que já foi
            inserido manualmente lá. */
+        /* Vale tanto quando o Status muda para "Publicado" quanto quando o link é colado depois. */
         const ap = section.autoPublish;
-        if(ap && saveKey && inp.dataset.col===ap.statusKey && inp.value===ap.publishedValue){
-          const link = (row[ap.linkKey]||'').trim();
-          if(link && !row[ap.flagKey]){
-            const targetData = getTopicData(saveKey.sid, ap.targetTopicId);
-            if(!targetData[ap.targetKey]) targetData[ap.targetKey] = [];
-            targetData[ap.targetKey].push({[ap.linkKey]: link});
-            row[ap.flagKey] = true;
-            syncPanelData(saveKey.sid, ap.targetTopicId, targetData);
-          }
-        }
+        if(ap && saveKey && (inp.dataset.col===ap.statusKey || inp.dataset.col===ap.linkKey)) autoPublicarLinha(ap, row, saveKey.sid);
       }
       if(kind==='swatches'){
         const hex = /^#([0-9a-f]{3}){1,2}$/i.test(inp.value)? inp.value : '#1c1e19';
@@ -9104,6 +9125,7 @@ function bindSectionEvents(sections, data, rerender, saveKey){
 }
 function openTopicModal(quadrant, topicId){
   const s = getStudent(currentStudentId);
+  try{ reconciliarAutoPublish(s && s.id); }catch(e){ console.error('autoPublish', e); }
   const topic = quadrant.topics.find(t=>t.id===topicId);
   const idx = quadrant.topics.indexOf(topic);
   const data = getTopicData(s.id, topic.id);
