@@ -3445,6 +3445,7 @@ const MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out'
    da Agenda ao Vivo e passa a aparecer em Minhas Sessões 1:1 do próprio mentorado (ver renderSessoes). */
 const TIPO_ENCONTRO_LABELS = {
   mastermind: 'Mastermind',
+  treinamento_vendas: 'Treinamento de Vendas',
   plantao_duvidas: 'Plantão de Dúvidas',
   consultorio_simulado: 'Consultório Simulado',
   individual: 'Encontro 1:1',
@@ -7759,6 +7760,7 @@ function renderAgenda(){
   const pastColetivos = visible.filter(l=>l.type==='past' && l.studentId==null).sort((a,b)=>byDateTimeAsc(b,a));
   const TIPO_GRUPOS = [
     {key:'mastermind', label:'Mastermind'},
+    {key:'treinamento_vendas', label:'Treinamento de Vendas'},
     {key:'plantao_duvidas', label:'Plantão de Dúvidas'},
     {key:'consultorio_simulado', label:'Consultório Simulado'},
     {key:null, label:'Outros encontros'},
@@ -10772,6 +10774,7 @@ function renderConteudo(){
       <div class="field"><label>Tipo de encontro</label>
         <select class="ps-input" id="new-live-tipo">
           <option value="mastermind">Mastermind</option>
+          <option value="treinamento_vendas">Treinamento de Vendas</option>
           <option value="plantao_duvidas">Plantão de Dúvidas</option>
           <option value="consultorio_simulado">Consultório Simulado</option>
           <option value="individual">Encontro 1:1</option>
