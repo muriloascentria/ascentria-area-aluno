@@ -1002,6 +1002,7 @@
   .an-table .an-lead{font-weight:700;}
   .an-table .an-sub{display:block;font-size:11px;color:var(--text-mute);font-weight:500;margin-top:2px;}
   .an-table .an-col-mark{text-align:center;}
+  .an-na{color:var(--text-mute);font-weight:600;}
   .an-links{display:flex;flex-wrap:wrap;gap:4px;}
   .an-links .link-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:86px;height:24px;box-sizing:border-box;padding:0 8px;margin:0;font-size:10.5px;font-weight:700;line-height:1;border:1px solid var(--border);border-radius:12px;white-space:nowrap;text-decoration:none;}
   .an-links .link-btn .icon{width:11px;height:11px;}
@@ -14098,7 +14099,9 @@ let vendasBusca = '';
 let clientesBusca = '';
 let clientesOrdem = 'nome'; // 'nome' (A–Z) ou 'recentes'
 const CLIENTES_TAG_OPTS = ['Paciente Murilo','Paciente Sandra','Paciente Diego','Paciente Carmem','Mentoria Essência','Método Essência','Pós-Graduação','Constelação'];
-const VENDAS_VENDEDOR_OPTS = ['Adriana','Carmem','Carmem e Diego','Diego','Viviane'];
+/* Viviane deixou de ser consultora de vendas em outubro/2026: sai das opções para registros novos;
+   registros antigos dela continuam aparecendo (ev-vendedor e filtro mantêm o valor gravado). */
+const VENDAS_VENDEDOR_OPTS = ['Adriana','Carmem','Carmem e Diego','Diego'];
 const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
 const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'];
 const VENDAS_PRESENCA_OPTS = ['Show','No-show'];
@@ -14479,7 +14482,7 @@ function openEditVendaModal(id){
         <label class="ps-label">WhatsApp</label>
         <input class="ps-input" type="text" id="ev-whatsapp" value="${escapeAttr(v.whatsapp||'')}" placeholder="(00) 00000-0000">
         <label class="ps-label">Vendedor</label>
-        <select class="ps-input" id="ev-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS, v.vendedor)}</select>
+        <select class="ps-input" id="ev-vendedor">${selectOpts((v.vendedor && !VENDAS_VENDEDOR_OPTS.includes(v.vendedor)) ? [...VENDAS_VENDEDOR_OPTS, v.vendedor] : VENDAS_VENDEDOR_OPTS, v.vendedor)}</select>
         <label class="ps-label">Produto</label>
         <select class="ps-input" id="ev-produto">${selectOpts(VENDAS_PRODUTO_OPTS, v.produto)}</select>
         <label class="ps-label" style="display:flex;align-items:center;gap:6px;margin-top:10px"><input type="checkbox" id="ev-upsell" ${v.upsell?'checked':''}> Upsell (upgrade)</label>
@@ -14577,7 +14580,8 @@ const ANALISE_VENDEDORAS = [
    ap:['diegoAp1','diegoAp2'],    campoAp:['diego_aprendizado1','diego_aprendizado2']},
   {key:'carmem',  nome:'Carmem',  userId:'3ac4f0c3-4db3-4f98-b9b8-c021da4db519', assistiu:'carmemAssistiu',  campoAssistiu:'carmem_assistiu',
    ap:['carmemAp1','carmemAp2'],  campoAp:['carmem_aprendizado1','carmem_aprendizado2']},
-  {key:'viviane', nome:'Viviane', userId:'e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu',
+  /* ate: última data de venda em que a pessoa ainda analisa. Viviane saiu das vendas em out/2026. */
+  {key:'viviane', nome:'Viviane', userId:'e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu', ate:'2026-09-30',
    ap:['vivianeAp1','vivianeAp2'], campoAp:['viviane_aprendizado1','viviane_aprendizado2']},
   {key:'adriana', nome:'Adriana', userId:'4703b11a-7061-4d49-857c-9a571d43bb76', assistiu:'adrianaAssistiu', campoAssistiu:'adriana_assistiu',
    ap:['adrianaAp1','adrianaAp2'], campoAp:['adriana_aprendizado1','adriana_aprendizado2']},
@@ -14589,12 +14593,26 @@ function analiseLinkCell(url, rotulo){
     ? `<a class="link-btn" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} ${escapeHtml(rotulo)}</a>`
     : escapeHtml(u);
 }
+/* Data da venda em ISO (dd/mm/aaaa da planilha); sem data, usa a data de criação da linha. */
+function analiseDataISO(a){
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(a.dataVenda||'').trim());
+  if(m){ const y = m[3].length===2 ? '20'+m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+  return String(a.createdAt||'').slice(0,10) || gtfHojeISO();
+}
+/* A pessoa participa da análise desta venda? (quem tem "ate" só até aquela data, ou se já registrou algo) */
+function analiseAplica(a, v){
+  if(!v.ate) return true;
+  if(a[v.assistiu] || String(a[v.ap[0]]||'').trim() || String(a[v.ap[1]]||'').trim()) return true;
+  return analiseDataISO(a) <= v.ate;
+}
+function analiseVendedorasDe(a){ return ANALISE_VENDEDORAS.filter(v=>analiseAplica(a, v)); }
 function analiseFeita(a, v){
   /* "Realizado" = assistiu e registrou pelo menos um aprendizado. */
   const marcados = [a[v.ap[0]], a[v.ap[1]]].map(t=>String(t||'').trim()).filter(Boolean);
   return !!a[v.assistiu] && marcados.length>0;
 }
 function analiseMarkHtml(a, v){
+  if(!analiseAplica(a, v)) return `<span class="an-na" title="${escapeAttr(v.nome)} não participa da análise desta venda">—</span>`;
   return analiseFeita(a, v)
     ? `<span class="treino-mark ok" title="${escapeAttr(v.nome)} analisou e registrou">${icon('tick')}</span>`
     : `<span class="treino-mark no" title="${escapeAttr(v.nome)} ainda não analisou">✕</span>`;
@@ -15317,7 +15335,7 @@ function openAnaliseModal(id){
   if(!a) return;
   const eu = currentUser ? currentUser.id : null;
   const podeLead = staffPleno();                          // dados do lead e links: equipe interna (fora da Visualização Consultora)
-  const minha = ANALISE_VENDEDORAS.find(v=>v.userId===eu) || null; // minha coluna de análise (se eu for analista)
+  const minha = analiseVendedorasDe(a).find(v=>v.userId===eu) || null; // minha coluna de análise (se eu for analista)
   const ro = podeLead ? '' : 'readonly disabled';
   /* Analista só enxerga a análise das colegas depois de registrar a sua (o que está salvo, não o
      que está sendo digitado). Quem não é analista (ex.: gestão) vê tudo. */
@@ -15350,7 +15368,7 @@ function openAnaliseModal(id){
       </div>`}
       <h4 style="margin:14px 0 2px">Análises</h4>
       <p class="section-sub" style="margin:0 0 4px;font-size:12px">Cada pessoa registra só no próprio espaço; os demais ficam bloqueados.${podeVerColegas ? '' : ' As análises das colegas aparecem depois que você salvar a sua.'}</p>
-      ${ANALISE_VENDEDORAS.map(v=>{
+      ${analiseVendedorasDe(a).map(v=>{
         const meu = minha && minha.key===v.key;
         const t1 = String(a[v.ap[0]]||'').trim(), t2 = String(a[v.ap[1]]||'').trim();
         return `<div class="an-pessoa ${meu?'':'locked'}">
