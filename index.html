@@ -1471,6 +1471,12 @@
   .tf-check:disabled{opacity:.5;cursor:default;}
   .tf-card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--text-dim);}
   .tf-pessoa{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .tf-pessoas{display:inline-flex;flex-wrap:wrap;gap:4px 10px;}
+  .tf-coresp{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+  .tf-coresp-item{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 10px;border:1px solid var(--border);border-radius:999px;cursor:pointer;user-select:none;}
+  .tf-coresp-item.on{border-color:var(--accent);background:var(--accent-soft);}
+  .tf-coresp-item.principal{display:none;}
+  .tf-coresp-item input{margin:0;}
   .tf-avatar-vazio{width:18px;height:18px;border-radius:50%;background:var(--border);display:inline-block;}
   .tf-prazo{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
   .tf-prazo .icon{width:12px;height:12px;}
@@ -2017,6 +2023,9 @@
   .reu-ata-cab b{font-size:13.5px;font-weight:600;}
   .reu-pauta-ata{margin-bottom:10px;}
   .reu-ul{margin:0;padding-left:20px;line-height:1.55;}
+  .reu-ata-corpo{margin-top:12px;}
+  .reu-ata-corpo>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:8px 0;color:var(--accent);list-style-position:inside;}
+  .reu-ata-corpo>summary .muted{font-weight:400;font-size:12.5px;}
   .reu-enc{min-width:640px;}
   .reu-enc td{vertical-align:top;}
   .reu-enc-tcol{min-width:190px;}
@@ -10980,13 +10989,17 @@ function tarefasSouMembro(){ const m = tarefasMeuMembro(); return !!(m && m.ativ
 function tarefasSouAdmin(){ const m = tarefasMeuMembro(); return !!(m && m.ativo && m.admin); }
 function tarefasPossoDelegar(){ const m = tarefasMeuMembro(); return !!(m && m.ativo && (m.pode_delegar || m.admin)); }
 function tarefasSouDono(t){ return tarefasSouAdmin() || t.criadorId===tarefasEu(); }
-function tarefasPossoEditar(t){ return !t.excluida && (tarefasSouDono(t) || t.responsavelId===tarefasEu()); }
+/* Responsáveis: o principal (responsavel_id) e, se houver, os demais (coresponsaveis). Todos veem a
+   tarefa em "Minhas", podem mudar a situação e recebem os avisos. */
+function tarefaResps(t){ return [t.responsavelId, ...((t.coresponsaveis||[]).filter(u=>u && u!==t.responsavelId))].filter(Boolean); }
+function tarefaEhResp(t, uid){ return !!uid && tarefaResps(t).includes(uid); }
+function tarefasPossoEditar(t){ return !t.excluida && (tarefasSouDono(t) || tarefaEhResp(t, tarefasEu())); }
 function tarefaAberta(t){ return !t.excluida && t.status!=='concluida' && t.status!=='cancelada'; }
 function tarefaAtrasada(t){ return tarefaAberta(t) && !!t.prazoData && t.prazoData < tzHojeISO(); }
 function tarefaVenceHoje(t){ return tarefaAberta(t) && t.prazoData===tzHojeISO(); }
 function tarefaNova(t){ // recém-atribuída a mim (últimas 48h, por outra pessoa) ou com aviso de atribuição ainda não lido
   const eu = tarefasEu();
-  if(t.responsavelId!==eu) return false;
+  if(!tarefaEhResp(t, eu)) return false;
   if(TAREFAS_NOTIFS.some(n=>n.tarefaId===t.id && n.tipo==='atribuida')) return true;
   return t.criadorId!==eu && (Date.now()-new Date(t.createdAt).getTime()) < 48*3600*1000;
 }
@@ -10994,7 +11007,7 @@ function tarefaAtualizada(t){ // mexeram nela depois do meu último acesso (e n�
   return !!TAREFAS_ACESSO_ANTERIOR && t.updatedAt > TAREFAS_ACESSO_ANTERIOR && tarefaAberta(t) && !TAREFAS_TOQUEI.has(t.id);
 }
 function mapTarefaRow(r){
-  return { id:r.id, titulo:r.titulo||'', descricao:r.descricao||'', responsavelId:r.responsavel_id, criadorId:r.criador_id,
+  return { id:r.id, titulo:r.titulo||'', descricao:r.descricao||'', responsavelId:r.responsavel_id, coresponsaveis:Array.isArray(r.coresponsaveis)?r.coresponsaveis:[], criadorId:r.criador_id,
     prazoData:r.prazo_data||'', prazoHora:r.prazo_hora||'', prioridade:r.prioridade||'media', status:r.status||'pendente',
     concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null, excluida:!!r.excluida, excluidaEm:r.excluida_em||null,
     createdAt:r.created_at, updatedAt:r.updated_at };
@@ -11081,8 +11094,8 @@ async function recarregarTarefa(id){
 function tarefasBase(){
   const eu = tarefasEu();
   let lista = TAREFAS.filter(t=>!t.excluida);
-  if(tarefasUI.aba==='minhas') lista = lista.filter(t=>t.responsavelId===eu);
-  else if(tarefasUI.aba==='delegadas') lista = lista.filter(t=>t.criadorId===eu && t.responsavelId!==eu);
+  if(tarefasUI.aba==='minhas') lista = lista.filter(t=>tarefaEhResp(t, eu));
+  else if(tarefasUI.aba==='delegadas') lista = lista.filter(t=>t.criadorId===eu && !tarefaEhResp(t, eu));
   else if(tarefasUI.aba==='concluidas') lista = lista.filter(t=>t.status==='concluida' || t.status==='cancelada');
   return lista;
 }
@@ -11093,7 +11106,7 @@ function tarefasFiltradas(){
     if(f.status==='abertas') lista = lista.filter(tarefaAberta);
     else if(f.status!=='todas') lista = lista.filter(t=>t.status===f.status);
   } else if(f.status!=='abertas' && f.status!=='todas') lista = lista.filter(t=>t.status===f.status);
-  if(f.responsavel!=='todos') lista = lista.filter(t=>t.responsavelId===f.responsavel);
+  if(f.responsavel!=='todos') lista = lista.filter(t=>tarefaEhResp(t, f.responsavel));
   if(f.criador!=='todos') lista = lista.filter(t=>t.criadorId===f.criador);
   if(f.prioridade!=='todas') lista = lista.filter(t=>t.prioridade===f.prioridade);
   if(f.prazo==='atrasadas') lista = lista.filter(tarefaAtrasada);
@@ -11122,6 +11135,11 @@ function tarefasFiltroAtivo(){
 }
 
 /* ---- pedaços de HTML ---- */
+function tarefaPessoasHtml(t, tam){
+  const ids = tarefaResps(t);
+  if(ids.length<=1) return tarefaPessoaHtml(t.responsavelId, tam);
+  return `<span class="tf-pessoas">${ids.map(id=>tarefaPessoaHtml(id, tam)).join('')}</span>`;
+}
 function tarefaPessoaHtml(id, tam){
   const m = tarefasMembro(id) || getPerson(id);
   if(!m) return `<span class="tf-pessoa"><span class="tf-avatar-vazio"></span><span>—</span></span>`;
@@ -11164,7 +11182,7 @@ function tarefaCardHtml(t, opts){
         ${tarefaPrioHtml(t.prioridade)}
       </div>
       <div class="tf-card-meta">
-        ${o.semResponsavel ? '' : tarefaPessoaHtml(t.responsavelId, 18)}
+        ${o.semResponsavel ? '' : tarefaPessoasHtml(t, 18)}
         ${tarefaPrazoHtml(t)}
         ${tarefaSubProgresso(t)}
         ${tarefaStatusSelect(t)}
@@ -11177,7 +11195,7 @@ function tarefaLinhaHtml(t){
     <tr class="${tarefaAtrasada(t)?'tf-linha-atrasada':''}" data-tf-abrir="${t.id}">
       <td><button type="button" class="tf-check ${t.status==='concluida'?'ok':''}" data-tf-concluir="${t.id}" ${tarefasPossoEditar(t)?'':'disabled'}>${icon('check','tiny')}</button></td>
       <td style="min-width:220px"><strong>${escapeHtml(t.titulo)}</strong>${tarefaSinais(t)? `<div class="tf-card-sinais">${tarefaSinais(t)}</div>` : ''}</td>
-      <td>${tarefaPessoaHtml(t.responsavelId, 20)}</td>
+      <td>${tarefaPessoasHtml(t, 20)}</td>
       <td>${tarefaPessoaHtml(t.criadorId, 20)}</td>
       <td style="white-space:nowrap">${tarefaPrazoHtml(t)}</td>
       <td>${tarefaPrioHtml(t.prioridade)}</td>
@@ -11209,8 +11227,8 @@ function tarefasKanbanHtml(lista){
     </div>`;
 }
 function tarefasSubquadroHtml(m, lista){
-  const minhas = lista.filter(t=>t.responsavelId===m.userId);
-  const todas = TAREFAS.filter(t=>t.responsavelId===m.userId && !t.excluida);
+  const minhas = lista.filter(t=>tarefaEhResp(t, m.userId));
+  const todas = TAREFAS.filter(t=>tarefaEhResp(t, m.userId) && !t.excluida);
   const pend = todas.filter(tarefaAberta).length, atr = todas.filter(tarefaAtrasada).length, conc = todas.filter(t=>t.status==='concluida').length;
   const rec = !!tarefasUI.recolhidos[m.userId];
   return `
@@ -11262,8 +11280,8 @@ function renderTarefas(){
   const ativos = TAREFAS_EQUIPE.filter(m=>m.ativo);
   const lista = tarefasFiltradas();
   const eu = tarefasEu();
-  const minhasAbertas = TAREFAS.filter(t=>t.responsavelId===eu && tarefaAberta(t));
-  const kpis = { pend:minhasAbertas.length, atr:minhasAbertas.filter(tarefaAtrasada).length, hoje:minhasAbertas.filter(tarefaVenceHoje).length, deleg:TAREFAS.filter(t=>t.criadorId===eu && t.responsavelId!==eu && tarefaAberta(t)).length };
+  const minhasAbertas = TAREFAS.filter(t=>tarefaEhResp(t, eu) && tarefaAberta(t));
+  const kpis = { pend:minhasAbertas.length, atr:minhasAbertas.filter(tarefaAtrasada).length, hoje:minhasAbertas.filter(tarefaVenceHoje).length, deleg:TAREFAS.filter(t=>t.criadorId===eu && !tarefaEhResp(t, eu) && tarefaAberta(t)).length };
   const abas = [['minhas','Minhas tarefas'],['delegadas','Delegadas por mim'],['equipe','Quadro da equipe'],['concluidas','Concluídas']];
   const selPessoas = (id, atual, rotuloTodos)=> `<select class="ps-input" id="${id}"><option value="todos">${rotuloTodos}</option>${TAREFAS_EQUIPE.map(m=>`<option value="${m.userId}" ${atual===m.userId?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select>`;
   const mobile = window.innerWidth < 720;
@@ -11415,7 +11433,7 @@ async function openTarefaModal(id, defaults){
   const nova = !id;
   const eu = tarefasEu();
   let t = nova
-    ? { id:null, titulo:(defaults&&defaults.titulo)||'', descricao:(defaults&&defaults.descricao)||'', responsavelId:(defaults&&defaults.responsavelId)||eu, criadorId:eu, prazoData:(defaults&&defaults.prazoData)||'', prazoHora:'', prioridade:'media', status:'pendente', createdAt:null, updatedAt:null, excluida:false }
+    ? { id:null, titulo:(defaults&&defaults.titulo)||'', descricao:(defaults&&defaults.descricao)||'', responsavelId:(defaults&&defaults.responsavelId)||eu, coresponsaveis:(defaults&&defaults.coresponsaveis)||[], criadorId:eu, prazoData:(defaults&&defaults.prazoData)||'', prazoHora:'', prioridade:'media', status:'pendente', createdAt:null, updatedAt:null, excluida:false }
     : (TAREFAS.find(x=>x.id===id) || await recarregarTarefa(id));
   if(!t){ alert('Tarefa não encontrada.'); return; }
   const modal = document.getElementById('modal');
@@ -11436,7 +11454,7 @@ async function openTarefaModal(id, defaults){
   const dono = nova ? true : tarefasSouDono(t);
   const podeEditar = nova ? true : tarefasPossoEditar(t);
   const podeDelegarAgora = tarefasPossoDelegar();
-  const ativos = TAREFAS_EQUIPE.filter(m=>m.ativo || m.userId===t.responsavelId);
+  const ativos = TAREFAS_EQUIPE.filter(m=>m.ativo || m.userId===t.responsavelId || (t.coresponsaveis||[]).includes(m.userId));
   const subs = nova ? [] : (TAREFAS_SUB[t.id]||[]);
   const ro = (ok)=> ok ? '' : 'disabled';
   const draftNovoSubs = []; // subtarefas digitadas antes de salvar a tarefa nova
@@ -11446,6 +11464,7 @@ async function openTarefaModal(id, defaults){
     switch(h.acao){
       case 'criada': return `criou a tarefa para ${nome(d.responsavel)}`;
       case 'responsavel': return `passou a responsabilidade de ${nome(d.de)} para ${nome(d.para)}`;
+      case 'coresponsaveis': { const de = d.de||[], para = d.para||[]; const add = para.filter(x=>!de.includes(x)).map(nome), rem = de.filter(x=>!para.includes(x)).map(nome); return [add.length?`incluiu ${add.join(', ')} como responsável`:'', rem.length?`tirou ${rem.join(', ')} dos responsáveis`:''].filter(Boolean).join(' e ') || 'alterou os responsáveis'; }
       case 'prazo': return `alterou o prazo de ${d.de? tzDataCurta(d.de)+(d.de_hora?' '+d.de_hora:'') : 'sem prazo'} para ${d.para? tzDataCurta(d.para)+(d.para_hora?' '+d.para_hora:'') : 'sem prazo'}`;
       case 'prioridade': return `mudou a prioridade de ${pr(d.de)} para ${pr(d.para)}`;
       case 'status': return `mudou a situação de ${st(d.de)} para ${st(d.para)}`;
@@ -11479,6 +11498,8 @@ async function openTarefaModal(id, defaults){
           <select class="ps-input" id="tf-m-status" ${ro(podeEditar)}>${Object.entries(TAREFAS_STATUS).filter(([k])=>k!=='cancelada' || dono || t.status==='cancelada').map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
         ${t.concluidaEm ? `<div><label class="ps-label">Concluída</label><div style="font-size:13px;padding-top:8px">${tzDataHora(t.concluidaEm, true)} por ${escapeHtml((tarefasMembro(t.concluidaPor)||getPerson(t.concluidaPor)||{name:'—'}).name.split(' ')[0])}</div></div>` : ''}
       </div>
+      <label class="ps-label">Outros responsáveis <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
+      <div class="tf-coresp" id="tf-m-coresp">${ativos.map(m=>{ const on = (t.coresponsaveis||[]).includes(m.userId); const bloq = !(dono && (podeDelegarAgora || nova)) || (!podeDelegarAgora && m.userId!==eu && !on); return `<label class="tf-coresp-item ${on?'on':''} ${m.userId===t.responsavelId?'principal':''}"><input type="checkbox" value="${m.userId}" ${on?'checked':''} ${bloq?'disabled':''}> ${escapeHtml((m.name||'').split(' ')[0])}</label>`; }).join('')}</div>
       <label class="ps-label">Descrição</label>
       <textarea class="ps-input" id="tf-m-desc" rows="3" placeholder="Detalhes, contexto, links…" ${ro(dono)}>${escapeHtml(t.descricao)}</textarea>
 
@@ -11533,6 +11554,7 @@ async function openTarefaModal(id, defaults){
   $('#tf-m-fechar').addEventListener('click', closeModal);
   const lerForm = ()=>({
     titulo: $('#tf-m-titulo').value.trim(), descricao: $('#tf-m-desc').value.trim(), responsavel_id: $('#tf-m-resp').value,
+    coresponsaveis: [...modal.querySelectorAll('#tf-m-coresp input:checked')].map(i=>i.value).filter(u=>u!==$('#tf-m-resp').value),
     prioridade: $('#tf-m-prio').value, prazo_data: $('#tf-m-data').value || null, prazo_hora: $('#tf-m-hora').value || null, status: $('#tf-m-status').value,
   });
   const validar = (v)=>{
@@ -11540,9 +11562,13 @@ async function openTarefaModal(id, defaults){
     if(v.titulo.length>200){ alert('O título pode ter no máximo 200 caracteres.'); return false; }
     if(!v.responsavel_id || !tarefasMembroAtivo(v.responsavel_id)){ alert('Escolha um responsável ativo.'); return false; }
     if(v.responsavel_id!==eu && !podeDelegarAgora && (nova || v.responsavel_id!==t.responsavelId)){ alert('Sua conta não tem permissão para delegar tarefas a outras pessoas.'); return false; }
+    if(!podeDelegarAgora && v.coresponsaveis.some(u=>u!==eu && !(t.coresponsaveis||[]).includes(u))){ alert('Sua conta não tem permissão para delegar tarefas a outras pessoas.'); return false; }
     if(v.prazo_hora && !v.prazo_data){ alert('Para informar um horário, informe também a data do prazo.'); return false; }
     return true;
   };
+  modal.querySelectorAll('#tf-m-coresp input').forEach(i=>i.addEventListener('change', ()=>i.parentElement.classList.toggle('on', i.checked)));
+  const selResp = $('#tf-m-resp');
+  if(selResp) selResp.addEventListener('change', ()=>modal.querySelectorAll('#tf-m-coresp input').forEach(i=>{ const p = i.value===selResp.value; i.parentElement.classList.toggle('principal', p); if(p){ i.checked = false; i.parentElement.classList.remove('on'); } }));
   const salvar = $('#tf-m-salvar');
   if(salvar) salvar.addEventListener('click', async ()=>{
     const v = lerForm();
@@ -11561,6 +11587,7 @@ async function openTarefaModal(id, defaults){
         if(defaults && typeof defaults.onSalvo==='function') await defaults.onSalvo(data.id);
       } else {
         const payload = dono ? v : { status: v.status };
+        if(dono && !(podeDelegarAgora) && JSON.stringify(v.coresponsaveis.slice().sort())===JSON.stringify((t.coresponsaveis||[]).slice().sort())) delete payload.coresponsaveis;
         const { error } = await sb.from('tarefas').update(payload).eq('id', t.id);
         if(error) throw error;
         await recarregarTarefa(t.id);
@@ -11578,7 +11605,7 @@ async function openTarefaModal(id, defaults){
     await recarregarTarefa(t.id); openTarefaModal(t.id);
   };
   function rebind(){ // usado só na tarefa nova (subtarefas em rascunho): guarda o que foi digitado antes de redesenhar
-    const guardar = ()=>{ const v = lerForm(); t.titulo=v.titulo; t.descricao=v.descricao; t.responsavelId=v.responsavel_id; t.prioridade=v.prioridade; t.prazoData=v.prazo_data||''; t.prazoHora=v.prazo_hora||''; t.status=v.status; };
+    const guardar = ()=>{ const v = lerForm(); t.titulo=v.titulo; t.descricao=v.descricao; t.responsavelId=v.responsavel_id; t.coresponsaveis=v.coresponsaveis; t.prioridade=v.prioridade; t.prazoData=v.prazo_data||''; t.prazoHora=v.prazo_hora||''; t.status=v.status; };
     const redesenhar = ()=>{ guardar(); modal.innerHTML = body(); rebind(); };
     const f = $('#tf-m-fechar'); if(f && !f.dataset.ok){ f.dataset.ok='1'; f.addEventListener('click', closeModal); }
     const s = $('#tf-m-salvar'); if(s && s!==salvar) s.addEventListener('click', ()=>salvar.click());
@@ -11640,7 +11667,7 @@ async function openTarefaModal(id, defaults){
   const b3 = $('#tf-m-cancelar'); if(b3) b3.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Cancelar esta tarefa? Ela sai das pendências e fica no histórico.', {title:'Cancelar tarefa', confirmLabel:'Cancelar tarefa', cancelLabel:'Voltar'}))) return; if(await acao({status:'cancelada'})){ closeModal(); renderTarefas(); } });
   const b4 = $('#tf-m-excluir'); if(b4) b4.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Excluir esta tarefa? Ela some das listas, mas o registro fica guardado para auditoria.', {title:'Excluir tarefa', confirmLabel:'Excluir', cancelLabel:'Voltar'}))) return; if(await acao({excluida:true})){ TAREFAS = TAREFAS.filter(x=>x.id!==t.id); closeModal(); renderTarefas(); } });
   const b5 = $('#tf-m-duplicar'); if(b5) b5.addEventListener('click', async ()=>{
-    const v = { titulo: (t.titulo+' (cópia)').slice(0,200), descricao:t.descricao||null, responsavel_id: (tarefasPossoDelegar()||t.responsavelId===eu) ? t.responsavelId : eu, prioridade:t.prioridade, prazo_data:t.prazoData||null, prazo_hora:t.prazoHora||null, criador_id:eu };
+    const v = { titulo: (t.titulo+' (cópia)').slice(0,200), descricao:t.descricao||null, responsavel_id: (tarefasPossoDelegar()||t.responsavelId===eu) ? t.responsavelId : eu, coresponsaveis: tarefasPossoDelegar() ? (t.coresponsaveis||[]) : [], prioridade:t.prioridade, prazo_data:t.prazoData||null, prazo_hora:t.prazoHora||null, criador_id:eu };
     const { data, error } = await sb.from('tarefas').insert(v).select().single();
     if(error){ alert('Não foi possível duplicar: '+error.message); return; }
     const subsT = (TAREFAS_SUB[t.id]||[]);
@@ -14758,7 +14785,7 @@ function renderAnalise(){
    a concordância com a ata. A aba "Pautas da próxima reunião" é dos sócios: escreve a pauta antes
    e dá o check quando ela for tratada. */
 const REU_SOCIOS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b9b8-c021da4db519','8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc','a29026ae-d252-4456-bb26-eec09ba778c4'];
-const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'', enc:{}, encTf:{}, encVinc:null, encVincBusca:'', encNovo:false };
+const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'', enc:{}, encTf:{}, encVinc:null, encVincBusca:'', encNovo:false, ataAberta:false };
 function reuSocio(){ return (currentUserRole==='staff' || currentUserRole==='vendas' || currentUserRole==='editor') && !!currentUser && REU_SOCIOS.includes(idEfetivo()); }
 function reuSouMurilo(){ return !!currentUser && (currentUser.id===REU_SOCIOS[0] || (!!(currentUserProfile&&currentUserProfile.contaTeste) && (!currentUserProfile.espelhoDe || currentUserProfile.espelhoDe===REU_SOCIOS[0]))); }
 function reuPodeAbrir(){ if(!currentUser || currentUserRole==='aluno') return false; if(reuSocio()) return true; return (REU_UI.envios||[]).some(e=>e.user_id===currentUser.id && e.ativo); }
@@ -14846,14 +14873,15 @@ function reuAtaHtml(r){
   const enc = (a.encaminhamentos||[]);
   return `<div class="reu-ata">
     <div class="reu-ata-cab"><div><span>Reunião</span><b>${escapeHtml(r.titulo)}</b></div><div><span>Data</span><b>${escapeHtml(reuDataTxt(r.data))}</b></div><div><span>Participantes</span><b>${escapeHtml(part.join(', ')||'—')}</b></div></div>
+    <details class="reu-ata-corpo" id="reu-ata-corpo" ${REU_UI.ataAberta?'open':''}><summary>${REU_UI.ataAberta?'Recolher':'Ver'} o registro da ata <span class="muted">(resumo, assuntos, decisões e pendências)</span></summary>
     ${a.resumo ? `<h4>Resumo</h4><p>${escapeHtml(a.resumo)}</p>` : ''}
     ${(a.pautas||[]).length ? `<h4>Assuntos tratados</h4>${a.pautas.map(p=>`<div class="reu-pauta-ata"><b>${escapeHtml(p.tema||'')}</b><p>${escapeHtml(p.discussao||'')}</p></div>`).join('')}` : ''}
     ${(a.pautas_previstas||[]).length ? `<h4>Pautas previstas que foram tratadas</h4>${reuLista(a.pautas_previstas)}` : ''}
     <h4>Decisões</h4>${reuLista(a.decisoes)}
-    <h4>Encaminhamentos</h4>${reuEncHtml(r)}
     ${(a.pendencias||[]).length ? `<h4>Pendências e pontos em aberto</h4>${reuLista(a.pendencias)}` : ''}
     ${a.observacoes ? `<h4>Observações</h4><p>${escapeHtml(a.observacoes)}</p>` : ''}
     ${a.editada_em ? `<p class="muted reu-edit-info">Ata ajustada manualmente em ${escapeHtml(fmtDataHora(a.editada_em))}.</p>` : ''}
+    </details>
   </div>`;
 }
 function reuAtaEditorHtml(r){
@@ -14906,6 +14934,9 @@ function reuDetalheHtml(r){
     ${REU_UI.editando ? reuAtaEditorHtml(r) : reuAtaHtml(r)}
     ${reuSocio() && ass.length && r.ata ? '<p class="muted reu-dica">A ata não pode mais ser alterada porque já tem concordância registrada.</p>' : ''}
   </section>
+  <section class="reu-bloco reu-bloco-enc"><div class="reu-bloco-tit">${icon('tick')} Encaminhamentos e tarefas</div>
+    ${r.ata ? reuEncHtml(r) : '<p class="muted">Os encaminhamentos aparecem assim que a ata for montada.</p>'}
+  </section>
   <section class="reu-bloco"><div class="reu-bloco-tit">${icon('file')} Transcrição ${reuUrlOk(r.transcricao_url) ? `<a class="reu-mini-link" href="${escapeHtml(r.transcricao_url)}" target="_blank" rel="noopener">abrir no Google Docs</a>` : ''}</div>
     ${t===undefined ? `<button type="button" class="btn-outline" id="reu-ver-transc">Mostrar transcrição completa</button>`
       : t===null ? '<p class="muted">Carregando…</p>'
@@ -14929,6 +14960,8 @@ function reuLinhas(id){ return (document.getElementById(id).value||'').split('\n
 function reuDetalheBind(el, r){
   const on = (id, fn, ev)=>{ const b = el.querySelector('#'+id); if(b) b.addEventListener(ev||'click', fn); };
   reuEncBind(el, r);
+  const corpo = el.querySelector('#reu-ata-corpo');
+  if(corpo) corpo.addEventListener('toggle', ()=>{ REU_UI.ataAberta = corpo.open; const sm = corpo.querySelector('summary'); if(sm) sm.firstChild.textContent = (corpo.open?'Recolher':'Ver')+' o registro da ata '; });
   if(REU_UI.enc[r.id]===undefined) reuEncCarregar(r);
   on('reu-voltar', ()=>{ REU_UI.aberta = null; REU_UI.busca = ''; renderReunioes(); });
   on('reu-ver-video', ()=>{ REU_UI.verVideo = true; renderReunioes(); });
@@ -15052,10 +15085,10 @@ function reuEncPrazoTxt(e){
   if(t && t.prazo_data){ const [y,m,d] = String(t.prazo_data).split('-'); return `${d}/${m}/${y}`; }
   return e.prazo || '—';
 }
-function reuEncRespId(txt){
+function reuEncRespIds(txt){
   const n = normTxt(String(txt||'')).split(/[^a-z]+/).filter(Boolean);
-  const m = (TAREFAS_EQUIPE||[]).filter(x=>x.ativo).find(x=>n.includes(normTxt(x.name).split(' ')[0]));
-  return m ? m.userId : null;
+  return (TAREFAS_EQUIPE||[]).filter(x=>x.ativo && n.includes(normTxt(x.name).split(' ')[0]))
+    .sort((a,b)=>n.indexOf(normTxt(a.name).split(' ')[0]) - n.indexOf(normTxt(b.name).split(' ')[0])).map(x=>x.userId);
 }
 function reuEncPrazoISO(txt){
   const m = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/.exec(String(txt||''));
@@ -15096,8 +15129,8 @@ function reuEncBind(el, r){
   }));
   el.querySelectorAll('[data-reu-enc-criar]').forEach(b=>b.addEventListener('click', ()=>{
     const e = achar(b.dataset.reuEncCriar); if(!e) return;
-    const resp = reuEncRespId(e.responsavel);
-    openTarefaModal(null, { titulo:String(e.acao||'').slice(0,200), responsavelId: resp || undefined, prazoData: reuEncPrazoISO(e.prazo),
+    const resps = reuEncRespIds(e.responsavel);
+    openTarefaModal(null, { titulo:String(e.acao||'').slice(0,200), responsavelId: resps[0] || undefined, coresponsaveis: resps.slice(1), prazoData: reuEncPrazoISO(e.prazo),
       descricao:`Encaminhamento da reunião "${r.titulo}" (${reuDataTxt(r.data)}).${e.responsavel?`\nResponsável na ata: ${e.responsavel}.`:''}${e.prazo?`\nPrazo na ata: ${e.prazo}.`:''}`,
       onSalvo: async (tid)=>{ if(await salvar(e, {tarefa_id:tid, nao_criar:false})){ await reuEncTarefas([tid]); if(currentView==='reunioes') renderReunioes(); } } });
   }));
