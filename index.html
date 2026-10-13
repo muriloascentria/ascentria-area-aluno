@@ -2022,6 +2022,7 @@
   .reu-enc-tcol{min-width:190px;}
   .reu-enc-bts{display:flex;gap:6px;flex-wrap:wrap;}
   .reu-enc-st{font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);cursor:pointer;}
+  .reu-enc-st.nao{cursor:default;background:rgba(200,60,60,.08);border-color:rgba(200,60,60,.35);color:var(--danger);}
   .reu-enc-st.ok{background:rgba(60,140,80,.14);border-color:rgba(60,140,80,.5);color:#3c8c50;}
   .reu-enc-tf{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-size:12.5px;padding:6px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:inherit;cursor:pointer;max-width:240px;}
   .reu-enc-tf span{font-weight:600;}
@@ -15031,9 +15032,10 @@ function reuEncHtml(r){
     </div></td></tr>`;
   };
   const linhas = lista.map(e=>`<tr>
-    <td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(e.prazo||'—')}</td>
-    <td class="reu-enc-tcol">${e.tarefa_id ? `${reuEncTfHtml(e)}${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desv="${e.id}" title="Desvincular a tarefa">${icon('x','tiny')}</button>`:''}`
-      : (socio && membro ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-criar="${e.id}">${icon('plus','tiny')} Criar tarefa</button><button type="button" class="btn-mini" data-reu-enc-vinc="${e.id}">${icon('paperclip','tiny')} Vincular</button></div>` : '<span class="muted">—</span>')}</td>
+    <td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(reuEncPrazoTxt(e))}</td>
+    <td class="reu-enc-tcol">${!e.tarefa_id && e.nao_criar ? `<span class="reu-enc-st nao" title="Decidido não criar tarefa">NÃO CRIADA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desfazer="${e.id}" title="Desfazer">${icon('x','tiny')}</button>`:''}`
+      : e.tarefa_id ? `${reuEncTfHtml(e)}${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desv="${e.id}" title="Desvincular a tarefa">${icon('x','tiny')}</button>`:''}`
+      : (socio && membro ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-criar="${e.id}">${icon('plus','tiny')} Criar tarefa</button><button type="button" class="btn-mini" data-reu-enc-vinc="${e.id}">${icon('paperclip','tiny')} Vincular</button><button type="button" class="btn-mini" data-reu-enc-naocriar="${e.id}">${icon('x','tiny')} Não criar</button></div>` : '<span class="muted">—</span>')}</td>
     ${socio ? `<td class="reu-enc-del"><button type="button" class="btn-mini icon-only danger" data-reu-enc-del="${e.id}" title="Excluir encaminhamento">${icon('trash','tiny')}</button></td>` : ''}
   </tr>${vinc(e.id)}`).join('');
   const novo = socio && REU_UI.encNovo ? `<div class="reu-enc-novo">
@@ -15043,6 +15045,12 @@ function reuEncHtml(r){
       <div class="reu-acoes"><button type="button" class="btn-primary" id="reu-enc-n-ok">Adicionar</button><button type="button" class="btn-outline" id="reu-enc-n-cancel">Cancelar</button></div></div>`
     : (socio ? `<button type="button" class="btn-outline reu-mini-add" id="reu-enc-n-abrir">${icon('plus','tiny')} Adicionar encaminhamento</button>` : '');
   return `${lista.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th><th>Tarefa</th>${socio?'<th></th>':''}</tr></thead><tbody>${linhas}</tbody></table></div>` : '<p class="muted">Nenhum encaminhamento.</p>'}${novo}`;
+}
+/* Com tarefa vinculada, o prazo mostrado é o da tarefa (acompanha qualquer mudança feita nela). */
+function reuEncPrazoTxt(e){
+  const t = e.tarefa_id && REU_UI.encTf[e.tarefa_id];
+  if(t && t.prazo_data){ const [y,m,d] = String(t.prazo_data).split('-'); return `${d}/${m}/${y}`; }
+  return e.prazo || '—';
 }
 function reuEncRespId(txt){
   const n = normTxt(String(txt||'')).split(/[^a-z]+/).filter(Boolean);
@@ -15076,6 +15084,12 @@ function reuEncBind(el, r){
     const e = achar(b.dataset.reuEncDesv); if(!e || !confirm('Desvincular a tarefa deste encaminhamento? A tarefa continua existindo.')) return;
     if(await salvar(e, {tarefa_id:null})) renderReunioes();
   }));
+  el.querySelectorAll('[data-reu-enc-naocriar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = achar(b.dataset.reuEncNaocriar); if(e && await salvar(e, {nao_criar:true})) renderReunioes();
+  }));
+  el.querySelectorAll('[data-reu-enc-desfazer]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = achar(b.dataset.reuEncDesfazer); if(e && await salvar(e, {nao_criar:false})) renderReunioes();
+  }));
   el.querySelectorAll('[data-reu-enc-del]').forEach(b=>b.addEventListener('click', async ()=>{
     const e = achar(b.dataset.reuEncDel); if(!e || !confirm(`Excluir este encaminhamento da ata?\n\n"${e.acao}"`)) return;
     if(await salvar(e, {ativo:false})){ REU_UI.enc[r.id] = lista.filter(x=>x!==e); renderReunioes(); }
@@ -15085,7 +15099,7 @@ function reuEncBind(el, r){
     const resp = reuEncRespId(e.responsavel);
     openTarefaModal(null, { titulo:String(e.acao||'').slice(0,200), responsavelId: resp || undefined, prazoData: reuEncPrazoISO(e.prazo),
       descricao:`Encaminhamento da reunião "${r.titulo}" (${reuDataTxt(r.data)}).${e.responsavel?`\nResponsável na ata: ${e.responsavel}.`:''}${e.prazo?`\nPrazo na ata: ${e.prazo}.`:''}`,
-      onSalvo: async (tid)=>{ if(await salvar(e, {tarefa_id:tid})){ await reuEncTarefas([tid]); if(currentView==='reunioes') renderReunioes(); } } });
+      onSalvo: async (tid)=>{ if(await salvar(e, {tarefa_id:tid, nao_criar:false})){ await reuEncTarefas([tid]); if(currentView==='reunioes') renderReunioes(); } } });
   }));
   el.querySelectorAll('[data-reu-enc-vinc]').forEach(b=>b.addEventListener('click', async ()=>{
     REU_UI.encVinc = b.dataset.reuEncVinc; REU_UI.encVincBusca = ''; renderReunioes();
@@ -15097,7 +15111,7 @@ function reuEncBind(el, r){
   el.querySelectorAll('[data-reu-enc-escolher]').forEach(b=>b.addEventListener('click', async ()=>{
     const e = achar(REU_UI.encVinc); if(!e) return;
     const t = (TAREFAS||[]).find(x=>x.id===b.dataset.reuEncEscolher);
-    if(await salvar(e, {tarefa_id:b.dataset.reuEncEscolher})){
+    if(await salvar(e, {tarefa_id:b.dataset.reuEncEscolher, nao_criar:false})){
       if(t) REU_UI.encTf[t.id] = {id:t.id, titulo:t.titulo, status:t.status, responsavel_id:t.responsavelId, prazo_data:t.prazoData||null, excluida:false};
       REU_UI.encVinc = null; renderReunioes();
     }
