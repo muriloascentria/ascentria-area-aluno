@@ -2021,6 +2021,8 @@
   .reu-enc td{vertical-align:top;}
   .reu-enc-tcol{min-width:190px;}
   .reu-enc-bts{display:flex;gap:6px;flex-wrap:wrap;}
+  .reu-enc-st{font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);cursor:pointer;}
+  .reu-enc-st.ok{background:rgba(60,140,80,.14);border-color:rgba(60,140,80,.5);color:#3c8c50;}
   .reu-enc-tf{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-size:12.5px;padding:6px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:inherit;cursor:pointer;max-width:240px;}
   .reu-enc-tf span{font-weight:600;}
   .reu-enc-tf small{color:var(--text-mute);font-size:11px;}
@@ -14993,21 +14995,22 @@ async function reuEncCarregar(r){
     /* Ainda não importada (nenhum sócio abriu): quem não é sócio vê a lista original da ata. */
     if(!(data||[]).length && origem.length && !reuSocio()){ REU_UI.enc[r.id] = 'ata'; if(currentView==='reunioes' && REU_UI.aberta===r.id) renderReunioes(); return; }
     REU_UI.enc[r.id] = (data||[]).filter(x=>x.ativo);
-    await reuEncTarefas(REU_UI.enc[r.id].map(x=>x.tarefa_id).filter(Boolean));
+    await reuEncTarefas(REU_UI.enc[r.id].map(x=>x.tarefa_id).filter(Boolean), true);
   }catch(e){ console.error('reuniao_encaminhamentos', e); REU_UI.enc[r.id] = false; }
   if(currentView==='reunioes' && REU_UI.aberta===r.id) renderReunioes();
 }
-async function reuEncTarefas(ids){
-  ids = ids.filter(id=>!REU_UI.encTf[id]); if(!ids.length) return;
+async function reuEncTarefas(ids, forcar){
+  if(!forcar) ids = ids.filter(id=>!REU_UI.encTf[id]);
+  if(!ids.length) return;
   const { data } = await sb.from('tarefas').select('id,titulo,status,responsavel_id,prazo_data,excluida').in('id', ids);
   (data||[]).forEach(t=>{ REU_UI.encTf[t.id] = t; });
 }
 function reuEncTfHtml(e){
+  /* Só a palavra: CRIADA enquanto a tarefa existe e não foi concluída; CONCLUÍDA quando o profissional conclui. */
   const t = REU_UI.encTf[e.tarefa_id];
-  if(!t) return `<span class="muted">Tarefa vinculada</span>`;
-  const resp = (tarefasMembro(t.responsavel_id)||getPerson(t.responsavel_id)||{}).name;
-  return `<button type="button" class="reu-enc-tf ${t.status==='concluida'?'ok':''} ${t.excluida||t.status==='cancelada'?'off':''}" data-reu-enc-tf="${t.id}" title="Abrir a tarefa">
-    ${icon('check','tiny')} <span>${escapeHtml(t.titulo)}</span><small>${escapeHtml(t.excluida?'Excluída':(TAREFAS_STATUS[t.status]||t.status))}${resp?' · '+escapeHtml(resp.split(' ')[0]):''}${t.prazo_data?' · '+escapeHtml(tzDataCurta(t.prazo_data)):''}</small></button>`;
+  const feita = !!t && t.status==='concluida';
+  const tip = t ? `${t.titulo}${t.excluida?' (excluída)':''} · clique para abrir` : 'Clique para abrir a tarefa';
+  return `<button type="button" class="reu-enc-st ${feita?'ok':''}" data-reu-enc-tf="${escapeHtml(e.tarefa_id)}" title="${escapeHtml(tip)}">${feita ? 'CONCLUÍDA' : 'CRIADA'}</button>`;
 }
 function reuEncHtml(r){
   const lista = REU_UI.enc[r.id];
@@ -15060,7 +15063,15 @@ function reuEncBind(el, r){
     if(error){ alert('Não consegui salvar agora. Tente de novo.'); return false; }
     Object.assign(e, campos); return true;
   };
-  el.querySelectorAll('[data-reu-enc-tf]').forEach(b=>b.addEventListener('click', ()=>openTarefaModal(b.dataset.reuEncTf)));
+  el.querySelectorAll('[data-reu-enc-tf]').forEach(b=>b.addEventListener('click', async ()=>{
+    await openTarefaModal(b.dataset.reuEncTf);
+    /* Quando a tarefa for fechada (talvez concluída lá dentro), atualiza CRIADA/CONCLUÍDA. */
+    const bd = document.getElementById('modal-backdrop');
+    const iv = setInterval(async ()=>{ if(bd && bd.classList.contains('open')) return; clearInterval(iv);
+      const lst = REU_UI.enc[r.id]; if(!Array.isArray(lst)) return;
+      await reuEncTarefas(lst.map(x=>x.tarefa_id).filter(Boolean), true);
+      if(currentView==='reunioes' && REU_UI.aberta===r.id) renderReunioes(); }, 700);
+  }));
   el.querySelectorAll('[data-reu-enc-desv]').forEach(b=>b.addEventListener('click', async ()=>{
     const e = achar(b.dataset.reuEncDesv); if(!e || !confirm('Desvincular a tarefa deste encaminhamento? A tarefa continua existindo.')) return;
     if(await salvar(e, {tarefa_id:null})) renderReunioes();
