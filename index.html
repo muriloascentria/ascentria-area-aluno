@@ -2017,7 +2017,27 @@
   .reu-ata-cab b{font-size:13.5px;font-weight:600;}
   .reu-pauta-ata{margin-bottom:10px;}
   .reu-ul{margin:0;padding-left:20px;line-height:1.55;}
-  .reu-enc{min-width:480px;}
+  .reu-enc{min-width:640px;}
+  .reu-enc td{vertical-align:top;}
+  .reu-enc-tcol{min-width:190px;}
+  .reu-enc-bts{display:flex;gap:6px;flex-wrap:wrap;}
+  .reu-enc-tf{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-size:12.5px;padding:6px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:inherit;cursor:pointer;max-width:240px;}
+  .reu-enc-tf span{font-weight:600;}
+  .reu-enc-tf small{color:var(--text-mute);font-size:11px;}
+  .reu-enc-tf.ok{border-color:rgba(60,140,80,.45);}
+  .reu-enc-tf.off{opacity:.6;text-decoration:line-through;}
+  .reu-enc-x{border:0;background:none;color:var(--text-mute);cursor:pointer;padding:4px;vertical-align:top;}
+  .reu-enc-del{width:40px;}
+  .reu-enc-vbox{padding:6px 0;}
+  .reu-enc-vlista{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
+  .reu-enc-vlista button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:inherit;cursor:pointer;}
+  .reu-enc-vlista button:hover{border-color:var(--accent);}
+  .reu-enc-vlista small{color:var(--text-mute);font-size:11.5px;}
+  .reu-enc-novo{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:10px;}
+  .reu-enc-novo .reu-acoes{grid-column:1/-1;margin-top:0;}
+  .reu-enc-novo .reu-busca{margin-bottom:0;}
+  .reu-mini-add{margin-top:10px;display:inline-flex;gap:6px;align-items:center;}
+  @media (max-width:640px){ .reu-enc-novo{grid-template-columns:1fr;} }
   .reu-ata-edit label{display:block;font-weight:600;font-size:13px;margin-bottom:12px;}
   .reu-ata-edit textarea{width:100%;margin-top:5px;font:inherit;font-weight:400;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:inherit;box-sizing:border-box;}
   .reu-busca{width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;font:inherit;background:var(--bg);color:inherit;}
@@ -11392,7 +11412,7 @@ async function openTarefaModal(id, defaults){
   const nova = !id;
   const eu = tarefasEu();
   let t = nova
-    ? { id:null, titulo:'', descricao:'', responsavelId:(defaults&&defaults.responsavelId)||eu, criadorId:eu, prazoData:'', prazoHora:'', prioridade:'media', status:'pendente', createdAt:null, updatedAt:null, excluida:false }
+    ? { id:null, titulo:(defaults&&defaults.titulo)||'', descricao:(defaults&&defaults.descricao)||'', responsavelId:(defaults&&defaults.responsavelId)||eu, criadorId:eu, prazoData:(defaults&&defaults.prazoData)||'', prazoHora:'', prioridade:'media', status:'pendente', createdAt:null, updatedAt:null, excluida:false }
     : (TAREFAS.find(x=>x.id===id) || await recarregarTarefa(id));
   if(!t){ alert('Tarefa não encontrada.'); return; }
   const modal = document.getElementById('modal');
@@ -11535,6 +11555,7 @@ async function openTarefaModal(id, defaults){
         }
         await recarregarTarefa(data.id);
         closeModal(); renderTarefas();
+        if(defaults && typeof defaults.onSalvo==='function') await defaults.onSalvo(data.id);
       } else {
         const payload = dono ? v : { status: v.status };
         const { error } = await sb.from('tarefas').update(payload).eq('id', t.id);
@@ -14734,7 +14755,7 @@ function renderAnalise(){
    a concordância com a ata. A aba "Pautas da próxima reunião" é dos sócios: escreve a pauta antes
    e dá o check quando ela for tratada. */
 const REU_SOCIOS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b9b8-c021da4db519','8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc','a29026ae-d252-4456-bb26-eec09ba778c4'];
-const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'' };
+const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'', enc:{}, encTf:{}, encVinc:null, encVincBusca:'', encNovo:false };
 function reuSocio(){ return (currentUserRole==='staff' || currentUserRole==='vendas' || currentUserRole==='editor') && !!currentUser && REU_SOCIOS.includes(idEfetivo()); }
 function reuSouMurilo(){ return !!currentUser && (currentUser.id===REU_SOCIOS[0] || (!!(currentUserProfile&&currentUserProfile.contaTeste) && (!currentUserProfile.espelhoDe || currentUserProfile.espelhoDe===REU_SOCIOS[0]))); }
 function reuPodeAbrir(){ if(!currentUser || currentUserRole==='aluno') return false; if(reuSocio()) return true; return (REU_UI.envios||[]).some(e=>e.user_id===currentUser.id && e.ativo); }
@@ -14811,7 +14832,7 @@ function renderReunioes(){
   reuBindAbas(el);
   const t = el.querySelector('#reu-tentar'); if(t) t.addEventListener('click', ()=>{ REU_UI.lista = null; renderReunioes(); });
   el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
-  el.querySelectorAll('[data-reu-abrir]').forEach(tr=>tr.addEventListener('click', ()=>{ REU_UI.aberta = tr.dataset.reuAbrir; REU_UI.verVideo = false; REU_UI.editando = false; REU_UI.enviando = false; renderReunioes(); window.scrollTo(0,0); }));
+  el.querySelectorAll('[data-reu-abrir]').forEach(tr=>tr.addEventListener('click', ()=>{ REU_UI.aberta = tr.dataset.reuAbrir; REU_UI.verVideo = false; REU_UI.editando = false; REU_UI.enviando = false; REU_UI.encVinc = null; REU_UI.encNovo = false; renderReunioes(); window.scrollTo(0,0); }));
 }
 function reuBindAbas(el){ el.querySelectorAll('[data-reu-aba]').forEach(b=>b.addEventListener('click', ()=>{ REU_UI.aba = b.dataset.reuAba; if(b.dataset.reuAba==='reunioes') REU_UI.aberta = null; renderReunioes(); })); }
 function reuLista(arr){ arr = (arr||[]).filter(x=>x && String(typeof x==='string'?x:'').trim()!=='' || (x && typeof x==='object')); return arr.length ? `<ul class="reu-ul">${arr.map(x=>`<li>${escapeHtml(typeof x==='string'?x:JSON.stringify(x))}</li>`).join('')}</ul>` : '<p class="muted">Nada registrado.</p>'; }
@@ -14826,7 +14847,7 @@ function reuAtaHtml(r){
     ${(a.pautas||[]).length ? `<h4>Assuntos tratados</h4>${a.pautas.map(p=>`<div class="reu-pauta-ata"><b>${escapeHtml(p.tema||'')}</b><p>${escapeHtml(p.discussao||'')}</p></div>`).join('')}` : ''}
     ${(a.pautas_previstas||[]).length ? `<h4>Pautas previstas que foram tratadas</h4>${reuLista(a.pautas_previstas)}` : ''}
     <h4>Decisões</h4>${reuLista(a.decisoes)}
-    <h4>Encaminhamentos</h4>${enc.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th></tr></thead><tbody>${enc.map(e=>`<tr><td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(e.prazo||'—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Nada registrado.</p>'}
+    <h4>Encaminhamentos</h4>${reuEncHtml(r)}
     ${(a.pendencias||[]).length ? `<h4>Pendências e pontos em aberto</h4>${reuLista(a.pendencias)}` : ''}
     ${a.observacoes ? `<h4>Observações</h4><p>${escapeHtml(a.observacoes)}</p>` : ''}
     ${a.editada_em ? `<p class="muted reu-edit-info">Ata ajustada manualmente em ${escapeHtml(fmtDataHora(a.editada_em))}.</p>` : ''}
@@ -14841,7 +14862,7 @@ function reuAtaEditorHtml(r){
     <label>Resumo<textarea id="reu-e-resumo" rows="4">${escapeHtml(a.resumo||'')}</textarea></label>
     <label>Assuntos tratados <span class="muted">(um por linha: assunto | o que foi conversado)</span><textarea id="reu-e-pautas" rows="6">${escapeHtml(pts)}</textarea></label>
     <label>Decisões <span class="muted">(uma por linha)</span><textarea id="reu-e-dec" rows="5">${ls(a.decisoes)}</textarea></label>
-    <label>Encaminhamentos <span class="muted">(um por linha: o que fazer | responsável | prazo)</span><textarea id="reu-e-enc" rows="6">${escapeHtml(enc)}</textarea></label>
+    <p class="muted reu-dica">Os encaminhamentos são ajustados na própria lista da ata (vincular tarefa, excluir ou adicionar).</p>
     <label>Pendências <span class="muted">(uma por linha)</span><textarea id="reu-e-pend" rows="3">${ls(a.pendencias)}</textarea></label>
     <label>Observações<textarea id="reu-e-obs" rows="3">${escapeHtml(a.observacoes||'')}</textarea></label>
     <div class="reu-acoes"><button type="button" class="btn-primary" id="reu-e-salvar">Salvar ata</button><button type="button" class="btn-outline" id="reu-e-cancelar">Cancelar</button></div>
@@ -14904,6 +14925,8 @@ function reuDetalheHtml(r){
 function reuLinhas(id){ return (document.getElementById(id).value||'').split('\n').map(x=>x.trim()).filter(Boolean); }
 function reuDetalheBind(el, r){
   const on = (id, fn, ev)=>{ const b = el.querySelector('#'+id); if(b) b.addEventListener(ev||'click', fn); };
+  reuEncBind(el, r);
+  if(REU_UI.enc[r.id]===undefined) reuEncCarregar(r);
   on('reu-voltar', ()=>{ REU_UI.aberta = null; REU_UI.busca = ''; renderReunioes(); });
   on('reu-ver-video', ()=>{ REU_UI.verVideo = true; renderReunioes(); });
   on('reu-ver-transc', async ()=>{
@@ -14921,7 +14944,6 @@ function reuDetalheBind(el, r){
       resumo: document.getElementById('reu-e-resumo').value.trim(),
       pautas: reuLinhas('reu-e-pautas').map(l=>{ const [tema, ...d] = l.split('|'); return {tema:(tema||'').trim(), discussao:d.join('|').trim()}; }),
       decisoes: reuLinhas('reu-e-dec'),
-      encaminhamentos: reuLinhas('reu-e-enc').map(l=>{ const [acao, resp, prazo] = l.split('|').map(x=>(x||'').trim()); return {acao, responsavel:resp||'', prazo:prazo||''}; }),
       pendencias: reuLinhas('reu-e-pend'),
       observacoes: document.getElementById('reu-e-obs').value.trim(),
       editada_em: new Date().toISOString(),
@@ -14950,6 +14972,134 @@ function reuDetalheBind(el, r){
     if(error){ alert('Não consegui enviar agora. Tente de novo.'); return; }
     rows.forEach(x=>{ const i = REU_UI.envios.findIndex(e=>e.reuniao_id===x.reuniao_id && e.user_id===x.user_id); if(i>=0) REU_UI.envios[i] = x; else REU_UI.envios.push(x); });
     REU_UI.enviando = false; renderReunioes();
+  });
+}
+/* ---------- Encaminhamentos da ata -> Tarefas ----------
+   Cada encaminhamento que a ata automática listou vira uma linha em reuniao_encaminhamentos (a
+   primeira vez que um sócio abre a reunião). Ali os sócios ligam o encaminhamento a uma tarefa já
+   existente, criam a tarefa a partir dele, excluem o que a ata registrou errado ou acrescentam um
+   novo. A ata original (JSON) não muda; a lista que aparece na ata passa a ser esta. */
+async function reuEncCarregar(r){
+  REU_UI.enc[r.id] = null;
+  try{
+    let { data, error } = await sb.from('reuniao_encaminhamentos').select('*').eq('reuniao_id', r.id).order('ordem').order('created_at');
+    if(error) throw error;
+    const origem = (r.ata && r.ata.encaminhamentos) || [];
+    if(!(data||[]).length && origem.length && reuSocio()){
+      const rows = origem.map((e,i)=>({reuniao_id:r.id, ata_idx:i, ordem:i, acao:e.acao||'', responsavel:e.responsavel||'', prazo:e.prazo||''}));
+      await sb.from('reuniao_encaminhamentos').upsert(rows, {onConflict:'reuniao_id,ata_idx', ignoreDuplicates:true});
+      ({ data } = await sb.from('reuniao_encaminhamentos').select('*').eq('reuniao_id', r.id).order('ordem').order('created_at'));
+    }
+    /* Ainda não importada (nenhum sócio abriu): quem não é sócio vê a lista original da ata. */
+    if(!(data||[]).length && origem.length && !reuSocio()){ REU_UI.enc[r.id] = 'ata'; if(currentView==='reunioes' && REU_UI.aberta===r.id) renderReunioes(); return; }
+    REU_UI.enc[r.id] = (data||[]).filter(x=>x.ativo);
+    await reuEncTarefas(REU_UI.enc[r.id].map(x=>x.tarefa_id).filter(Boolean));
+  }catch(e){ console.error('reuniao_encaminhamentos', e); REU_UI.enc[r.id] = false; }
+  if(currentView==='reunioes' && REU_UI.aberta===r.id) renderReunioes();
+}
+async function reuEncTarefas(ids){
+  ids = ids.filter(id=>!REU_UI.encTf[id]); if(!ids.length) return;
+  const { data } = await sb.from('tarefas').select('id,titulo,status,responsavel_id,prazo_data,excluida').in('id', ids);
+  (data||[]).forEach(t=>{ REU_UI.encTf[t.id] = t; });
+}
+function reuEncTfHtml(e){
+  const t = REU_UI.encTf[e.tarefa_id];
+  if(!t) return `<span class="muted">Tarefa vinculada</span>`;
+  const resp = (tarefasMembro(t.responsavel_id)||getPerson(t.responsavel_id)||{}).name;
+  return `<button type="button" class="reu-enc-tf ${t.status==='concluida'?'ok':''} ${t.excluida||t.status==='cancelada'?'off':''}" data-reu-enc-tf="${t.id}" title="Abrir a tarefa">
+    ${icon('check','tiny')} <span>${escapeHtml(t.titulo)}</span><small>${escapeHtml(t.excluida?'Excluída':(TAREFAS_STATUS[t.status]||t.status))}${resp?' · '+escapeHtml(resp.split(' ')[0]):''}${t.prazo_data?' · '+escapeHtml(tzDataCurta(t.prazo_data)):''}</small></button>`;
+}
+function reuEncHtml(r){
+  const lista = REU_UI.enc[r.id];
+  const socio = reuSocio(), membro = typeof tarefasSouMembro==='function' && tarefasSouMembro();
+  if(!Array.isArray(lista)){
+    const enc = (r.ata && r.ata.encaminhamentos) || [];
+    if(lista===false) return '<p class="muted">Não consegui carregar os encaminhamentos agora.</p>';
+    return enc.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th></tr></thead><tbody>${enc.map(e=>`<tr><td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(e.prazo||'—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Nada registrado.</p>';
+  }
+  const vinc = (id)=>{
+    if(REU_UI.encVinc!==id) return '';
+    const b = normTxt(REU_UI.encVincBusca||'');
+    const abertas = (TAREFAS||[]).filter(t=>tarefaAberta(t) && (!b || normTxt(t.titulo).includes(b))).slice(0, 12);
+    return `<tr class="reu-enc-vinc"><td colspan="5"><div class="reu-enc-vbox">
+      <input type="search" class="reu-busca" id="reu-enc-vbusca" placeholder="Procure a tarefa pelo título" value="${escapeHtml(REU_UI.encVincBusca||'')}">
+      ${!tarefasUI.carregado ? '<p class="muted">Carregando tarefas…</p>' : abertas.length ? `<div class="reu-enc-vlista">${abertas.map(t=>{ const m = tarefasMembro(t.responsavelId); return `<button type="button" data-reu-enc-escolher="${t.id}"><b>${escapeHtml(t.titulo)}</b><small>${escapeHtml(TAREFAS_STATUS[t.status]||t.status)}${m?' · '+escapeHtml(m.name.split(' ')[0]):''}${t.prazoData?' · '+escapeHtml(tzDataCurta(t.prazoData)):''}</small></button>`; }).join('')}</div>` : '<p class="muted">Nenhuma tarefa aberta encontrada.</p>'}
+      <div class="reu-acoes"><button type="button" class="btn-outline" data-reu-enc-vfechar>Cancelar</button></div>
+    </div></td></tr>`;
+  };
+  const linhas = lista.map(e=>`<tr>
+    <td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(e.prazo||'—')}</td>
+    <td class="reu-enc-tcol">${e.tarefa_id ? `${reuEncTfHtml(e)}${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desv="${e.id}" title="Desvincular a tarefa">${icon('x','tiny')}</button>`:''}`
+      : (socio && membro ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-criar="${e.id}">${icon('plus','tiny')} Criar tarefa</button><button type="button" class="btn-mini" data-reu-enc-vinc="${e.id}">${icon('paperclip','tiny')} Vincular</button></div>` : '<span class="muted">—</span>')}</td>
+    ${socio ? `<td class="reu-enc-del"><button type="button" class="btn-mini icon-only danger" data-reu-enc-del="${e.id}" title="Excluir encaminhamento">${icon('trash','tiny')}</button></td>` : ''}
+  </tr>${vinc(e.id)}`).join('');
+  const novo = socio && REU_UI.encNovo ? `<div class="reu-enc-novo">
+      <input type="text" class="reu-busca" id="reu-enc-n-acao" placeholder="O que fazer">
+      <input type="text" class="reu-busca" id="reu-enc-n-resp" placeholder="Responsável">
+      <input type="text" class="reu-busca" id="reu-enc-n-prazo" placeholder="Prazo (ex.: 20/10/2026)">
+      <div class="reu-acoes"><button type="button" class="btn-primary" id="reu-enc-n-ok">Adicionar</button><button type="button" class="btn-outline" id="reu-enc-n-cancel">Cancelar</button></div></div>`
+    : (socio ? `<button type="button" class="btn-outline reu-mini-add" id="reu-enc-n-abrir">${icon('plus','tiny')} Adicionar encaminhamento</button>` : '');
+  return `${lista.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th><th>Tarefa</th>${socio?'<th></th>':''}</tr></thead><tbody>${linhas}</tbody></table></div>` : '<p class="muted">Nenhum encaminhamento.</p>'}${novo}`;
+}
+function reuEncRespId(txt){
+  const n = normTxt(String(txt||'')).split(/[^a-z]+/).filter(Boolean);
+  const m = (TAREFAS_EQUIPE||[]).filter(x=>x.ativo).find(x=>n.includes(normTxt(x.name).split(' ')[0]));
+  return m ? m.userId : null;
+}
+function reuEncPrazoISO(txt){
+  const m = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/.exec(String(txt||''));
+  if(!m) return '';
+  const y = m[3] ? (m[3].length===2 ? '20'+m[3] : m[3]) : String(new Date().getFullYear());
+  return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+function reuEncBind(el, r){
+  const lista = REU_UI.enc[r.id]; if(!Array.isArray(lista)) return;
+  const achar = id=>lista.find(x=>x.id===id);
+  const salvar = async (e, campos)=>{
+    const { error } = await sb.from('reuniao_encaminhamentos').update(Object.assign({updated_at:new Date().toISOString()}, campos)).eq('id', e.id);
+    if(error){ alert('Não consegui salvar agora. Tente de novo.'); return false; }
+    Object.assign(e, campos); return true;
+  };
+  el.querySelectorAll('[data-reu-enc-tf]').forEach(b=>b.addEventListener('click', ()=>openTarefaModal(b.dataset.reuEncTf)));
+  el.querySelectorAll('[data-reu-enc-desv]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = achar(b.dataset.reuEncDesv); if(!e || !confirm('Desvincular a tarefa deste encaminhamento? A tarefa continua existindo.')) return;
+    if(await salvar(e, {tarefa_id:null})) renderReunioes();
+  }));
+  el.querySelectorAll('[data-reu-enc-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = achar(b.dataset.reuEncDel); if(!e || !confirm(`Excluir este encaminhamento da ata?\n\n"${e.acao}"`)) return;
+    if(await salvar(e, {ativo:false})){ REU_UI.enc[r.id] = lista.filter(x=>x!==e); renderReunioes(); }
+  }));
+  el.querySelectorAll('[data-reu-enc-criar]').forEach(b=>b.addEventListener('click', ()=>{
+    const e = achar(b.dataset.reuEncCriar); if(!e) return;
+    const resp = reuEncRespId(e.responsavel);
+    openTarefaModal(null, { titulo:String(e.acao||'').slice(0,200), responsavelId: resp || undefined, prazoData: reuEncPrazoISO(e.prazo),
+      descricao:`Encaminhamento da reunião "${r.titulo}" (${reuDataTxt(r.data)}).${e.responsavel?`\nResponsável na ata: ${e.responsavel}.`:''}${e.prazo?`\nPrazo na ata: ${e.prazo}.`:''}`,
+      onSalvo: async (tid)=>{ if(await salvar(e, {tarefa_id:tid})){ await reuEncTarefas([tid]); if(currentView==='reunioes') renderReunioes(); } } });
+  }));
+  el.querySelectorAll('[data-reu-enc-vinc]').forEach(b=>b.addEventListener('click', async ()=>{
+    REU_UI.encVinc = b.dataset.reuEncVinc; REU_UI.encVincBusca = ''; renderReunioes();
+    if(!tarefasUI.carregado){ await carregarTarefas(); if(currentView==='reunioes') renderReunioes(); }
+  }));
+  const vb = el.querySelector('#reu-enc-vbusca');
+  if(vb){ vb.focus(); vb.setSelectionRange(vb.value.length, vb.value.length); vb.addEventListener('input', ()=>{ REU_UI.encVincBusca = vb.value; renderReunioes(); }); }
+  el.querySelectorAll('[data-reu-enc-vfechar]').forEach(b=>b.addEventListener('click', ()=>{ REU_UI.encVinc = null; renderReunioes(); }));
+  el.querySelectorAll('[data-reu-enc-escolher]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = achar(REU_UI.encVinc); if(!e) return;
+    const t = (TAREFAS||[]).find(x=>x.id===b.dataset.reuEncEscolher);
+    if(await salvar(e, {tarefa_id:b.dataset.reuEncEscolher})){
+      if(t) REU_UI.encTf[t.id] = {id:t.id, titulo:t.titulo, status:t.status, responsavel_id:t.responsavelId, prazo_data:t.prazoData||null, excluida:false};
+      REU_UI.encVinc = null; renderReunioes();
+    }
+  }));
+  const on = (id, fn)=>{ const x = el.querySelector('#'+id); if(x) x.addEventListener('click', fn); };
+  on('reu-enc-n-abrir', ()=>{ REU_UI.encNovo = true; renderReunioes(); const i = document.getElementById('reu-enc-n-acao'); if(i) i.focus(); });
+  on('reu-enc-n-cancel', ()=>{ REU_UI.encNovo = false; renderReunioes(); });
+  on('reu-enc-n-ok', async ()=>{
+    const acao = document.getElementById('reu-enc-n-acao').value.trim(); if(!acao){ alert('Escreva o que precisa ser feito.'); return; }
+    const row = { reuniao_id:r.id, acao, responsavel:document.getElementById('reu-enc-n-resp').value.trim(), prazo:document.getElementById('reu-enc-n-prazo').value.trim(), ordem: lista.reduce((m,x)=>Math.max(m, x.ordem||0), 0)+1 };
+    const { data, error } = await sb.from('reuniao_encaminhamentos').insert(row).select().single();
+    if(error){ alert('Não consegui adicionar agora. Tente de novo.'); return; }
+    lista.push(data); REU_UI.encNovo = false; renderReunioes();
   });
 }
 /* ---------- Pautas da próxima reunião (só sócios) ---------- */
