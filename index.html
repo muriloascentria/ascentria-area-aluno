@@ -881,6 +881,9 @@
   .ps-nao-tenho{font:inherit;font-size:11px;font-weight:600;padding:3px 10px;margin-bottom:4px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
   .ps-nao-tenho:hover{border-color:var(--accent);color:var(--accent);}
   .ps-locked .ps-nao-tenho{display:none;}
+  .ps-rowlabel .ps-nao-tenho-row{display:block;margin:6px 0 0;}
+  .ps-row-acoes{display:flex;align-items:center;gap:6px;}
+  .ps-row-acoes .ps-nao-tenho-row{margin:0;}
   .ps-label:first-of-type{margin-top:0;}
   .ps-input{
     width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -8458,8 +8461,12 @@ function renderSectionHTML(section, data){
       <div class="table-wrap"><table class="ps-table">
         <thead><tr>${section.fixedRows?'<th></th>':''}${cols.map(c=>`<th>${c.label}</th>`).join('')}${section.fixedRows?'':'<th></th>'}</tr></thead>
         <tbody>
-          ${rows.map((row,i)=>`<tr>
-            ${section.fixedRows? `<td class="ps-rowlabel">${row.__label}</td>` : ''}
+          ${rows.map((row,i)=>{
+            /* Linha com alguma coluna vazia: botão "Não tenho" preenche as vazias de uma vez. */
+            const ntBtn = cols.some(c=>c.key!=='__label' && !String(row[c.key]||'').trim())
+              ? `<button type="button" class="ps-nao-tenho ps-nao-tenho-row" data-nao-tenho-row="${section.key}|${i}" title="Marque se esta linha não se aplica a você">Não tenho</button>` : '';
+            return `<tr>
+            ${section.fixedRows? `<td class="ps-rowlabel">${row.__label}${ntBtn}</td>` : ''}
             ${cols.map(c=>{
               if(c.type==='select'){
                 const current = row[c.key]||'';
@@ -8482,8 +8489,8 @@ function renderSectionHTML(section, data){
               }
               return `<td><input class="ps-input ps-cell" data-fkind="table" data-skey="${section.key}" data-idx="${i}" data-col="${c.key}" value="${escapeAttr(row[c.key]||'')}"></td>`;
             }).join('')}
-            ${section.fixedRows? '' : `<td><button class="ps-remove" data-remove="table" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></td>`}
-          </tr>`).join('')}
+            ${section.fixedRows? '' : `<td><div class="ps-row-acoes">${ntBtn}<button class="ps-remove" data-remove="table" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button></div></td>`}
+          </tr>`; }).join('')}
         </tbody>
       </table></div>
       ${canAddMore? `<button class="btn-mini ps-add" data-add="table" data-skey="${section.key}">${icon('plus','ps-plus')} Adicionar linha</button>` : ''}
@@ -8759,6 +8766,13 @@ function bindSectionEvents(sections, data, rerender, saveKey){
     const [skey, fkey] = b.dataset.naoTenho.split('|');
     const section = sections.find(x=>x.key===skey); if(!section) return;
     sectionValue(data, section)[fkey] = 'Não tenho';
+    persist(); rerender();
+  }));
+  modalEl.querySelectorAll('[data-nao-tenho-row]').forEach(b=>b.addEventListener('click', ()=>{
+    const [skey, idx] = b.dataset.naoTenhoRow.split('|');
+    const section = sections.find(x=>x.key===skey); if(!section) return;
+    const row = sectionValue(data, section)[+idx]; if(!row) return;
+    section.columns.forEach(c=>{ if(c.key!=='__label' && !String(row[c.key]||'').trim()) row[c.key] = 'Não tenho'; });
     persist(); rerender();
   }));
   modalEl.querySelectorAll('[data-fkind]').forEach(inp=>{
@@ -9181,7 +9195,7 @@ function openTopicModal(quadrant, topicId){
         <h3>${topic.title}</h3>
         ${topic.desc? `<p class="desc">${topic.desc}</p>` : ''}
         ${(topic.intro||[]).map(t=>`<div class="topic-note">${t}</div>`).join('')}
-        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : `Salvo — ainda falta preencher: <strong>${escapeHtml(topicFaltando(topic, data).join(', '))}</strong>. Se algum item não se aplica a você, clique em Editar e use o botão "Não tenho".`}</div>` : ''}
+        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : `Salvo — ainda falta preencher: <strong>${escapeHtml(topicFaltando(topic, data).join(', '))}</strong>. Se algum item não se aplica a você, clique em Editar e use o botão "Não tenho" ou escreva "não tenho" no campo.`}</div>` : ''}
         <div class="${editing? '' : 'ps-locked'}">
           ${(topic.sections||[]).map(sec=>renderSectionHTML(sec, data)).join('')}
         </div>
