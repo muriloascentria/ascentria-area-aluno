@@ -15036,7 +15036,7 @@ async function reuEncCarregar(r){
 async function reuEncTarefas(ids, forcar){
   if(!forcar) ids = ids.filter(id=>!REU_UI.encTf[id]);
   if(!ids.length) return;
-  const { data } = await sb.from('tarefas').select('id,titulo,status,responsavel_id,prazo_data,excluida').in('id', ids);
+  const { data } = await sb.from('tarefas').select('id,titulo,status,responsavel_id,coresponsaveis,prazo_data,excluida').in('id', ids);
   (data||[]).forEach(t=>{ REU_UI.encTf[t.id] = t; });
 }
 function reuEncTfHtml(e){
@@ -15065,7 +15065,7 @@ function reuEncHtml(r){
     </div></td></tr>`;
   };
   const linhas = lista.map(e=>`<tr>
-    <td>${escapeHtml(e.acao||'')}</td><td>${escapeHtml(e.responsavel||'—')}</td><td>${escapeHtml(reuEncPrazoTxt(e))}</td>
+    <td>${escapeHtml(reuEncAcaoTxt(e))}</td><td>${escapeHtml(reuEncRespTxt(e))}</td><td>${escapeHtml(reuEncPrazoTxt(e))}</td>
     <td class="reu-enc-tcol">${!e.tarefa_id && e.nao_criar ? `<span class="reu-enc-st nao" title="Decidido não criar tarefa">NÃO CRIADA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desfazer="${e.id}" title="Desfazer">${icon('x','tiny')}</button>`:''}`
       : e.tarefa_id ? `${reuEncTfHtml(e)}${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desv="${e.id}" title="Desvincular a tarefa">${icon('x','tiny')}</button>`:''}`
       : (socio && membro ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-criar="${e.id}">${icon('plus','tiny')} Criar tarefa</button><button type="button" class="btn-mini" data-reu-enc-vinc="${e.id}">${icon('paperclip','tiny')} Vincular</button><button type="button" class="btn-mini" data-reu-enc-naocriar="${e.id}">${icon('x','tiny')} Não criar</button></div>` : '<span class="muted">—</span>')}</td>
@@ -15080,6 +15080,20 @@ function reuEncHtml(r){
   return `${lista.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th><th>Tarefa</th>${socio?'<th></th>':''}</tr></thead><tbody>${linhas}</tbody></table></div>` : '<p class="muted">Nenhum encaminhamento.</p>'}${novo}`;
 }
 /* Com tarefa vinculada, o prazo mostrado é o da tarefa (acompanha qualquer mudança feita nela). */
+/* Idem para os responsáveis: com tarefa vinculada, mostra quem está na tarefa (principal e demais). */
+function reuEncAcaoTxt(e){
+  const t = e.tarefa_id && REU_UI.encTf[e.tarefa_id];
+  return (t && t.titulo) ? t.titulo : (e.acao||'');
+}
+function reuEncRespTxt(e){
+  const t = e.tarefa_id && REU_UI.encTf[e.tarefa_id];
+  if(t && t.responsavel_id){
+    const nomes = [t.responsavel_id, ...((t.coresponsaveis||[]).filter(u=>u!==t.responsavel_id))]
+      .map(id=>{ const m = tarefasMembro(id) || getPerson(id); return m ? (m.name||'').split(' ')[0] : null; }).filter(Boolean);
+    if(nomes.length) return nomes.length>1 ? nomes.slice(0,-1).join(', ')+' e '+nomes[nomes.length-1] : nomes[0];
+  }
+  return e.responsavel || '—';
+}
 function reuEncPrazoTxt(e){
   const t = e.tarefa_id && REU_UI.encTf[e.tarefa_id];
   if(t && t.prazo_data){ const [y,m,d] = String(t.prazo_data).split('-'); return `${d}/${m}/${y}`; }
@@ -15145,7 +15159,7 @@ function reuEncBind(el, r){
     const e = achar(REU_UI.encVinc); if(!e) return;
     const t = (TAREFAS||[]).find(x=>x.id===b.dataset.reuEncEscolher);
     if(await salvar(e, {tarefa_id:b.dataset.reuEncEscolher, nao_criar:false})){
-      if(t) REU_UI.encTf[t.id] = {id:t.id, titulo:t.titulo, status:t.status, responsavel_id:t.responsavelId, prazo_data:t.prazoData||null, excluida:false};
+      if(t) REU_UI.encTf[t.id] = {id:t.id, titulo:t.titulo, status:t.status, responsavel_id:t.responsavelId, coresponsaveis:t.coresponsaveis||[], prazo_data:t.prazoData||null, excluida:false};
       REU_UI.encVinc = null; renderReunioes();
     }
   }));
