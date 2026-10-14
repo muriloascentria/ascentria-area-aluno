@@ -11934,11 +11934,36 @@ async function msgCarregarGrupos(){
   try{
     const { data, error } = await sb.rpc('mensagens_meus_grupos');
     if(error) throw error;
+    const antes = {}; MSG_GRUPOS.forEach(g=>{ antes[g.id] = g; });
     MSG_GRUPOS = (data||[]).map(g=>({ id:g.id, nome:g.nome||'', criadoPor:g.criado_por, createdAt:g.created_at, membros:g.membros||[], naoLidas:g.nao_lidas||0, ultimaLeitura:g.ultima_leitura, limpoEm:g.limpo_em, fotoUrl:g.foto_url||null }));
+    /* A leitura que eu acabei de marcar pode ainda não ter chegado ao servidor quando esta consulta
+       volta: sem isso o grupo "desmarcava" e voltava para Não lidas por um instante. A conversa que
+       está aberta na tela também conta como lida. */
+    MSG_GRUPOS.forEach(g=>{
+      const a = antes[g.id];
+      if(a && a.ultimaLeitura && (!g.ultimaLeitura || a.ultimaLeitura > g.ultimaLeitura)){ g.ultimaLeitura = a.ultimaLeitura; if(!a.naoLidas) g.naoLidas = 0; }
+      if(msgUI.aberto===msgChaveGrupo(g.id) && msgNaTela()) g.naoLidas = 0;
+    });
     // se saí de um grupo (ou ele foi excluído) enquanto estava aberto, fecha a conversa
     if(msgEhGrupo(msgUI.aberto) && !msgGrupoDaChave(msgUI.aberto)) msgUI.aberto = null;
     MSG_GRUPOS.forEach(g=>{ if(g.limpoEm && MSG_CONVERSAS[msgChaveGrupo(g.id)]){ MSG_CONVERSAS[msgChaveGrupo(g.id)] = MSG_CONVERSAS[msgChaveGrupo(g.id)].filter(m=>m.createdAt > g.limpoEm); } });
   }catch(e){ console.error('msgCarregarGrupos', e); }
+}
+/* Linha de membro mudou. Entrar ou sair do grupo (INSERT/DELETE) recarrega os grupos. Já o UPDATE
+   é só leitura (ultima_leitura) ou "limpar conversa" (limpo_em) de UMA pessoa: o de outra pessoa
+   não muda nada para mim, e o meu já foi aplicado aqui na hora. Antes cada leitura de qualquer
+   membro recarregava os grupos de todo mundo e redesenhava a conversa aberta: no grupo de vendas,
+   cheio de gente lendo, a conversa ficava "abrindo e voltando" e a rolagem subia e descia. */
+function msgMembrosMudaram(payload){
+  if(payload && payload.eventType==='UPDATE'){
+    const n = payload.new || {};
+    if(n.user_id !== msgEu()) return;
+    const g = msgGrupo(n.grupo_id); if(!g) return msgGruposMudaram();
+    if(n.ultima_leitura && (!g.ultimaLeitura || n.ultima_leitura > g.ultimaLeitura)){ g.ultimaLeitura = n.ultima_leitura; if(g.naoLidas){ g.naoLidas = 0; updateNotifBadge(); if(msgNaTela()) renderMensagens(); } }
+    if(n.limpo_em && n.limpo_em !== g.limpoEm) return msgGruposMudaram(); // limpou em outro aparelho
+    return;
+  }
+  msgGruposMudaram();
 }
 /* Grupo criado/renomeado/excluído ou membros mudaram (evento em tempo real): recarrega com calma. */
 function msgGruposMudaram(){
@@ -12101,7 +12126,7 @@ function msgAssinarTempoReal(){
     .on('postgres_changes', {event:'DELETE', schema:'public', table:'mensagens'}, payload=>msgRemovida(payload.old));
   if(msgSouEquipe()) ch = ch
     .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupos'}, ()=>msgGruposMudaram())
-    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, ()=>msgGruposMudaram())
+    .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_membros'}, payload=>msgMembrosMudaram(payload))
     .on('postgres_changes', {event:'*', schema:'public', table:'mensagens_grupo_tarefas'}, payload=>gtfMudou(payload));
   /* A ligação ao vivo cai calada em rede de celular: troca de wi-fi para dados, túnel, elevador,
      tela apagada. Sem tratar isso, o app continua "conectado" na aparência e as mensagens só
