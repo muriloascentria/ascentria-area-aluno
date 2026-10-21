@@ -368,6 +368,8 @@
   .ee-banner .eb-logo img{display:block;width:100%;height:auto;}
   @media (max-width:640px){ .ee-banner{flex-direction:column-reverse;align-items:flex-start;padding:20px;} .ee-banner .eb-logo{width:160px;} .ee-banner .eb-txt{padding-left:14px;} }
   .ee-campo{margin:0 0 14px;}
+  .ee-link-box{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;font-size:13px;}
+  .ee-link-box code{font-size:12.5px;word-break:break-all;background:var(--bg-elev);padding:4px 8px;border-radius:6px;}
   .ee-campo label{display:block;font-size:15px;font-weight:600;margin:0 0 6px;}
   .ee-assina{font-size:14px;line-height:1.6;color:#3a3936;margin:26px 0 0;text-align:center;}
   /* ---- Prêmio Essência Experience 2026: banner no Início, página do formulário e aba da equipe ---- */
@@ -16566,12 +16568,16 @@ const EE_TERMOS = [
   { k:'autoriza_imagem', t:'Autorização de uso de imagem e voz', txt:'Autorizo, de forma gratuita, o uso da minha imagem e da minha voz captadas durante o Essência Experience, em fotos e vídeos, nos materiais institucionais e de divulgação da Ascentria e do Método Essência, nas redes sociais, no site e em outros canais, sem limite de tempo.' },
   { k:'autoriza_contato', t:'Autorização de contato', txt:'Autorizo a equipe da Ascentria a entrar em contato comigo pelo WhatsApp e pelo e-mail informados para confirmar a minha participação e enviar as orientações do evento.' },
 ];
-async function eeAbrir(){
+/* opts.publico: link aberto por quem não tem acesso ao Plat (?inscricao na URL). Sem login, sem dados
+   pré-preenchidos, e a inscrição entra sem aluno vinculado (aluno_id vazio). */
+async function eeAbrir(opts){
+  const publico = !!(opts && opts.publico);
   premioFontes();
   if(document.querySelector('.premio-page')) return;
-  const s = getStudent(currentStudentId);
-  const souAluno = currentUserRole==='aluno' && !!currentUser;
-  const produto = s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência';
+  const s = publico ? null : getStudent(currentStudentId);
+  const souAluno = !publico && currentUserRole==='aluno' && !!currentUser;
+  const podeEnviar = publico || souAluno;
+  const produto = publico ? 'Link externo' : (s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência');
   const st = {
     nome: (souAluno && currentUserProfile && currentUserProfile.name) || '', whatsapp: (s && s.cadastro && s.cadastro.telefone) || '',
     email: (souAluno && currentUser.email) || '', area:'', vinculo: souAluno ? 'aluno' : '', convidadoPor:'', confirma:null,
@@ -16606,10 +16612,10 @@ async function eeAbrir(){
         <p>${st.enviado ? 'Recebemos a sua inscrição' : `Recebemos a sua inscrição em ${tzDataCurta(String(r.created_at).slice(0,10))}`} para o Essência Experience, nos dias ${EE_EDICAO.datas}, em ${EE_EDICAO.local}. A equipe vai entrar em contato pelo WhatsApp com as orientações.</p>
         ${resumoHtml(r)}
         ${despedida}
-        <div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-ee="fechar">Voltar ao Plat</button></div>
+        ${publico ? '' : `<div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-ee="fechar">Voltar ao Plat</button></div>`}
       </div>`;
     }
-    const aviso = souAluno ? '' : `<div class="pr-aviso">Você está vendo a página como equipe. A inscrição funciona só para alunos e mentorados.</div>`;
+    const aviso = podeEnviar ? '' : `<div class="pr-aviso">Você está vendo a página como equipe. A inscrição funciona só para alunos e mentorados.</div>`;
     return aviso + `
       <h2 class="pr-sec-t">Seus dados</h2>
       ${campo('ee-nome','Qual o seu nome?', st.nome, 'text', 'Nome completo', 'maxlength="150" autocomplete="name"')}
@@ -16633,7 +16639,7 @@ async function eeAbrir(){
       <h2 class="pr-sec-t">Consentimento de dados, imagem e voz</h2>
       ${EE_TERMOS.map(t=>`<label class="pr-decl"><input type="checkbox" data-ee-termo="${t.k}" ${st.termos[t.k]?'checked':''}> <span><b>${t.t}.</b> ${t.txt}</span></label>`).join('')}
       <p class="pr-erro">${escapeHtml(st.erro)}</p>
-      <div class="pr-acoes"><button type="button" class="pr-btn cheio" data-ee="enviar" ${(!souAluno || st.enviando)?'disabled':''}>${st.enviando?'Enviando...':'Garantir minha vaga'}</button></div>
+      <div class="pr-acoes"><button type="button" class="pr-btn cheio" data-ee="enviar" ${(!podeEnviar || st.enviando)?'disabled':''}>${st.enviando?'Enviando...':'Garantir minha vaga'}</button></div>
       ${despedida}`;
   };
   const ler = ()=>{
@@ -16649,7 +16655,7 @@ async function eeAbrir(){
       <div class="pr-wrap">
         <div class="pr-top">
           <img src="logo-essencia-experience.png" alt="Essência Experience">
-          <button type="button" class="pr-voltar" data-ee="fechar">${icon('back')} Voltar ao Plat</button>
+          ${publico ? '' : `<button type="button" class="pr-voltar" data-ee="fechar">${icon('back')} Voltar ao Plat</button>`}
         </div>
         <div class="pr-hero">
           <div class="pr-k">${EE_EDICAO.curta} · ${EE_EDICAO.local}</div>
@@ -16666,7 +16672,7 @@ async function eeAbrir(){
     page.querySelectorAll('[data-ee-termo]').forEach(c=>c.addEventListener('change', ()=>{ st.termos[c.dataset.eeTermo] = c.checked; if(st.erro){ st.erro=''; const e = page.querySelector('.pr-erro'); if(e) e.textContent=''; } }));
     const env = page.querySelector('[data-ee="enviar"]');
     if(env) env.addEventListener('click', async ()=>{
-      if(!souAluno) return;
+      if(!podeEnviar) return;
       ler();
       const falta = (id, msg)=>{ st.erro = msg; st.campoErro = id; desenhar(); const e = page.querySelector('#'+id); if(e){ e.focus(); e.scrollIntoView({block:'center'}); } };
       st.campoErro = '';
@@ -16680,15 +16686,15 @@ async function eeAbrir(){
       if(!EE_TERMOS.every(t=>st.termos[t.k])){ st.erro = 'Para concluir a inscrição, marque os três termos de consentimento.'; desenhar(); return; }
       st.enviando = true; st.erro = ''; desenhar();
       const linha = {
-        edicao: EE_EDICAO.id, aluno_id: currentUser.id, nome: st.nome.trim().slice(0,150), whatsapp: String(st.whatsapp).trim().slice(0,30),
+        edicao: EE_EDICAO.id, aluno_id: publico ? null : currentUser.id, nome: st.nome.trim().slice(0,150), whatsapp: String(st.whatsapp).trim().slice(0,30),
         email: st.email.trim().slice(0,150), area_atuacao: st.area.trim().slice(0,200), vinculo: st.vinculo,
         convidado_por: st.vinculo==='convidado' ? st.convidadoPor.trim().slice(0,150) : null, confirma: st.confirma,
         consentimento_dados: true, autoriza_imagem: true, autoriza_contato: true, produto,
       };
-      const { data, error } = await sb.from('ee_inscricoes').insert(linha).select().maybeSingle();
+      const { data, error } = publico ? await sb.from('ee_inscricoes').insert(linha) : await sb.from('ee_inscricoes').insert(linha).select().maybeSingle();
       st.enviando = false;
       if(error){
-        if(/duplicate|unique/i.test(error.message||'')){ st.existente = { ...linha, created_at:new Date().toISOString() }; desenhar(true); return; }
+        if(!publico && /duplicate|unique/i.test(error.message||'')){ st.existente = { ...linha, created_at:new Date().toISOString() }; desenhar(true); return; }
         console.error('ee_inscricoes', error); st.erro = 'Não foi possível enviar agora. Confira a internet e tente de novo.'; desenhar(); return;
       }
       st.existente = data || { ...linha, created_at:new Date().toISOString() }; st.enviado = true; desenhar(true);
@@ -16706,6 +16712,7 @@ async function eeAbrir(){
   } else st.existente = null;
   if(document.body.contains(page)) desenhar();
 }
+function eeLinkPublico(){ return location.origin + location.pathname + '?inscricao=essencia-experience'; }
 /* ---- Equipe: aba "Inscrições Essência Experience" no Radar ---- */
 const EE_UI = { rows:null, carregando:false };
 async function eeCarregarEquipe(){
@@ -16719,10 +16726,11 @@ function eeHtmlEquipe(){
   if(EE_UI.rows===null){ if(!EE_UI.carregando) eeCarregarEquipe(); return '<div class="empty-state">Carregando as inscrições…</div>'; }
   const rows = EE_UI.rows;
   const conf = rows.filter(r=>r.confirma).length;
-  return `<p class="section-sub" style="margin-top:0">Inscrições feitas pelo banner do Início para o Essência Experience de ${EE_EDICAO.curta}, em ${EE_EDICAO.local}. ${rows.length} inscrição(ões), ${conf} com participação confirmada.</p>
+  const linkBox = `<div class="ee-link-box"><span>Link para quem não tem acesso ao Plat:</span><code>${escapeHtml(eeLinkPublico())}</code><button type="button" class="btn-outline" id="ee-copiar">${icon('copy','tiny')} Copiar link</button></div>`;
+  return linkBox + `<p class="section-sub" style="margin-top:0">Inscrições feitas pelo banner do Início e pelo link externo para o Essência Experience de ${EE_EDICAO.curta}, em ${EE_EDICAO.local}. ${rows.length} inscrição(ões), ${conf} com participação confirmada.</p>
     ${rows.length ? `<div style="margin-bottom:10px"><button type="button" class="btn-outline" id="ee-csv">${icon('download','tiny')} Baixar planilha (CSV)</button></div>
     <div class="table-wrap"><table class="check-table"><thead><tr><th>Data</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Área</th><th>Participação</th><th>Confirma</th></tr></thead><tbody>
-      ${rows.map(r=>`<tr><td style="white-space:nowrap">${tzDataCurta(String(r.created_at).slice(0,10))}</td><td>${getStudent(r.aluno_id) ? `<button type="button" class="vg-nome-btn" data-rd-acomp="${r.aluno_id}">${escapeHtml(r.nome)}</button>` : escapeHtml(r.nome)}</td><td>${whatsappCell(r.whatsapp)}</td><td>${escapeHtml(r.email)}</td><td>${escapeHtml(r.area_atuacao)}</td><td>${r.vinculo==='convidado' ? 'Convidado(a)'+(r.convidado_por?` de ${escapeHtml(r.convidado_por)}`:'') : escapeHtml(r.produto||'Aluno(a)')}</td><td>${r.confirma ? 'Sim' : 'Não'}</td></tr>`).join('')}
+      ${rows.map(r=>`<tr><td style="white-space:nowrap">${tzDataCurta(String(r.created_at).slice(0,10))}</td><td>${getStudent(r.aluno_id) ? `<button type="button" class="vg-nome-btn" data-rd-acomp="${r.aluno_id}">${escapeHtml(r.nome)}</button>` : escapeHtml(r.nome)}</td><td>${whatsappCell(r.whatsapp)}</td><td>${escapeHtml(r.email)}</td><td>${escapeHtml(r.area_atuacao)}</td><td>${r.vinculo==='convidado' ? 'Convidado(a)'+(r.convidado_por?` de ${escapeHtml(r.convidado_por)}`:'') : 'Mentorado(a)/aluno(a)'}${r.aluno_id ? '' : ' <span class="muted">· pelo link</span>'}</td><td>${r.confirma ? 'Sim' : 'Não'}</td></tr>`).join('')}
     </tbody></table></div>` : '<div class="empty-state">Nenhuma inscrição ainda. Elas aparecem aqui assim que os alunos preenchem o formulário pelo banner do Início.</div>'}`;
 }
 function eeCsv(){
@@ -16896,6 +16904,7 @@ function renderRadar(){
     el.innerHTML = radarAbasHtml() + eeHtmlEquipe();
     radarBindAbas(el);
     const csv = el.querySelector('#ee-csv'); if(csv) csv.addEventListener('click', eeCsv);
+    const cp = el.querySelector('#ee-copiar'); if(cp) cp.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(eeLinkPublico()); cp.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', eeLinkPublico()); } });
     el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
     return;
   }
@@ -19151,6 +19160,8 @@ sb.auth.onAuthStateChange((event, session)=>{
    ainda válida. Se não houver sessão (ou não conseguir restaurar), cai no fluxo normal de login. */
 (async function initApp(){
   document.getElementById('login-screen').style.display = 'none';
+  /* Link externo da inscrição no Essência Experience: abre só o formulário, sem login. */
+  if(new URLSearchParams(location.search).has('inscricao')){ eeAbrir({publico:true}); return; }
   try{
     const { data: { session } } = await sb.auth.getSession();
     if(session && session.user){
