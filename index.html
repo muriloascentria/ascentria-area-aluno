@@ -368,19 +368,22 @@
   .ee-banner{padding-bottom:72px;}
   /* Fitas zebradas (amarelo e preto) cruzadas no canto de baixo: "Evento gratuito para alunos e mentorados". */
   .ee-banner .eb-fitas{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden;border-radius:inherit;}
-  .ee-banner .eb-fita{position:absolute;display:flex;white-space:nowrap;height:30px;align-items:center;width:760px;
+  .ee-banner .eb-fita{position:absolute;display:flex;justify-content:center;white-space:nowrap;height:30px;align-items:center;width:900px;
     background:repeating-linear-gradient(-45deg,#111 0 12px,#F5C518 12px 24px);box-shadow:0 3px 10px rgba(0,0,0,.25);}
-  .ee-banner .eb-fita b{display:inline-block;background:#F5C518;color:#111;font-family:Anton,'Arial Narrow',Impact,sans-serif;font-weight:400;font-size:13.5px;letter-spacing:.12em;text-transform:uppercase;padding:0 14px;margin:0 30px;line-height:22px;}
-  .ee-banner .eb-fita.f1{right:-160px;bottom:26px;transform:rotate(-4deg);}
-  .ee-banner .eb-fita.f2{right:-200px;bottom:6px;transform:rotate(3deg);}
+  .ee-banner .eb-fita b{display:inline-block;background:#F5C518;color:#111;font-family:Anton,'Arial Narrow',Impact,sans-serif;font-weight:400;font-size:13.5px;letter-spacing:.12em;text-transform:uppercase;padding:0 0 0 22px;margin:0;line-height:20px;}
+  .ee-banner .eb-fita b::after{content:'\2022';margin-left:22px;}
+  .ee-banner .eb-fita.f1{right:-240px;bottom:41px;transform:rotate(-15deg);z-index:2;}
+  .ee-banner .eb-fita.f2{right:-335px;bottom:51px;transform:rotate(-30deg);}
   @media (max-width:640px){
-    .ee-banner{padding-bottom:84px;}
-    .ee-banner .eb-fita{width:620px;}
-    .ee-banner .eb-fita.f1{right:-130px;bottom:34px;transform:rotate(-6deg);}
-    .ee-banner .eb-fita.f2{right:-110px;bottom:10px;transform:rotate(5deg);}
+    .ee-banner{padding-bottom:120px;}
+    .ee-banner .eb-fita{width:700px;height:26px;}
+    .ee-banner .eb-fita b{font-size:12px;line-height:17px;padding-left:16px;}
+    .ee-banner .eb-fita b::after{margin-left:16px;}
+    .ee-banner .eb-fita.f1{right:-200px;bottom:27px;transform:rotate(-15deg);}
+    .ee-banner .eb-fita.f2{right:-265px;bottom:36px;transform:rotate(-30deg);}
   }
   .ee-banner .eb-logo img{display:block;width:100%;height:auto;}
-  @media (max-width:640px){ .ee-banner{flex-direction:column-reverse;align-items:flex-start;padding:20px 20px 84px;} .ee-banner .eb-logo{width:160px;} .ee-banner .eb-txt{padding-left:14px;} }
+  @media (max-width:640px){ .ee-banner{flex-direction:column-reverse;align-items:flex-start;padding:20px 20px 120px;} .ee-banner .eb-logo{width:160px;} .ee-banner .eb-txt{padding-left:14px;} }
   /* ---- Essência Experience abril/2027: verde da edição (#2a3c2a) com brilhos desfocados ---- */
   :root{ --ee-verde:#2a3c2a; --ee-verde-2:#4f6b4c; --ee-verde-claro:#e8ede5; }
   .ee-banner{position:relative;overflow:hidden;isolation:isolate;}
@@ -6166,7 +6169,7 @@ function essenciaBannerHtml(){
         <span class="eb-rodape"><span class="eb-cta">Garantir minha vaga</span><span class="eb-data">${EE_EDICAO.curta} · ${EE_EDICAO.local}</span></span>
       </span>
       <span class="eb-logo"><img src="logo-essencia-experience.png" alt="Essência Experience"></span>
-      <span class="eb-fitas" aria-hidden="true">${[1,2].map(n=>`<span class="eb-fita f${n}">${Array(4).fill('<b>Evento gratuito para alunos e mentorados</b>').join('')}</span>`).join('')}</span>
+      <span class="eb-fitas" aria-hidden="true">${[1,2].map(n=>`<span class="eb-fita f${n}">${Array(5).fill('<b>Evento gratuito para alunos e mentorados</b>').join('')}</span>`).join('')}</span>
     </button>`;
 }
 function eeBindBanner(root){
