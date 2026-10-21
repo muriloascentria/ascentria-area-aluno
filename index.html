@@ -371,8 +371,10 @@
   :root{ --ee-verde:#2a3c2a; --ee-verde-2:#4f6b4c; --ee-verde-claro:#e8ede5; }
   .ee-banner{position:relative;overflow:hidden;isolation:isolate;}
   .ee-banner::before,.ee-banner::after{content:'';position:absolute;z-index:-1;border-radius:50%;filter:blur(60px);pointer-events:none;}
-  .ee-banner::before{width:420px;height:420px;right:-90px;top:-180px;background:var(--ee-verde);opacity:.38;}
-  .ee-banner::after{width:300px;height:300px;left:28%;bottom:-210px;background:var(--ee-verde-2);opacity:.28;}
+  /* Brilhos longe da logo (que fica à direita): canto superior esquerdo e embaixo, no meio. */
+  .ee-banner::before{width:380px;height:380px;left:-170px;top:-200px;background:var(--ee-verde);opacity:.34;}
+  .ee-banner::after{width:340px;height:300px;left:38%;bottom:-230px;background:var(--ee-verde-2);opacity:.30;}
+  @media (max-width:640px){ .ee-banner::before{left:auto;right:-170px;top:auto;bottom:-120px;} .ee-banner::after{left:-120px;bottom:-200px;} }
   .ee-banner .eb-txt{border-left-color:var(--ee-verde);}
   .ee-banner .eb-k{color:var(--ee-verde);}
   .ee-banner .eb-prata{background:linear-gradient(90deg,var(--ee-verde),#7f9a7a 55%,var(--ee-verde));-webkit-background-clip:text;background-clip:text;color:transparent;}
