@@ -389,6 +389,9 @@
   .ee-page .pr-hero::after{content:'';position:absolute;z-index:-1;width:260px;height:260px;left:-80px;bottom:-140px;border-radius:50%;background:#14200f;opacity:.55;filter:blur(60px);}
   .ee-page .pr-k{color:#c4d1bf;}
   .ee-page .pr-sec-t{color:var(--ee-verde);}
+  .ee-page .pr-passos span.on{border-top-color:var(--ee-verde);color:var(--ee-verde);}
+  .ee-page .pr-mic{border-color:rgba(42,60,42,.35);}
+  .ee-page .pr-mic .icon{stroke:var(--ee-verde);}
   .ee-page .pr-q{border-top-color:var(--ee-verde);}
   .ee-page .pr-q:last-of-type{border-bottom-color:var(--ee-verde);}
   .ee-page .pr-sn button{border-color:var(--ee-verde);color:var(--ee-verde);}
@@ -415,8 +418,15 @@
   .premio-banner .pb-k{font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#6E6D67;}
   .premio-banner .pb-t{font-family:Anton,'Arial Narrow',Impact,sans-serif;font-weight:400;font-size:clamp(22px,4.2vw,34px);line-height:1.02;text-transform:uppercase;letter-spacing:.01em;}
   .premio-banner .pb-s{font-size:13px;color:#3a3936;line-height:1.45;}
+  .premio-banner{position:relative;overflow:hidden;isolation:isolate;}
+  .premio-banner::before,.premio-banner::after{content:'';position:absolute;z-index:-1;border-radius:50%;filter:blur(55px);pointer-events:none;}
+  .premio-banner::before{width:340px;height:340px;right:-80px;top:-170px;background:#2a3c2a;opacity:.36;}
+  .premio-banner::after{width:240px;height:240px;left:22%;bottom:-170px;background:#4f6b4c;opacity:.24;}
+  .premio-banner .pb-k{color:#2a3c2a;}
   .premio-banner .pb-cta{flex:none;display:inline-flex;align-items:center;gap:8px;background:#171716;color:#FAF9F2;border-radius:999px;padding:11px 18px;font-size:13px;font-weight:700;white-space:nowrap;}
   .premio-banner .pb-cta .icon{stroke:#FAF9F2;width:16px;height:16px;}
+  .premio-banner .pb-cta{background:#2a3c2a;color:#F3F5EF;}
+  .pe-contato{font-size:12.5px;color:var(--text-mute);margin:4px 0 0;}
   @media (max-width:560px){ .premio-banner{flex-direction:column;align-items:flex-start;padding:20px;} }
 
   .premio-page{color-scheme:light;position:fixed;inset:0;z-index:340;background:#FAF9F2;color:#0B0B0A;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:'Instrument Sans',Helvetica,Arial,sans-serif;}
@@ -16380,9 +16390,9 @@ function premioFontes(){
 function premioBannerHtml(){
   premioFontes();
   return `
-    <button type="button" class="premio-banner" id="premio-banner" aria-label="Prêmio Essência Experience 2026: seus resultados podem ser premiados. Participar.">
+    <button type="button" class="premio-banner" id="premio-banner" aria-label="Prêmio Essência Experience: seus resultados podem ser premiados. Participar.">
       <span class="pb-txt">
-        <span class="pb-k">Prêmio Essência Experience 2026</span>
+        <span class="pb-k">Prêmio Essência Experience</span>
         <span class="pb-t">Seus resultados podem ser premiados</span>
         <span class="pb-s">Conte o que você conquistou depois que entrou no Método Essência.</span>
       </span>
@@ -16423,16 +16433,22 @@ function premioDitar(btn, campo, aoMudar){
   };
   iniciar();
 }
-async function premioAbrir(){
+/* Edição atual do Prêmio. Cada edição aceita uma participação por pessoa; as de edições anteriores
+   ficam guardadas (coluna edicao) e continuam visíveis para a equipe. opts.publico: link externo
+   (?premio), para quem não tem acesso ao Plat; aí pedimos nome, WhatsApp e e-mail no primeiro passo. */
+const PREMIO_EDICAO = '2027-04';
+async function premioAbrir(opts){
+  const publico = !!(opts && opts.publico);
   premioFontes();
   if(document.querySelector('.premio-page')) return;
-  const s = getStudent(currentStudentId);
-  const souAluno = currentUserRole==='aluno' && !!currentUser;
-  const produto = s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência';
-  const st = { passo:1, fat:{ fat_5k:null, fat_10k:null, fat_20k:null, fat_30k:null }, decl:false, como:[], outros:'', exp:'', erro:'', enviando:false, existente:undefined };
+  const s = publico ? null : getStudent(currentStudentId);
+  const souAluno = !publico && currentUserRole==='aluno' && !!currentUser;
+  const podeEnviar = publico || souAluno;
+  const produto = publico ? 'Link externo' : (s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência');
+  const st = { nome:'', whatsapp:'', email:'', campoErro:'', passo:1, fat:{ fat_5k:null, fat_10k:null, fat_20k:null, fat_30k:null }, decl:false, como:[], outros:'', exp:'', erro:'', enviando:false, existente:undefined };
   const page = document.createElement('div');
-  page.className = 'premio-page';
-  page.setAttribute('role','dialog'); page.setAttribute('aria-modal','true'); page.setAttribute('aria-label','Prêmio Essência Experience 2026');
+  page.className = 'premio-page ee-page';
+  page.setAttribute('role','dialog'); page.setAttribute('aria-modal','true'); page.setAttribute('aria-label','Prêmio Essência Experience');
   const fechar = ()=>{ premioDitarParar(); document.removeEventListener('keydown', esc); page.remove(); document.body.style.overflow = ''; };
   const esc = e=>{ if(e.key==='Escape') fechar(); };
   document.addEventListener('keydown', esc);
@@ -16462,13 +16478,18 @@ async function premioAbrir(){
         <h2>Participação recebida</h2>
         <p>Você enviou sua participação em ${tzDataCurta(String(st.existente.created_at).slice(0,10))}. A equipe já tem as suas respostas. Os premiados serão anunciados no Essência Experience.</p>
         ${resumoHtml(st.existente)}
-        <div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-pr="fechar">Voltar ao Plat</button></div>
+        ${publico ? '' : `<div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-pr="fechar">Voltar ao Plat</button></div>`}
       </div>`;
     }
     const passos = `<div class="pr-passos" aria-hidden="true"><span class="${st.passo>=1?'on':''}">1 · Faturamento</span><span class="${st.passo>=2?'on':''}">2 · Como</span><span class="${st.passo>=3?'on':''}">3 · Sua história</span></div>`;
-    const aviso = souAluno ? '' : `<div class="pr-aviso">Você está vendo a página como equipe. O envio funciona só para alunos e mentorados.</div>`;
+    const aviso = podeEnviar ? '' : `<div class="pr-aviso">Você está vendo a página como equipe. O envio funciona só para alunos, mentorados e pelo link externo.</div>`;
+    const ce = (id, rot, val, tipo, ph, extra)=>`<div class="ee-campo"><label for="${id}">${rot}</label><input class="pr-in ${st.campoErro===id?'erro':''}" id="${id}" type="${tipo}" value="${escapeHtml(val)}" placeholder="${escapeHtml(ph)}" ${extra||''}></div>`;
     if(st.passo===1){
-      return passos + aviso + `
+      return passos + aviso + (publico ? `
+        <h2 class="pr-sec-t">Seus dados</h2>
+        ${ce('pr-nome','Qual o seu nome?', st.nome, 'text', 'Nome completo', 'maxlength="150" autocomplete="name"')}
+        ${ce('pr-whats','Qual o seu WhatsApp?', st.whatsapp, 'tel', '(00) 00000-0000', 'maxlength="30" autocomplete="tel"')}
+        ${ce('pr-email','Qual o seu e-mail?', st.email, 'email', 'seu@email.com', 'maxlength="150" autocomplete="email"')}` : '') + `
         <h2 class="pr-sec-t">Seu faturamento</h2>
         <p class="pr-sec-s">Responda pensando no faturamento mensal do seu consultório ou negócio depois que você entrou no Método Essência.</p>
         ${visiveis().map(f=>`
@@ -16504,12 +16525,12 @@ async function premioAbrir(){
           ${wfDitadoDisponivel() ? `<button type="button" class="pr-mic" id="pr-mic" title="Falar" aria-label="Falar em vez de digitar">${icon('mic')}</button>` : ''}
         </div>
         <p class="pr-erro">${escapeHtml(st.erro)}</p>
-        <div class="pr-acoes"><button type="button" class="pr-btn" data-pr="volta2">Voltar</button><button type="button" class="pr-btn cheio" data-pr="enviar" ${(!souAluno || st.enviando)?'disabled':''}>${st.enviando?'Enviando...':'Enviar respostas'}</button></div>`;
+        <div class="pr-acoes"><button type="button" class="pr-btn" data-pr="volta2">Voltar</button><button type="button" class="pr-btn cheio" data-pr="enviar" ${(!podeEnviar || st.enviando)?'disabled':''}>${st.enviando?'Enviando...':'Enviar respostas'}</button></div>`;
     }
     return `<div class="pr-fim">
       <h2>Respostas enviadas!</h2>
       <p>Obrigado por compartilhar a sua história. A equipe do Método Essência vai analisar todas as participações, e os premiados serão anunciados no Essência Experience.</p>
-      <div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-pr="fechar">Voltar ao Plat</button></div>
+      ${publico ? '' : `<div class="pr-acoes" style="justify-content:center"><button type="button" class="pr-btn cheio" style="margin-left:0" data-pr="fechar">Voltar ao Plat</button></div>`}
     </div>`;
   };
 
@@ -16518,10 +16539,10 @@ async function premioAbrir(){
       <div class="pr-wrap">
         <div class="pr-top">
           <img src="logo-essencia-experience.png" alt="Essência Experience">
-          <button type="button" class="pr-voltar" data-pr="fechar">${icon('back')} Voltar ao Plat</button>
+          ${publico ? '' : `<button type="button" class="pr-voltar" data-pr="fechar">${icon('back')} Voltar ao Plat</button>`}
         </div>
         <div class="pr-hero">
-          <div class="pr-k">Prêmio Essência Experience 2026</div>
+          <div class="pr-k">Prêmio Essência Experience</div>
           <h1>Seus resultados podem ser premiados</h1>
           <p>Os alunos e mentorados do Método Essência que mais transformaram a própria atuação serão reconhecidos no Essência Experience, em São Paulo. Conte para a gente o que você conquistou.</p>
         </div>
@@ -16545,10 +16566,18 @@ async function premioAbrir(){
       if(k==='outros' && c.checked){ const o = page.querySelector('#pr-outros'); if(o) o.focus(); }
     }));
     const outros = page.querySelector('#pr-outros'); if(outros) outros.addEventListener('input', ()=>{ st.outros = outros.value; });
+    [['pr-nome','nome'],['pr-whats','whatsapp'],['pr-email','email']].forEach(([id,k])=>{ const i = page.querySelector('#'+id); if(i) i.addEventListener('input', ()=>{ st[k] = i.value; i.classList.remove('erro'); }); });
     const exp = page.querySelector('#pr-exp'); if(exp) exp.addEventListener('input', ()=>{ st.exp = exp.value; });
     const mic = page.querySelector('#pr-mic'); if(mic && exp) mic.addEventListener('click', ()=>premioDitar(mic, exp, t=>{ st.exp = t; }));
     const acao = (nome, fn)=>{ const b = page.querySelector(`[data-pr="${nome}"]`); if(b) b.addEventListener('click', fn); };
     acao('ir2', ()=>{
+      if(publico){
+        const falta = (id, msg)=>{ st.erro = msg; st.campoErro = id; desenhar(); const e = page.querySelector('#'+id); if(e) e.focus(); };
+        st.campoErro = '';
+        if(!st.nome.trim()) return falta('pr-nome','Informe o seu nome.');
+        if(String(st.whatsapp).replace(/\D/g,'').length < 10) return falta('pr-whats','Informe o seu WhatsApp com DDD.');
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(st.email.trim())) return falta('pr-email','Informe um e-mail válido.');
+      }
       if(!faixaOk()){ st.erro = 'Responda às perguntas de faturamento para continuar.'; desenhar(); return; }
       if(!st.decl){ st.erro = 'Para continuar, confirme que as informações são verídicas.'; desenhar(); return; }
       st.erro = ''; st.passo = 2; desenhar(true);
@@ -16562,11 +16591,12 @@ async function premioAbrir(){
     acao('volta2', ()=>{ premioDitarParar(); st.erro = ''; st.passo = 2; desenhar(true); });
     acao('enviar', async ()=>{
       premioDitarParar();
-      if(!souAluno) return;
+      if(!podeEnviar) return;
       if(!st.exp.trim()){ st.erro = 'Conte a sua experiência antes de enviar.'; desenhar(); const e = page.querySelector('#pr-exp'); if(e){ e.classList.add('erro'); e.focus(); } return; }
       st.enviando = true; st.erro = ''; desenhar();
       const linha = {
-        aluno_id: currentUser.id,
+        edicao: PREMIO_EDICAO, aluno_id: publico ? null : currentUser.id,
+        nome: publico ? st.nome.trim().slice(0,150) : null, whatsapp: publico ? String(st.whatsapp).trim().slice(0,30) : null, email: publico ? st.email.trim().slice(0,150) : null,
         fat_5k: !!st.fat.fat_5k, fat_10k: !!st.fat.fat_10k, fat_20k: !!st.fat.fat_20k, fat_30k: !!st.fat.fat_30k,
         como: st.como, como_outros: st.como.includes('outros') ? st.outros.trim().slice(0,500) : null,
         experiencia: st.exp.trim().slice(0,5000), declaracao: true, produto,
@@ -16574,7 +16604,7 @@ async function premioAbrir(){
       const { error } = await sb.from('premio_ee2026').insert(linha);
       st.enviando = false;
       if(error){
-        if(/duplicate|unique/i.test(error.message||'')){ st.existente = { ...linha, created_at:new Date().toISOString() }; desenhar(true); return; }
+        if(!publico && /duplicate|unique/i.test(error.message||'')){ st.existente = { ...linha, created_at:new Date().toISOString() }; desenhar(true); return; }
         console.error('premio', error); st.erro = 'Não foi possível enviar agora. Confira a internet e tente de novo.'; desenhar(); return;
       }
       st.passo = 4; desenhar(true);
@@ -16586,7 +16616,7 @@ async function premioAbrir(){
   page.focus && page.setAttribute('tabindex','-1'); page.focus();
   if(souAluno){
     try{
-      const { data, error } = await sb.from('premio_ee2026').select('*').eq('aluno_id', currentUser.id).maybeSingle();
+      const { data, error } = await sb.from('premio_ee2026').select('*').eq('edicao', PREMIO_EDICAO).eq('aluno_id', currentUser.id).maybeSingle();
       if(error) throw error;
       st.existente = data || null;
     }catch(e){ console.error('premio', e); st.existente = null; }
@@ -16777,7 +16807,9 @@ function eeCsv(){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `inscricoes-essencia-experience-${EE_EDICAO.id}.csv`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 /* ---- Visão da equipe: aba "Prêmio Essência Experience 2026" no Radar ---- */
-const PREMIO_UI = { rows:null, carregando:false, filtro:'todos' };
+const PREMIO_UI = { rows:null, carregando:false, filtro:'todos', edicao:'2027-04' };
+const PREMIO_EDICOES = [['2027-04','Edição de abril de 2027'],['2026-10','Edição de outubro de 2026']];
+function premioLinkPublico(){ return location.origin + location.pathname + '?premio=essencia-experience'; }
 async function premioCarregarEquipe(){
   PREMIO_UI.carregando = true;
   try{ const { data, error } = await sb.from('premio_ee2026').select('*').order('created_at', {ascending:false}); if(error) throw error; PREMIO_UI.rows = data || []; }
@@ -16787,20 +16819,23 @@ async function premioCarregarEquipe(){
 }
 function premioHtmlEquipe(){
   if(PREMIO_UI.rows===null){ if(!PREMIO_UI.carregando) premioCarregarEquipe(); return '<div class="empty-state">Carregando as participações…</div>'; }
-  const rows = PREMIO_UI.rows.filter(r=>getStudent(r.aluno_id))
+  const rows = PREMIO_UI.rows.filter(r=>(r.edicao||'2026-10')===PREMIO_UI.edicao && (getStudent(r.aluno_id) || r.nome))
     .sort((a,b)=> premioFaixa(b).n - premioFaixa(a).n || String(b.created_at).localeCompare(String(a.created_at)));
   const f = PREMIO_UI.filtro;
   const vis = rows.filter(r=> f==='todos' || premioFaixa(r).c===f);
   const conta = c=> rows.filter(r=>premioFaixa(r).c===c).length;
   const tile = (rot, n)=>`<div class="kpi-tile"><div class="label">${rot}</div><div class="value" style="font-size:22px">${n}</div></div>`;
   return `
-    <p class="section-sub" style="margin-top:0">Respostas do formulário "Seus resultados podem ser premiados", aberto pelo banner no Início dos alunos do Método e dos mentorados. Cada pessoa envia uma vez e declara que as informações são verídicas.</p>
+    <div class="ee-link-box"><span>Link para quem não tem acesso ao Plat:</span><code>${escapeHtml(premioLinkPublico())}</code><button type="button" class="btn-outline" id="premio-copiar">${icon('copy','tiny')} Copiar link</button></div>
+    <div class="nps-filtros">${PREMIO_EDICOES.map(([k,l])=>`<button type="button" class="filter-tab ${PREMIO_UI.edicao===k?'active':''}" data-pe-ed="${k}">${l}</button>`).join('')}</div>
+    <p class="section-sub" style="margin-top:0">Respostas do formulário "Seus resultados podem ser premiados", aberto pelo banner no Início (alunos do Método e mentorados) e pelo link externo. Cada pessoa participa uma vez por edição e declara que as informações são verídicas. As participações de edições anteriores ficam guardadas.</p>
     <div class="kpi-row">${tile('Participações', rows.length)}${tile('Mais de R$ 30 mil/mês', conta('f30'))}${tile('Mais de R$ 20 mil/mês', conta('f20'))}${tile('Mais de R$ 10 mil/mês', conta('f10'))}${tile('Mais de R$ 5 mil/mês', conta('f5'))}</div>
     <div class="nps-filtros">${[['todos','Todas'],['f30','+ R$ 30 mil'],['f20','+ R$ 20 mil'],['f10','+ R$ 10 mil'],['f5','+ R$ 5 mil'],['f0','Até R$ 5 mil']].map(([k,l])=>`<button type="button" class="filter-tab ${f===k?'active':''}" data-pe-f="${k}">${l}</button>`).join('')}</div>
     <div class="pe-lista">
       ${vis.map(r=>{ const s = getStudent(r.aluno_id); const fx = premioFaixa(r); return `
         <div class="pe-item">
-          <div class="pe-hd"><span class="pe-faixa ${fx.c}">${fx.t}</span><button type="button" class="vg-nome-btn" data-rd-acomp="${s.id}">${escapeHtml(s.name)}</button><small>${escapeHtml(r.produto || (s.tier==='curso'?'Método Essência':'Mentoria Essência'))} · ${tzDataCurta(String(r.created_at).slice(0,10))}</small></div>
+          <div class="pe-hd"><span class="pe-faixa ${fx.c}">${fx.t}</span>${s ? `<button type="button" class="vg-nome-btn" data-rd-acomp="${s.id}">${escapeHtml(s.name)}</button>` : `<strong>${escapeHtml(r.nome||'—')}</strong>`}<small>${escapeHtml(r.produto || (s && s.tier==='curso'?'Método Essência':'Mentoria Essência'))} · ${tzDataCurta(String(r.created_at).slice(0,10))}</small></div>
+          ${s ? '' : `<div class="pe-contato">${whatsappCell(r.whatsapp)} · ${escapeHtml(r.email||'')}</div>`}
           <div class="pe-como">${premioComoTxt(r).map(t=>`<span>${escapeHtml(t)}</span>`).join('')}</div>
           <p class="pe-exp">${escapeHtml(r.experiencia||'')}</p>
           ${r.declaracao ? `<span class="pe-decl">${icon('check')} Declarou que as informações são verídicas</span>` : ''}
@@ -16817,7 +16852,7 @@ const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-b
 const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
 const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
 const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, aba:'mentorados' };
-function radarAbasHtml(){ return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${RADAR_UI.aba==='mentorados'?'active':''}" data-rd-aba="mentorados">Mentorados</button><button type="button" class="filter-tab ${RADAR_UI.aba==='nps'?'active':''}" data-rd-aba="nps">NPS</button><button type="button" class="filter-tab ${RADAR_UI.aba==='premio'?'active':''}" data-rd-aba="premio">Prêmio Essência Experience 2026</button><button type="button" class="filter-tab ${RADAR_UI.aba==='ee'?'active':''}" data-rd-aba="ee">Inscrições Essência Experience</button></div>`; }
+function radarAbasHtml(){ return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${RADAR_UI.aba==='mentorados'?'active':''}" data-rd-aba="mentorados">Mentorados</button><button type="button" class="filter-tab ${RADAR_UI.aba==='nps'?'active':''}" data-rd-aba="nps">NPS</button><button type="button" class="filter-tab ${RADAR_UI.aba==='premio'?'active':''}" data-rd-aba="premio">Prêmio Essência Experience</button><button type="button" class="filter-tab ${RADAR_UI.aba==='ee'?'active':''}" data-rd-aba="ee">Inscrições Essência Experience</button></div>`; }
 function radarBindAbas(el){ el.querySelectorAll('[data-rd-aba]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.aba = b.dataset.rdAba; renderRadar(); })); }
 function radarPode(){
   return currentUserRole==='staff' && !!currentUser && RADAR_UIDS.includes(idEfetivo());
@@ -16948,6 +16983,8 @@ function renderRadar(){
     el.innerHTML = radarAbasHtml() + premioHtmlEquipe();
     radarBindAbas(el);
     el.querySelectorAll('[data-pe-f]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.filtro = b.dataset.peF; renderRadar(); }));
+    el.querySelectorAll('[data-pe-ed]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.edicao = b.dataset.peEd; PREMIO_UI.filtro = 'todos'; renderRadar(); }));
+    const pc = el.querySelector('#premio-copiar'); if(pc) pc.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(premioLinkPublico()); pc.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', premioLinkPublico()); } });
     el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
     return;
   }
@@ -19198,6 +19235,7 @@ sb.auth.onAuthStateChange((event, session)=>{
   document.getElementById('login-screen').style.display = 'none';
   /* Link externo da inscrição no Essência Experience: abre só o formulário, sem login. */
   if(new URLSearchParams(location.search).has('inscricao')){ eeAbrir({publico:true}); return; }
+  if(new URLSearchParams(location.search).has('premio')){ premioAbrir({publico:true}); return; }
   try{
     const { data: { session } } = await sb.auth.getSession();
     if(session && session.user){
