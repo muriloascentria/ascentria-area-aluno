@@ -3795,7 +3795,7 @@ function nomeAlunoTag(id){
 }
 function alunoSelectOpts(current){
   return `<option value="">— Sem aluno vinculado —</option>` +
-    alunosParaVinculo().map(s=>`<option value="${s.id}" ${current===s.id?'selected':''}>${escapeHtml(s.name)}${s.tier==='curso'? (s.bonus? ' (Método + Bônus)' : ' (Curso)') : ''}</option>`).join('');
+    alunosParaVinculo().map(s=>`<option value="${s.id}" ${current===s.id?'selected':''}>${escapeHtml(s.name)}${s.tier==='curso'? (s.pos? ' (Pós-graduação)' : (s.bonus? ' (Método + Bônus)' : ' (Curso)')) : ''}</option>`).join('');
 }
 /* Sugestões de aluno por semelhança de nome — só SUGERE; quem confirma é a pessoa. Os nomes de lead
    no registro de vendas são descritivos ("Enfermeira Fulana e esposo"), então casar sozinho erraria. */
@@ -3941,7 +3941,7 @@ function aniversariantesClientes(hoje){
     if(lista.some(x=>x.aluno===st.name || normTxt(x.nome)===normTxt(st.name))) return;
     if(!(st.cadastro && fazAniversarioEm(st.cadastro.dataNascimento, hj))) return;
     lista.push({ id:'a'+st.id, nome: st.name, idade: idadeQueFaz(st.cadastro.dataNascimento, hj),
-      tags:[st.tier==='curso' ? 'Método Essência' : 'Mentoria Essência'], whatsapp:(st.cadastro.telefone||''),
+      tags:[produtoAluno(st).replace('graduação','Graduação')], whatsapp:(st.cadastro.telefone||''),
       cidade:(st.cadastro.cidade||''), initials:st.initials, color:st.color, avatarUrl:st.avatarUrl, aluno:st.name });
   });
   return lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
@@ -4347,9 +4347,12 @@ function liveSessionLiberadaBonus(l){
 }
 function tierLabel(s){
   if(!s) return '';
-  if(s.tier==='curso') return s.bonus ? 'Método + Bônus' : 'Método';
+  if(s.tier==='curso') return s.pos ? 'Pós-graduação' : (s.bonus ? 'Método + Bônus' : 'Método');
   return 'Mentoria';
 }
+/* Perfil "Pós-graduação": mesmo acesso do Método (curso gravado, tier 'curso'), só muda o nome do perfil
+   e do produto (profiles.pos = true). */
+function produtoAluno(s){ return s && s.tier==='curso' ? (s.pos ? 'Pós-graduação' : 'Método Essência') : 'Mentoria Essência'; }
 function getViewingTier(){
   // No modo "Equipe Interna" (currentRole==='staff'), a equipe não está vendo como um aluno específico —
   // segue a aba de comunidade que ela mesma escolheu (currentCommunityAudience). Já no modo "Aluno" —
@@ -4389,6 +4392,7 @@ function mapProfileRow(p){
     /* 'Método + Bônus': aluno do curso (tier 'curso') que também participa dos encontros ao vivo da
        mentoria de terça (Plantão de Dúvidas) e sexta (Consultório Simulado). Só muda a Agenda. */
     bonus: !!p.bonus,
+    pos: !!p.pos,
     /* Aluno do curso com TODAS as aulas liberadas de uma vez (sem o bloqueio sequencial) — a equipe liga na Visão Geral. */
     aulasLiberadas: !!p.aulas_liberadas,
     /* Início real (para o NPS de 4, 8 e 12 meses): a data de matrícula; sem ela, o dia em que a conta foi criada. */
@@ -4459,7 +4463,7 @@ async function bootstrapData(){
     try{ const { data: rest } = await sb.from('staff_restrito').select('bloqueios').eq('user_id', currentUser.id).maybeSingle();
       if(rest && Array.isArray(rest.bloqueios)) STAFF_BLOQUEIOS = new Set(rest.bloqueios); }catch(e){}
   }
-  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, aulasLiberadas:!!me.aulas_liberadas, contaTeste:!!me.conta_teste, espelhoDe:me.espelho_de||null, perfilTeste:me.perfil_teste||null} : null;
+  currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:me.tier||'mentorado', bonus:!!me.bonus, pos:!!me.pos, aulasLiberadas:!!me.aulas_liberadas, contaTeste:!!me.conta_teste, espelhoDe:me.espelho_de||null, perfilTeste:me.perfil_teste||null} : null;
 
   /* Papel 'vendas' (vendedora do time): acesso restrito ao Registro de Sessões 1:1 e nada mais.
      Carrega só essa lista — nenhum dado de aluno, comunidade, aulas, clientes ou financeiro chega ao
@@ -5125,22 +5129,22 @@ function syncClienteDelete(id){
 /* ---- Códigos de acesso (Criar conta) ---- */
 function mapAccessCodeRow(row){
   return {
-    id: row.id, code: row.code, tier: row.tier, bonus: !!row.bonus, label: row.label || '',
+    id: row.id, code: row.code, tier: row.tier, bonus: !!row.bonus, pos: !!row.pos, label: row.label || '',
     usedBy: row.used_by || null, usedAt: row.used_at || null, createdAt: row.created_at || '',
   };
 }
 function accessCodeAlphabet(){ return 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; } // sem 0/O/1/I, evita confusão na hora de digitar
-function generateAccessCodeString(tier, bonus){
+function generateAccessCodeString(tier, bonus, pos){
   const abc = accessCodeAlphabet();
   let rand = '';
   for(let i=0;i<6;i++) rand += abc[Math.floor(Math.random()*abc.length)];
-  return (tier==='curso' ? (bonus ? 'BONUS-' : 'METODO-') : 'MENTOR-') + rand;
+  return (tier==='curso' ? (pos ? 'POS-' : (bonus ? 'BONUS-' : 'METODO-')) : 'MENTOR-') + rand;
 }
 /* Gera e grava um código novo, tentando de novo em caso (raríssimo) de colisão com um já existente. */
-async function syncAccessCodeGenerate(tier, label, bonus){
+async function syncAccessCodeGenerate(tier, label, bonus, pos){
   for(let tries=0; tries<5; tries++){
-    const code = generateAccessCodeString(tier, bonus);
-    const { data, error } = await sb.from('access_codes').insert({ code, tier, bonus: !!bonus, label: label || null, created_by: currentUser.id }).select().single();
+    const code = generateAccessCodeString(tier, bonus, pos);
+    const { data, error } = await sb.from('access_codes').insert({ code, tier, bonus: !!bonus, pos: !!pos, label: label || null, created_by: currentUser.id }).select().single();
     if(!error) return data;
     if(!/duplicate|unique/i.test(error.message||'')) throw error;
   }
@@ -5357,8 +5361,8 @@ function syncFinLancamentoUpdate(id, fields){ syncNow(sb.from('fin_lancamentos')
 function syncFinLancamentoDelete(id){ syncNow(sb.from('fin_lancamentos').delete().eq('id', id)); }
 /* Muda um aluno entre 'mentorado' (acesso completo) e 'curso' (curso gravado, só Aulas + comunidade
    própria) — ver Visão Geral, onde a equipe interna faz essa troca. */
-function syncStudentTierUpdate(id, tier, bonus){
-  syncNow(sb.from('profiles').update({tier, bonus: !!bonus}).eq('id', id));
+function syncStudentTierUpdate(id, tier, bonus, pos){
+  syncNow(sb.from('profiles').update({tier, bonus: !!bonus, pos: !!pos}).eq('id', id));
 }
 /* Códigos de acesso (Criar conta): a validação em si é sempre feita no banco (validate_access_code
    antes do signUp, redeem_access_code depois de logado) — nunca no cliente. O único papel deste
@@ -6204,7 +6208,7 @@ function renderInicioCurso(s){
     <div class="hero">
       <div>
         <h1>Olá, ${escapeHtml(s.name.split(' ')[0])}</h1>
-        <p>Bem-vindo(a) de volta à sua área do Método Essência.</p>
+        <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : 'do Método Essência'}.</p>
       </div>
       ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
     </div>
@@ -9964,7 +9968,7 @@ function exportAcompanhamentoPDF(s){
         <div>
           <div class="cat">Acompanhamento completo do mentorado</div>
           <h1>${escapeHtml(s.name)}</h1>
-          <div class="cat" style="text-transform:none">${escapeHtml((s.tier==='curso'? (s.bonus? 'Curso Gravado + Bônus' : 'Curso Gravado') : 'Mentoria Método Essência'))} · Documento gerado em ${geradoEm}</div>
+          <div class="cat" style="text-transform:none">${escapeHtml((s.tier==='curso'? (s.pos? 'Pós-graduação' : (s.bonus? 'Curso Gravado + Bônus' : 'Curso Gravado')) : 'Mentoria Método Essência'))} · Documento gerado em ${geradoEm}</div>
         </div>
       </div>
 
@@ -10248,7 +10252,7 @@ function renderInterno(){
   /* Seletor de mentorado (no lugar da lista que ficava no menu da foto): ordem alfabética, com foto,
      e uma busca por nome pra achar rápido. Escolher abre o acompanhamento da pessoa aqui mesmo. */
   const alunosOrdenados = STUDENTS.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-  const tierLabel = (st)=> st.tier==='curso' ? (st.bonus? 'Método + Bônus' : 'Método') : 'Mentoria';
+  const tierLabel = (st)=> st.tier==='curso' ? (st.pos? 'Pós-graduação' : (st.bonus? 'Método + Bônus' : 'Método')) : 'Mentoria';
   const alunoPickerHtml = `
     <div class="aluno-picker" id="aluno-picker">
       <button type="button" class="aluno-picker-btn" id="aluno-picker-btn" aria-expanded="false">
@@ -15899,11 +15903,12 @@ function nextCourseLessonFor(s){
   return nextId ? getCourse(nextId) : null;
 }
 function tierSelectHtml(s){
-  const atual = s.tier==='curso' ? (s.bonus ? 'curso_bonus' : 'curso') : 'mentorado';
+  const atual = s.tier==='curso' ? (s.pos ? 'curso_pos' : (s.bonus ? 'curso_bonus' : 'curso')) : 'mentorado';
   return `<select class="ps-input" style="padding:6px 8px;font-size:12px" data-tier-select="${s.id}">
     <option value="mentorado" ${atual==='mentorado'?'selected':''}>Mentorado</option>
     <option value="curso" ${atual==='curso'?'selected':''}>Método (curso)</option>
     <option value="curso_bonus" ${atual==='curso_bonus'?'selected':''}>Método + Bônus</option>
+    <option value="curso_pos" ${atual==='curso_pos'?'selected':''}>Pós-graduação</option>
   </select>`;
 }
 function bindTierSelects(root, afterChange){
@@ -15913,7 +15918,8 @@ function bindTierSelects(root, afterChange){
       if(!s) return;
       s.tier = sel.value==='mentorado' ? 'mentorado' : 'curso';
       s.bonus = sel.value==='curso_bonus';
-      syncStudentTierUpdate(s.id, s.tier, s.bonus);
+      s.pos = sel.value==='curso_pos';
+      syncStudentTierUpdate(s.id, s.tier, s.bonus, s.pos);
       afterChange();
     });
   });
@@ -16292,7 +16298,7 @@ function epInicioHtml(s){
 const NPS_MARCOS = [4, 8, 12];
 let NPS_MINHAS = null;
 function npsAddMeses(iso, m){ const [y,mo,d] = iso.split('-').map(Number); const dt = new Date(y, mo-1+m, d); dt.setHours(0,0,0,0); return dt; }
-function npsProduto(s){ return s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência'; }
+function npsProduto(s){ return produtoAluno(s); }
 function npsMarcoDevido(s, respostas){
   if(!s || !s.inicioReal) return null;
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -16505,7 +16511,7 @@ async function premioAbrir(opts){
   const s = publico ? null : getStudent(currentStudentId);
   const souAluno = !publico && currentUserRole==='aluno' && !!currentUser;
   const podeEnviar = publico || souAluno;
-  const produto = publico ? 'Link externo' : (s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência');
+  const produto = publico ? 'Link externo' : produtoAluno(s);
   const st = { nome:'', whatsapp:'', email:'', campoErro:'', passo:1, fat:{ fat_5k:null, fat_10k:null, fat_20k:null, fat_30k:null }, decl:false, como:[], outros:'', exp:'', erro:'', enviando:false, existente:undefined };
   const page = document.createElement('div');
   page.className = 'premio-page ee-page';
@@ -16704,7 +16710,7 @@ async function eeAbrir(opts){
   const s = publico ? null : getStudent(currentStudentId);
   const souAluno = !publico && currentUserRole==='aluno' && !!currentUser;
   const podeEnviar = publico || souAluno;
-  const produto = publico ? 'Link externo' : (s && s.tier==='curso' ? 'Método Essência' : 'Mentoria Essência');
+  const produto = publico ? 'Link externo' : produtoAluno(s);
   const st = {
     nome: (souAluno && currentUserProfile && currentUserProfile.name) || '', whatsapp: (s && s.cadastro && s.cadastro.telefone) || '',
     email: (souAluno && currentUser.email) || '', area:'', vinculo: souAluno ? 'aluno' : '', convidadoPor:'', confirma:null,
@@ -16895,7 +16901,7 @@ function premioHtmlEquipe(){
     <div class="pe-lista">
       ${vis.map(r=>{ const s = getStudent(r.aluno_id); const fx = premioFaixa(r); return `
         <div class="pe-item">
-          <div class="pe-hd"><span class="pe-faixa ${fx.c}">${fx.t}</span>${s ? `<button type="button" class="vg-nome-btn" data-rd-acomp="${s.id}">${escapeHtml(s.name)}</button>` : `<strong>${escapeHtml(r.nome||'—')}</strong>`}<small>${escapeHtml(r.produto || (s && s.tier==='curso'?'Método Essência':'Mentoria Essência'))} · ${tzDataCurta(String(r.created_at).slice(0,10))}</small></div>
+          <div class="pe-hd"><span class="pe-faixa ${fx.c}">${fx.t}</span>${s ? `<button type="button" class="vg-nome-btn" data-rd-acomp="${s.id}">${escapeHtml(s.name)}</button>` : `<strong>${escapeHtml(r.nome||'—')}</strong>`}<small>${escapeHtml(r.produto || produtoAluno(s))} · ${tzDataCurta(String(r.created_at).slice(0,10))}</small></div>
           ${s ? '' : `<div class="pe-contato">${whatsappCell(r.whatsapp)} · ${escapeHtml(r.email||'')}</div>`}
           <div class="pe-como">${premioComoTxt(r).map(t=>`<span>${escapeHtml(t)}</span>`).join('')}</div>
           <p class="pe-exp">${escapeHtml(r.experiencia||'')}</p>
@@ -17454,6 +17460,7 @@ function renderVisaoGeral(){
           <option value="mentorado">Mentoria (mentorado)</option>
           <option value="curso">Método (curso gravado)</option>
           <option value="curso_bonus">Método + Bônus (curso + encontros de terça e sexta)</option>
+          <option value="curso_pos">Pós-graduação (curso gravado)</option>
         </select>
       </div>
       <div class="field full"><label>Identificação (opcional)</label><input class="ps-input" type="text" id="new-code-label" placeholder="Ex.: nome de quem vai usar, ou turma"></div>
@@ -17468,7 +17475,7 @@ function renderVisaoGeral(){
           ${ACCESS_CODES.filter(c=>!c.usedBy).map(c=>`
             <tr>
               <td style="font-family:monospace;font-weight:600;white-space:nowrap">${escapeHtml(c.code)}</td>
-              <td><span class="resp-pill">${c.tier==='curso'? (c.bonus? 'Método + Bônus' : 'Método') : 'Mentoria'}</span></td>
+              <td><span class="resp-pill">${tierLabel(c)}</span></td>
               <td>${escapeHtml(c.label||'—')}</td>
               <td style="white-space:nowrap">
                 <button class="btn-mini" data-copy-code="${escapeAttr(c.code)}">${icon('copy')} Copiar</button>
@@ -17493,11 +17500,12 @@ function renderVisaoGeral(){
     const escolha = document.getElementById('new-code-tier').value;
     const tier = escolha==='mentorado' ? 'mentorado' : 'curso';
     const bonus = escolha==='curso_bonus';
+    const pos = escolha==='curso_pos';
     const label = document.getElementById('new-code-label').value.trim();
     const btn = document.getElementById('gen-code-btn');
     btn.disabled = true;
     try{
-      const row = await syncAccessCodeGenerate(tier, label, bonus);
+      const row = await syncAccessCodeGenerate(tier, label, bonus, pos);
       ACCESS_CODES.unshift(mapAccessCodeRow(row));
       renderVisaoGeral();
     }catch(e){ console.error(e); btn.disabled = false; }
@@ -17795,7 +17803,7 @@ function clienteDeAluno(st){
     nome: sc.nomeCompleto || st.name, cpf: sc.cpf || '', cnpj: '', nascimento: sc.dataNascimento || '',
     whatsapp: sc.telefone || '', email: sc.email || '', cep:'', endereco:'', numero:'', complemento:'', pontoReferencia:'',
     bairro:'', estado:'', cidade: sc.cidade || '', pais:'Brasil', comoConheceu:'',
-    tags: [st.tier==='curso' ? 'Método Essência' : 'Mentoria Essência'], studentId: st.id,
+    tags: [produtoAluno(st).replace('graduação','Graduação')], studentId: st.id,
   };
 }
 async function sincronizarAlunosClientes(){
@@ -17813,7 +17821,7 @@ async function sincronizarAlunosClientes(){
   if(btn){ btn.disabled = true; btn.textContent = 'Sincronizando...'; }
   try{
     for(const {st, c} of paraVincular){
-      const tag = st.tier==='curso' ? 'Método Essência' : 'Mentoria Essência';
+      const tag = produtoAluno(st).replace('graduação','Graduação');
       const tags = c.tags.includes(tag) ? c.tags : c.tags.concat([tag]);
       await syncClienteVincular(c.id, st.id, tags);
       c.studentId = st.id; c.tags = tags;
