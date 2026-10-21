@@ -9,7 +9,7 @@
    Nada do Supabase (dados, mensagens, áudios, arquivos) passa por aqui: é outro endereço e
    vai direto para a rede, sempre ao vivo. */
 
-const CACHE = 'ascentria-v2';
+const CACHE = 'ascentria-v3';
 const ESSENCIAIS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e)=>{
@@ -42,7 +42,8 @@ self.addEventListener('fetch', (e)=>{
   if(ehPagina){
     e.respondWith((async ()=>{
       try{
-        const resp = await fetch(req);
+        /* cache:'no-store': não aceita cópia guardada pelo navegador; vai sempre ao servidor. */
+        const resp = await fetch(req.url, { cache:'no-store', credentials:'same-origin' });
         if(resp && resp.ok){ const c = await caches.open(CACHE); c.put('./index.html', resp.clone()); }
         return resp;
       }catch(err){
