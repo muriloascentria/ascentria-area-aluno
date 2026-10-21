@@ -635,6 +635,7 @@
   .staff-note.new-reply{color:var(--accent-2);background:var(--accent-soft);}
   .staff-tag{display:inline-block;font-size:9.5px;font-weight:800;color:var(--accent-2);background:var(--accent-soft);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle;text-transform:uppercase;letter-spacing:.02em;}
   .post.post-unseen{border-color:var(--accent-2);box-shadow:0 0 0 1px var(--accent-2);}
+  .post.post-destaque{box-shadow:0 0 0 3px var(--accent);transition:box-shadow .3s;}
   .post-text{font-size:13.5px;line-height:1.55;color:var(--text);margin-bottom:12px;}
   .mention{color:var(--accent-2);font-weight:700;background:var(--accent-soft);padding:0 4px;border-radius:5px;}
   .mention-wrap{position:relative;flex:1;min-width:0;}
@@ -5586,7 +5587,7 @@ function notifItens(){
   if(equipe && typeof tarefasNaoLidas==='function'){
     tarefasNaoLidas().forEach(n=>{
       const t = (typeof TAREFAS!=='undefined' ? TAREFAS : []).find(x=>x.id===n.tarefaId);
-      itens.push({ tipo:'tarefa', icone:'check', quando:n.createdAt, titulo:n.texto||'Aviso de tarefa', sub: t ? t.titulo : 'Tarefas', acao: ()=>{ if(currentView!=='tarefas') goTo('tarefas'); openTarefaModal(n.tarefaId); } });
+      itens.push({ tipo:'tarefa', icone:'check', quando:n.createdAt, titulo:n.texto||'Aviso de tarefa', sub: t ? t.titulo : 'Tarefas', acao: ()=>notifAbrirTarefa(n) });
     });
   }
   if(equipe){
@@ -5618,15 +5619,40 @@ function notifItens(){
     const onde = c ? `na aula "${c.title}"` : 'na Comunidade';
     const nome = x.quem_nome ? x.quem_nome.split(' ')[0] : 'Alguém';
     const titulo = x.motivo==='duvida' ? `${nome} deixou uma dúvida ${onde}` : x.motivo==='mencao' ? `${nome} mencionou você ${onde}` : `${nome} respondeu você ${onde}`;
-    itens.push({ tipo:'comunidade', avatarDe:x.quem_id, quando:x.quando, titulo, sub:(x.texto||'').replace(/\s+/g,' '), acao: ()=>{
-      currentCommunityAudience = x.audience||'mentorado';
-      if(x.course_id){ openCourseModal(x.course_id); return; }
-      communityFilter = currentRole==='staff' ? 'duvida' : 'todas';
-      goTo('comunidade');
-    } });
+    itens.push({ tipo:'comunidade', avatarDe:x.quem_id, quando:x.quando, titulo, sub:(x.texto||'').replace(/\s+/g,' '), acao: ()=>notifAbrirComunidade(x) });
   });
   itens.sort((a,b)=> String(b.quando||'').localeCompare(String(a.quando||'')));
   return itens;
+}
+/* Aviso de tarefa: sai do sino no clique, mesmo que a tarefa tenha sido excluída depois. Antes a
+   marcação de lido só acontecia dentro da tarefa aberta; se ela não existia mais, o aviso ficava preso. */
+async function notifAbrirTarefa(n){
+  tarefasMarcarLidas([n.id]);
+  const t = (TAREFAS||[]).find(x=>x.id===n.tarefaId) || await recarregarTarefa(n.tarefaId);
+  if(!t || t.excluida){ alert('Essa tarefa foi excluída.'); return; }
+  if(currentView!=='tarefas') goTo('tarefas');
+  openTarefaModal(n.tarefaId);
+}
+/* Aviso da Comunidade: o clique já dá a resposta/menção por vista (no banco) e leva até a publicação.
+   Antes, publicações antigas não estavam carregadas no mural (que vem em páginas) e as feitas em outra
+   comunidade não aparecem na aula; como só o que aparece na tela era marcado como visto, o aviso
+   nunca saía do sino e o clique parecia não abrir nada. */
+async function notifAbrirComunidade(x){
+  currentCommunityAudience = x.audience||'mentorado';
+  let post = COMMUNITY_POSTS.find(p=>String(p.id)===String(x.post_id));
+  if(!post){
+    try{ const { data } = await sb.from('community_posts').select(POST_SELECT).eq('id', x.post_id); mergeCommunityRows(data||[]); }catch(e){ console.error('notif comunidade', e); }
+    post = COMMUNITY_POSTS.find(p=>String(p.id)===String(x.post_id));
+  }
+  if(post) markVisiblePostsSeen([post]);
+  if(x.motivo!=='duvida'){ PENDENCIAS = PENDENCIAS.filter(p=>!(String(p.post_id)===String(x.post_id) && p.motivo===x.motivo)); updateNotifBadge(); }
+  if(x.course_id){ openCourseModal(x.course_id); return; }
+  communityFilter = 'todas';
+  if(currentView!=='comunidade') goTo('comunidade'); else renderComunidade();
+  setTimeout(()=>{
+    const el = document.querySelector(`[data-post-id="${x.post_id}"]`);
+    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('post-destaque'); setTimeout(()=>el.classList.remove('post-destaque'), 2600); }
+  }, 120);
 }
 function notifPainelHtml(){
   const itens = notifItens();
@@ -7460,7 +7486,7 @@ function postHtml(p,compact,showCourseTag){
   const isMine = p.authorId===actingAuthorId();
   const canDeletePost = isMine || iAmStaff;
   return `
-    <div class="post post-border-${t.css}${((isMine && p.notifyAuthor) || fuiMencionadoEm(p.id))?' post-unseen':''}">
+    <div class="post post-border-${t.css}${((isMine && p.notifyAuthor) || fuiMencionadoEm(p.id))?' post-unseen':''}" data-post-id="${p.id}">
       <div class="post-head">
         ${initialsAvatar(author.initials,author.color,undefined,author.avatarUrl)}
         <div class="who"><div class="name">${author.name}${nameTag(author)}</div><div class="time">${p.time}</div></div>
