@@ -1967,8 +1967,10 @@
   .gtf-form{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px dashed var(--border);}
   .gtf-novo{display:flex;justify-content:flex-end;margin-top:8px;}
   .gtf-novo .btn-accent{display:inline-flex;align-items:center;gap:6px;}
-  .gtf-modal .gtf-origem{margin-bottom:6px;}
+  .gtf-modal .gtf-origem{display:block;margin-bottom:10px;line-height:1.45;}
+  .gtf-modal .gtf-origem .icon{display:inline-block;vertical-align:-2px;margin-right:4px;}
   .gtf-modal .gtf-acoes{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
+  .gtf-modal .gtf-acoes .btn-accent{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;}
   .gtf-resps{display:flex;flex-wrap:wrap;align-items:center;gap:4px;}
   .gtf-resps em{font-style:normal;margin-left:4px;}
   .gtf-quem{display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:10px;border:1px dashed var(--border);color:var(--text-dim);font-weight:600;}
@@ -12349,7 +12351,7 @@ function gtfAbrirForm(grupo, ini){
         <div class="cat">${escapeHtml(grupo.nome||'Grupo')}</div>
         <h3>Nova tarefa do grupo</h3>
         <p class="desc">Fica só neste grupo. Cada responsável marca a sua parte como resolvida, e a tarefa fecha quando todos marcarem.</p>
-        ${r.msgId ? `<div class="gtf-origem">${icon('comment','tiny')} Sobre a mensagem${origem ? ` de ${escapeHtml(msgNomeDe(origem.de).split(' ')[0])}: “${escapeHtml(String(origem.texto||'').slice(0,120))}${String(origem.texto||'').length>120?'…':''}”` : ''} <button type="button" class="link-btn" id="gtf-sem-origem">tirar</button></div>` : ''}
+        ${r.msgId ? `<div class="gtf-origem">${icon('comment','tiny')} Sobre a mensagem${origem ? ` de ${escapeHtml(msgNomeDe(origem.de).split(' ')[0])}: “${escapeHtml(String(origem.texto||'').slice(0,120))}${String(origem.texto||'').length>120?'…':''}”` : ''}</div>` : ''}
         <label class="ps-label">O que precisa ser resolvido?</label>
         <textarea class="ps-input" id="gtf-texto" rows="3" maxlength="500">${escapeHtml(r.texto)}</textarea>
         <label class="ps-label">Responsáveis <small style="font-weight:400;color:var(--text-mute)">(pode marcar mais de um)</small></label>
@@ -12364,7 +12366,6 @@ function gtfAbrirForm(grupo, ini){
     const md = document.getElementById('modal');
     const guarda = ()=>{ r.texto = md.querySelector('#gtf-texto').value; r.prazo = md.querySelector('#gtf-prazo').value; };
     md.querySelector('#gtf-cancelar').addEventListener('click', closeModal);
-    const so = md.querySelector('#gtf-sem-origem'); if(so) so.addEventListener('click', ()=>{ guarda(); r.msgId = null; desenha(); });
     md.querySelectorAll('[data-gtf-resp]').forEach(c=>c.addEventListener('change', ()=>{
       const id = c.dataset.gtfResp;
       r.resps = c.checked ? r.resps.concat(r.resps.includes(id)?[]:[id]) : r.resps.filter(x=>x!==id);
