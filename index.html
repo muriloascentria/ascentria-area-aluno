@@ -1082,6 +1082,11 @@
   .an-dest-txt p{margin:2px 0 0;font-size:12.5px;color:var(--text-dim);word-break:break-word;}
   .an-dest-acoes{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
   .an-dest-acoes .btn-accent{display:inline-flex;align-items:center;gap:5px;text-decoration:none;white-space:nowrap;}
+  .an-dest-marks{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+  .an-dest-mark{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;border:1px solid var(--border);color:var(--danger);}
+  .an-dest-mark.ok{color:var(--success);border-color:var(--success);}
+  .an-dest-mark .icon{width:11px;height:11px;}
+  .an-dest-video{display:inline-flex;align-items:center;gap:5px;text-decoration:none;white-space:nowrap;}
   .an-dest-add{margin-top:10px;display:inline-flex;align-items:center;gap:4px;font-size:12.5px;}
   .an-dest-novo{display:flex;justify-content:flex-end;margin:-4px 0 14px;}
   .an-dest-novo .btn-outline{display:inline-flex;align-items:center;gap:5px;}
@@ -15121,13 +15126,20 @@ function analiseAprendizadosCell(a, v){
 }
 /* Destaques fixados no topo da Análise Sessões 1:1: análises e feedbacks de quem vem de fora do
    time comercial (ex.: Vanessa Medeiros). Ficam em analise_destaques, agrupados por autor. */
-let AN_DEST = null, AN_DEST_CARREGANDO = false;
+let AN_DEST = null, AN_DEST_CARREGANDO = false, AN_DEST_REG = [];
+/* Quem assiste e registra aprendizados dos destaques: as mesmas analistas da planilha, menos quem já saiu das vendas. */
+function anDestAnalistas(){ return ANALISE_VENDEDORAS.filter(v=>!v.ate); }
+function anDestReg(did, uid){ return AN_DEST_REG.find(r=>String(r.destaque_id)===String(did) && r.user_id===uid) || null; }
+function anDestFeito(r){ return !!r && !!r.assistiu && !!(String(r.aprendizado1||'').trim() || String(r.aprendizado2||'').trim()); }
 async function anDestCarregar(){
   if(AN_DEST_CARREGANDO) return; AN_DEST_CARREGANDO = true;
   try{
-    const { data, error } = await sb.from('analise_destaques').select('*').eq('ativo', true).order('ordem', {ascending:false}).order('data', {ascending:false});
-    if(error) throw error;
-    AN_DEST = data || [];
+    const [d, r] = await Promise.all([
+      sb.from('analise_destaques').select('*').eq('ativo', true).order('ordem', {ascending:false}).order('data', {ascending:false}),
+      sb.from('analise_destaque_registros').select('*'),
+    ]);
+    if(d.error) throw d.error;
+    AN_DEST = d.data || []; AN_DEST_REG = (r && r.data) || [];
   }catch(e){ console.error('analise_destaques', e); if(AN_DEST===null) AN_DEST = []; }
   AN_DEST_CARREGANDO = false;
   if(currentView==='analise') renderAnalise();
@@ -15153,9 +15165,11 @@ function anDestHtml(){
               <strong>${escapeHtml(d.titulo||'Sem título')}</strong>
               ${d.data ? `<small>${tzDataCurta(d.data)}</small>` : ''}
               ${d.descricao ? `<p>${linkify(d.descricao)}</p>` : ''}
+              <div class="an-dest-marks">${anDestAnalistas().map(v=>{ const ok = anDestFeito(anDestReg(d.id, v.userId)); return `<span class="an-dest-mark ${ok?'ok':''}" title="${escapeAttr(v.nome)} ${ok?'assistiu e registrou':'ainda não registrou'}">${ok?icon('tick','tiny'):'✕'} ${escapeHtml(v.nome)}</span>`; }).join('')}</div>
             </div>
             <div class="an-dest-acoes">
-              ${ok ? `<a class="btn-accent btn-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : ''}
+              ${ok ? `<a class="btn-outline an-dest-video" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Assistir</a>` : ''}
+              <button type="button" class="btn-accent btn-abrir" data-an-dest-reg="${d.id}">${anDestAnalistas().some(v=>v.userId===(currentUser&&currentUser.id)) ? 'Registrar' : 'Abrir'}</button>
               ${pode ? `<button type="button" class="btn-mini icon-only" data-an-dest-edit="${d.id}" title="Editar">${icon('edit','tiny')}</button><button type="button" class="btn-mini icon-only danger" data-an-dest-del="${d.id}" title="Tirar do destaque">${icon('trash','tiny')}</button>` : ''}
             </div>
           </div>`; }).join('')}</div>
@@ -15201,8 +15215,65 @@ function anDestForm(d, autorIni){
   modalReturnTo = null; modalCloseGuard = null;
   document.getElementById('modal-backdrop').classList.add('open');
 }
+/* Registro de cada analista num destaque: mesmo formato da planilha (assisti + 2 aprendizados), e a
+   mesma regra: cada uma escreve só no próprio espaço e só vê as colegas depois de salvar a sua. */
+function anDestRegistro(d){
+  const eu = currentUser ? currentUser.id : null;
+  const analistas = anDestAnalistas();
+  const minha = analistas.find(v=>v.userId===eu) || null;
+  const meu = minha ? (anDestReg(d.id, eu) || {}) : null;
+  const podeVerColegas = !minha || anDestFeito(anDestReg(d.id, eu));
+  const u = String(d.link||'').trim();
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Análise feita por ${escapeHtml(d.autor||'')}</div>
+      <h3>${escapeHtml(d.titulo||'')}</h3>
+      ${d.data ? `<p class="desc" style="margin-top:-4px">${tzDataCurta(d.data)}</p>` : ''}
+      ${/^https?:\/\//i.test(u) ? `<div style="margin:6px 0 4px"><a class="btn-outline an-dest-video" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Assistir o vídeo</a></div>` : ''}
+      <h4 style="margin:14px 0 2px">Aprendizados</h4>
+      <p class="section-sub" style="margin:0 0 4px;font-size:12px">Cada pessoa registra só no próprio espaço; os demais ficam bloqueados.${podeVerColegas ? '' : ' Os aprendizados das colegas aparecem depois que você salvar o seu.'}</p>
+      ${analistas.map(v=>{
+        const r = anDestReg(d.id, v.userId) || {};
+        const ehEu = minha && minha.key===v.key;
+        const feito = anDestFeito(r);
+        const t1 = String(r.aprendizado1||'').trim(), t2 = String(r.aprendizado2||'').trim();
+        return `<div class="an-pessoa ${ehEu?'':'locked'}">
+          <div class="hd">${feito ? `<span class="treino-mark ok">${icon('tick')}</span>` : '<span class="treino-mark no">✕</span>'} ${escapeHtml(v.nome)} ${ehEu ? '<span class="resp-pill">você</span>' : icon('lock')}</div>
+          ${ehEu ? `
+            <label class="ps-label" style="display:flex;align-items:center;gap:8px;margin-top:2px">
+              <input type="checkbox" id="adr-assistiu" ${r.assistiu?'checked':''}> Já assisti a análise
+            </label>
+            <label class="ps-label">1</label>
+            <textarea class="ps-input" id="adr-ap1" rows="2" placeholder="Primeiro ponto que você tirou desta análise">${escapeHtml(r.aprendizado1||'')}</textarea>
+            <label class="ps-label">2</label>
+            <textarea class="ps-input" id="adr-ap2" rows="2" placeholder="Segundo ponto">${escapeHtml(r.aprendizado2||'')}</textarea>`
+          : !podeVerColegas ? `<div class="vazio">${feito ? 'Registrou — você verá depois de salvar o seu.' : 'Ainda não registrou.'}</div>`
+          : (t1||t2 ? `${t1? `<div class="num">1</div><div class="txt">${escapeHtml(t1)}</div>` : ''}${t2? `<div class="num">2</div><div class="txt">${escapeHtml(t2)}</div>` : ''}` : `<div class="vazio">${r.assistiu ? 'Assistiu, mas ainda não registrou.' : 'Ainda não registrou.'}</div>`)}
+        </div>`;
+      }).join('')}
+      <div class="modal-actions">
+        ${minha ? `<button class="btn-accent" id="adr-salvar">Salvar</button>` : ''}
+        <button class="btn-outline" id="adr-fechar">Fechar</button>
+      </div>
+    </div>`;
+  const md = document.getElementById('modal');
+  md.querySelector('#adr-fechar').addEventListener('click', closeModal);
+  const sv = md.querySelector('#adr-salvar');
+  if(sv) sv.addEventListener('click', async ()=>{
+    const linha = { destaque_id:d.id, user_id:eu, assistiu: md.querySelector('#adr-assistiu').checked, aprendizado1: md.querySelector('#adr-ap1').value.trim(), aprendizado2: md.querySelector('#adr-ap2').value.trim(), updated_at:new Date().toISOString() };
+    sv.disabled = true;
+    const { data, error } = await sb.from('analise_destaque_registros').upsert(linha, { onConflict:'destaque_id,user_id' }).select().single();
+    if(error){ console.error('analise_destaque_registros', error); alert('Não foi possível salvar: '+(error.message||'')); sv.disabled = false; return; }
+    const salvo = data || linha;
+    AN_DEST_REG = AN_DEST_REG.filter(x=>!(String(x.destaque_id)===String(d.id) && x.user_id===eu)).concat([salvo]);
+    reallyCloseModal(); renderAnalise();
+  });
+  modalReturnTo = null; modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
 function anDestBind(){
   const v = document.getElementById('view-analise'); if(!v) return;
+  v.querySelectorAll('[data-an-dest-reg]').forEach(b=>b.addEventListener('click', ()=>{ const d = (AN_DEST||[]).find(x=>String(x.id)===b.dataset.anDestReg); if(d) anDestRegistro(d); }));
   v.querySelectorAll('[data-an-dest-add]').forEach(b=>b.addEventListener('click', ()=>anDestForm(null, b.dataset.anDestAdd)));
   v.querySelectorAll('[data-an-dest-edit]').forEach(b=>b.addEventListener('click', ()=>{ const d = (AN_DEST||[]).find(x=>String(x.id)===b.dataset.anDestEdit); if(d) anDestForm(d); }));
   v.querySelectorAll('[data-an-dest-del]').forEach(b=>b.addEventListener('click', async ()=>{
