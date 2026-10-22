@@ -2299,7 +2299,21 @@
   .msg-audio-ic .icon{width:14px;height:14px;color:var(--text-mute);}
   .msg-audio small{color:var(--text-mute);font-size:11px;}
   .msg-audio.erro::after{content:'não foi possível tocar aqui — use o botão de baixar';font-size:11px;color:var(--danger);}
-  .msg-audio.erro audio{display:none;}
+  .msg-audio.erro audio,.msg-audio.erro .msg-player{display:none;}
+  .mic-dica{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:3000;max-width:min(440px,92vw);background:var(--bg-elev);border:1px solid var(--accent);border-radius:12px;padding:12px 38px 12px 14px;font-size:12.5px;line-height:1.5;color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.35);}
+  .mic-dica button{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text-mute);cursor:pointer;padding:2px;}
+  .msg-audio:not(.msg-arq-audio):not(.carregando) > small{display:none;}
+  .msg-player{display:flex;align-items:center;gap:8px;flex:1;min-width:0;max-width:300px;}
+  .msg-pp{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:none;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  .msg-pp svg{display:block;}
+  .msg-player:not(.tocando) .msg-pp svg{margin-left:2px;}
+  .msg-prog{flex:1;min-width:60px;height:18px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer;--p:0%;}
+  .msg-prog::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--accent) var(--p),var(--border) var(--p));}
+  .msg-prog::-moz-range-track{height:4px;border-radius:2px;background:var(--border);}
+  .msg-prog::-moz-range-progress{height:4px;border-radius:2px;background:var(--accent);}
+  .msg-prog::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);margin-top:-4.5px;border:none;}
+  .msg-prog::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);border:none;}
+  .msg-tempo{flex:0 0 auto;font-size:11.5px;color:var(--text-mute);font-variant-numeric:tabular-nums;min-width:32px;text-align:right;}
   .msg-audio.carregando small::after{content:' · preparando…';color:var(--text-mute);}
   .msg-editor .ps-input{margin:0;flex:1;resize:none;min-height:38px;max-height:140px;}
   .msg-editor .btn-accent{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
@@ -12747,12 +12761,34 @@ function msgAudioMime(){
   for(const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']){ try{ if(MediaRecorder.isTypeSupported(t)) return t; }catch(e){} }
   return '';
 }
+/* O pedido de permissão do microfone é do navegador/celular, não da Plat. Quando a pessoa libera só
+   "desta vez" (ou no app do iPhone, que esquece a cada abertura), mostramos UMA vez por aparelho como
+   deixar liberado para sempre. */
+async function msgMicDica(){
+  try{ if(localStorage.getItem('ascentria-mic-dica')) return; }catch(e){ return; }
+  let estado = null;
+  try{ if(navigator.permissions && navigator.permissions.query){ estado = (await navigator.permissions.query({name:'microphone'})).state; } }catch(e){}
+  const apple = msgAparelhoApple() || msgSafari();
+  if(!apple && estado === 'granted') { try{ localStorage.setItem('ascentria-mic-dica','1'); }catch(e){} return; }
+  const txt = apple
+    ? 'Para o iPhone não pedir o microfone toda vez: abra <b>Ajustes › Apps › Safari › Microfone</b> e escolha <b>Permitir</b>. No Safari, também dá para tocar em <b>aA</b> na barra de endereço › <b>Ajustes do Site</b> › Microfone › <b>Permitir</b>.'
+    : 'Para não pedir o microfone toda vez: na próxima vez que aparecer o pedido, escolha <b>“Ao usar o app”</b> ou <b>“Permitir”</b> (e não “Somente desta vez”). Ou toque no cadeado ao lado do endereço › <b>Permissões</b> › Microfone › <b>Permitir</b>.';
+  try{ localStorage.setItem('ascentria-mic-dica','1'); }catch(e){}
+  const d = document.createElement('div');
+  d.className = 'mic-dica';
+  d.innerHTML = `<div>${txt}</div><button type="button" aria-label="Fechar">${icon('x','tiny')}</button>`;
+  document.body.appendChild(d);
+  const fecha = ()=>{ d.remove(); };
+  d.querySelector('button').addEventListener('click', fecha);
+  setTimeout(fecha, 16000);
+}
 async function msgGravarIniciar(chave){
   if(msgGrav) return;
   if(!navigator.mediaDevices || !window.MediaRecorder){ alert('Este navegador não permite gravar áudio.'); return; }
   let stream;
   try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
   catch(e){ alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.'); return; }
+  msgMicDica();
   const mime = msgAudioMime();
   let rec;
   try{ rec = mime ? new MediaRecorder(stream, {mimeType:mime}) : new MediaRecorder(stream); }
@@ -12996,9 +13032,76 @@ function msgVelBotaoHtml(){
 }
 /* Aplica a velocidade escolhida. O navegador zera o playbackRate quando troca a fonte do áudio,
    por isso reaplicamos também quando o arquivo termina de carregar e a cada play. */
+/* Player próprio dos áudios, como no WhatsApp: botão de tocar/pausar, barra de progresso que dá
+   para arrastar e o tempo. O player nativo do navegador some no celular quando a bolha é estreita
+   (fica só o play, sem a barra), então ele continua existindo escondido e só serve de motor. */
+const MSG_SVG_PLAY = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+const MSG_SVG_PAUSE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg>';
+function msgPlayerTempo(seg){
+  if(!isFinite(seg) || seg < 0) seg = 0;
+  seg = Math.floor(seg);
+  return Math.floor(seg/60) + ':' + String(seg%60).padStart(2,'0');
+}
+function msgPlayerMontar(a){
+  if(a.dataset.player) return;
+  a.dataset.player = '1';
+  a.removeAttribute('controls');
+  a.style.display = 'none';
+  const pl = document.createElement('div');
+  pl.className = 'msg-player';
+  pl.innerHTML = `<button type="button" class="msg-pp" aria-label="Tocar áudio">${MSG_SVG_PLAY}</button><input type="range" class="msg-prog" min="0" max="1000" value="0" step="1" aria-label="Posição do áudio"><span class="msg-tempo">0:00</span>`;
+  a.parentNode.insertBefore(pl, a);
+  const bt = pl.querySelector('.msg-pp'), rg = pl.querySelector('.msg-prog'), tp = pl.querySelector('.msg-tempo');
+  let arrastando = false, corrigindo = false;
+  const dur = ()=> (isFinite(a.duration) && a.duration > 0) ? a.duration : 0;
+  const pinta = ()=>{
+    const d = dur(), c = a.currentTime || 0;
+    if(!arrastando) rg.value = d ? Math.round(c/d*1000) : 0;
+    rg.style.setProperty('--p', (rg.value/10) + '%');
+    tp.textContent = (a.paused && c === 0) ? msgPlayerTempo(d) : msgPlayerTempo(c);
+  };
+  const icone = ()=>{ const tocando = !a.paused && !a.ended; bt.innerHTML = tocando ? MSG_SVG_PAUSE : MSG_SVG_PLAY; bt.setAttribute('aria-label', tocando ? 'Pausar áudio' : 'Tocar áudio'); pl.classList.toggle('tocando', tocando); };
+  /* Áudios gravados no Chrome chegam sem duração (Infinity) até serem lidos inteiros. O truque é
+     pular para o fim uma vez: o navegador calcula a duração e voltamos para o começo. */
+  a.addEventListener('loadedmetadata', ()=>{
+    if(!isFinite(a.duration)){
+      corrigindo = true;
+      const volta = ()=>{ a.removeEventListener('durationchange', volta); if(corrigindo){ corrigindo = false; try{ a.currentTime = 0; }catch(e){} pinta(); } };
+      a.addEventListener('durationchange', volta);
+      try{ a.currentTime = 1e101; }catch(e){ corrigindo = false; }
+    }
+    pinta();
+  });
+  a.addEventListener('durationchange', pinta);
+  a.addEventListener('timeupdate', ()=>{ if(!corrigindo) pinta(); });
+  a.addEventListener('play', ()=>{
+    /* Um áudio de cada vez, como no WhatsApp. */
+    document.querySelectorAll('.msg-audio audio').forEach(o=>{ if(o !== a && !o.paused){ try{ o.pause(); }catch(e){} } });
+    icone();
+  });
+  a.addEventListener('pause', icone);
+  a.addEventListener('ended', ()=>{ icone(); try{ a.currentTime = 0; }catch(e){} pinta(); });
+  bt.addEventListener('click', ()=>{
+    if(a.paused){ const pr = a.play(); if(pr && pr.catch) pr.catch(err=>console.error('play', err)); }
+    else a.pause();
+  });
+  rg.addEventListener('input', ()=>{
+    arrastando = true;
+    const d = dur();
+    rg.style.setProperty('--p', (rg.value/10) + '%');
+    if(d) tp.textContent = msgPlayerTempo(rg.value/1000*d);
+  });
+  rg.addEventListener('change', ()=>{
+    const d = dur();
+    if(d){ try{ a.currentTime = rg.value/1000*d; }catch(e){} }
+    arrastando = false; pinta();
+  });
+  pinta();
+}
 function msgVelAplicar(root){
   const v = msgVelAtual();
   (root || document).querySelectorAll('.msg-audio audio').forEach(a=>{
+    msgPlayerMontar(a);
     try{ a.playbackRate = v; }catch(e){}
     if(!a.dataset.velLigado){
       a.dataset.velLigado = '1';
