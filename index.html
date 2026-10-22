@@ -1583,6 +1583,7 @@
   .tf-nova-para{border:1px solid var(--border);border-radius:20px;padding:3px 10px;flex-shrink:0;}
   .tf-membro-corpo{padding:10px;display:flex;flex-direction:column;gap:8px;max-height:520px;overflow-y:auto;}
   .tf-membro-corpo[hidden]{display:none;}
+  .tf-card.tf-destaque{box-shadow:0 0 0 2px var(--accent);transition:box-shadow .3s;}
   .tf-card{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s,transform .15s;}
   .tf-card:hover{border-color:var(--accent);transform:translateY(-1px);}
   .tf-card.atrasada{border-left-color:var(--danger);}
@@ -5776,6 +5777,24 @@ async function notifAbrirTarefa(n){
   tarefasMarcarLidas([n.id]);
   const t = (TAREFAS||[]).find(x=>x.id===n.tarefaId) || await recarregarTarefa(n.tarefaId);
   if(!t || t.excluida){ alert('Essa tarefa foi excluída.'); return; }
+  /* Aviso de tarefa concluída por alguém: abre o painel de Concluídas filtrado pela pessoa que
+     concluiu (o responsável), com a tarefa em destaque, em vez de abrir só a tarefa. */
+  if(n.tipo==='concluida'){
+    const pessoa = t.responsavelId;
+    tarefasUI.aba = 'concluidas';
+    tarefasUI.busca = '';
+    Object.assign(tarefasUI.filtros, { responsavel: pessoa || 'todos', criador:'todos', status:'todas', prioridade:'todas', prazo:'todos', de:'', ate:'' });
+    if(!tarefasUI.carregado){ try{ await carregarTarefas(); }catch(e){ console.error(e); } }
+    try{ await carregarTarefasConcluidas(false); }catch(e){ console.error(e); }
+    if(currentView!=='tarefas') goTo('tarefas');
+    if(!(TAREFAS||[]).some(x=>x.id===t.id)) TAREFAS.push(t);
+    renderTarefas();
+    setTimeout(()=>{
+      const card = document.querySelector(`#view-tarefas [data-tf-abrir="${t.id}"]`);
+      if(card){ card.scrollIntoView({block:'center', behavior:'smooth'}); card.classList.add('tf-destaque'); setTimeout(()=>card.classList.remove('tf-destaque'), 3500); }
+    }, 150);
+    return;
+  }
   if(currentView!=='tarefas') goTo('tarefas');
   openTarefaModal(n.tarefaId);
 }
