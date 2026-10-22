@@ -1965,6 +1965,13 @@
   .gtf-feitas summary{font-size:12px;color:var(--text-mute);cursor:pointer;margin:2px 0 6px;}
   .gtf-feitas .gtf-item{margin-bottom:6px;}
   .gtf-form{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px dashed var(--border);}
+  .gtf-resp-sel{position:relative;flex:1;min-width:150px;}
+  .gtf-resp-sel>summary{list-style:none;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gtf-resp-sel>summary::-webkit-details-marker{display:none;}
+  .gtf-resp-op{position:absolute;left:0;right:0;bottom:calc(100% + 4px);z-index:20;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.3);min-width:200px;}
+  .gtf-resp-op label{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:13px;border-radius:6px;cursor:pointer;}
+  .gtf-resp-op label:hover{background:var(--bg-card);}
+  .gtf-resp-op input{accent-color:var(--accent);width:15px;height:15px;}
   .gtf-form-linha{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:6px;}
   .gtf-form .ps-input{min-width:0;}
   .gtf-form .btn-accent{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;}
@@ -12204,7 +12211,7 @@ function msgGruposMudaram(){
    não vai para a lista de Tarefas de ninguém, e acende um alerta para o responsável (no grupo, na
    lista de conversas e no sininho) até ser concluída. */
 let MSG_GTAREFAS = [];
-function gtfMap(r){ return { id:r.id, grupoId:r.grupo_id, texto:r.texto||'', resp:r.responsavel_id||null, prazo:r.prazo||null, msgId:r.mensagem_id||null, criadoPor:r.criado_por, criadoEm:r.created_at, concluida:!!r.concluida, concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null }; }
+function gtfMap(r){ return { id:r.id, grupoId:r.grupo_id, texto:r.texto||'', resp:r.responsavel_id||null, coresp:Array.isArray(r.coresponsaveis)? r.coresponsaveis : [], prazo:r.prazo||null, msgId:r.mensagem_id||null, criadoPor:r.criado_por, criadoEm:r.created_at, concluida:!!r.concluida, concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null }; }
 async function gtfCarregar(){
   if(!msgSouEquipe()) return;
   try{
@@ -12214,16 +12221,19 @@ async function gtfCarregar(){
     MSG_GTAREFAS = (data||[]).map(gtfMap);
   }catch(e){ console.error('gtfCarregar', e); }
 }
+/* Responsáveis da tarefa do grupo: o principal + os demais escolhidos (pode ser mais de um). */
+function gtfResps(t){ return [t.resp].concat(t.coresp||[]).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i); }
 function gtfDoGrupo(gid){ return MSG_GTAREFAS.filter(t=>t.grupoId===gid); }
-function gtfMinhasAbertas(gid){ const eu = msgEu(); return MSG_GTAREFAS.filter(t=>!t.concluida && t.resp===eu && (!gid || t.grupoId===gid) && msgGrupo(t.grupoId)); }
+function gtfMinhasAbertas(gid){ const eu = msgEu(); return MSG_GTAREFAS.filter(t=>!t.concluida && gtfResps(t).includes(eu) && (!gid || t.grupoId===gid) && msgGrupo(t.grupoId)); }
 function gtfMudou(payload){
   if(payload.eventType==='DELETE'){ const id = payload.old && payload.old.id; MSG_GTAREFAS = MSG_GTAREFAS.filter(t=>t.id!==id); }
   else if(payload.new){ const t = gtfMap(payload.new); const i = MSG_GTAREFAS.findIndex(x=>x.id===t.id); if(i>-1) MSG_GTAREFAS[i] = t; else MSG_GTAREFAS.push(t); }
   updateNotifBadge();
   if(msgNaTela()) renderMensagens();
 }
-async function gtfCriar(gid, texto, resp, prazo, msgId){
-  const { data, error } = await sb.from('mensagens_grupo_tarefas').insert({ grupo_id:gid, texto, responsavel_id:resp||null, prazo:prazo||null, mensagem_id:msgId||null, criado_por:msgEu() }).select().single();
+async function gtfCriar(gid, texto, resps, prazo, msgId){
+  resps = (Array.isArray(resps) ? resps : [resps]).filter(Boolean);
+  const { data, error } = await sb.from('mensagens_grupo_tarefas').insert({ grupo_id:gid, texto, responsavel_id:resps[0]||null, coresponsaveis:resps.slice(1), prazo:prazo||null, mensagem_id:msgId||null, criado_por:msgEu() }).select().single();
   if(error){ console.error('gtfCriar', error); alert('Não foi possível criar a tarefa: '+(error.message||'')); return false; }
   const t = gtfMap(data);
   if(!MSG_GTAREFAS.some(x=>x.id===t.id)) MSG_GTAREFAS.push(t);
@@ -12248,13 +12258,14 @@ function gtfItemHtml(t, admin){
   const eu = msgEu();
   const atrasada = !t.concluida && t.prazo && t.prazo < gtfHojeISO();
   const podeExcluir = t.criadoPor===eu || admin;
-  const quem = t.resp ? (t.resp===eu ? 'você' : escapeHtml(msgNomeDe(t.resp).split(' ')[0])) : 'sem responsável';
+  const rs = gtfResps(t);
+  const quem = rs.length ? rs.map(id=> id===eu ? 'você' : escapeHtml(msgNomeDe(id).split(' ')[0])).join(', ') : 'sem responsável';
   return `
-    <div class="gtf-item ${t.concluida?'feita':''} ${!t.concluida && t.resp===eu?'minha':''} ${atrasada?'atrasada':''}">
+    <div class="gtf-item ${t.concluida?'feita':''} ${!t.concluida && rs.includes(eu)?'minha':''} ${atrasada?'atrasada':''}">
       <button type="button" class="gtf-check ${t.concluida?'on':''}" data-gtf-check="${t.id}" title="${t.concluida?'Reabrir':'Marcar como resolvida'}">${icon('tick','tiny')}</button>
       <div class="gtf-txt">
         <span>${linkify(t.texto)}</span>
-        <small>Responsável: <b>${quem}</b>${t.prazo ? ` · até ${tzDataCurta(t.prazo)}${atrasada?' (atrasada)':''}` : ''} · criada por ${t.criadoPor===eu ? 'você' : escapeHtml(msgNomeDe(t.criadoPor).split(' ')[0])}${t.concluida && t.concluidaPor ? ` · resolvida por ${t.concluidaPor===eu ? 'você' : escapeHtml(msgNomeDe(t.concluidaPor).split(' ')[0])}` : ''}</small>
+        <small>${rs.length>1?'Responsáveis':'Responsável'}: <b>${quem}</b>${t.prazo ? ` · até ${tzDataCurta(t.prazo)}${atrasada?' (atrasada)':''}` : ''} · criada por ${t.criadoPor===eu ? 'você' : escapeHtml(msgNomeDe(t.criadoPor).split(' ')[0])}${t.concluida && t.concluidaPor ? ` · resolvida por ${t.concluidaPor===eu ? 'você' : escapeHtml(msgNomeDe(t.concluidaPor).split(' ')[0])}` : ''}</small>
         ${t.msgId ? `<button type="button" class="link-btn gtf-ir" data-msg-ir="${t.msgId}">${icon('comment','tiny')} Ver mensagem de origem</button>` : ''}
       </div>
       ${podeExcluir ? `<button type="button" class="gtf-del" data-gtf-del="${t.id}" title="Excluir">${icon('trash','tiny')}</button>` : ''}
@@ -12263,9 +12274,10 @@ function gtfItemHtml(t, admin){
 function gtfPainelHtml(grupo, admin){
   const lista = gtfDoGrupo(grupo.id);
   const eu = msgEu();
-  const abertas = lista.filter(t=>!t.concluida).sort((a,b)=> (b.resp===eu) - (a.resp===eu) || String(a.prazo||'9999').localeCompare(String(b.prazo||'9999')) || String(a.criadoEm).localeCompare(String(b.criadoEm)));
+  const abertas = lista.filter(t=>!t.concluida).sort((a,b)=> (gtfResps(b).includes(eu)) - (gtfResps(a).includes(eu)) || String(a.prazo||'9999').localeCompare(String(b.prazo||'9999')) || String(a.criadoEm).localeCompare(String(b.criadoEm)));
   const feitas = lista.filter(t=>t.concluida).sort((a,b)=>String(b.concluidaEm).localeCompare(String(a.concluidaEm))).slice(0,8);
-  const r = (msgUI.gtfRascunho && msgUI.gtfRascunho.gid===grupo.id) ? msgUI.gtfRascunho : { gid:grupo.id, texto:'', resp:'', prazo:'', msgId:null };
+  const r = (msgUI.gtfRascunho && msgUI.gtfRascunho.gid===grupo.id) ? msgUI.gtfRascunho : { gid:grupo.id, texto:'', resps:[], prazo:'', msgId:null };
+  if(!Array.isArray(r.resps)) r.resps = r.resp ? [r.resp] : [];
   const membros = Array.from(new Set((grupo.membros||[]).concat([eu]))).map(id=>({ id, nome: id===eu ? (msgNomeDe(id)+' (você)') : msgNomeDe(id) })).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const origem = r.msgId ? (MSG_CONVERSAS[msgChaveGrupo(grupo.id)]||[]).find(m=>String(m.id)===String(r.msgId)) : null;
   return `
@@ -12277,7 +12289,9 @@ function gtfPainelHtml(grupo, admin){
         ${r.msgId ? `<div class="gtf-origem">${icon('comment','tiny')} Sobre a mensagem${origem ? ` de ${escapeHtml(msgNomeDe(origem.de).split(' ')[0])}: “${escapeHtml(String(origem.texto||'').slice(0,90))}${String(origem.texto||'').length>90?'…':''}”` : ''} <button type="button" class="link-btn" id="gtf-sem-origem">tirar</button></div>` : ''}
         <input class="ps-input" id="gtf-texto" maxlength="500" placeholder="O que precisa ser resolvido?" value="${escapeAttr(r.texto)}">
         <div class="gtf-form-linha">
-          <select class="ps-input" id="gtf-resp"><option value="">Responsável…</option>${membros.map(m=>`<option value="${m.id}" ${r.resp===m.id?'selected':''}>${escapeHtml(m.nome)}</option>`).join('')}</select>
+          <details class="gtf-resp-sel" id="gtf-resp"><summary class="ps-input">${r.resps.length ? escapeHtml(r.resps.map(id=>id===eu?'Você':msgNomeDe(id).split(' ')[0]).join(', ')) : 'Responsáveis…'}</summary>
+            <div class="gtf-resp-op">${membros.map(m=>`<label><input type="checkbox" data-gtf-resp="${m.id}" ${r.resps.includes(m.id)?'checked':''}> ${escapeHtml(m.nome)}</label>`).join('')}</div>
+          </details>
           <input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}" title="Prazo (opcional)">
           <button type="button" class="btn-accent" id="gtf-criar">${icon('plus','tiny')} Criar</button>
         </div>
@@ -12288,11 +12302,16 @@ function gtfBind(el, grupo){
   const admin = msgSouAdminGrupos();
   const tg = el.querySelector('#gtf-toggle'); if(tg) tg.addEventListener('click', ()=>{ msgUI.gtfAberto = msgUI.gtfAberto===grupo.id ? null : grupo.id; renderMensagens(); });
   const pn = el.querySelector('#gtf-painel'); if(!pn) return;
-  const rasc = ()=>{ if(!msgUI.gtfRascunho || msgUI.gtfRascunho.gid!==grupo.id) msgUI.gtfRascunho = { gid:grupo.id, texto:'', resp:'', prazo:'', msgId:null }; return msgUI.gtfRascunho; };
+  const rasc = ()=>{ if(!msgUI.gtfRascunho || msgUI.gtfRascunho.gid!==grupo.id) msgUI.gtfRascunho = { gid:grupo.id, texto:'', resps:[], prazo:'', msgId:null }; if(!Array.isArray(msgUI.gtfRascunho.resps)) msgUI.gtfRascunho.resps = []; return msgUI.gtfRascunho; };
   pn.querySelector('#gtf-fechar').addEventListener('click', ()=>{ msgUI.gtfAberto = null; renderMensagens(); });
   pn.querySelector('#gtf-texto').addEventListener('input', e=>{ rasc().texto = e.target.value; });
   pn.querySelector('#gtf-texto').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); pn.querySelector('#gtf-criar').click(); } });
-  pn.querySelector('#gtf-resp').addEventListener('change', e=>{ rasc().resp = e.target.value; });
+  pn.querySelectorAll('[data-gtf-resp]').forEach(c=>c.addEventListener('change', ()=>{
+    const r = rasc(); const id = c.dataset.gtfResp;
+    r.resps = c.checked ? r.resps.concat(r.resps.includes(id)?[]:[id]) : r.resps.filter(x=>x!==id);
+    const sm = pn.querySelector('#gtf-resp summary'); const eu = msgEu();
+    if(sm) sm.textContent = r.resps.length ? r.resps.map(x=>x===eu?'Você':msgNomeDe(x).split(' ')[0]).join(', ') : 'Responsáveis…';
+  }));
   pn.querySelector('#gtf-prazo').addEventListener('change', e=>{ rasc().prazo = e.target.value; });
   const so = pn.querySelector('#gtf-sem-origem'); if(so) so.addEventListener('click', ()=>{ rasc().msgId = null; renderMensagens(); });
   const fd = pn.querySelector('.gtf-feitas'); if(fd) fd.addEventListener('toggle', ()=>{ msgUI.gtfFeitasAberto = fd.open; });
@@ -12300,7 +12319,7 @@ function gtfBind(el, grupo){
     const r = rasc(); const texto = (pn.querySelector('#gtf-texto').value||'').trim();
     if(!texto){ pn.querySelector('#gtf-texto').focus(); return; }
     e.currentTarget.disabled = true;
-    const ok = await gtfCriar(grupo.id, texto, pn.querySelector('#gtf-resp').value, pn.querySelector('#gtf-prazo').value, r.msgId);
+    const ok = await gtfCriar(grupo.id, texto, r.resps, pn.querySelector('#gtf-prazo').value, r.msgId);
     if(ok){ msgUI.gtfRascunho = null; updateNotifBadge(); }
     renderMensagens();
   });
@@ -12312,7 +12331,7 @@ function gtfDaMensagem(id){
   const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===String(id));
   const trecho = m ? String(m.texto||'').replace(/\s+/g,' ').trim().slice(0,140) : '';
   msgUI.gtfAberto = g.id;
-  msgUI.gtfRascunho = { gid:g.id, texto: trecho ? 'Responder: '+trecho : '', resp: m && m.de!==msgEu() ? '' : '', prazo:'', msgId: m ? m.id : null };
+  msgUI.gtfRascunho = { gid:g.id, texto: trecho ? 'Responder: '+trecho : '', resps:[], prazo:'', msgId: m ? m.id : null };
   renderMensagens();
   setTimeout(()=>{ const i = document.getElementById('gtf-texto'); if(i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 30);
 }
