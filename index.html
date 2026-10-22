@@ -1965,6 +1965,13 @@
   .gtf-feitas summary{font-size:12px;color:var(--text-mute);cursor:pointer;margin:2px 0 6px;}
   .gtf-feitas .gtf-item{margin-bottom:6px;}
   .gtf-form{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px dashed var(--border);}
+  .gtf-novo{display:flex;justify-content:flex-end;margin-top:8px;}
+  .gtf-novo .btn-accent{display:inline-flex;align-items:center;gap:6px;}
+  .gtf-modal .gtf-origem{margin-bottom:6px;}
+  .gtf-resp-lista{display:flex;flex-wrap:wrap;gap:6px;}
+  .gtf-resp-lista label{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;background:var(--bg-card);}
+  .gtf-resp-lista label.on{border-color:var(--accent);background:var(--accent-soft);color:var(--text);}
+  .gtf-resp-lista input{accent-color:var(--accent);width:15px;height:15px;}
   .gtf-resp-sel{position:relative;flex:1;min-width:150px;}
   .gtf-resp-sel>summary{list-style:none;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .gtf-resp-sel>summary::-webkit-details-marker{display:none;}
@@ -12285,44 +12292,16 @@ function gtfPainelHtml(grupo, admin){
       <div class="gtf-hd"><div><strong>${icon('check','tiny')} Tarefas do grupo</strong><small>Ficam só aqui no grupo. Não vão para a lista de Tarefas de ninguém.</small></div><button type="button" class="btn-mini" id="gtf-fechar" title="Fechar">${icon('x','tiny')}</button></div>
       <div class="gtf-lista">${abertas.map(t=>gtfItemHtml(t, admin)).join('') || '<p class="gtf-vazio">Nenhuma tarefa aberta neste grupo.</p>'}</div>
       ${feitas.length ? `<details class="gtf-feitas" ${msgUI.gtfFeitasAberto?'open':''}><summary>Resolvidas nos últimos 7 dias (${feitas.length})</summary>${feitas.map(t=>gtfItemHtml(t, admin)).join('')}</details>` : ''}
-      <div class="gtf-form">
-        ${r.msgId ? `<div class="gtf-origem">${icon('comment','tiny')} Sobre a mensagem${origem ? ` de ${escapeHtml(msgNomeDe(origem.de).split(' ')[0])}: “${escapeHtml(String(origem.texto||'').slice(0,90))}${String(origem.texto||'').length>90?'…':''}”` : ''} <button type="button" class="link-btn" id="gtf-sem-origem">tirar</button></div>` : ''}
-        <input class="ps-input" id="gtf-texto" maxlength="500" placeholder="O que precisa ser resolvido?" value="${escapeAttr(r.texto)}">
-        <div class="gtf-form-linha">
-          <details class="gtf-resp-sel" id="gtf-resp"><summary class="ps-input">${r.resps.length ? escapeHtml(r.resps.map(id=>id===eu?'Você':msgNomeDe(id).split(' ')[0]).join(', ')) : 'Responsáveis…'}</summary>
-            <div class="gtf-resp-op">${membros.map(m=>`<label><input type="checkbox" data-gtf-resp="${m.id}" ${r.resps.includes(m.id)?'checked':''}> ${escapeHtml(m.nome)}</label>`).join('')}</div>
-          </details>
-          <input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}" title="Prazo (opcional)">
-          <button type="button" class="btn-accent" id="gtf-criar">${icon('plus','tiny')} Criar</button>
-        </div>
-      </div>
+      <div class="gtf-novo"><button type="button" class="btn-accent" id="gtf-nova">${icon('plus','tiny')} Nova tarefa</button></div>
     </div>`;
 }
 function gtfBind(el, grupo){
   const admin = msgSouAdminGrupos();
   const tg = el.querySelector('#gtf-toggle'); if(tg) tg.addEventListener('click', ()=>{ msgUI.gtfAberto = msgUI.gtfAberto===grupo.id ? null : grupo.id; renderMensagens(); });
   const pn = el.querySelector('#gtf-painel'); if(!pn) return;
-  const rasc = ()=>{ if(!msgUI.gtfRascunho || msgUI.gtfRascunho.gid!==grupo.id) msgUI.gtfRascunho = { gid:grupo.id, texto:'', resps:[], prazo:'', msgId:null }; if(!Array.isArray(msgUI.gtfRascunho.resps)) msgUI.gtfRascunho.resps = []; return msgUI.gtfRascunho; };
   pn.querySelector('#gtf-fechar').addEventListener('click', ()=>{ msgUI.gtfAberto = null; renderMensagens(); });
-  pn.querySelector('#gtf-texto').addEventListener('input', e=>{ rasc().texto = e.target.value; });
-  pn.querySelector('#gtf-texto').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); pn.querySelector('#gtf-criar').click(); } });
-  pn.querySelectorAll('[data-gtf-resp]').forEach(c=>c.addEventListener('change', ()=>{
-    const r = rasc(); const id = c.dataset.gtfResp;
-    r.resps = c.checked ? r.resps.concat(r.resps.includes(id)?[]:[id]) : r.resps.filter(x=>x!==id);
-    const sm = pn.querySelector('#gtf-resp summary'); const eu = msgEu();
-    if(sm) sm.textContent = r.resps.length ? r.resps.map(x=>x===eu?'Você':msgNomeDe(x).split(' ')[0]).join(', ') : 'Responsáveis…';
-  }));
-  pn.querySelector('#gtf-prazo').addEventListener('change', e=>{ rasc().prazo = e.target.value; });
-  const so = pn.querySelector('#gtf-sem-origem'); if(so) so.addEventListener('click', ()=>{ rasc().msgId = null; renderMensagens(); });
   const fd = pn.querySelector('.gtf-feitas'); if(fd) fd.addEventListener('toggle', ()=>{ msgUI.gtfFeitasAberto = fd.open; });
-  pn.querySelector('#gtf-criar').addEventListener('click', async (e)=>{
-    const r = rasc(); const texto = (pn.querySelector('#gtf-texto').value||'').trim();
-    if(!texto){ pn.querySelector('#gtf-texto').focus(); return; }
-    e.currentTarget.disabled = true;
-    const ok = await gtfCriar(grupo.id, texto, r.resps, pn.querySelector('#gtf-prazo').value, r.msgId);
-    if(ok){ msgUI.gtfRascunho = null; updateNotifBadge(); }
-    renderMensagens();
-  });
+  pn.querySelector('#gtf-nova').addEventListener('click', ()=>gtfAbrirForm(grupo, null));
   pn.querySelectorAll('[data-gtf-check]').forEach(b=>b.addEventListener('click', ()=>{ const t = MSG_GTAREFAS.find(x=>String(x.id)===b.dataset.gtfCheck); if(t) gtfConcluir(t, !t.concluida); }));
   pn.querySelectorAll('[data-gtf-del]').forEach(b=>b.addEventListener('click', ()=>{ const t = MSG_GTAREFAS.find(x=>String(x.id)===b.dataset.gtfDel); if(t) gtfExcluir(t); }));
 }
@@ -12330,10 +12309,58 @@ function gtfDaMensagem(id){
   const chave = msgUI.aberto; const g = msgGrupoDaChave(chave); if(!g) return;
   const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===String(id));
   const trecho = m ? String(m.texto||'').replace(/\s+/g,' ').trim().slice(0,140) : '';
-  msgUI.gtfAberto = g.id;
-  msgUI.gtfRascunho = { gid:g.id, texto: trecho ? 'Responder: '+trecho : '', resps:[], prazo:'', msgId: m ? m.id : null };
-  renderMensagens();
-  setTimeout(()=>{ const i = document.getElementById('gtf-texto'); if(i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 30);
+  gtfAbrirForm(g, { texto: trecho ? 'Responder: '+trecho : '', msgId: m ? m.id : null });
+}
+/* Nova tarefa do grupo numa janela à frente da conversa (a partir do painel ou de uma mensagem). */
+function gtfAbrirForm(grupo, ini){
+  const eu = msgEu();
+  const r = { texto:(ini&&ini.texto)||'', resps:[], prazo:'', msgId:(ini&&ini.msgId)||null };
+  /* Contas de teste (usadas só para conferir como fica cada perfil) não aparecem como responsáveis. */
+  const membros = Array.from(new Set((grupo.membros||[]).concat([eu]))).filter(id=> id===eu || !(PEOPLE[id] && PEOPLE[id].contaTeste)).map(id=>({ id, nome: id===eu ? (msgNomeDe(id)+' (você)') : msgNomeDe(id) })).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const desenha = ()=>{
+    const origem = r.msgId ? (MSG_CONVERSAS[msgChaveGrupo(grupo.id)]||[]).find(m=>String(m.id)===String(r.msgId)) : null;
+    document.getElementById('modal').innerHTML = `
+      <div class="modal-body form-modal gtf-modal">
+        <div class="cat">${escapeHtml(grupo.nome||'Grupo')}</div>
+        <h3>Nova tarefa do grupo</h3>
+        <p class="desc">Fica só neste grupo e acende um alerta para os responsáveis até alguém resolver.</p>
+        ${r.msgId ? `<div class="gtf-origem">${icon('comment','tiny')} Sobre a mensagem${origem ? ` de ${escapeHtml(msgNomeDe(origem.de).split(' ')[0])}: “${escapeHtml(String(origem.texto||'').slice(0,120))}${String(origem.texto||'').length>120?'…':''}”` : ''} <button type="button" class="link-btn" id="gtf-sem-origem">tirar</button></div>` : ''}
+        <label class="ps-label">O que precisa ser resolvido?</label>
+        <textarea class="ps-input" id="gtf-texto" rows="3" maxlength="500">${escapeHtml(r.texto)}</textarea>
+        <label class="ps-label">Responsáveis <small style="font-weight:400;color:var(--text-mute)">(pode marcar mais de um)</small></label>
+        <div class="gtf-resp-lista">${membros.map(m=>`<label class="${r.resps.includes(m.id)?'on':''}"><input type="checkbox" data-gtf-resp="${m.id}" ${r.resps.includes(m.id)?'checked':''}> ${escapeHtml(m.nome)}</label>`).join('')}</div>
+        <label class="ps-label">Prazo <small style="font-weight:400;color:var(--text-mute)">(opcional)</small></label>
+        <input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}">
+        <div class="modal-actions">
+          <button type="button" class="btn-accent" id="gtf-criar">${icon('plus','tiny')} Criar tarefa</button>
+          <button type="button" class="btn-outline" id="gtf-cancelar">Cancelar</button>
+        </div>
+      </div>`;
+    const md = document.getElementById('modal');
+    const guarda = ()=>{ r.texto = md.querySelector('#gtf-texto').value; r.prazo = md.querySelector('#gtf-prazo').value; };
+    md.querySelector('#gtf-cancelar').addEventListener('click', closeModal);
+    const so = md.querySelector('#gtf-sem-origem'); if(so) so.addEventListener('click', ()=>{ guarda(); r.msgId = null; desenha(); });
+    md.querySelectorAll('[data-gtf-resp]').forEach(c=>c.addEventListener('change', ()=>{
+      const id = c.dataset.gtfResp;
+      r.resps = c.checked ? r.resps.concat(r.resps.includes(id)?[]:[id]) : r.resps.filter(x=>x!==id);
+      c.closest('label').classList.toggle('on', c.checked);
+    }));
+    md.querySelector('#gtf-criar').addEventListener('click', async (e)=>{
+      guarda();
+      const texto = (r.texto||'').trim();
+      if(!texto){ md.querySelector('#gtf-texto').focus(); return; }
+      e.currentTarget.disabled = true;
+      const ok = await gtfCriar(grupo.id, texto, r.resps, r.prazo, r.msgId);
+      if(!ok){ e.currentTarget.disabled = false; return; }
+      reallyCloseModal();
+      msgUI.gtfAberto = grupo.id;
+      updateNotifBadge(); renderMensagens();
+    });
+    const ta = md.querySelector('#gtf-texto'); setTimeout(()=>{ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 30);
+  };
+  modalReturnTo = null; modalCloseGuard = null;
+  desenha();
+  document.getElementById('modal-backdrop').classList.add('open');
 }
 function msgAudioDur(seg){ seg = Math.max(0, Math.round(seg||0)); return Math.floor(seg/60)+':'+String(seg%60).padStart(2,'0'); }
 function msgPapelLabel(p){ return p.cargo || (p.role==='vendas' ? 'Consultora de Vendas' : p.role==='editor' ? 'Editor de Vídeos' : 'Equipe interna'); }
