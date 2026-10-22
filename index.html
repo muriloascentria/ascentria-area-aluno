@@ -1330,6 +1330,21 @@
   .ae-form label{font-size:11.5px;font-weight:700;color:var(--text-dim);}
   .ae-form textarea{resize:vertical;font:inherit;font-size:13px;line-height:1.45;}
   .ae-linha2{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  .ae-linha2.ae-acao-nova{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;}
+  .ae-acao-nova .ae-acao-add{white-space:nowrap;height:38px;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;padding:0 16px;}
+  .ae-acoes-lista{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .ae-acoes-vazio{font-size:12.5px;color:var(--text-mute);margin:4px 0 0;}
+  .ae-acao-item{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;background:var(--bg-card);}
+  .ae-acao-item.feita .ae-acao-txt{text-decoration:line-through;color:var(--text-mute);}
+  .ae-acao-ok input{width:17px;height:17px;margin-top:2px;accent-color:var(--accent);cursor:pointer;}
+  .ae-acao-corpo{flex:1;min-width:0;}
+  .ae-acao-txt{font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+  .ae-acao-corpo small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:3px;}
+  .ae-acao-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .ae-acao-pill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--success);background:var(--success-soft);border:none;border-radius:20px;padding:4px 10px;font-family:inherit;}
+  .ae-acao-pill.link{cursor:pointer;}
+  .ae-acao-pill .icon{stroke:var(--success);}
+  @media (max-width:640px){ .ae-linha2.ae-acao-nova{grid-template-columns:1fr;} .ae-acao-nova .ae-acao-add{width:100%;} }
   .ae-linha2 .ps-input{width:100%;box-sizing:border-box;}
   .ae-dica{font-size:11px;color:var(--text-mute);}
   .ae-restaurar{align-self:flex-start;font-size:11.5px;}
@@ -17308,7 +17323,42 @@ function aeResponsaveis(atual){
 }
 const AE_NIVEIS = ['Não iniciado','Em desenvolvimento','Concluído','Precisa de apoio'];
 const AE_PRIORIDADES = ['Baixa','Média','Alta','Urgente'];
-const AE_UI = { sid:null, dados:null, carregando:false, abertos:{} };
+const AE_UI = { sid:null, dados:null, carregando:false, abertos:{}, acoes:[], nova:{texto:'',prazo:'',resp:''} };
+/* Ações do acompanhamento: cada ação inserida fica listada (histórico) e pode ser enviada para as Metas
+   do mentorado (vira item da aba Metas dele) e/ou virar tarefa de alguém da equipe. A "próxima ação"
+   que aparece no cartão do Radar é a mais recente ainda não concluída. */
+function aeAcaoAtual(){ return (AE_UI.acoes||[]).find(a=>!a.concluida) || null; }
+async function aeAcoesSincronizarResumo(){
+  const a = aeAcaoAtual();
+  const campos = { student_id: AE_UI.sid, proxima_acao: a ? a.texto : null, prazo: a ? a.prazo : null, proxima_acao_resp: a && !a.resp_mentorado ? a.responsavel : null };
+  try{
+    const { data, error } = await sb.from('acompanhamento_evolucao').upsert(campos, { onConflict:'student_id' }).select().single();
+    if(error) throw error;
+    AE_UI.dados = Object.assign({}, AE_UI.dados||{}, { proxima_acao: campos.proxima_acao, prazo: campos.prazo, proxima_acao_resp: campos.proxima_acao_resp });
+    void data;
+  }catch(e){ console.error('resumo da ação', e); }
+}
+function aeAcaoRespNome(a){
+  if(a.resp_mentorado) return 'Mentorado(a)';
+  const p = a.responsavel && PEOPLE[a.responsavel];
+  return p ? p.name.split(' ')[0] : 'sem responsável';
+}
+function aeAcoesHtml(s){
+  const lista = AE_UI.acoes || [];
+  if(!lista.length) return '<p class="ae-acoes-vazio">Nenhuma ação registrada ainda.</p>';
+  return lista.map(a=>`<div class="ae-acao-item ${a.concluida?'feita':''}">
+    <label class="ae-acao-ok" title="${a.concluida?'Reabrir ação':'Marcar como concluída'}"><input type="checkbox" data-ae-acao-ok="${a.id}" ${a.concluida?'checked':''}></label>
+    <div class="ae-acao-corpo">
+      <div class="ae-acao-txt">${escapeHtml(a.texto)}</div>
+      <small>${a.prazo ? 'até '+escapeHtml(tzDataCurta(a.prazo)) : 'sem prazo'} · ${escapeHtml(aeAcaoRespNome(a))} · registrada em ${escapeHtml(tzDataCurta(String(a.created_at).slice(0,10)))}</small>
+      <div class="ae-acao-btns">
+        ${a.meta_id ? `<span class="ae-acao-pill">${icon('check','tiny')} Nas Metas do mentorado</span>` : `<button type="button" class="btn-mini" data-ae-acao-meta="${a.id}">${icon('target','tiny')} Enviar para as Metas do mentorado</button>`}
+        ${a.tarefa_id ? `<button type="button" class="ae-acao-pill link" data-ae-acao-vertarefa="${a.tarefa_id}">${icon('check','tiny')} Tarefa criada · abrir</button>` : `<button type="button" class="btn-mini" data-ae-acao-tarefa="${a.id}">${icon('plus','tiny')} Criar tarefa para a equipe</button>`}
+        <button type="button" class="btn-mini danger" data-ae-acao-del="${a.id}">${icon('trash','tiny')}</button>
+      </div>
+    </div>
+  </div>`).join('');
+}
 function aeEstagio(label){ return AE_ESTAGIOS.find(e=>e.label===label) || AE_ESTAGIOS[0]; }
 /* Situação calculada (as mesmas fórmulas da planilha). */
 function aeSituacao(s, salvo){
@@ -17324,15 +17374,26 @@ function aeSituacao(s, salvo){
     : metaPendente ? 'ATENÇÃO — meta pendente' : 'ACOMPANHAR';
   return { dias, consumidos, esperado, estagioPlataforma, atual, alinhamento, metaPendente, sugerida, progresso: overallProgress(s) };
 }
+/* Volta ao acompanhamento depois de criar a tarefa, sem perder a lista já carregada. */
+function abrirAcompanhamentoVoltar(sid){
+  if(AE_UI.sid!==sid){ abrirAcompanhamento(sid); return; }
+  document.getElementById('modal-backdrop').classList.add('open');
+  modalReturnTo = null; modalCloseGuard = null;
+  aeRender();
+}
 async function abrirAcompanhamento(sid){
-  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.carregando = true; AE_UI.abertos = {};
+  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.carregando = true; AE_UI.abertos = {}; AE_UI.acoes = []; AE_UI.nova = {texto:'',prazo:'',resp:''};
   aeRender();
   document.getElementById('modal-backdrop').classList.add('open');
   modalReturnTo = null; modalCloseGuard = null;
   try{
-    const { data, error } = await sb.from('acompanhamento_evolucao').select('*').eq('student_id', sid).maybeSingle();
-    if(error) throw error;
-    AE_UI.dados = data || null;
+    const [r1, r2] = await Promise.all([
+      sb.from('acompanhamento_evolucao').select('*').eq('student_id', sid).maybeSingle(),
+      sb.from('acompanhamento_acoes').select('*').eq('student_id', sid).order('created_at', {ascending:false}),
+    ]);
+    if(r1.error) throw r1.error;
+    AE_UI.dados = r1.data || null;
+    AE_UI.acoes = (r2 && !r2.error && r2.data) ? r2.data : [];
   }catch(e){ console.error('acompanhamento_evolucao', e); AE_UI.erro = true; }
   AE_UI.carregando = false;
   if(AE_UI.sid===sid) aeRender();
@@ -17378,14 +17439,18 @@ function aeRender(){
         <div class="field full"><label>Pendências anteriores</label><textarea class="ps-input" id="ae-pendencias" rows="2" placeholder="O que ficou pendente das etapas anteriores">${escapeHtml(salvo.pendencias||'')}</textarea></div>
         <div class="field full"><label>Habilidades a desenvolver agora</label><textarea class="ps-input" id="ae-habilidades" rows="2">${escapeHtml(habil)}</textarea>
           ${salvo.habilidades ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
-        <div class="field full"><label>Próxima ação</label><textarea class="ps-input" id="ae-acao" rows="2" placeholder="O que o mentorado (ou a equipe) faz a seguir">${escapeHtml(salvo.proxima_acao||'')}</textarea></div>
-        <div class="field full ae-linha2">
-          <div class="field"><label>Prazo da próxima ação</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(salvo.prazo||'')}"></div>
-          <div class="field"><label>Responsável por inserir a ação</label>
-            ${(()=>{ const sel = salvo.proxima_acao_resp || (currentUser && (PEOPLE[currentUser.id]||{}).role==='staff' ? currentUser.id : ''); return `<select class="ps-input" id="ae-resp"><option value="">—</option>${aeResponsaveis(sel).map(p=>`<option value="${escapeAttr(p.id)}" ${p.id===sel?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>`; })()}
+        <div class="field full ae-acoes"><label>Ações</label>
+          <textarea class="ps-input" id="ae-acao" rows="2" placeholder="Nova ação: o que o mentorado (ou a equipe) faz a seguir">${escapeHtml(AE_UI.nova.texto||'')}</textarea>
+          <div class="ae-linha2 ae-acao-nova">
+            <div class="field"><label>Prazo</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(AE_UI.nova.prazo||'')}"></div>
+            <div class="field"><label>Responsável</label>
+              ${(()=>{ const sel = AE_UI.nova.resp || (currentUser && (PEOPLE[currentUser.id]||{}).role==='staff' ? currentUser.id : ''); return `<select class="ps-input" id="ae-resp"><option value="">—</option><option value="__mentorado" ${sel==='__mentorado'?'selected':''}>Mentorado(a)</option>${aeResponsaveis(sel==='__mentorado'?'':sel).map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>`; })()}
+            </div>
+            <button type="button" class="btn-accent ae-acao-add" id="ae-acao-add">${icon('plus','tiny')} Adicionar ação</button>
           </div>
+          <div class="ae-acoes-lista">${aeAcoesHtml(s)}</div>
         </div>
-        <div class="field full"><label>Observações (Sandra)</label><textarea class="ps-input" id="ae-obs" rows="3">${escapeHtml(salvo.observacoes||'')}</textarea></div>
+        <div class="field full"><label>Observações</label><textarea class="ps-input" id="ae-obs" rows="3">${escapeHtml(salvo.observacoes||'')}</textarea></div>
       </div>
       <div class="ae-sec-tit">Competências por módulo <small>marcadas sozinhas quando o aluno conclui a tarefa no Dashboard; a equipe pode marcar as demais</small></div>
       <div class="ae-modulos">
@@ -17423,14 +17488,15 @@ function aeRender(){
       prioridade: document.getElementById('ae-prioridade').value || null,
       pendencias: document.getElementById('ae-pendencias').value.trim() || null,
       habilidades: (hab && hab!==AE_HABILIDADES[est2]) ? hab : null,
-      proxima_acao: document.getElementById('ae-acao').value.trim() || null,
-      proxima_acao_resp: document.getElementById('ae-resp').value || null,
-      prazo: document.getElementById('ae-prazo').value || null,
+      proxima_acao: aeAcaoAtual() ? aeAcaoAtual().texto : null,
+      proxima_acao_resp: aeAcaoAtual() && !aeAcaoAtual().resp_mentorado ? aeAcaoAtual().responsavel : null,
+      prazo: aeAcaoAtual() ? aeAcaoAtual().prazo : null,
       observacoes: document.getElementById('ae-obs').value.trim() || null,
       competencias: comp2,
     };
   };
-  const rascunho = ()=>{ AE_UI.dados = Object.assign({}, AE_UI.dados||{}, coletar(), {updated_at:(AE_UI.dados||{}).updated_at, updated_by:(AE_UI.dados||{}).updated_by}); AE_UI.sujo = true; };
+  const guardaNova = ()=>{ const t = document.getElementById('ae-acao'); if(t) AE_UI.nova = { texto:t.value, prazo:document.getElementById('ae-prazo').value, resp:document.getElementById('ae-resp').value }; };
+  const rascunho = ()=>{ guardaNova(); AE_UI.dados = Object.assign({}, AE_UI.dados||{}, coletar(), {updated_at:(AE_UI.dados||{}).updated_at, updated_by:(AE_UI.dados||{}).updated_by}); AE_UI.sujo = true; };
   document.querySelectorAll('[data-ae-mod]').forEach(b=>b.addEventListener('click', ()=>{ rascunho(); AE_UI.abertos[b.dataset.aeMod] = !AE_UI.abertos[b.dataset.aeMod]; aeRender(); }));
   document.getElementById('ae-estagio').addEventListener('change', e=>{
     const habAtual = document.getElementById('ae-habilidades').value.trim();
@@ -17442,8 +17508,79 @@ function aeRender(){
   });
   const rest = document.getElementById('ae-hab-padrao');
   if(rest) rest.addEventListener('click', ()=>{ rascunho(); AE_UI.dados.habilidades = null; aeRender(); });
+  const st = getStudent(AE_UI.sid);
+  const adicionarAcao = async ()=>{
+    guardaNova();
+    const texto = (AE_UI.nova.texto||'').trim();
+    if(!texto) return null;
+    const resp = AE_UI.nova.resp;
+    const row = { student_id: AE_UI.sid, texto, prazo: AE_UI.nova.prazo || null, responsavel: (resp && resp!=='__mentorado') ? resp : null, resp_mentorado: resp==='__mentorado', created_by: currentUser.id };
+    const { data, error } = await sb.from('acompanhamento_acoes').insert(row).select().single();
+    if(error){ console.error(error); alert('Não foi possível adicionar a ação: '+(error.message||'')); return null; }
+    AE_UI.acoes.unshift(data);
+    AE_UI.nova = { texto:'', prazo:'', resp: resp };
+    await aeAcoesSincronizarResumo();
+    return data;
+  };
+  document.getElementById('ae-acao-add').addEventListener('click', async ()=>{
+    const b = document.getElementById('ae-acao-add'); b.disabled = true;
+    rascunho();
+    const ok = await adicionarAcao();
+    if(!ok){ b.disabled = false; const t = document.getElementById('ae-acao'); if(t && !t.value.trim()) t.focus(); return; }
+    aeRender();
+  });
+  const acaoPor = id=> AE_UI.acoes.find(a=>a.id===id);
+  const atualizaAcao = async (a, campos)=>{
+    const { error } = await sb.from('acompanhamento_acoes').update(campos).eq('id', a.id);
+    if(error){ console.error(error); alert('Não foi possível atualizar a ação: '+(error.message||'')); return false; }
+    Object.assign(a, campos); return true;
+  };
+  document.querySelectorAll('[data-ae-acao-ok]').forEach(c=>c.addEventListener('change', async ()=>{
+    const a = acaoPor(c.dataset.aeAcaoOk); if(!a) return;
+    rascunho();
+    if(await atualizaAcao(a, {concluida: c.checked})) await aeAcoesSincronizarResumo();
+    aeRender();
+  }));
+  document.querySelectorAll('[data-ae-acao-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const a = acaoPor(b.dataset.aeAcaoDel); if(!a) return;
+    if(!confirm('Excluir esta ação da lista? A meta ou a tarefa já criada a partir dela não é apagada.')) return;
+    rascunho();
+    const { error } = await sb.from('acompanhamento_acoes').delete().eq('id', a.id);
+    if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
+    AE_UI.acoes = AE_UI.acoes.filter(x=>x!==a);
+    await aeAcoesSincronizarResumo();
+    aeRender();
+  }));
+  document.querySelectorAll('[data-ae-acao-meta]').forEach(b=>b.addEventListener('click', async ()=>{
+    const a = acaoPor(b.dataset.aeAcaoMeta); if(!a || !st) return;
+    rascunho();
+    b.disabled = true;
+    const prazoTxt = a.prazo ? a.prazo.split('-').reverse().join('/') : '—';
+    const item = { tarefa: a.texto, responsavel: 'Mentorado', prazo: prazoTxt, status: 'Pendente', obs: '', aulas: [] };
+    try{
+      item.id = await syncChecklistItemInsert(st.id, item);
+      st.checklist.push(item);
+      await atualizaAcao(a, { meta_id: item.id });
+    }catch(e){ console.error(e); alert('Não foi possível enviar para as Metas: '+(e.message||'')); }
+    aeRender();
+  }));
+  document.querySelectorAll('[data-ae-acao-tarefa]').forEach(b=>b.addEventListener('click', ()=>{
+    const a = acaoPor(b.dataset.aeAcaoTarefa); if(!a) return;
+    rascunho();
+    const sid = AE_UI.sid;
+    const nome = st ? st.name : '';
+    openTarefaModal(null, {
+      titulo: (nome ? nome.split(' ')[0]+': ' : '') + String(a.texto).slice(0,180),
+      descricao: `Ação do acompanhamento de ${nome}.\n\n${a.texto}`,
+      responsavelId: a.responsavel || undefined,
+      prazoData: a.prazo || undefined,
+      onSalvo: async (tid)=>{ await atualizaAcao(a, { tarefa_id: tid }); setTimeout(()=>abrirAcompanhamentoVoltar(sid), 50); },
+    });
+  }));
+  document.querySelectorAll('[data-ae-acao-vertarefa]').forEach(b=>b.addEventListener('click', ()=>{ rascunho(); openTarefaModal(b.dataset.aeAcaoVertarefa); }));
   document.getElementById('ae-salvar').addEventListener('click', async ()=>{
     const btn = document.getElementById('ae-salvar');
+    if((document.getElementById('ae-acao').value||'').trim()){ btn.disabled = true; await adicionarAcao(); }
     const row = Object.assign(coletar(), { updated_at: new Date().toISOString(), updated_by: currentUser.id });
     btn.disabled = true; btn.textContent = 'Salvando…';
     const { data, error } = await sb.from('acompanhamento_evolucao').upsert(row, { onConflict:'student_id' }).select().single();
