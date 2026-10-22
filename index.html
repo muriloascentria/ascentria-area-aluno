@@ -1333,6 +1333,15 @@
   .ae-linha2.ae-acao-nova{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;}
   .ae-acao-nova .ae-acao-add{white-space:nowrap;height:38px;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;padding:0 16px;}
   .ae-acoes-lista{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .ae-obs-lista{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;max-height:320px;overflow-y:auto;}
+  .ae-obs-item{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:8px 12px;background:var(--bg-card);}
+  .ae-obs-cab{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-mute);}
+  .ae-obs-cab b{color:var(--text-dim);}
+  .ae-obs-del{margin-left:auto;background:none;border:none;color:var(--text-mute);cursor:pointer;padding:2px;}
+  .ae-obs-del:hover{color:var(--danger);}
+  .ae-obs-txt{font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin-top:3px;}
+  .ae-obs-acoes{display:flex;justify-content:flex-end;margin-top:8px;}
+  .ae-obs-acoes .ae-acao-add{height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 16px;}
   .ae-acoes-vazio{font-size:12.5px;color:var(--text-mute);margin:4px 0 0;}
   .ae-acao-item{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;background:var(--bg-card);}
   .ae-acao-item.feita .ae-acao-txt{text-decoration:line-through;color:var(--text-mute);}
@@ -17323,7 +17332,18 @@ function aeResponsaveis(atual){
 }
 const AE_NIVEIS = ['Não iniciado','Em desenvolvimento','Concluído','Precisa de apoio'];
 const AE_PRIORIDADES = ['Baixa','Média','Alta','Urgente'];
-const AE_UI = { sid:null, dados:null, carregando:false, abertos:{}, acoes:[], nova:{texto:'',prazo:'',resp:''} };
+const AE_UI = { sid:null, dados:null, carregando:false, abertos:{}, acoes:[], nova:{texto:'',prazo:'',resp:''}, obs:[], obsRasc:'' };
+/* Histórico de observações do acompanhamento (só a equipe vê): cada "Salvar observação" grava uma
+   entrada com data e autor, listada acima da caixa de texto. */
+function aeObsHtml(){
+  const lista = AE_UI.obs || [];
+  if(!lista.length) return '<p class="ae-acoes-vazio">Nenhuma observação registrada ainda.</p>';
+  return lista.map(o=>{
+    const p = o.created_by && PEOPLE[o.created_by];
+    const quem = p ? p.name.split(' ')[0] : 'Equipe';
+    return `<div class="ae-obs-item"><div class="ae-obs-cab"><b>${escapeHtml(quem)}</b> · ${escapeHtml(tzDataHora(o.created_at, true))}<button type="button" class="ae-obs-del" data-ae-obs-del="${o.id}" title="Excluir esta observação">${icon('trash','tiny')}</button></div><div class="ae-obs-txt">${escapeHtml(o.texto)}</div></div>`;
+  }).join('');
+}
 /* Ações do acompanhamento: cada ação inserida fica listada (histórico) e pode ser enviada para as Metas
    do mentorado (vira item da aba Metas dele) e/ou virar tarefa de alguém da equipe. A "próxima ação"
    que aparece no cartão do Radar é a mais recente ainda não concluída. */
@@ -17382,18 +17402,20 @@ function abrirAcompanhamentoVoltar(sid){
   aeRender();
 }
 async function abrirAcompanhamento(sid){
-  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.carregando = true; AE_UI.abertos = {}; AE_UI.acoes = []; AE_UI.nova = {texto:'',prazo:'',resp:''};
+  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.carregando = true; AE_UI.abertos = {}; AE_UI.acoes = []; AE_UI.nova = {texto:'',prazo:'',resp:''}; AE_UI.obs = []; AE_UI.obsRasc = '';
   aeRender();
   document.getElementById('modal-backdrop').classList.add('open');
   modalReturnTo = null; modalCloseGuard = null;
   try{
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r3] = await Promise.all([
       sb.from('acompanhamento_evolucao').select('*').eq('student_id', sid).maybeSingle(),
       sb.from('acompanhamento_acoes').select('*').eq('student_id', sid).order('created_at', {ascending:false}),
+      sb.from('acompanhamento_observacoes').select('*').eq('student_id', sid).order('created_at', {ascending:false}),
     ]);
     if(r1.error) throw r1.error;
     AE_UI.dados = r1.data || null;
     AE_UI.acoes = (r2 && !r2.error && r2.data) ? r2.data : [];
+    AE_UI.obs = (r3 && !r3.error && r3.data) ? r3.data : [];
   }catch(e){ console.error('acompanhamento_evolucao', e); AE_UI.erro = true; }
   AE_UI.carregando = false;
   if(AE_UI.sid===sid) aeRender();
@@ -17450,7 +17472,11 @@ function aeRender(){
           </div>
           <div class="ae-acoes-lista">${aeAcoesHtml(s)}</div>
         </div>
-        <div class="field full"><label>Observações</label><textarea class="ps-input" id="ae-obs" rows="3">${escapeHtml(salvo.observacoes||'')}</textarea></div>
+        <div class="field full ae-obs"><label>Observações</label>
+          <div class="ae-obs-lista">${aeObsHtml()}</div>
+          <textarea class="ps-input" id="ae-obs" rows="3" placeholder="Nova observação">${escapeHtml(AE_UI.obsRasc||'')}</textarea>
+          <div class="ae-obs-acoes"><button type="button" class="btn-accent ae-acao-add" id="ae-obs-salvar">${icon('check','tiny')} Salvar observação</button></div>
+        </div>
       </div>
       <div class="ae-sec-tit">Competências por módulo <small>marcadas sozinhas quando o aluno conclui a tarefa no Dashboard; a equipe pode marcar as demais</small></div>
       <div class="ae-modulos">
@@ -17491,11 +17517,10 @@ function aeRender(){
       proxima_acao: aeAcaoAtual() ? aeAcaoAtual().texto : null,
       proxima_acao_resp: aeAcaoAtual() && !aeAcaoAtual().resp_mentorado ? aeAcaoAtual().responsavel : null,
       prazo: aeAcaoAtual() ? aeAcaoAtual().prazo : null,
-      observacoes: document.getElementById('ae-obs').value.trim() || null,
       competencias: comp2,
     };
   };
-  const guardaNova = ()=>{ const t = document.getElementById('ae-acao'); if(t) AE_UI.nova = { texto:t.value, prazo:document.getElementById('ae-prazo').value, resp:document.getElementById('ae-resp').value }; };
+  const guardaNova = ()=>{ const ob = document.getElementById('ae-obs'); if(ob) AE_UI.obsRasc = ob.value; const t = document.getElementById('ae-acao'); if(t) AE_UI.nova = { texto:t.value, prazo:document.getElementById('ae-prazo').value, resp:document.getElementById('ae-resp').value }; };
   const rascunho = ()=>{ guardaNova(); AE_UI.dados = Object.assign({}, AE_UI.dados||{}, coletar(), {updated_at:(AE_UI.dados||{}).updated_at, updated_by:(AE_UI.dados||{}).updated_by}); AE_UI.sujo = true; };
   document.querySelectorAll('[data-ae-mod]').forEach(b=>b.addEventListener('click', ()=>{ rascunho(); AE_UI.abertos[b.dataset.aeMod] = !AE_UI.abertos[b.dataset.aeMod]; aeRender(); }));
   document.getElementById('ae-estagio').addEventListener('change', e=>{
@@ -17577,10 +17602,37 @@ function aeRender(){
       onSalvo: async (tid)=>{ await atualizaAcao(a, { tarefa_id: tid }); setTimeout(()=>abrirAcompanhamentoVoltar(sid), 50); },
     });
   }));
+  const salvarObs = async ()=>{
+    const ta = document.getElementById('ae-obs');
+    const texto = (ta && ta.value || '').trim();
+    if(!texto) return true;
+    const { data, error } = await sb.from('acompanhamento_observacoes').insert({ student_id: AE_UI.sid, texto, created_by: currentUser.id }).select().single();
+    if(error){ console.error(error); alert('Não foi possível salvar a observação: '+(error.message||'')); return false; }
+    AE_UI.obs.unshift(data); AE_UI.obsRasc = '';
+    return true;
+  };
+  document.getElementById('ae-obs-salvar').addEventListener('click', async ()=>{
+    const b = document.getElementById('ae-obs-salvar');
+    const ta = document.getElementById('ae-obs');
+    if(!(ta.value||'').trim()){ ta.focus(); return; }
+    b.disabled = true;
+    rascunho();
+    if(await salvarObs()) AE_UI.obsRasc = '';
+    aeRender();
+  });
+  document.querySelectorAll('[data-ae-obs-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!confirm('Excluir esta observação do histórico?')) return;
+    rascunho();
+    const { error } = await sb.from('acompanhamento_observacoes').delete().eq('id', b.dataset.aeObsDel);
+    if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
+    AE_UI.obs = AE_UI.obs.filter(o=>o.id!==b.dataset.aeObsDel);
+    aeRender();
+  }));
   document.querySelectorAll('[data-ae-acao-vertarefa]').forEach(b=>b.addEventListener('click', ()=>{ rascunho(); openTarefaModal(b.dataset.aeAcaoVertarefa); }));
   document.getElementById('ae-salvar').addEventListener('click', async ()=>{
     const btn = document.getElementById('ae-salvar');
     if((document.getElementById('ae-acao').value||'').trim()){ btn.disabled = true; await adicionarAcao(); }
+    if((document.getElementById('ae-obs').value||'').trim()){ btn.disabled = true; await salvarObs(); }
     const row = Object.assign(coletar(), { updated_at: new Date().toISOString(), updated_by: currentUser.id });
     btn.disabled = true; btn.textContent = 'Salvando…';
     const { data, error } = await sb.from('acompanhamento_evolucao').upsert(row, { onConflict:'student_id' }).select().single();
