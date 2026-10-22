@@ -1069,6 +1069,25 @@
   .fin-ocorr-table{margin-top:12px;}
   .fin-modal-actions{margin-top:26px;}
   /* Indicadores do topo do Financeiro interno */
+  /* Destaque fixado no topo da Análise Sessões 1:1 */
+  .an-dest{border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;}
+  .an-dest-hd h3{margin:4px 0 10px;font-size:16px;}
+  .an-dest-pin{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);}
+  .an-dest-lista{display:flex;flex-direction:column;gap:8px;}
+  .an-dest-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);}
+  .an-dest-ic{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent);flex:0 0 auto;}
+  .an-dest-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .an-dest-txt strong{font-size:13.5px;}
+  .an-dest-txt small{font-size:11.5px;color:var(--text-mute);}
+  .an-dest-txt p{margin:2px 0 0;font-size:12.5px;color:var(--text-dim);word-break:break-word;}
+  .an-dest-acoes{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  .an-dest-acoes .btn-accent{display:inline-flex;align-items:center;gap:5px;text-decoration:none;white-space:nowrap;}
+  .an-dest-add{margin-top:10px;display:inline-flex;align-items:center;gap:4px;font-size:12.5px;}
+  .an-dest-novo{display:flex;justify-content:flex-end;margin:-4px 0 14px;}
+  .an-dest-novo .btn-outline{display:inline-flex;align-items:center;gap:5px;}
+  .an-dest-form-acoes{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
+  .an-dest-form-acoes .btn-accent{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  @media (max-width:560px){ .an-dest-item{flex-wrap:wrap;} .an-dest-acoes{width:100%;justify-content:flex-end;} }
   /* Planilha de Análise Sessões 1:1 */
   /* Larguras fixas: sem isso o navegador dimensiona cada coluna pelo conteúdo, e a tabela muda de
      forma a cada aprendizado preenchido — as três colunas de aprendizados ficavam com tamanhos bem
@@ -15100,6 +15119,101 @@ function analiseAprendizadosCell(a, v){
   const lista = `<div class="an-ap-list an-clamp" data-anclamp="${cid}">${marcados.map((t,i)=>`<div>${i+1}. ${escapeHtml(t)}</div>`).join('')}</div>`;
   return situacao + lista + `<button type="button" class="cc-toggle" data-anclamp-toggle="${cid}" style="display:none">Ver mais</button>`;
 }
+/* Destaques fixados no topo da Análise Sessões 1:1: análises e feedbacks de quem vem de fora do
+   time comercial (ex.: Vanessa Medeiros). Ficam em analise_destaques, agrupados por autor. */
+let AN_DEST = null, AN_DEST_CARREGANDO = false;
+async function anDestCarregar(){
+  if(AN_DEST_CARREGANDO) return; AN_DEST_CARREGANDO = true;
+  try{
+    const { data, error } = await sb.from('analise_destaques').select('*').eq('ativo', true).order('ordem', {ascending:false}).order('data', {ascending:false});
+    if(error) throw error;
+    AN_DEST = data || [];
+  }catch(e){ console.error('analise_destaques', e); if(AN_DEST===null) AN_DEST = []; }
+  AN_DEST_CARREGANDO = false;
+  if(currentView==='analise') renderAnalise();
+}
+function anDestHtml(){
+  if(AN_DEST===null){ anDestCarregar(); return ''; }
+  const pode = staffPleno();
+  if(!AN_DEST.length && !pode) return '';
+  const autores = Array.from(new Set(AN_DEST.map(d=>d.autor||'')));
+  const blocos = autores.map(autor=>{
+    const itens = AN_DEST.filter(d=>(d.autor||'')===autor);
+    return `
+      <div class="an-dest">
+        <div class="an-dest-hd">
+          <span class="an-dest-pin">${icon('award','tiny')} Destaque fixado</span>
+          <h3>Análise feita por ${escapeHtml(autor||'—')}</h3>
+        </div>
+        <div class="an-dest-lista">${itens.map(d=>{
+          const u = String(d.link||'').trim(); const ok = /^https?:\/\//i.test(u);
+          return `<div class="an-dest-item">
+            <span class="an-dest-ic">${icon(/video|recording|grava/i.test(d.titulo+' '+u) || /drive\.google\.com\/file/.test(u) ? 'play' : 'file','tiny')}</span>
+            <div class="an-dest-txt">
+              <strong>${escapeHtml(d.titulo||'Sem título')}</strong>
+              ${d.data ? `<small>${tzDataCurta(d.data)}</small>` : ''}
+              ${d.descricao ? `<p>${linkify(d.descricao)}</p>` : ''}
+            </div>
+            <div class="an-dest-acoes">
+              ${ok ? `<a class="btn-accent btn-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : ''}
+              ${pode ? `<button type="button" class="btn-mini icon-only" data-an-dest-edit="${d.id}" title="Editar">${icon('edit','tiny')}</button><button type="button" class="btn-mini icon-only danger" data-an-dest-del="${d.id}" title="Tirar do destaque">${icon('trash','tiny')}</button>` : ''}
+            </div>
+          </div>`; }).join('')}</div>
+        ${pode ? `<button type="button" class="link-btn an-dest-add" data-an-dest-add="${escapeAttr(autor)}">${icon('plus','tiny')} Adicionar a este destaque</button>` : ''}
+      </div>`;
+  }).join('');
+  return blocos + (pode ? `<div class="an-dest-novo"><button type="button" class="btn-outline" data-an-dest-add="">${icon('plus','tiny')} Novo destaque fixado</button></div>` : '');
+}
+function anDestForm(d, autorIni){
+  const r = d ? Object.assign({}, d) : { autor:autorIni||'', titulo:'', descricao:'', link:'', data:'' };
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Análise Sessões 1:1</div>
+      <h3>${d ? 'Editar destaque' : 'Novo item no destaque'}</h3>
+      <label class="ps-label">Análise feita por</label>
+      <input class="ps-input" id="and-autor" value="${escapeAttr(r.autor||'')}" placeholder="Ex.: Vanessa Medeiros">
+      <label class="ps-label">Título</label>
+      <input class="ps-input" id="and-titulo" value="${escapeAttr(r.titulo||'')}" placeholder="Ex.: Feedback da Carmem">
+      <label class="ps-label">Link (vídeo ou documento)</label>
+      <input class="ps-input" id="and-link" value="${escapeAttr(r.link||'')}" placeholder="https://drive.google.com/...">
+      <label class="ps-label">Data <small style="font-weight:400;color:var(--text-mute)">(opcional)</small></label>
+      <input class="ps-input" type="date" id="and-data" value="${escapeAttr(r.data||'')}">
+      <label class="ps-label">Observação <small style="font-weight:400;color:var(--text-mute)">(opcional)</small></label>
+      <textarea class="ps-input" id="and-desc" rows="3">${escapeHtml(r.descricao||'')}</textarea>
+      <div class="modal-actions gtf-acoes an-dest-form-acoes">
+        <button type="button" class="btn-accent" id="and-salvar">${icon('check','tiny')} Salvar</button>
+        <button type="button" class="btn-outline" id="and-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+  const md = document.getElementById('modal');
+  md.querySelector('#and-cancelar').addEventListener('click', closeModal);
+  md.querySelector('#and-salvar').addEventListener('click', async (e)=>{
+    const v = id=>md.querySelector(id).value.trim();
+    const linha = { autor:v('#and-autor'), titulo:v('#and-titulo'), link:v('#and-link'), data:v('#and-data')||null, descricao:v('#and-desc') };
+    if(!linha.autor){ md.querySelector('#and-autor').focus(); return; }
+    if(!linha.titulo){ md.querySelector('#and-titulo').focus(); return; }
+    e.currentTarget.disabled = true;
+    const q = d ? sb.from('analise_destaques').update(linha).eq('id', d.id) : sb.from('analise_destaques').insert(Object.assign({ ordem: Math.max(0, ...(AN_DEST||[]).map(x=>x.ordem||0)) + 1 }, linha));
+    const { error } = await q;
+    if(error){ console.error('analise_destaques', error); alert('Não foi possível salvar: '+(error.message||'')); e.currentTarget.disabled = false; return; }
+    reallyCloseModal(); await anDestCarregar();
+  });
+  modalReturnTo = null; modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+function anDestBind(){
+  const v = document.getElementById('view-analise'); if(!v) return;
+  v.querySelectorAll('[data-an-dest-add]').forEach(b=>b.addEventListener('click', ()=>anDestForm(null, b.dataset.anDestAdd)));
+  v.querySelectorAll('[data-an-dest-edit]').forEach(b=>b.addEventListener('click', ()=>{ const d = (AN_DEST||[]).find(x=>String(x.id)===b.dataset.anDestEdit); if(d) anDestForm(d); }));
+  v.querySelectorAll('[data-an-dest-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const d = (AN_DEST||[]).find(x=>String(x.id)===b.dataset.anDestDel); if(!d) return;
+    const ok = await showAppConfirm(`Tirar "${d.titulo}" do destaque?`, {title:'Tirar do destaque', confirmLabel:'Tirar', cancelLabel:'Cancelar'});
+    if(!ok) return;
+    AN_DEST = AN_DEST.filter(x=>x!==d); renderAnalise();
+    const { error } = await sb.from('analise_destaques').update({ ativo:false }).eq('id', d.id);
+    if(error){ console.error(error); alert('Não foi possível tirar.'); anDestCarregar(); }
+  }));
+}
 function renderAnalise(){
   const busca = analiseBusca.trim().toLowerCase();
   const lista = ANALISE_SESSOES
@@ -15111,6 +15225,7 @@ function renderAnalise(){
 
     <h2 class="section-title">${icon('chart')} Análise Sessões 1:1</h2>
     <p class="section-sub" style="margin-top:-6px">✓ = analisou e registrou · ✕ = ainda não. Clique em <strong>Abrir</strong> para ver os links e registrar a sua análise — cada pessoa só escreve no próprio espaço.</p>
+    ${anDestHtml()}
     <div class="add-form" style="margin-bottom:14px">
       <div class="field full"><label>Buscar por lead ou WhatsApp</label>
         <input class="ps-input" type="text" id="analise-busca" value="${escapeAttr(analiseBusca)}" placeholder="Digite o nome do lead">
@@ -15148,6 +15263,7 @@ function renderAnalise(){
     </table></div>
   `;
 
+  anDestBind();
   const buscaEl = document.getElementById('analise-busca');
   buscaEl.addEventListener('input', e=>{ analiseBusca = e.target.value; });
   buscaEl.addEventListener('change', ()=>renderAnalise());
