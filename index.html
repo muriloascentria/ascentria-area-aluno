@@ -1968,6 +1968,15 @@
   .gtf-novo{display:flex;justify-content:flex-end;margin-top:8px;}
   .gtf-novo .btn-accent{display:inline-flex;align-items:center;gap:6px;}
   .gtf-modal .gtf-origem{margin-bottom:6px;}
+  .gtf-modal .gtf-acoes{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
+  .gtf-resps{display:flex;flex-wrap:wrap;align-items:center;gap:4px;}
+  .gtf-resps em{font-style:normal;margin-left:4px;}
+  .gtf-quem{display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:10px;border:1px dashed var(--border);color:var(--text-dim);font-weight:600;}
+  .gtf-quem.ok{border-style:solid;border-color:var(--success);color:var(--success);}
+  .gtf-quem .icon{width:11px;height:11px;}
+  .gtf-check-off{cursor:default;opacity:.45;}
+  .gtf-check-off:hover{border-color:var(--border);color:transparent;}
+  .gtf-check-off.on:hover{border-color:var(--success);color:#fff;}
   .gtf-resp-lista{display:flex;flex-wrap:wrap;gap:6px;}
   .gtf-resp-lista label{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;background:var(--bg-card);}
   .gtf-resp-lista label.on{border-color:var(--accent);background:var(--accent-soft);color:var(--text);}
@@ -12218,7 +12227,7 @@ function msgGruposMudaram(){
    não vai para a lista de Tarefas de ninguém, e acende um alerta para o responsável (no grupo, na
    lista de conversas e no sininho) até ser concluída. */
 let MSG_GTAREFAS = [];
-function gtfMap(r){ return { id:r.id, grupoId:r.grupo_id, texto:r.texto||'', resp:r.responsavel_id||null, coresp:Array.isArray(r.coresponsaveis)? r.coresponsaveis : [], prazo:r.prazo||null, msgId:r.mensagem_id||null, criadoPor:r.criado_por, criadoEm:r.created_at, concluida:!!r.concluida, concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null }; }
+function gtfMap(r){ return { id:r.id, grupoId:r.grupo_id, texto:r.texto||'', resp:r.responsavel_id||null, coresp:Array.isArray(r.coresponsaveis)? r.coresponsaveis : [], prazo:r.prazo||null, msgId:r.mensagem_id||null, criadoPor:r.criado_por, criadoEm:r.created_at, concluida:!!r.concluida, concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null, res:(r.resolucoes && typeof r.resolucoes==='object') ? r.resolucoes : {} }; }
 async function gtfCarregar(){
   if(!msgSouEquipe()) return;
   try{
@@ -12231,7 +12240,10 @@ async function gtfCarregar(){
 /* Responsáveis da tarefa do grupo: o principal + os demais escolhidos (pode ser mais de um). */
 function gtfResps(t){ return [t.resp].concat(t.coresp||[]).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i); }
 function gtfDoGrupo(gid){ return MSG_GTAREFAS.filter(t=>t.grupoId===gid); }
-function gtfMinhasAbertas(gid){ const eu = msgEu(); return MSG_GTAREFAS.filter(t=>!t.concluida && gtfResps(t).includes(eu) && (!gid || t.grupoId===gid) && msgGrupo(t.grupoId)); }
+function gtfMinhasAbertas(gid){ const eu = msgEu(); return MSG_GTAREFAS.filter(t=>!t.concluida && gtfResps(t).includes(eu) && !(t.res||{})[eu] && (!gid || t.grupoId===gid) && msgGrupo(t.grupoId)); }
+/* Cada responsável resolve a sua parte; a tarefa só fecha quando todos marcaram. */
+function gtfEuResolvi(t){ return !!(t.res||{})[msgEu()]; }
+function gtfPendenteParaMim(t){ return !t.concluida && gtfResps(t).includes(msgEu()) && !gtfEuResolvi(t); }
 function gtfMudou(payload){
   if(payload.eventType==='DELETE'){ const id = payload.old && payload.old.id; MSG_GTAREFAS = MSG_GTAREFAS.filter(t=>t.id!==id); }
   else if(payload.new){ const t = gtfMap(payload.new); const i = MSG_GTAREFAS.findIndex(x=>x.id===t.id); if(i>-1) MSG_GTAREFAS[i] = t; else MSG_GTAREFAS.push(t); }
@@ -12247,11 +12259,16 @@ async function gtfCriar(gid, texto, resps, prazo, msgId){
   return true;
 }
 async function gtfConcluir(t, feita){
-  const patch = feita ? { concluida:true, concluida_em:new Date().toISOString(), concluida_por:msgEu() } : { concluida:false, concluida_em:null, concluida_por:null };
-  Object.assign(t, { concluida:feita, concluidaEm:patch.concluida_em, concluidaPor:patch.concluida_por });
+  const eu = msgEu(), rs = gtfResps(t);
+  const res = Object.assign({}, t.res||{});
+  if(feita) res[eu] = new Date().toISOString(); else delete res[eu];
+  const tudo = rs.length ? rs.every(id=>res[id]) : feita;
+  Object.assign(t, { res, concluida:tudo, concluidaEm: tudo ? (t.concluidaEm||new Date().toISOString()) : null, concluidaPor: tudo ? (t.concluidaPor||eu) : null });
   updateNotifBadge(); renderMensagens();
-  const { error } = await sb.from('mensagens_grupo_tarefas').update(patch).eq('id', t.id);
-  if(error){ console.error('gtfConcluir', error); alert('Não foi possível salvar. Tente de novo.'); await gtfCarregar(); renderMensagens(); updateNotifBadge(); }
+  const { data, error } = await sb.rpc('gtf_marcar', { p_id:t.id, p_feita:!!feita });
+  if(error){ console.error('gtfConcluir', error); alert('Não foi possível salvar. Tente de novo.'); await gtfCarregar(); renderMensagens(); updateNotifBadge(); return; }
+  const linha = Array.isArray(data) ? data[0] : data;
+  if(linha && linha.id){ Object.assign(t, gtfMap(linha)); updateNotifBadge(); renderMensagens(); }
 }
 async function gtfExcluir(t){
   if(!confirmDelete('Excluir esta tarefa do grupo?')) return;
@@ -12266,13 +12283,22 @@ function gtfItemHtml(t, admin){
   const atrasada = !t.concluida && t.prazo && t.prazo < gtfHojeISO();
   const podeExcluir = t.criadoPor===eu || admin;
   const rs = gtfResps(t);
-  const quem = rs.length ? rs.map(id=> id===eu ? 'você' : escapeHtml(msgNomeDe(id).split(' ')[0])).join(', ') : 'sem responsável';
+  const res = t.res||{};
+  const souResp = rs.includes(eu);
+  const nome = id=> id===eu ? 'você' : escapeHtml(msgNomeDe(id).split(' ')[0]);
+  /* Sem responsável: qualquer um fecha. Com responsáveis: cada um marca só a sua parte. */
+  const podeMarcar = !rs.length || souResp;
+  const marcado = rs.length ? !!res[eu] : t.concluida;
+  const tituloCheck = rs.length>1 ? (marcado ? 'Desmarcar a minha parte' : 'Marcar a minha parte como resolvida') : (marcado ? 'Reabrir' : 'Marcar como resolvida');
+  const quem = !rs.length ? 'sem responsável' : rs.map(id=>`<span class="gtf-quem ${res[id]?'ok':''}" title="${res[id] ? 'Resolveu em '+escapeAttr(new Date(res[id]).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})) : 'Ainda não resolveu'}">${res[id]?icon('tick','tiny'):''}${nome(id)}</span>`).join('');
+  const feitosN = rs.filter(id=>res[id]).length;
   return `
-    <div class="gtf-item ${t.concluida?'feita':''} ${!t.concluida && rs.includes(eu)?'minha':''} ${atrasada?'atrasada':''}">
-      <button type="button" class="gtf-check ${t.concluida?'on':''}" data-gtf-check="${t.id}" title="${t.concluida?'Reabrir':'Marcar como resolvida'}">${icon('tick','tiny')}</button>
+    <div class="gtf-item ${t.concluida?'feita':''} ${gtfPendenteParaMim(t)?'minha':''} ${atrasada?'atrasada':''}">
+      ${podeMarcar ? `<button type="button" class="gtf-check ${marcado?'on':''}" data-gtf-check="${t.id}" title="${tituloCheck}">${icon('tick','tiny')}</button>` : `<span class="gtf-check gtf-check-off ${t.concluida?'on':''}" title="Só os responsáveis marcam">${icon('tick','tiny')}</span>`}
       <div class="gtf-txt">
         <span>${linkify(t.texto)}</span>
-        <small>${rs.length>1?'Responsáveis':'Responsável'}: <b>${quem}</b>${t.prazo ? ` · até ${tzDataCurta(t.prazo)}${atrasada?' (atrasada)':''}` : ''} · criada por ${t.criadoPor===eu ? 'você' : escapeHtml(msgNomeDe(t.criadoPor).split(' ')[0])}${t.concluida && t.concluidaPor ? ` · resolvida por ${t.concluidaPor===eu ? 'você' : escapeHtml(msgNomeDe(t.concluidaPor).split(' ')[0])}` : ''}</small>
+        <small class="gtf-resps">${rs.length>1?'Responsáveis':'Responsável'}: ${quem}${rs.length>1 && !t.concluida ? ` <em>${feitosN} de ${rs.length} resolveram</em>` : ''}</small>
+        <small>${t.prazo ? `até ${tzDataCurta(t.prazo)}${atrasada?' (atrasada)':''} · ` : ''}criada por ${t.criadoPor===eu ? 'você' : nome(t.criadoPor)}${t.concluida && !rs.length && t.concluidaPor ? ` · resolvida por ${nome(t.concluidaPor)}` : ''}</small>
         ${t.msgId ? `<button type="button" class="link-btn gtf-ir" data-msg-ir="${t.msgId}">${icon('comment','tiny')} Ver mensagem de origem</button>` : ''}
       </div>
       ${podeExcluir ? `<button type="button" class="gtf-del" data-gtf-del="${t.id}" title="Excluir">${icon('trash','tiny')}</button>` : ''}
@@ -12281,7 +12307,7 @@ function gtfItemHtml(t, admin){
 function gtfPainelHtml(grupo, admin){
   const lista = gtfDoGrupo(grupo.id);
   const eu = msgEu();
-  const abertas = lista.filter(t=>!t.concluida).sort((a,b)=> (gtfResps(b).includes(eu)) - (gtfResps(a).includes(eu)) || String(a.prazo||'9999').localeCompare(String(b.prazo||'9999')) || String(a.criadoEm).localeCompare(String(b.criadoEm)));
+  const abertas = lista.filter(t=>!t.concluida).sort((a,b)=> gtfPendenteParaMim(b) - gtfPendenteParaMim(a) || String(a.prazo||'9999').localeCompare(String(b.prazo||'9999')) || String(a.criadoEm).localeCompare(String(b.criadoEm)));
   const feitas = lista.filter(t=>t.concluida).sort((a,b)=>String(b.concluidaEm).localeCompare(String(a.concluidaEm))).slice(0,8);
   const r = (msgUI.gtfRascunho && msgUI.gtfRascunho.gid===grupo.id) ? msgUI.gtfRascunho : { gid:grupo.id, texto:'', resps:[], prazo:'', msgId:null };
   if(!Array.isArray(r.resps)) r.resps = r.resp ? [r.resp] : [];
@@ -12302,14 +12328,13 @@ function gtfBind(el, grupo){
   pn.querySelector('#gtf-fechar').addEventListener('click', ()=>{ msgUI.gtfAberto = null; renderMensagens(); });
   const fd = pn.querySelector('.gtf-feitas'); if(fd) fd.addEventListener('toggle', ()=>{ msgUI.gtfFeitasAberto = fd.open; });
   pn.querySelector('#gtf-nova').addEventListener('click', ()=>gtfAbrirForm(grupo, null));
-  pn.querySelectorAll('[data-gtf-check]').forEach(b=>b.addEventListener('click', ()=>{ const t = MSG_GTAREFAS.find(x=>String(x.id)===b.dataset.gtfCheck); if(t) gtfConcluir(t, !t.concluida); }));
+  pn.querySelectorAll('[data-gtf-check]').forEach(b=>b.addEventListener('click', ()=>{ const t = MSG_GTAREFAS.find(x=>String(x.id)===b.dataset.gtfCheck); if(t) gtfConcluir(t, gtfResps(t).length ? !gtfEuResolvi(t) : !t.concluida); }));
   pn.querySelectorAll('[data-gtf-del]').forEach(b=>b.addEventListener('click', ()=>{ const t = MSG_GTAREFAS.find(x=>String(x.id)===b.dataset.gtfDel); if(t) gtfExcluir(t); }));
 }
 function gtfDaMensagem(id){
   const chave = msgUI.aberto; const g = msgGrupoDaChave(chave); if(!g) return;
   const m = (MSG_CONVERSAS[chave]||[]).find(x=>String(x.id)===String(id));
-  const trecho = m ? String(m.texto||'').replace(/\s+/g,' ').trim().slice(0,140) : '';
-  gtfAbrirForm(g, { texto: trecho ? 'Responder: '+trecho : '', msgId: m ? m.id : null });
+  gtfAbrirForm(g, { texto:'', msgId: m ? m.id : null });
 }
 /* Nova tarefa do grupo numa janela à frente da conversa (a partir do painel ou de uma mensagem). */
 function gtfAbrirForm(grupo, ini){
@@ -12323,7 +12348,7 @@ function gtfAbrirForm(grupo, ini){
       <div class="modal-body form-modal gtf-modal">
         <div class="cat">${escapeHtml(grupo.nome||'Grupo')}</div>
         <h3>Nova tarefa do grupo</h3>
-        <p class="desc">Fica só neste grupo e acende um alerta para os responsáveis até alguém resolver.</p>
+        <p class="desc">Fica só neste grupo. Cada responsável marca a sua parte como resolvida, e a tarefa fecha quando todos marcarem.</p>
         ${r.msgId ? `<div class="gtf-origem">${icon('comment','tiny')} Sobre a mensagem${origem ? ` de ${escapeHtml(msgNomeDe(origem.de).split(' ')[0])}: “${escapeHtml(String(origem.texto||'').slice(0,120))}${String(origem.texto||'').length>120?'…':''}”` : ''} <button type="button" class="link-btn" id="gtf-sem-origem">tirar</button></div>` : ''}
         <label class="ps-label">O que precisa ser resolvido?</label>
         <textarea class="ps-input" id="gtf-texto" rows="3" maxlength="500">${escapeHtml(r.texto)}</textarea>
@@ -12331,7 +12356,7 @@ function gtfAbrirForm(grupo, ini){
         <div class="gtf-resp-lista">${membros.map(m=>`<label class="${r.resps.includes(m.id)?'on':''}"><input type="checkbox" data-gtf-resp="${m.id}" ${r.resps.includes(m.id)?'checked':''}> ${escapeHtml(m.nome)}</label>`).join('')}</div>
         <label class="ps-label">Prazo <small style="font-weight:400;color:var(--text-mute)">(opcional)</small></label>
         <input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}">
-        <div class="modal-actions">
+        <div class="modal-actions gtf-acoes">
           <button type="button" class="btn-accent" id="gtf-criar">${icon('plus','tiny')} Criar tarefa</button>
           <button type="button" class="btn-outline" id="gtf-cancelar">Cancelar</button>
         </div>
