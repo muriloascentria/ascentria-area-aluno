@@ -14595,6 +14595,14 @@ const VENDAS_PRODUTO_OPTS = ['Mentoria Essência','Pós-Graduação'];
 const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'];
 const VENDAS_PRESENCA_OPTS = ['Show','No-show'];
 const VENDAS_RESULTADO_OPTS = ['Vendido','Não vendido','Incompleto','Desqualificado'];
+/* O que cada resultado significa (o mesmo texto aparece no Registro da sessão do eCRM). */
+const VENDAS_RESULTADO_SIGNIFICA = {
+  'Vendido': 'A pessoa comprou.',
+  'Não vendido': 'A reunião foi até o final e a pessoa não comprou (no eCRM: coluna Perdido apresentado).',
+  'Incompleto': 'A reunião não chegou ao final.',
+  'Desqualificado': 'A pessoa não tem o perfil para a mentoria.'
+};
+const vendasResultadoAjuda = () => `<small style="display:block;margin-top:4px;color:var(--text-muted,#777);line-height:1.4"><strong>Não vendido</strong> = a reunião foi até o final e a pessoa não comprou.</small>`;
 function selectOpts(opts, current){
   return `<option value="">—</option>` + opts.map(o=>`<option value="${escapeAttr(o)}" ${current===o?'selected':''}>${escapeHtml(o)}</option>`).join('');
 }
@@ -14800,6 +14808,7 @@ function renderVendas(){
           <option value="todos">Todos</option>
           ${resultados.map(r=>`<option value="${escapeAttr(r)}" ${vendasFiltroResultado===r?'selected':''}>${escapeHtml(r)}</option>`).join('')}
         </select>
+        ${vendasResultadoAjuda()}
       </div>
       <div class="field"><label>Mês</label>
         <select class="ps-input" id="vendas-filtro-mes">
@@ -14834,7 +14843,7 @@ function renderVendas(){
               <td class="vendas-upsell-check">${v.upsell? icon('check','tiny') : icon('xcircle','tiny x-danger')}</td>
               <td>${escapeHtml(v.formato)}</td>
               <td>${escapeHtml(v.presenca)}</td>
-              <td>${v.resultado? `<span class="resp-pill">${escapeHtml(v.resultado)}</span>` : ''}</td>
+              <td>${v.resultado? `<span class="resp-pill" title="${escapeAttr(VENDAS_RESULTADO_SIGNIFICA[v.resultado]||'')}">${escapeHtml(v.resultado)}</span>` : ''}</td>
               <td>${vendasRegistroCell([v.objecoes,v.objecoes2].filter(o=>vendaTemRegistro(o, VENDAS_SEM_OBJECAO)).map((o,i)=>`<div class="vd-obj"><b>Objeção ${i+1}:</b> ${linkify(o)}</div>`).join(''), 'obj-'+v.id)}</td>
               <td>${vendasRegistroCell(vendaTemRegistro(v.observacoes, VENDAS_SEM_OBSERVACAO) ? linkify(v.observacoes) : '', 'obs-'+v.id)}</td>
               <td>${v.contrato? (/^https?:\/\//i.test(v.contrato.trim()) ? `<a href="${escapeAttr(v.contrato.trim())}" target="_blank" rel="noopener" class="link-btn">Clique aqui</a>` : escapeHtml(v.contrato)) : ''}</td>
@@ -14869,6 +14878,7 @@ function renderVendas(){
       </div>
       <div class="field"><label>Resultado</label>
         <select class="ps-input" id="new-venda-resultado">${selectOpts(VENDAS_RESULTADO_OPTS,'')}</select>
+        ${vendasResultadoAjuda()}
       </div>
       <div class="field"><label>Valor</label><input class="ps-input" type="text" id="new-venda-valor" placeholder="Ex.: R$ 5.997,00"></div>
       <div class="field full"><label>Objeção 1</label><textarea class="ps-input" id="new-venda-objecao1"></textarea></div>
@@ -14981,6 +14991,7 @@ function openEditVendaModal(id){
         <select class="ps-input" id="ev-presenca">${selectOpts(VENDAS_PRESENCA_OPTS, v.presenca)}</select>
         <label class="ps-label">Resultado</label>
         <select class="ps-input" id="ev-resultado">${selectOpts(VENDAS_RESULTADO_OPTS, v.resultado)}</select>
+        ${vendasResultadoAjuda()}
         <label class="ps-label">Valor</label>
         <input class="ps-input" type="text" id="ev-valor" value="${escapeAttr(v.valorTexto)}">
         <label class="ps-label">Objeção 1</label>
