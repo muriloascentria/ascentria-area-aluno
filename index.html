@@ -14599,10 +14599,10 @@ const VENDAS_RESULTADO_OPTS = ['Vendido','Não vendido','Incompleto','Desqualifi
 const VENDAS_RESULTADO_SIGNIFICA = {
   'Vendido': 'A pessoa comprou.',
   'Não vendido': 'A reunião foi até o final e a pessoa não comprou (no eCRM: coluna Perdido apresentado).',
-  'Incompleto': 'A reunião não chegou ao final.',
+  'Incompleto': 'A reunião foi interrompida pelo lead, não chegando até o final.',
   'Desqualificado': 'A pessoa não tem o perfil para a mentoria.'
 };
-const vendasResultadoAjuda = () => `<small style="display:block;margin-top:4px;color:var(--text-muted,#777);line-height:1.4"><strong>Não vendido</strong> = a reunião foi até o final e a pessoa não comprou.</small>`;
+const vendasResultadoAjuda = () => `<small style="display:block;margin-top:4px;color:var(--text-muted,#777);line-height:1.4"><strong>Não vendido</strong> = a reunião foi até o final e a pessoa não comprou. <strong>Incompleto</strong> = a reunião foi interrompida pelo lead, não chegando até o final. <strong>Desqualificado</strong> = a pessoa não tem o perfil para a mentoria.</small>`;
 function selectOpts(opts, current){
   return `<option value="">—</option>` + opts.map(o=>`<option value="${escapeAttr(o)}" ${current===o?'selected':''}>${escapeHtml(o)}</option>`).join('');
 }
