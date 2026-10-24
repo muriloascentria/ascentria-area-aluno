@@ -2143,6 +2143,7 @@
   .av-hd small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px;}
   .av-linha2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin:10px 0;}
   .av-linha2 label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);}
+  .av-antigo{font-size:12px;color:var(--text-mute);background:var(--bg-elev);border:1px dashed var(--border);border-radius:8px;padding:8px 10px;margin:8px 0;}
   .av-etapas{display:flex;flex-direction:column;gap:6px;}
   .av-etapa{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;font-size:13px;padding:6px 8px;border-radius:9px;background:var(--bg-elev);}
   .av-notas{display:flex;gap:6px;}
@@ -16222,16 +16223,26 @@ function dreExportar(d, ant){
    na tabela avaliacao_vendas, que só Diego e Murilo leem e escrevem (nem as consultoras veem). O
    quadro "Desempenho das Consultoras" mostra a evolução de cada uma. */
 const AV_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc'];
+/* Roteiro da reunião de vendas (12 etapas, de 0 a 2 cada = até 24 pontos). As 4 avaliações de
+   out/2026 foram feitas no roteiro antigo de 7 etapas (AV_ETAPAS_ANTIGAS): continuam guardadas e
+   entram na comparação pela escala de 24. Ao reavaliar uma delas, as notas antigas são zeradas. */
 const AV_ETAPAS = [
-  {k:'pacto', nome:'Pacto inicial'}, {k:'qualificacao', nome:'Qualificação'}, {k:'dor', nome:'Dor'},
-  {k:'ancoragem', nome:'Ancoragem'}, {k:'isolar', nome:'Isolar a objeção'}, {k:'resgate', nome:'Resgate'}, {k:'fechamento', nome:'Fechamento'},
+  {k:'conexao', nome:'Conexão inicial', curto:'Conexão'}, {k:'dor_inflamada', nome:'Dor inflamada', curto:'Dor'},
+  {k:'tabela', nome:'Tabela Comparativa', curto:'Tabela'}, {k:'prova_social', nome:'Prova Social', curto:'Prova'},
+  {k:'historia', nome:'História', curto:'História'}, {k:'pacto_sim_nao', nome:'Pacto de Sim ou Não', curto:'Pacto'},
+  {k:'entregaveis', nome:'Entregáveis', curto:'Entreg.'}, {k:'perguntas5', nome:'5 Perguntas', curto:'5 Perg.'},
+  {k:'percepcao_valor', nome:'Percepção de Valor', curto:'Valor'}, {k:'ancoragem_preco', nome:'Ancoragem de Preço', curto:'Ancor.'},
+  {k:'preco_final', nome:'Preço Final', curto:'Preço'}, {k:'objecoes', nome:'Contorno de Objeções', curto:'Objeções'},
 ];
+const AV_ETAPAS_ANTIGAS = ['pacto','qualificacao','dor','ancoragem','isolar','resgate','fechamento'];
+const AV_ESCALA = AV_ETAPAS.length*2;
+function avRoteiroAntigo(r){ return !!r && AV_ETAPAS_ANTIGAS.some(k=>r[k]!=null) && !AV_ETAPAS.some(e=>r[e.k]!=null); }
 const AV_CONSULTORAS = ['Adriana','Carmem'];
 let AVALIACOES = {}; // analise_id -> linha
 /* Etapa "não se aplica" (a reunião não chegou nela, lead desqualificado...) fica NULL no banco e não
-   conta nem na soma nem no máximo. Para comparar vendas entre si, a nota é levada para a escala de 14. */
-function avMax(r){ return r ? (r.max_pontos!=null ? r.max_pontos : AV_ETAPAS.filter(e=>r[e.k]!=null).length*2) : 14; }
-function avNota14(r){ const m = avMax(r); return m ? Math.round(r.total/m*14*10)/10 : null; }
+   conta nem na soma nem no máximo. Para comparar vendas entre si, a nota é levada para a escala de 24. */
+function avMax(r){ return r ? (r.max_pontos!=null ? r.max_pontos : AV_ETAPAS.filter(e=>r[e.k]!=null).length*2) : AV_ESCALA; }
+function avNota14(r){ const m = avMax(r); return m ? Math.round(r.total/m*AV_ESCALA*10)/10 : null; }
 function avFmtNum(v){ return v==null ? '—' : (Math.round(v*10)/10).toString().replace('.',','); }
 function avPillTxt(r){ return `${r.total}/${avMax(r)}`; }
 function avPode(){ return currentUserRole==='staff' && !!currentUser && AV_UIDS.includes(idEfetivo()); }
@@ -16255,7 +16266,9 @@ function avBlocoHtml(a){
   const cons = r ? r.consultora : avConsultoraPadrao(a);
   const notas = {}; AV_ETAPAS.forEach(e=>{ notas[e.k] = r ? (r[e.k]==null ? 'na' : r[e.k]) : null; });
   const total = AV_ETAPAS.reduce((t,e)=>t+(typeof notas[e.k]==='number'?notas[e.k]:0),0);
-  const maxIni = r ? avMax(r) : 14;
+  const antigo = avRoteiroAntigo(r);
+  if(antigo) AV_ETAPAS.forEach(e=>{ notas[e.k] = null; });
+  const maxIni = (r && !antigo) ? avMax(r) : AV_ESCALA;
   return `
     <div class="av-bloco" id="av-bloco">
       <div class="av-hd"><strong>${icon('chart','tiny')} Avaliação da consultora</strong><small>Só você e ${idEfetivo()===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem estas notas.</small></div>
@@ -16263,6 +16276,7 @@ function avBlocoHtml(a){
         <label>Consultora<select class="ps-input" id="av-consultora"><option value="">Escolha…</option>${AV_CONSULTORAS.map(c=>`<option ${cons===c?'selected':''}>${c}</option>`).join('')}</select></label>
         <label>Data da venda<input class="ps-input" type="date" id="av-data" value="${escapeAttr(r ? r.data_ref : avDataPadrao(a))}"></label>
       </div>
+      ${antigo ? `<p class="av-antigo">Esta venda foi avaliada no roteiro antigo de 7 etapas (${r.total} de ${avMax(r)}). Para avaliar de novo no roteiro atual, marque as 12 etapas e salve.</p>` : ''}
       <div class="av-etapas">
         ${AV_ETAPAS.map(e=>`
           <div class="av-etapa"><span>${e.nome}</span>
@@ -16292,7 +16306,8 @@ function avColetar(a){
   let marcadas = 0;
   AV_ETAPAS.forEach(e=>{ const on = bl.querySelector(`[data-av-etapa="${e.k}"] .av-n.on`); if(on){ linha[e.k] = on.dataset.avN==='na' ? null : Number(on.dataset.avN); marcadas++; } });
   if(!marcadas && !AVALIACOES[a.id]) return null;
-  if(marcadas < AV_ETAPAS.length) return { erro:'Marque todas as 7 etapas do roteiro (0, 1, 2 ou Não se aplica) antes de salvar a avaliação.' };
+  if(marcadas < AV_ETAPAS.length) return { erro:`Marque todas as ${AV_ETAPAS.length} etapas do roteiro (0, 1, 2 ou Não se aplica) antes de salvar a avaliação.` };
+  AV_ETAPAS_ANTIGAS.forEach(k=>{ linha[k] = null; });
   if(!linha.consultora) return { erro:'Escolha qual consultora fez a venda.' };
   return linha;
 }
@@ -16307,13 +16322,13 @@ function avGraficoSvg(lista, cor){
   const W = 640, H = 220, pl = 34, pr = 14, pt = 14, pb = 30;
   const n = lista.length;
   const x = i => n<=1 ? pl + (W-pl-pr)/2 : pl + i*(W-pl-pr)/(n-1);
-  const y = v => pt + (14 - v)*(H-pt-pb)/14;
-  const grade = [0,7,14].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" class="av-grade"/><text x="${pl-8}" y="${y(v)+4}" text-anchor="end" class="av-eixo">${v}</text>`).join('');
+  const y = v => pt + (AV_ESCALA - v)*(H-pt-pb)/AV_ESCALA;
+  const grade = [0,AV_ESCALA/2,AV_ESCALA].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" class="av-grade"/><text x="${pl-8}" y="${y(v)+4}" text-anchor="end" class="av-eixo">${v}</text>`).join('');
   const pts = lista.map((r,i)=>[x(i), y(r.nota14)]);
   const linha = pts.length>1 ? `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : '';
   const passo = Math.max(1, Math.ceil(n/8));
   const rotulos = lista.map((r,i)=> (i%passo===0 || i===n-1) ? `<text x="${x(i)}" y="${H-8}" text-anchor="middle" class="av-eixo">${tzDataCurta(r.data_ref).slice(0,5)}</text>` : '').join('');
-  const marcas = lista.map((r,i)=>`<g class="av-ponto"><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="11" fill="transparent"/><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="4.5" fill="${cor}" stroke="var(--bg-card)" stroke-width="2"/><title>${tzDataCurta(r.data_ref)}: ${r.total} de ${avMax(r)}${avMax(r)!==14 ? ' ('+avFmtNum(r.nota14)+' na escala de 14)' : ''}${r.lead ? ' · '+r.lead : ''}</title></g>`).join('');
+  const marcas = lista.map((r,i)=>`<g class="av-ponto"><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="11" fill="transparent"/><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="4.5" fill="${cor}" stroke="var(--bg-card)" stroke-width="2"/><title>${tzDataCurta(r.data_ref)}: ${r.total} de ${avMax(r)}${avMax(r)!==AV_ESCALA ? ' ('+avFmtNum(r.nota14)+' na escala de '+AV_ESCALA+')' : ''}${r.lead ? ' · '+r.lead : ''}</title></g>`).join('');
   const ult = n ? `<text x="${pts[n-1][0]}" y="${pts[n-1][1]-12}" text-anchor="middle" class="av-ult">${avFmtNum(lista[n-1].nota14)}</text>` : '';
   return `<svg viewBox="0 0 ${W} ${H}" class="av-svg" role="img" aria-label="Evolução da nota total">${grade}${linha}${marcas}${ult}${rotulos}</svg>`;
 }
@@ -16324,7 +16339,7 @@ function renderDesempenho(){
   const media = (l,k)=>{ const v = l.map(r=>r[k]).filter(x=>x!=null); return v.length ? v.reduce((t,x)=>t+x,0)/v.length : null; };
   const fmt = avFmtNum;
   el.innerHTML = `
-    <p class="section-sub" style="margin-top:0">Nota de cada venda analisada (soma das 7 etapas do roteiro, de 0 a 14). Etapas marcadas como "Não se aplica" não contam: nesses casos a nota é levada para a escala de 14 para dar para comparar. As notas vêm da avaliação feita na Análise Sessões 1:1. Só você e ${idEfetivo()===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem este quadro.</p>
+    <p class="section-sub" style="margin-top:0">Nota de cada venda analisada (soma das ${AV_ETAPAS.length} etapas do roteiro, de 0 a ${AV_ESCALA}). Etapas marcadas como "Não se aplica" não contam: nesses casos a nota é levada para a escala de ${AV_ESCALA} para dar para comparar. As avaliações feitas no roteiro antigo, de 7 etapas, também entram convertidas para essa escala. As notas vêm da avaliação feita na Análise Sessões 1:1. Só você e ${idEfetivo()===AV_UIDS[0] ? 'o Diego' : 'o Murilo'} veem este quadro.</p>
     ${AV_CONSULTORAS.map(c=>{
       const l = todas.filter(r=>r.consultora===c).sort((a,b)=>String(a.data_ref).localeCompare(String(b.data_ref)) || String(a.created_at).localeCompare(String(b.created_at)));
       const ini = l.slice(0,3), fim = l.slice(-3);
@@ -16344,7 +16359,7 @@ function renderDesempenho(){
           <div class="av-graf-tit">Média por etapa <small>(últimas 3 avaliações, de 0 a 2)</small></div>
           <div class="av-barras">${AV_ETAPAS.map(e=>{ const v = media(fim, e.k); return `<div class="av-barra"><span>${e.nome}</span><div class="av-trilho"><div class="av-fill" style="width:${v==null?0:v/2*100}%"></div></div><b>${fmt(v)}</b></div>`; }).join('')}</div>
           <details class="av-tabela"><summary>Ver todas as avaliações</summary>
-            <table class="check-table"><thead><tr><th>Data</th><th>Lead</th>${AV_ETAPAS.map(e=>`<th title="${e.nome}">${e.nome.split(' ')[0]}</th>`).join('')}<th>Total</th></tr></thead>
+            <table class="check-table"><thead><tr><th>Data</th><th>Lead</th>${AV_ETAPAS.map(e=>`<th title="${e.nome}">${e.curto||e.nome.split(' ')[0]}</th>`).join('')}<th>Total</th></tr></thead>
             <tbody>${l.slice().reverse().map(r=>`<tr><td>${tzDataCurta(r.data_ref)}</td><td>${escapeHtml(r.lead||'—')}</td>${AV_ETAPAS.map(e=>r[e.k]==null ? `<td class="av-na" title="Não se aplica">N/A</td>` : `<td>${r[e.k]}</td>`).join('')}<td><b>${avPillTxt(r)}</b></td></tr>`).join('')}</tbody></table>
           </details>` : `<div class="empty-state" style="padding:24px 10px">Nenhuma venda avaliada ainda. Abra uma sessão na Análise Sessões 1:1 e preencha a avaliação.</div>`}
       </div>`; }).join('')}`;
