@@ -1279,6 +1279,12 @@
   .goal-aula:hover{border-color:var(--accent);}
   .goal-aula.locked{opacity:.55;}
   .aula-pick{display:flex;flex-direction:column;gap:8px;}
+  .prazo-atalhos{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .prazo-atalho{font-family:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);cursor:pointer;}
+  .prazo-atalho:hover{border-color:var(--accent);color:var(--text);}
+  .prazo-atalho.on{border-color:var(--accent);background:var(--accent-soft);color:var(--text);}
+  .add-form.form-tarefa{align-items:flex-start;}
+  .prazo-antigo{display:block;margin-top:4px;font-size:11.5px;color:var(--text-mute);}
   .apoio-dd{position:relative;max-width:520px;}
   .form-tarefa .apoio-dd{max-width:none;}
   .apoio-dd-btn{width:100%;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--text-dim);font-family:inherit;}
@@ -10252,6 +10258,25 @@ function exportAcompanhamentoPDF(s){
 function mentorLabel(responsavel){
   return MENTORES_MASC.includes(responsavel) ? 'do mentor' : 'da mentora';
 }
+/* ---- Prazo com calendário e atalhos +10 / +15 / +20 dias ----
+   Os atalhos preenchem o calendário sozinhos (data de hoje + N dias). As tarefas do mentorado
+   guardam o prazo como texto "dd/mm/aaaa"; prazos antigos escritos à mão (ex.: "30 ago") seguem
+   aparecendo como estavam até alguém escolher uma data nova. */
+function prazoMaisDias(n){ const d = new Date(); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function prazoIsoParaTexto(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||'')); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
+function prazoTextoParaIso(t){ const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(t||'').trim()); return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : ''; }
+function prazoAtalhosHtml(alvoId){
+  return `<div class="prazo-atalhos">${[10,15,20].map(n=>`<button type="button" class="prazo-atalho" data-prazo-mais="${n}" data-prazo-alvo="${alvoId}">+${n} dias</button>`).join('')}</div>`;
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('[data-prazo-mais]');
+  if(!b) return;
+  const inp = document.getElementById(b.dataset.prazoAlvo);
+  if(!inp || inp.disabled || inp.readOnly) return;
+  inp.value = prazoMaisDias(+b.dataset.prazoMais);
+  inp.dispatchEvent(new Event('input', {bubbles:true})); inp.dispatchEvent(new Event('change', {bubbles:true}));
+  const grupo = b.parentElement; if(grupo) grupo.querySelectorAll('.prazo-atalho').forEach(x=>x.classList.toggle('on', x===b));
+});
 /* ---- Aulas de apoio vinculadas a uma tarefa do checklist ----
    A equipe escolhe (várias) aulas que ajudam o mentorado a executar a tarefa; em Minhas Metas elas
    viram links que abrem a aula direto. Guardadas em checklist_items.aulas (ids de courses). */
@@ -10395,7 +10420,7 @@ function openTarefaEditModal(s, t){
         <div class="field"><label>Responsável</label>
           <select class="ps-input" id="te-resp">${['Mentorado','Mentor'].map(r=>`<option value="${r}" ${t.responsavel===r?'selected':''}>${r}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="te-prazo" value="${escapeAttr(t.prazo==='—' ? '' : (t.prazo||''))}" placeholder="Ex.: 30 ago"></div>
+        <div class="field"><label>Prazo</label><input class="ps-input" type="date" id="te-prazo" value="${escapeAttr(prazoTextoParaIso(t.prazo))}">${prazoAtalhosHtml('te-prazo')}${t.prazo && t.prazo!=='—' && !prazoTextoParaIso(t.prazo) ? `<small class="prazo-antigo">Prazo atual: ${escapeHtml(t.prazo)}</small>` : ''}</div>
         <div class="field"><label>Status</label>
           <select class="ps-input" id="te-status">${['Pendente','Concluída','Atrasada'].map(st=>`<option value="${st}" ${t.status===st?'selected':''}>${st}</option>`).join('')}</select>
         </div>
@@ -10421,7 +10446,7 @@ function openTarefaEditModal(s, t){
     const campos = {
       tarefa,
       responsavel: document.getElementById('te-resp').value,
-      prazo: document.getElementById('te-prazo').value.trim() || '—',
+      prazo: prazoIsoParaTexto(document.getElementById('te-prazo').value) || ((t.prazo && !prazoTextoParaIso(t.prazo)) ? t.prazo : '—'),
       status: document.getElementById('te-status').value,
       obs: document.getElementById('te-obs').value.trim(),
       aulas: apoioOrdenar(sel),
@@ -10560,7 +10585,7 @@ function renderInterno(){
       <div class="field"><label>Responsável</label>
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
       </div>
-      <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="new-task-prazo" placeholder="Ex.: 30 ago"></div>
+      <div class="field"><label>Prazo</label><input class="ps-input" type="date" id="new-task-prazo" value="${prazoMaisDias(10)}">${prazoAtalhosHtml('new-task-prazo')}</div>
       <div class="field aulas-apoio"><label>Aulas e atividades de apoio (opcional · <span id="nt-count">${apoioContagem(novaTarefaAulas)}</span>)</label>
         ${aulaPickHtml([...novaTarefaAulas], 'nt')}
       </div>
@@ -10792,7 +10817,7 @@ function renderInterno(){
     const tarefa = document.getElementById('new-task-tarefa').value.trim();
     if(!tarefa) return;
     const responsavel = document.getElementById('new-task-resp').value;
-    const prazo = document.getElementById('new-task-prazo').value.trim() || '—';
+    const prazo = prazoIsoParaTexto(document.getElementById('new-task-prazo').value) || '—';
     const btn = document.getElementById('add-task-btn');
     btn.disabled = true;
     const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: apoioOrdenar(novaTarefaAulas)};
@@ -11892,7 +11917,7 @@ async function openTarefaModal(id, defaults){
           <select class="ps-input" id="tf-m-resp" ${ro(dono && (podeDelegarAgora || nova))}>${ativos.map(m=>`<option value="${m.userId}" ${t.responsavelId===m.userId?'selected':''} ${(!podeDelegarAgora && m.userId!==eu && m.userId!==t.responsavelId)?'disabled':''}>${escapeHtml(m.name)}</option>`).join('')}</select></div>
         <div><label class="ps-label">Prioridade</label>
           <select class="ps-input" id="tf-m-prio" ${ro(dono)}>${Object.entries(TAREFAS_PRIO).map(([k,v])=>`<option value="${k}" ${t.prioridade===k?'selected':''}>${v}</option>`).join('')}</select></div>
-        <div><label class="ps-label">Prazo</label><input class="ps-input" type="date" id="tf-m-data" value="${escapeAttr(t.prazoData)}" ${ro(dono)}></div>
+        <div><label class="ps-label">Prazo</label><input class="ps-input" type="date" id="tf-m-data" value="${escapeAttr(t.prazoData)}" ${ro(dono)}>${dono ? prazoAtalhosHtml('tf-m-data') : ''}</div>
         <div><label class="ps-label">Horário (opcional)</label><input class="ps-input" type="time" id="tf-m-hora" value="${escapeAttr(t.prazoHora)}" ${ro(dono)}></div>
         <div><label class="ps-label">Situação</label>
           <select class="ps-input" id="tf-m-status" ${ro(podeEditar)}>${Object.entries(TAREFAS_STATUS).filter(([k])=>k!=='cancelada' || dono || t.status==='cancelada').map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
@@ -12505,6 +12530,7 @@ function gtfAbrirForm(grupo, ini){
         <div class="gtf-resp-lista">${membros.map(m=>`<label class="${r.resps.includes(m.id)?'on':''}"><input type="checkbox" data-gtf-resp="${m.id}" ${r.resps.includes(m.id)?'checked':''}> ${escapeHtml(m.nome)}</label>`).join('')}</div>
         <label class="ps-label">Prazo <small style="font-weight:400;color:var(--text-mute)">(opcional)</small></label>
         <input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}">
+        ${prazoAtalhosHtml('gtf-prazo')}
         <div class="modal-actions gtf-acoes">
           <button type="button" class="btn-accent" id="gtf-criar">${icon('plus','tiny')} Criar tarefa</button>
           <button type="button" class="btn-outline" id="gtf-cancelar">Cancelar</button>
