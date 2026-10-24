@@ -10266,13 +10266,30 @@ function apoioAtividade(id){
   const label = (MODULE_CHECKLIST[m[1]]||[])[idx];
   return (mod && label) ? { id:String(id), modId:m[1], modNome:mod.name, idx, label:String(label).replace(/\.$/,'') } : null;
 }
-function apoioAtividadesLista(){
-  return MODULES.flatMap(m=>(MODULE_CHECKLIST[m.id]||[]).map((label,idx)=>({ id:`chk:${m.id}:${idx}`, modId:m.id, modNome:m.name, idx, label:String(label).replace(/\.$/,'') }))
-    .filter(a=>!/^assistir aula/i.test(a.label)));
+/* Lista do menu na mesma sequência do checklist do Dashboard (MODULE_CHECKLIST), módulo a módulo.
+   "Assistir aula sobre X" vira a própria aula (abre a aula); os demais itens viram atividades.
+   Como é montada a partir do checklist e das aulas cadastradas, qualquer mudança no Dashboard ou
+   nas aulas já aparece aqui. Aulas que não têm item no checklist entram no fim do seu módulo. */
+function apoioSequencia(){
+  const usadas = new Set(); const out = [];
+  const cats = orderedCourseCats();
+  MODULES.forEach(m=>{
+    (MODULE_CHECKLIST[m.id]||[]).forEach((label,idx)=>{
+      const txt = String(label).replace(/\.$/,'');
+      const c = checklistLinkedCourse(label, m.name);
+      if(c && !usadas.has(c.id)){ usadas.add(c.id); out.push({ id:c.id, tipo:'aula', titulo:txt, modNome:m.name }); }
+      else if(!/^assistir aula/i.test(txt) || !c) out.push({ id:`chk:${m.id}:${idx}`, tipo:'ativ', titulo:txt, modNome:m.name });
+    });
+    COURSES.filter(c=>c.cat===m.name && !usadas.has(c.id)).forEach(c=>{ usadas.add(c.id); out.push({ id:c.id, tipo:'aula', titulo:'Assistir aula: '+c.title, modNome:m.name }); });
+  });
+  cats.filter(cat=>!MODULES.some(m=>m.name===cat)).forEach(cat=>COURSES.filter(c=>c.cat===cat && !usadas.has(c.id)).forEach(c=>{ usadas.add(c.id); out.push({ id:c.id, tipo:'aula', titulo:'Assistir aula: '+c.title, modNome:cat }); }));
+  return out;
 }
+function apoioAtividadesLista(){ return apoioSequencia().filter(x=>x.tipo==='ativ'); }
 function apoioOrdenar(set){
   const sel = set instanceof Set ? set : new Set(set||[]);
-  return orderedCourseIds().filter(id=>sel.has(id)).concat(apoioAtividadesLista().map(a=>a.id).filter(id=>sel.has(id)));
+  const seq = apoioSequencia().map(x=>x.id).filter(id=>sel.has(id));
+  return seq.concat([...sel].filter(id=>!seq.includes(id) && (getCourse(id) || apoioAtividade(id))));
 }
 function apoioContagem(set){ const n = set.size; return n ? `${n} selecionado${n>1?'s':''}` : 'nenhum selecionado'; }
 /* Menu suspenso próprio (não o select do navegador): clicar num item marca ou desmarca e o menu
@@ -10287,17 +10304,14 @@ function aulaPickInnerHtml(sel, prefix){
 }
 function apoioPainelHtml(sel, busca){
   const q = String(busca||'').trim().toLowerCase();
-  const ok = t=> !q || String(t).toLowerCase().includes(q);
-  const linha = (id, titulo, tipo)=>`<button type="button" class="apoio-op ${sel.has(id)?'on':''}" data-apoio-op="${escapeAttr(id)}"><span class="apoio-box">${sel.has(id)?icon('tick','tiny'):''}</span>${icon(tipo==='aula'?'play':'check','tiny')}<span>${escapeHtml(titulo)}</span></button>`;
-  const aulas = orderedCourseCats().map(cat=>{
-    const cs = COURSES.filter(c=>c.cat===cat && ok(c.title+' '+cat));
-    return cs.length ? `<div class="apoio-grupo">${escapeHtml(cat)}</div>${cs.map(c=>linha(c.id, c.title, 'aula')).join('')}` : '';
-  }).join('');
-  const ativs = MODULES.map(m=>{
-    const as = apoioAtividadesLista().filter(a=>a.modId===m.id && ok(a.label+' '+m.name));
-    return as.length ? `<div class="apoio-grupo">${escapeHtml(m.name)}</div>${as.map(a=>linha(a.id, a.label, 'ativ')).join('')}` : '';
-  }).join('');
-  return `${aulas ? `<div class="apoio-sec">Aulas</div>${aulas}` : ''}${ativs ? `<div class="apoio-sec">Atividades do Dashboard</div>${ativs}` : ''}${!aulas && !ativs ? '<div class="apoio-vazio">Nada encontrado com esse termo.</div>' : ''}`;
+  const seq = apoioSequencia().filter(x=>!q || (x.titulo+' '+x.modNome).toLowerCase().includes(q));
+  if(!seq.length) return '<div class="apoio-vazio">Nada encontrado com esse termo.</div>';
+  let mod = null, html = '';
+  seq.forEach(x=>{
+    if(x.modNome!==mod){ mod = x.modNome; html += `<div class="apoio-sec">${escapeHtml(mod)}</div>`; }
+    html += `<button type="button" class="apoio-op ${sel.has(x.id)?'on':''}" data-apoio-op="${escapeAttr(x.id)}"><span class="apoio-box">${sel.has(x.id)?icon('tick','tiny'):''}</span>${icon(x.tipo==='aula'?'play':'check','tiny')}<span>${escapeHtml(x.titulo)}</span></button>`;
+  });
+  return html;
 }
 function aulaPickHtml(selecionadas, prefix){
   return `<div class="aula-pick" id="${prefix}-pick">${aulaPickInnerHtml(new Set(selecionadas||[]), prefix)}</div>`;
@@ -10356,13 +10370,14 @@ function aulasChipsHtml(ids){
 /* Cartão de Minhas Metas: cada aula vira um link que abre a aula. Se a aula ainda estiver travada
    pro aluno do Curso, openCourseModal avisa e não abre — comportamento proposital, não contornar. */
 function goalAulasHtml(ids, s){
-  const aulas = (ids||[]).map(getCourse).filter(Boolean);
-  const ativs = (ids||[]).map(apoioAtividade).filter(Boolean);
-  if(!aulas.length && !ativs.length) return '';
-  return `<div class="goal-aulas-label">${ativs.length && aulas.length ? 'Aulas e atividades que vão ajudar na tarefa:' : ativs.length ? 'Atividades que vão ajudar na tarefa:' : 'Aulas que vão ajudar na tarefa:'}</div><div class="goal-aulas">${aulas.map(c=>{
-    const locked = isLessonLocked(c.id, s);
-    return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada — conclua a anterior':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
-  }).join('')}${ativs.map(a=>{
+  const itens = apoioOrdenar(ids||[]).map(id=>{ const c = getCourse(id); if(c) return {c}; const a = apoioAtividade(id); return a ? {a} : null; }).filter(Boolean);
+  if(!itens.length) return '';
+  const temA = itens.some(x=>x.a), temC = itens.some(x=>x.c);
+  return `<div class="goal-aulas-label">${temA && temC ? 'Aulas e atividades que vão ajudar na tarefa:' : temA ? 'Atividades que vão ajudar na tarefa:' : 'Aulas que vão ajudar na tarefa:'}</div><div class="goal-aulas">${itens.map(({c,a})=>{
+    if(c){
+      const locked = isLessonLocked(c.id, s);
+      return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada — conclua a anterior':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
+    }
     let feito = false; try{ feito = !!(getModuleChecklistState(s.id, a.modId)||[])[a.idx]; }catch(e){}
     return `<button type="button" class="goal-aula ativ ${feito?'feito':''}" data-goal-ativ="${escapeAttr(a.id)}" title="Abrir no Dashboard (módulo ${escapeAttr(a.modNome)})">${icon(feito?'tick':'check','tiny')} ${escapeHtml(a.label)}</button>`;
   }).join('')}</div>`;
