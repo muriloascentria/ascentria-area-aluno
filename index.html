@@ -2209,7 +2209,7 @@
   .pt-toggle{overflow-x:auto;scrollbar-width:none;max-width:min(640px, calc(100vw - 720px));min-width:0;flex:0 1 auto;}
   .topbar-right:has(.pt-toggle){flex-shrink:1;}
   .pt-toggle::-webkit-scrollbar{display:none;}
-  /* Políticas e Fluxos de Trabalho */
+  /* Políticas Internas */
   .pol-alerta{display:flex;gap:8px;align-items:flex-start;background:var(--danger-soft, rgba(220,60,80,.12));border:1px solid var(--danger);border-radius:10px;padding:10px 12px;margin:4px 0 14px;font-size:13px;line-height:1.5;}
   .pol-alerta .icon{color:var(--danger);margin-top:3px;flex:0 0 auto;}
   .pol-alerta .link-btn{font-size:13px;}
@@ -3006,7 +3006,7 @@ const NAV_LABELS = {
   desempenho:['chart','Desempenho das Consultoras'],
   dre:['money','DRE'],
   reunioes:['file','Reuniões e Atas'],
-  politicas:['file','Políticas e Fluxos de Trabalho'],
+  politicas:['file','Políticas Internas'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
@@ -14554,7 +14554,7 @@ const EQUIPE_ATALHOS = [
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
-  {view:'politicas',  desc:'Políticas e fluxos de trabalho da Ascentria, com os links, e a revisão dos sócios nos documentos em revisão.'},
+  {view:'politicas',  desc:'Políticas internas da Ascentria, com os POPs de cada área, os links e a revisão dos sócios nos documentos em revisão.'},
   {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
@@ -15635,9 +15635,10 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape' && document.getEle
    despesas, tarifas, retiradas). Transferências entre contas, empréstimos e aportes de sócios não são
    resultado: aparecem à parte, só para conferência. "Gerar DRE" guarda a foto do mês em fin_dre (só
    Murilo e Carmem leem), e dá para gerar de novo se algum lançamento mudar. */
-/* ================= VIEW: POLÍTICAS E FLUXOS DE TRABALHO =================
-   Lista as políticas e os fluxos de trabalho da Ascentria (documentos no Google Drive, pasta
-   Políticas_Fluxos_Processos_de_Trabalho) com o link de cada um. Documento "Em revisão" vira uma
+/* ================= VIEW: POLÍTICAS INTERNAS =================
+   Lista as políticas internas da Ascentria (documentos no Google Drive, pasta
+   Políticas_Fluxos_Processos_de_Trabalho) com o link de cada uma. Os POPs ficam dentro de cada
+   política; os antigos fluxos de trabalho (tipo 'fluxo') não aparecem mais aqui. Documento "Em revisão" vira uma
    demanda para cada sócio: ele escolhe UMA resposta, "Revisei" (com anotações por trecho) ou
    "Concordo". Ao responder, sai da demanda dele (some do sino e do aviso). Os sócios cadastram,
    editam, encerram a revisão ou abrem uma nova rodada (as respostas são por rodada). O time
@@ -15650,7 +15651,7 @@ async function polCarregar(){
   if(POL_UI.carregando || !polPodeAbrir()) return; POL_UI.carregando = true; POL_UI.erro = false;
   try{
     const [d, r] = await Promise.all([
-      sb.from('politicas_docs').select('*').eq('ativo', true).order('ordem', {ascending:false}).order('titulo'),
+      sb.from('politicas_docs').select('*').eq('ativo', true).eq('tipo', 'politica').order('ordem', {ascending:false}).order('titulo'),
       sb.from('politicas_respostas').select('*'),
     ]);
     if(d.error) throw d.error;
@@ -15678,21 +15679,15 @@ function polSociosHtml(d){
 function renderPoliticas(){
   const el = document.getElementById('view-politicas'); if(!el) return;
   if(!polPodeAbrir()){ el.innerHTML = '<div class="empty-state">Área da equipe interna.</div>'; return; }
-  if(POL_UI.docs===null){ polCarregar(); el.innerHTML = '<h2 class="section-title">Políticas e Fluxos de Trabalho</h2><div class="empty-state">Carregando…</div>'; return; }
+  if(POL_UI.docs===null){ polCarregar(); el.innerHTML = '<h2 class="section-title">Políticas Internas</h2><div class="empty-state">Carregando…</div>'; return; }
   const d = POL_UI.aberta && POL_UI.docs.find(x=>String(x.id)===String(POL_UI.aberta));
-  if(d){ el.innerHTML = `<h2 class="section-title">Políticas e Fluxos de Trabalho</h2>${polDetalheHtml(d)}`; polDetalheBind(el, d); return; }
+  if(d){ el.innerHTML = `<h2 class="section-title">Políticas Internas</h2>${polDetalheHtml(d)}`; polDetalheBind(el, d); return; }
   POL_UI.aberta = null;
   const pend = polPendentesMeus();
-  const lista = POL_UI.docs.filter(x=>x.tipo===POL_UI.aba).sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
-  const nP = POL_UI.docs.filter(x=>x.tipo==='politica').length, nF = POL_UI.docs.filter(x=>x.tipo==='fluxo').length;
-  const revP = POL_UI.docs.filter(x=>x.tipo==='politica' && polDevoRevisar(x)).length, revF = POL_UI.docs.filter(x=>x.tipo==='fluxo' && polDevoRevisar(x)).length;
-  el.innerHTML = `<h2 class="section-title">Políticas e Fluxos de Trabalho</h2>
-    <p class="section-sub" style="margin-top:-6px">As políticas e os fluxos de trabalho da Ascentria, com o link de cada documento. ${polSocio() ? 'Os que estão <b>Em revisão</b> aguardam a resposta de cada sócio: revisar com anotações ou concordar.' : 'Clique num documento para abrir.'}</p>
+  const lista = POL_UI.docs.filter(x=>x.tipo==='politica').sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
+  el.innerHTML = `<h2 class="section-title">Políticas Internas</h2>
+    <p class="section-sub" style="margin-top:-6px">As políticas internas da Ascentria, com o link de cada documento. Os procedimentos operacionais padrão (POPs) ficam dentro de cada política. ${polSocio() ? 'Os que estão <b>Em revisão</b> aguardam a resposta de cada sócio: revisar com anotações ou concordar.' : 'Clique num documento para abrir.'}</p>
     ${pend.length ? `<div class="pol-alerta">${icon('bell','tiny')} <span><b>${pend.length} ${pend.length===1?'documento aguarda':'documentos aguardam'} a sua revisão:</b> ${pend.map(x=>`<button type="button" class="link-btn" data-pol-abrir="${x.id}">${escapeHtml(x.titulo)}</button>`).join(', ')}</span></div>` : ''}
-    <div class="filter-tabs rd-abas">
-      <button type="button" class="filter-tab ${POL_UI.aba==='politica'?'active':''}" data-pol-aba="politica">Políticas (${nP})${revP?` <span class="reu-cont">${revP}</span>`:''}</button>
-      <button type="button" class="filter-tab ${POL_UI.aba==='fluxo'?'active':''}" data-pol-aba="fluxo">Fluxos de trabalho (${nF})${revF?` <span class="reu-cont">${revF}</span>`:''}</button>
-    </div>
     ${POL_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="pol-tentar">Tentar de novo</button></div>' : ''}
     ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Situação</th><th>Link</th><th>Revisão dos sócios</th></tr></thead><tbody>${lista.map(x=>{
       const minha = polDevoRevisar(x);
@@ -15701,9 +15696,8 @@ function renderPoliticas(){
         <td>${polStatusPill(x)}</td>
         <td>${reuUrlOk(x.link) ? `<a href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>Abrir</a>` : '<span class="muted">—</span>'}</td>
         <td>${polSociosHtml(x)}</td>
-      </tr>`; }).join('')}</tbody></table></div>` : `<div class="empty-state">Nenhum${POL_UI.aba==='politica'?'a política':' fluxo de trabalho'} cadastrado ainda.</div>`}
-    ${polSocio() ? `<div class="pol-novo"><button type="button" class="btn-accent" id="pol-novo">${icon('plus','tiny')} Adicionar ${POL_UI.aba==='politica'?'política':'fluxo de trabalho'}</button></div>` : ''}`;
-  el.querySelectorAll('[data-pol-aba]').forEach(b=>b.addEventListener('click', ()=>{ POL_UI.aba = b.dataset.polAba; renderPoliticas(); }));
+      </tr>`; }).join('')}</tbody></table></div>` : `<div class="empty-state">Nenhuma política cadastrada ainda.</div>`}
+    ${polSocio() ? `<div class="pol-novo"><button type="button" class="btn-accent" id="pol-novo">${icon('plus','tiny')} Adicionar política</button></div>` : ''}`;
   el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
   el.querySelectorAll('[data-pol-abrir]').forEach(t=>t.addEventListener('click', ()=>{ POL_UI.aberta = t.dataset.polAbrir; POL_UI.form = null; POL_UI.editando = null; renderPoliticas(); window.scrollTo(0,0); }));
   const tt = el.querySelector('#pol-tentar'); if(tt) tt.addEventListener('click', ()=>{ POL_UI.docs = null; renderPoliticas(); });
@@ -15816,13 +15810,11 @@ function polDetalheBind(el, d){
   const rm = el.querySelector('#pol-remover'); if(rm) rm.addEventListener('click', async ()=>{ if(await showAppConfirm(`Tirar "${d.titulo}" da lista? O arquivo no Drive não é apagado.`, {title:'Tirar da lista', confirmLabel:'Tirar', cancelLabel:'Cancelar'})){ if(await atualizaDoc({ ativo:false })){ POL_UI.docs = POL_UI.docs.filter(x=>x!==d); POL_UI.aberta = null; re(); } } });
 }
 function polDocForm(d){
-  const r = d ? Object.assign({}, d) : { tipo:POL_UI.aba, titulo:'', link:'', status:'vigente' };
+  const r = d ? Object.assign({}, d) : { tipo:'politica', titulo:'', link:'', status:'vigente' };
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
-      <div class="cat">Políticas e Fluxos de Trabalho</div>
-      <h3>${d ? 'Editar documento' : 'Novo documento'}</h3>
-      <label class="ps-label">Tipo</label>
-      <select class="ps-input" id="pdf-tipo"><option value="politica" ${r.tipo==='politica'?'selected':''}>Política</option><option value="fluxo" ${r.tipo==='fluxo'?'selected':''}>Fluxo de trabalho</option></select>
+      <div class="cat">Políticas Internas</div>
+      <h3>${d ? 'Editar política' : 'Nova política'}</h3>
       <label class="ps-label">Título</label>
       <input class="ps-input" id="pdf-titulo" value="${escapeAttr(r.titulo)}" placeholder="Ex.: Política de Agendamentos">
       <label class="ps-label">Link do documento</label>
@@ -15838,14 +15830,14 @@ function polDocForm(d){
   md.querySelector('#pdf-cancelar').addEventListener('click', closeModal);
   md.querySelector('#pdf-salvar').addEventListener('click', async (e)=>{
     const v = id=>md.querySelector(id).value.trim();
-    const linha = { tipo:v('#pdf-tipo'), titulo:v('#pdf-titulo'), link:v('#pdf-link'), status:v('#pdf-status'), updated_at:new Date().toISOString() };
+    const linha = { tipo:'politica', titulo:v('#pdf-titulo'), link:v('#pdf-link'), status:v('#pdf-status'), updated_at:new Date().toISOString() };
     if(!linha.titulo){ md.querySelector('#pdf-titulo').focus(); return; }
     if(d && linha.status==='revisao' && d.status!=='revisao' && polRespostasDoc(d).length) linha.rodada = (d.rodada||1)+1;
     e.currentTarget.disabled = true;
     const q = d ? sb.from('politicas_docs').update(linha).eq('id', d.id).select().single() : sb.from('politicas_docs').insert(Object.assign({ ordem: Math.max(0, ...(POL_UI.docs||[]).map(x=>x.ordem||0)) + 1 }, linha)).select().single();
     const { data, error } = await q;
     if(error){ console.error('politicas_docs', error); alert('Não foi possível salvar: '+(error.message||'')); e.currentTarget.disabled = false; return; }
-    if(d) Object.assign(d, data||linha); else { POL_UI.docs.push(data); POL_UI.aba = data.tipo; }
+    if(d) Object.assign(d, data||linha); else POL_UI.docs.push(data);
     reallyCloseModal(); updateNotifBadge(); renderPoliticas();
   });
   modalReturnTo = null; modalCloseGuard = null;
