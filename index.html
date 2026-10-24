@@ -2152,9 +2152,10 @@
   .nps-resp-txt p{margin:6px 0 0;word-break:break-word;}
   .nps-melhoria{color:var(--text-dim);}
   .nps-tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:9px;background:var(--success-soft);color:var(--success);}
-  .nps-pend{display:flex;flex-wrap:wrap;gap:6px;}
-  .nps-pend-item{font-size:12.5px;padding:5px 10px;border:1px solid var(--border);border-radius:999px;background:var(--bg-card);}
-  .nps-pend-item small{color:var(--text-mute);}
+  .nps-pend{display:flex;flex-direction:column;gap:6px;}
+  .nps-pend-item{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;font-size:13px;padding:9px 14px;border:1px solid var(--border);border-radius:999px;background:var(--bg-card);}
+  .nps-pend-item .vg-nome-btn{text-align:left;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .nps-pend-item small{flex:0 0 auto;color:var(--text-mute);font-size:12px;text-align:right;}
   .av-bloco{margin-top:14px;padding:12px 14px;border:1px solid var(--accent);border-radius:var(--radius-sm);background:var(--accent-soft);}
   .av-hd strong{display:flex;align-items:center;gap:6px;font-size:14px;}
   .av-hd small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px;}
@@ -17362,7 +17363,7 @@ function npsHtmlEquipe(){
         </div>`; }).join('') || '<div class="empty-state">Nenhuma resposta ainda.</div>'}
     </div>
     ${pendentes.length ? `<div class="ep-sec-hd" style="margin-top:18px"><h3>Aguardando resposta (${pendentes.length})</h3></div>
-      <div class="nps-pend">${pendentes.map(x=>`<span class="nps-pend-item"><button type="button" class="vg-nome-btn" data-rd-acomp="${x.st.id}">${escapeHtml(x.st.name)}</button> <small>${x.m} meses${x.st.tier==='curso'?' · Método':''}</small></span>`).join('')}</div>
+      <div class="nps-pend">${pendentes.map(x=>`<div class="nps-pend-item"><button type="button" class="vg-nome-btn" data-rd-acomp="${x.st.id}">${escapeHtml(x.st.name)}</button><small>${x.m} meses${x.st.tier==='curso'?' · Método':''}</small></div>`).join('')}</div>
       <p class="rd-legenda">A pesquisa aparece para essas pessoas na próxima vez que entrarem no Plat. Quem tocou em "Responder depois" vê de novo no dia seguinte.</p>` : ''}`;
 }
 /* ================= PRÊMIO ESSÊNCIA EXPERIENCE 2026 =================
