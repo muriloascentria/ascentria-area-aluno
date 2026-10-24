@@ -1380,6 +1380,18 @@
   .ae-sub{font-size:12.5px;color:var(--text-dim);margin-top:2px;}
   .ae-sec-tit{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:20px 0 10px;}
   .ae-sec-tit small{text-transform:none;letter-spacing:0;font-weight:500;margin-left:6px;}
+  /* Onboarding dos primeiros 30 dias (abertura, expert e eSIS) */
+  .ob-etapas{display:grid;gap:8px;}
+  .ob-etapa{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;}
+  .ob-etapa.feita{border-color:var(--success);}
+  .ob-nome b{display:block;font-size:14px;}
+  .ob-nome small{color:var(--text-mute);font-size:12px;}
+  .ob-campo label{display:block;font-size:11px;color:var(--text-mute);margin-bottom:3px;}
+  .ob-campo .ps-input{padding:6px 8px;}
+  .ob-campo .link-btn{font-size:11.5px;margin-top:3px;}
+  .ob-st{align-self:center;}
+  .ob-aviso{font-size:12.5px;color:var(--text-dim);margin:8px 2px 0;}
+  @media (max-width:720px){ .ob-etapa{grid-template-columns:minmax(0,1fr) minmax(0,1fr);} .ob-nome{grid-column:1 / -1;} .ob-st{grid-column:1 / -1;} }
   .ae-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
   .ae-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;min-width:0;}
   .ae-rot{font-size:11px;color:var(--text-mute);font-weight:600;margin-bottom:5px;}
@@ -4574,6 +4586,8 @@ function mapProfileRow(p){
     /* Início real (para o NPS de 4, 8 e 12 meses): a data de matrícula; sem ela, o dia em que a conta foi criada. */
     contaTeste: !!p.conta_teste,
     inicioReal: sc.data_matricula || String(p.created_at||'').slice(0,10) || null,
+    /* Dia em que a conta foi criada no Essência PLAT (base do onboarding dos primeiros 30 dias). */
+    contaCriada: String(p.created_at||'').slice(0,10) || null,
     cadastro:{
       nomeCompleto: sc.nome_completo || p.name || '',
       email: sc.email || '',
@@ -18151,6 +18165,67 @@ function aeSituacao(s, salvo){
     : metaPendente ? 'ATENÇÃO — meta pendente' : 'ACOMPANHAR';
   return { dias, consumidos, esperado, estagioPlataforma, atual, alinhamento, metaPendente, sugerida, progresso: overallProgress(s) };
 }
+/* Onboarding dos primeiros 30 dias (Política da Jornada do Mentorado): abertura com o Customer Success,
+   onboarding com o Expert 10 dias depois e onboarding do eSIS mais 10 dias depois. A equipe registra a
+   data agendada e a data realizada de cada etapa (tabela onboarding_jornada). O checkpoint quinzenal do
+   Acompanhamento só começa depois do onboarding do eSIS; quem não tem onboarding registrado passa a
+   receber quando completa 30 dias na plataforma (regra no banco: checkpoint_elegivel). */
+const OB_ETAPAS = [
+  { k:'abertura', nome:'Onboarding de abertura', resp:'Customer Success', apos:0 },
+  { k:'expert',   nome:'Onboarding com o Expert', resp:'Expert', apos:10 },
+  { k:'esis',     nome:'Onboarding do eSIS', resp:'', apos:10 },
+];
+function obSomaDias(iso, n){ if(!iso) return null; const d = new Date(String(iso).slice(0,10)+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function obPrevistas(s, o){
+  o = o || {};
+  const prev = {};
+  let base = o.abertura_agendada || s.contaCriada || s.inicioReal || null;
+  prev.abertura = base;
+  base = o.abertura_realizada || prev.abertura;
+  prev.expert = o.expert_agendada || obSomaDias(base, 10);
+  base = o.expert_realizada || prev.expert;
+  prev.esis = o.esis_agendada || obSomaDias(base, 10);
+  return prev;
+}
+function obStatus(e, o, prevista){
+  const hoje = tzHojeISO();
+  const feita = o && o[e.k+'_realizada'];
+  if(feita) return { cls:'ok', txt:'Realizado em '+tzDataCurta(feita) };
+  const ag = o && o[e.k+'_agendada'];
+  const ref = ag || prevista;
+  if(ref && ref < hoje) return { cls:'rev', txt: ag ? 'Agendado, sem registro de realização' : 'Atrasado' };
+  if(ag) return { cls:'ver', txt:'Agendado para '+tzDataCurta(ag) };
+  return { cls:'ver', txt:'Pendente' };
+}
+function obAvisoCheckpoint(s, o){
+  if(o && o.esis_realizada) return 'Onboarding concluído: o mentorado recebe o checkpoint quinzenal no Acompanhamento.';
+  if(o) return 'O checkpoint quinzenal no Acompanhamento começa depois do onboarding do eSIS.';
+  const dias = s.contaCriada ? Math.floor((new Date(tzHojeISO()+'T12:00:00') - new Date(s.contaCriada+'T12:00:00'))/86400000) : null;
+  if(dias!==null && dias > 30) return 'Sem onboarding registrado: recebe o checkpoint quinzenal por estar há mais de 30 dias na plataforma.';
+  return 'Sem onboarding registrado. O checkpoint quinzenal começa depois do onboarding do eSIS (ou, sem registro, ao completar 30 dias na plataforma).';
+}
+function obHtml(s){
+  const o = AE_UI.ob;
+  const prev = obPrevistas(s, o);
+  return `<div class="ae-sec-tit">Primeiros 30 dias · Onboarding <small>abertura, expert 10 dias depois e eSIS mais 10 dias depois</small></div>
+    <div class="ob-etapas">${OB_ETAPAS.map(e=>{
+      const st = obStatus(e, o, prev[e.k]);
+      const ag = (o && o[e.k+'_agendada']) || '', re = (o && o[e.k+'_realizada']) || '';
+      return `<div class="ob-etapa ${re?'feita':''}">
+        <div class="ob-nome"><b>${escapeHtml(e.nome)}</b><small>${e.resp ? escapeHtml(e.resp)+' · ' : ''}${prev[e.k] ? 'previsto para '+escapeHtml(tzDataCurta(prev[e.k])) : 'sem data prevista'}</small></div>
+        <div class="ob-campo"><label for="ob-${e.k}-ag">Agendado para</label><input class="ps-input" type="date" id="ob-${e.k}-ag" data-ob="${e.k}_agendada" value="${escapeAttr(ag)}"></div>
+        <div class="ob-campo"><label for="ob-${e.k}-re">Realizado em</label><input class="ps-input" type="date" id="ob-${e.k}-re" data-ob="${e.k}_realizada" value="${escapeAttr(re)}">${re ? '' : `<button type="button" class="link-btn" data-ob-hoje="${e.k}_realizada">Realizado hoje</button>`}</div>
+        <div class="ob-st"><span class="ae-pill ${st.cls}">${escapeHtml(st.txt)}</span></div>
+      </div>`; }).join('')}</div>
+    <p class="ob-aviso">${escapeHtml(obAvisoCheckpoint(s, o))}</p>`;
+}
+async function obSalvar(campo, valor){
+  const row = Object.assign({ student_id: AE_UI.sid, updated_at: new Date().toISOString(), updated_by: currentUser && currentUser.id }, { [campo]: valor || null });
+  const { data, error } = await sb.from('onboarding_jornada').upsert(row, { onConflict:'student_id' }).select().single();
+  if(error){ console.error('onboarding_jornada', error); alert('Não foi possível salvar o onboarding: '+(error.message||'')); return false; }
+  AE_UI.ob = data;
+  return true;
+}
 /* Volta ao acompanhamento depois de criar a tarefa, sem perder a lista já carregada. */
 function abrirAcompanhamentoVoltar(sid){
   if(AE_UI.sid!==sid){ abrirAcompanhamento(sid); return; }
@@ -18159,17 +18234,19 @@ function abrirAcompanhamentoVoltar(sid){
   aeRender();
 }
 async function abrirAcompanhamento(sid){
-  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.carregando = true; AE_UI.abertos = {}; AE_UI.acoes = []; AE_UI.nova = {texto:'',prazo:'',resp:''}; AE_UI.obs = []; AE_UI.obsRasc = '';
+  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.ob = null; AE_UI.carregando = true; AE_UI.abertos = {}; AE_UI.acoes = []; AE_UI.nova = {texto:'',prazo:'',resp:''}; AE_UI.obs = []; AE_UI.obsRasc = '';
   aeRender();
   document.getElementById('modal-backdrop').classList.add('open');
   modalReturnTo = null; modalCloseGuard = null;
   try{
-    const [r1, r2, r3] = await Promise.all([
+    const [r1, r2, r3, r4] = await Promise.all([
       sb.from('acompanhamento_evolucao').select('*').eq('student_id', sid).maybeSingle(),
       sb.from('acompanhamento_acoes').select('*').eq('student_id', sid).order('created_at', {ascending:false}),
       sb.from('acompanhamento_observacoes').select('*').eq('student_id', sid).order('created_at', {ascending:false}),
+      sb.from('onboarding_jornada').select('*').eq('student_id', sid).maybeSingle(),
     ]);
     if(r1.error) throw r1.error;
+    AE_UI.ob = (r4 && !r4.error && r4.data) ? r4.data : null;
     AE_UI.dados = r1.data || null;
     AE_UI.acoes = (r2 && !r2.error && r2.data) ? r2.data : [];
     AE_UI.obs = (r3 && !r3.error && r3.data) ? r3.data : [];
@@ -18203,6 +18280,7 @@ function aeRender(){
         ${tile('Estágio esperado', sit.esperado ? `<span class="stage-tag ${aeEstagio(sit.esperado).cls}">${escapeHtml(sit.esperado)}</span>` : 'Verificar prazo')}
         ${tile('Alinhamento', `<span class="ae-pill ${alinCls}">${sit.alinhamento}</span>`)}
       </div>
+      ${obHtml(s)}
       <div class="ae-sec-tit">Análise da equipe</div>
       <div class="ae-form">
         <div class="field"><label>Estágio atual</label>
@@ -18290,6 +18368,8 @@ function aeRender(){
   });
   const rest = document.getElementById('ae-hab-padrao');
   if(rest) rest.addEventListener('click', ()=>{ rascunho(); AE_UI.dados.habilidades = null; aeRender(); });
+  document.querySelectorAll('[data-ob]').forEach(inp=>inp.addEventListener('change', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(inp.dataset.ob, inp.value)) aeRender(); }));
+  document.querySelectorAll('[data-ob-hoje]').forEach(b=>b.addEventListener('click', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(b.dataset.obHoje, tzHojeISO())) aeRender(); }));
   const st = getStudent(AE_UI.sid);
   const adicionarAcao = async ()=>{
     guardaNova();
