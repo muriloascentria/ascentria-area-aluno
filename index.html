@@ -1279,6 +1279,30 @@
   .goal-aula:hover{border-color:var(--accent);}
   .goal-aula.locked{opacity:.55;}
   .aula-pick{display:flex;flex-direction:column;gap:8px;}
+  .apoio-dd{position:relative;max-width:520px;}
+  .form-tarefa .apoio-dd{max-width:none;}
+  .apoio-dd-btn{width:100%;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--text-dim);font-family:inherit;}
+  .apoio-dd-seta{font-size:11px;color:var(--text-mute);}
+  .apoio-painel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:60;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 12px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;min-width:260px;}
+  .apoio-busca{margin:8px;width:calc(100% - 16px);}
+  .apoio-lista{max-height:300px;overflow-y:auto;padding:0 6px 6px;}
+  .apoio-sec{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--accent);padding:10px 6px 4px;}
+  .apoio-grupo{font-size:11px;font-weight:700;color:var(--text-mute);padding:6px 6px 2px;}
+  .apoio-op{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--text);font-family:inherit;font-size:13px;padding:7px 8px;border-radius:6px;cursor:pointer;line-height:1.35;}
+  .apoio-op:hover{background:var(--bg-card);}
+  .apoio-op.on{color:var(--accent-2);}
+  .apoio-op>.icon{width:13px;height:13px;flex:0 0 auto;margin-top:2px;color:var(--text-mute);}
+  .apoio-box{width:16px;height:16px;border:1.5px solid var(--border);border-radius:4px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;}
+  .apoio-op.on .apoio-box{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .apoio-box .icon{width:11px;height:11px;}
+  .apoio-rod{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text-mute);}
+  .apoio-rod .btn-accent{padding:6px 14px;}
+  .apoio-vazio{padding:14px 8px;font-size:12.5px;color:var(--text-mute);}
+  .aula-pill .icon{width:11px;height:11px;}
+  .aula-mini.ativ{background:transparent;border:1px dashed var(--accent);}
+  .goal-aula.ativ{color:var(--text);}
+  .goal-aula.ativ.feito{color:var(--success);border-color:var(--success);}
+  .mod-check-item.mod-check-hl{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;}
   .aula-pick .ps-input{max-width:420px;}
   .form-tarefa .aula-pick .ps-input{max-width:none;width:100%;}
   .form-tarefa .field.aulas-apoio .aula-pick{width:100%;}
@@ -8272,7 +8296,7 @@ function syncChecklistFromCourse(student, course, checked){
 }
 
 /* ================= MODAL: CHECKLIST DO MÓDULO (Dashboard) ================= */
-function openModuleChecklist(modId){
+function openModuleChecklist(modId, hlIdx){
   const s = getStudent(currentStudentId);
   const mod = getModule(modId);
   const items = MODULE_CHECKLIST[modId];
@@ -8324,6 +8348,10 @@ function openModuleChecklist(modId){
   }
   renderModalBody();
   document.getElementById('modal-backdrop').classList.add('open');
+  if(hlIdx!=null){
+    const it = document.querySelector(`#modal .mod-check-item[data-idx="${hlIdx}"]`);
+    if(it){ it.classList.add('mod-check-hl'); setTimeout(()=>it.scrollIntoView({block:'center'}), 30); }
+  }
 }
 
 /* ================= VIEW: PAINEL DO MÉTODO (compartilhado aluno + equipe) ================= */
@@ -9777,6 +9805,9 @@ function renderMetas(){
   document.querySelectorAll('#view-metas [data-goal-aula]').forEach(btn=>{
     btn.addEventListener('click',()=>openCourseModal(btn.dataset.goalAula));
   });
+  document.querySelectorAll('#view-metas [data-goal-ativ]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ const a = apoioAtividade(btn.dataset.goalAtiv); if(a) openModuleChecklist(a.modId, a.idx); });
+  });
   document.querySelectorAll('[data-goal]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const t = s.checklist.find(x=>x.id==btn.dataset.goal);
@@ -10225,50 +10256,115 @@ function mentorLabel(responsavel){
    A equipe escolhe (várias) aulas que ajudam o mentorado a executar a tarefa; em Minhas Metas elas
    viram links que abrem a aula direto. Guardadas em checklist_items.aulas (ids de courses). */
 let novaTarefaAulas = new Set(); // seleção do formulário "Nova tarefa" (zera ao salvar)
+/* Itens de apoio de uma tarefa: aulas (id da aula) e atividades do Dashboard ("chk:<módulo>:<n>",
+   o item n do checklist do módulo, ex.: "Resumir aula sobre...", "TAREFA: ..."). Ficam juntos em
+   checklist_items.aulas. */
+function apoioAtividade(id){
+  const m = /^chk:([a-z_]+):(\d+)$/.exec(String(id||''));
+  if(!m) return null;
+  const mod = MODULES.find(x=>x.id===m[1]); const idx = +m[2];
+  const label = (MODULE_CHECKLIST[m[1]]||[])[idx];
+  return (mod && label) ? { id:String(id), modId:m[1], modNome:mod.name, idx, label:String(label).replace(/\.$/,'') } : null;
+}
+function apoioAtividadesLista(){
+  return MODULES.flatMap(m=>(MODULE_CHECKLIST[m.id]||[]).map((label,idx)=>({ id:`chk:${m.id}:${idx}`, modId:m.id, modNome:m.name, idx, label:String(label).replace(/\.$/,'') }))
+    .filter(a=>!/^assistir aula/i.test(a.label)));
+}
+function apoioOrdenar(set){
+  const sel = set instanceof Set ? set : new Set(set||[]);
+  return orderedCourseIds().filter(id=>sel.has(id)).concat(apoioAtividadesLista().map(a=>a.id).filter(id=>sel.has(id)));
+}
+function apoioContagem(set){ const n = set.size; return n ? `${n} selecionado${n>1?'s':''}` : 'nenhum selecionado'; }
+/* Menu suspenso próprio (não o select do navegador): clicar num item marca ou desmarca e o menu
+   continua aberto, para ir escolhendo várias aulas e atividades sem voltar ao começo. */
+function aulaPickInnerHtml(sel, prefix){
+  const itensSel = apoioOrdenar(sel).map(id=>{ const c = getCourse(id); if(c) return {id, tipo:'aula', titulo:c.title}; const a = apoioAtividade(id); return a ? {id, tipo:'ativ', titulo:a.label, sub:a.modNome} : null; }).filter(Boolean);
+  return `
+    ${itensSel.length? `<div class="pills">${itensSel.map(x=>`<span class="aula-pill active ${x.tipo==='ativ'?'ativ':''}">${icon(x.tipo==='aula'?'play':'check','tiny')} ${escapeHtml(x.titulo)} <button type="button" class="aula-pill-x" data-${prefix}-remove="${escapeAttr(x.id)}" title="Remover">×</button></span>`).join('')}</div>` : ''}
+    <div class="apoio-dd">
+      <button type="button" class="ps-input apoio-dd-btn" data-${prefix}-abrir>${itensSel.length? 'Adicionar mais aulas ou atividades...' : 'Selecionar aulas ou atividades...'} <span class="apoio-dd-seta">▾</span></button>
+    </div>`;
+}
+function apoioPainelHtml(sel, busca){
+  const q = String(busca||'').trim().toLowerCase();
+  const ok = t=> !q || String(t).toLowerCase().includes(q);
+  const linha = (id, titulo, tipo)=>`<button type="button" class="apoio-op ${sel.has(id)?'on':''}" data-apoio-op="${escapeAttr(id)}"><span class="apoio-box">${sel.has(id)?icon('tick','tiny'):''}</span>${icon(tipo==='aula'?'play':'check','tiny')}<span>${escapeHtml(titulo)}</span></button>`;
+  const aulas = orderedCourseCats().map(cat=>{
+    const cs = COURSES.filter(c=>c.cat===cat && ok(c.title+' '+cat));
+    return cs.length ? `<div class="apoio-grupo">${escapeHtml(cat)}</div>${cs.map(c=>linha(c.id, c.title, 'aula')).join('')}` : '';
+  }).join('');
+  const ativs = MODULES.map(m=>{
+    const as = apoioAtividadesLista().filter(a=>a.modId===m.id && ok(a.label+' '+m.name));
+    return as.length ? `<div class="apoio-grupo">${escapeHtml(m.name)}</div>${as.map(a=>linha(a.id, a.label, 'ativ')).join('')}` : '';
+  }).join('');
+  return `${aulas ? `<div class="apoio-sec">Aulas</div>${aulas}` : ''}${ativs ? `<div class="apoio-sec">Atividades do Dashboard</div>${ativs}` : ''}${!aulas && !ativs ? '<div class="apoio-vazio">Nada encontrado com esse termo.</div>' : ''}`;
+}
 function aulaPickHtml(selecionadas, prefix){
   return `<div class="aula-pick" id="${prefix}-pick">${aulaPickInnerHtml(new Set(selecionadas||[]), prefix)}</div>`;
-}
-/* Menu suspenso: escolhe uma aula por vez; as escolhidas viram etiquetas com "x" pra tirar. */
-function aulaPickInnerHtml(sel, prefix){
-  if(!COURSES.length) return `<span style="color:var(--text-mute);font-size:12px">Nenhuma aula cadastrada ainda.</span>`;
-  const escolhidas = orderedCourseIds().filter(id=>sel.has(id)).map(getCourse).filter(Boolean);
-  const cats = orderedCourseCats();
-  return `
-    ${escolhidas.length? `<div class="pills">${escolhidas.map(c=>`<span class="aula-pill active">${escapeHtml(c.title)} <button type="button" class="aula-pill-x" data-${prefix}-remove="${escapeAttr(c.id)}" title="Remover">×</button></span>`).join('')}</div>` : ''}
-    <select class="ps-input" data-${prefix}-select>
-      <option value="">${escolhidas.length? 'Adicionar outra aula...' : 'Selecionar aula...'}</option>
-      ${cats.map(cat=>`<optgroup label="${escapeAttr(cat)}">${COURSES.filter(c=>c.cat===cat && !sel.has(c.id)).map(c=>`<option value="${escapeAttr(c.id)}">${escapeHtml(c.title)}</option>`).join('')}</optgroup>`).join('')}
-    </select>`;
 }
 function bindAulaPick(prefix, set){
   const box = document.getElementById(prefix+'-pick');
   if(!box) return;
-  const atualiza = ()=>{
+  let painel = null, busca = '';
+  const conta = ()=>{ const cnt = document.getElementById(prefix+'-count'); if(cnt) cnt.textContent = apoioContagem(set); };
+  const pills = ()=>{
+    const aberto = !!painel;
+    if(painel){ painel.remove(); }
     box.innerHTML = aulaPickInnerHtml(set, prefix);
-    const cnt = document.getElementById(prefix+'-count');
-    if(cnt) cnt.textContent = set.size? `${set.size} selecionada${set.size>1?'s':''}` : 'nenhuma selecionada';
-    liga();
+    conta(); liga();
+    if(aberto) abre(true);
+  };
+  const fecha = ()=>{ if(painel){ painel.remove(); painel = null; document.removeEventListener('mousedown', fora, true); } };
+  const fora = (e)=>{ if(painel && !box.contains(e.target)) fecha(); };
+  const desenhaLista = ()=>{
+    const lista = painel.querySelector('.apoio-lista'); const st = lista.scrollTop;
+    lista.innerHTML = apoioPainelHtml(set, busca);
+    lista.scrollTop = st;
+    lista.querySelectorAll('[data-apoio-op]').forEach(b=>b.addEventListener('click', ()=>{
+      const id = b.dataset.apoioOp;
+      if(set.has(id)) set.delete(id); else set.add(id);
+      const st2 = lista.scrollTop;
+      pills();
+      const l2 = painel && painel.querySelector('.apoio-lista'); if(l2) l2.scrollTop = st2;
+    }));
+  };
+  const abre = (manterBusca)=>{
+    const dd = box.querySelector('.apoio-dd');
+    painel = document.createElement('div'); painel.className = 'apoio-painel';
+    painel.innerHTML = `<input class="ps-input apoio-busca" type="search" placeholder="Buscar aula ou atividade..." value="${escapeAttr(manterBusca ? busca : '')}"><div class="apoio-lista"></div><div class="apoio-rod"><span>${apoioContagem(set)}</span><button type="button" class="btn-accent apoio-pronto">Pronto</button></div>`;
+    if(!manterBusca) busca = '';
+    dd.appendChild(painel);
+    desenhaLista();
+    const bi = painel.querySelector('.apoio-busca');
+    bi.addEventListener('input', ()=>{ busca = bi.value; desenhaLista(); });
+    painel.querySelector('.apoio-pronto').addEventListener('click', fecha);
+    document.addEventListener('mousedown', fora, true);
+    if(!manterBusca) setTimeout(()=>bi.focus(), 20);
   };
   const liga = ()=>{
-    const sel = box.querySelector(`[data-${prefix}-select]`);
-    if(sel) sel.addEventListener('change', ()=>{ if(sel.value){ set.add(sel.value); atualiza(); } });
+    const bt = box.querySelector(`[data-${prefix}-abrir]`);
+    if(bt) bt.addEventListener('click', ()=>{ if(painel) fecha(); else abre(false); });
     box.querySelectorAll(`[data-${prefix}-remove]`).forEach(btn=>{
-      btn.addEventListener('click', ()=>{ set.delete(btn.getAttribute(`data-${prefix}-remove`)); atualiza(); });
+      btn.addEventListener('click', ()=>{ set.delete(btn.getAttribute(`data-${prefix}-remove`)); pills(); });
     });
   };
   liga();
 }
 function aulasChipsHtml(ids){
-  return (ids||[]).map(id=>{ const c = getCourse(id); return c ? `<span class="aula-mini">${escapeHtml(c.title)}</span>` : ''; }).join('');
+  return (ids||[]).map(id=>{ const c = getCourse(id); if(c) return `<span class="aula-mini">${escapeHtml(c.title)}</span>`; const at = apoioAtividade(id); return at ? `<span class="aula-mini ativ">${escapeHtml(at.label)}</span>` : ''; }).join('');
 }
 /* Cartão de Minhas Metas: cada aula vira um link que abre a aula. Se a aula ainda estiver travada
    pro aluno do Curso, openCourseModal avisa e não abre — comportamento proposital, não contornar. */
 function goalAulasHtml(ids, s){
   const aulas = (ids||[]).map(getCourse).filter(Boolean);
-  if(!aulas.length) return '';
-  return `<div class="goal-aulas-label">Aulas que vão ajudar na tarefa:</div><div class="goal-aulas">${aulas.map(c=>{
+  const ativs = (ids||[]).map(apoioAtividade).filter(Boolean);
+  if(!aulas.length && !ativs.length) return '';
+  return `<div class="goal-aulas-label">${ativs.length && aulas.length ? 'Aulas e atividades que vão ajudar na tarefa:' : ativs.length ? 'Atividades que vão ajudar na tarefa:' : 'Aulas que vão ajudar na tarefa:'}</div><div class="goal-aulas">${aulas.map(c=>{
     const locked = isLessonLocked(c.id, s);
     return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada — conclua a anterior':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
+  }).join('')}${ativs.map(a=>{
+    let feito = false; try{ feito = !!(getModuleChecklistState(s.id, a.modId)||[])[a.idx]; }catch(e){}
+    return `<button type="button" class="goal-aula ativ ${feito?'feito':''}" data-goal-ativ="${escapeAttr(a.id)}" title="Abrir no Dashboard (módulo ${escapeAttr(a.modNome)})">${icon(feito?'tick':'check','tiny')} ${escapeHtml(a.label)}</button>`;
   }).join('')}</div>`;
 }
 /* Editar uma tarefa do checklist (que aparece em Minhas Metas do mentorado) sem precisar apagar e
@@ -10290,7 +10386,7 @@ function openTarefaEditModal(s, t){
         </div>
       </div>
       <div class="field full"><label>Observações</label><textarea class="ps-input" id="te-obs" rows="2">${escapeHtml(t.obs||'')}</textarea></div>
-      <div class="field full"><label>Aulas de apoio (<span id="te-count">${sel.size? `${sel.size} selecionada${sel.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
+      <div class="field full"><label>Aulas e atividades de apoio (<span id="te-count">${apoioContagem(sel)}</span>)</label>
         ${aulaPickHtml(t.aulas, 'te')}
       </div>
       <div class="modal-actions">
@@ -10313,7 +10409,7 @@ function openTarefaEditModal(s, t){
       prazo: document.getElementById('te-prazo').value.trim() || '—',
       status: document.getElementById('te-status').value,
       obs: document.getElementById('te-obs').value.trim(),
-      aulas: orderedCourseIds().filter(id=>sel.has(id)),
+      aulas: apoioOrdenar(sel),
     };
     const btn = document.getElementById('te-save'); btn.disabled = true;
     try{ await syncChecklistItemUpdate(t.id, campos); }
@@ -10328,9 +10424,9 @@ function openTarefaAulasModal(s, t){
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
       <div class="cat">Checklist de Acompanhamento</div>
-      <h3>Aulas de apoio</h3>
+      <h3>Aulas e atividades de apoio</h3>
       <p class="desc">${escapeHtml(t.tarefa)}</p>
-      <p class="section-sub" style="margin-top:-4px">Escolha as aulas que ajudam o mentorado a executar esta tarefa — <span id="ta-count">${sel.size? `${sel.size} selecionada${sel.size>1?'s':''}` : 'nenhuma selecionada'}</span>.</p>
+      <p class="section-sub" style="margin-top:-4px">Escolha as aulas e as atividades do Dashboard que ajudam o mentorado a executar esta tarefa — <span id="ta-count">${apoioContagem(sel)}</span>.</p>
       ${aulaPickHtml(t.aulas, 'ta')}
       <div class="modal-actions">
         <button class="btn-accent" id="ta-save">Salvar</button>
@@ -10343,7 +10439,7 @@ function openTarefaAulasModal(s, t){
   bindAulaPick('ta', sel);
   document.getElementById('ta-cancel').addEventListener('click', closeModal);
   document.getElementById('ta-save').addEventListener('click', ()=>{
-    t.aulas = orderedCourseIds().filter(id=>sel.has(id));
+    t.aulas = apoioOrdenar(sel);
     syncChecklistItemAulas(t.id, t.aulas);
     closeModal();
     renderInterno();
@@ -10450,7 +10546,7 @@ function renderInterno(){
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
       </div>
       <div class="field"><label>Prazo</label><input class="ps-input" type="text" id="new-task-prazo" placeholder="Ex.: 30 ago"></div>
-      <div class="field aulas-apoio"><label>Aulas de apoio (opcional · <span id="nt-count">${novaTarefaAulas.size? `${novaTarefaAulas.size} selecionada${novaTarefaAulas.size>1?'s':''}` : 'nenhuma selecionada'}</span>)</label>
+      <div class="field aulas-apoio"><label>Aulas e atividades de apoio (opcional · <span id="nt-count">${apoioContagem(novaTarefaAulas)}</span>)</label>
         ${aulaPickHtml([...novaTarefaAulas], 'nt')}
       </div>
       <div class="actions"><button class="btn-accent" id="add-task-btn">${icon('plus')} Adicionar tarefa</button></div>
@@ -10684,7 +10780,7 @@ function renderInterno(){
     const prazo = document.getElementById('new-task-prazo').value.trim() || '—';
     const btn = document.getElementById('add-task-btn');
     btn.disabled = true;
-    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: orderedCourseIds().filter(id=>novaTarefaAulas.has(id))};
+    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: apoioOrdenar(novaTarefaAulas)};
     try{
       item.id = await syncChecklistItemInsert(s.id, item);
       s.checklist.push(item);
