@@ -1380,18 +1380,15 @@
   .ae-sub{font-size:12.5px;color:var(--text-dim);margin-top:2px;}
   .ae-sec-tit{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:20px 0 10px;}
   .ae-sec-tit small{text-transform:none;letter-spacing:0;font-weight:500;margin-left:6px;}
-  /* Onboarding dos primeiros 30 dias (abertura, expert e eSIS) */
-  .ob-etapas{display:grid;gap:8px;}
-  .ob-etapa{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;}
-  .ob-etapa.feita{border-color:var(--success);}
-  .ob-nome b{display:block;font-size:14px;}
-  .ob-nome small{color:var(--text-mute);font-size:12px;}
-  .ob-campo label{display:block;font-size:11px;color:var(--text-mute);margin-bottom:3px;}
-  .ob-campo .ps-input{padding:6px 8px;}
-  .ob-campo .link-btn{font-size:11.5px;margin-top:3px;}
-  .ob-st{align-self:center;}
-  .ob-aviso{font-size:12.5px;color:var(--text-dim);margin:8px 2px 0;}
-  @media (max-width:720px){ .ob-etapa{grid-template-columns:minmax(0,1fr) minmax(0,1fr);} .ob-nome{grid-column:1 / -1;} .ob-st{grid-column:1 / -1;} }
+  /* Onboarding dos primeiros 30 dias (abertura, expert e eSIS), dentro do módulo Abertura */
+  .ae-comp li.ob-item{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;}
+  .ae-comp li.ob-item > label{flex:1 1 260px;}
+  .ae-comp li.ob-item .ae-pill{font-size:10.5px;padding:2px 8px;margin-left:2px;}
+  .ob-datas{flex:0 0 auto;padding:4px 0 8px 26px;}
+  .ob-campo label{display:block;font-size:11px;color:var(--text-mute);margin-bottom:2px;padding:0;cursor:default;}
+  .ob-campo .ps-input{padding:5px 8px;font-size:12.5px;}
+  .ae-comp li.ob-nota{padding:8px 0;}
+  .ae-comp li.ob-nota small{font-size:12px;color:var(--text-dim);}
   .ae-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
   .ae-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;min-width:0;}
   .ae-rot{font-size:11px;color:var(--text-mute);font-weight:600;margin-bottom:5px;}
@@ -18204,20 +18201,20 @@ function obAvisoCheckpoint(s, o){
   if(dias!==null && dias > 30) return 'Sem onboarding registrado: recebe o checkpoint quinzenal por estar há mais de 30 dias na plataforma.';
   return 'Sem onboarding registrado. O checkpoint quinzenal começa depois do onboarding do eSIS (ou, sem registro, ao completar 30 dias na plataforma).';
 }
-function obHtml(s){
+function obFeitos(){ const o = AE_UI.ob; return OB_ETAPAS.filter(e=>o && o[e.k+'_realizada']).length; }
+/* Itens do onboarding dentro do módulo Abertura, em "Competências por módulo": marcar = realizado hoje
+   (a data pode ser corrigida); enquanto não acontece, mostra a data prevista e permite registrar o agendamento. */
+function obCompItensHtml(s){
   const o = AE_UI.ob;
   const prev = obPrevistas(s, o);
-  return `<div class="ae-sec-tit">Primeiros 30 dias · Onboarding <small>abertura, expert 10 dias depois e eSIS mais 10 dias depois</small></div>
-    <div class="ob-etapas">${OB_ETAPAS.map(e=>{
-      const st = obStatus(e, o, prev[e.k]);
-      const ag = (o && o[e.k+'_agendada']) || '', re = (o && o[e.k+'_realizada']) || '';
-      return `<div class="ob-etapa ${re?'feita':''}">
-        <div class="ob-nome"><b>${escapeHtml(e.nome)}</b><small>${e.resp ? escapeHtml(e.resp)+' · ' : ''}${prev[e.k] ? 'previsto para '+escapeHtml(tzDataCurta(prev[e.k])) : 'sem data prevista'}</small></div>
-        <div class="ob-campo"><label for="ob-${e.k}-ag">Agendado para</label><input class="ps-input" type="date" id="ob-${e.k}-ag" data-ob="${e.k}_agendada" value="${escapeAttr(ag)}"></div>
-        <div class="ob-campo"><label for="ob-${e.k}-re">Realizado em</label><input class="ps-input" type="date" id="ob-${e.k}-re" data-ob="${e.k}_realizada" value="${escapeAttr(re)}">${re ? '' : `<button type="button" class="link-btn" data-ob-hoje="${e.k}_realizada">Realizado hoje</button>`}</div>
-        <div class="ob-st"><span class="ae-pill ${st.cls}">${escapeHtml(st.txt)}</span></div>
-      </div>`; }).join('')}</div>
-    <p class="ob-aviso">${escapeHtml(obAvisoCheckpoint(s, o))}</p>`;
+  return OB_ETAPAS.map(e=>{
+    const st = obStatus(e, o, prev[e.k]);
+    const ag = (o && o[e.k+'_agendada']) || '', re = (o && o[e.k+'_realizada']) || '';
+    return `<li class="ob-item ${re?'feito':''}"><label><input type="checkbox" data-ob-ok="${e.k}" ${re?'checked':''}><span><b>${escapeHtml(e.nome)}</b><small>${e.resp ? escapeHtml(e.resp)+' · ' : ''}${(re || ag) ? '' : (prev[e.k] ? 'previsto para '+escapeHtml(tzDataCurta(prev[e.k]))+' · ' : '')}<span class="ae-pill ${st.cls}">${escapeHtml(st.txt)}</span></small></span></label>
+      <div class="ob-datas">${re
+        ? `<span class="ob-campo"><label for="ob-${e.k}-re">Realizado em</label><input class="ps-input" type="date" id="ob-${e.k}-re" data-ob="${e.k}_realizada" value="${escapeAttr(re)}"></span>`
+        : `<span class="ob-campo"><label for="ob-${e.k}-ag">Agendado para</label><input class="ps-input" type="date" id="ob-${e.k}-ag" data-ob="${e.k}_agendada" value="${escapeAttr(ag)}"></span>`}</div></li>`;
+  }).join('') + `<li class="ob-nota"><small>${escapeHtml(obAvisoCheckpoint(s, o))}</small></li>`;
 }
 async function obSalvar(campo, valor){
   const row = Object.assign({ student_id: AE_UI.sid, updated_at: new Date().toISOString(), updated_by: currentUser && currentUser.id }, { [campo]: valor || null });
@@ -18280,7 +18277,6 @@ function aeRender(){
         ${tile('Estágio esperado', sit.esperado ? `<span class="stage-tag ${aeEstagio(sit.esperado).cls}">${escapeHtml(sit.esperado)}</span>` : 'Verificar prazo')}
         ${tile('Alinhamento', `<span class="ae-pill ${alinCls}">${sit.alinhamento}</span>`)}
       </div>
-      ${obHtml(s)}
       <div class="ae-sec-tit">Análise da equipe</div>
       <div class="ae-form">
         <div class="field"><label>Estágio atual</label>
@@ -18317,15 +18313,16 @@ function aeRender(){
       <div class="ae-modulos">
         ${AE_ESTAGIOS.map(e=>{
           const m = AE_COMPETENCIAS[e.mod];
-          const feitos = m.itens.filter((_,i)=>comp[e.mod+'-'+i] || aeFeitoNoDashboard(s.id, e.mod, i)).length;
+          const feitos = m.itens.filter((_,i)=>comp[e.mod+'-'+i] || aeFeitoNoDashboard(s.id, e.mod, i)).length + (e.mod==='ABERTURA' ? obFeitos() : 0);
+          const total = m.itens.length + (e.mod==='ABERTURA' ? OB_ETAPAS.length : 0);
           const aberto = !!AE_UI.abertos[e.mod];
           return `<div class="ae-mod ${e.label===sit.atual?'atual':''}">
             <button type="button" class="ae-mod-cab" data-ae-mod="${e.mod}">
               <span class="stage-tag ${e.cls}">${escapeHtml(e.label)}</span><span class="ae-mod-prazo">${escapeHtml(m.prazo)}</span>
               ${e.label===sit.atual ? '<span class="ae-mod-agora">estágio atual</span>' : ''}
-              <span class="ae-mod-cont ${feitos===m.itens.length?'ok':''}">${feitos}/${m.itens.length}</span>${icon(aberto?'up':'down','tiny')}
+              <span class="ae-mod-cont ${feitos===total?'ok':''}">${feitos}/${total}</span>${icon(aberto?'up':'down','tiny')}
             </button>
-            ${aberto ? `<ul class="ae-comp">${m.itens.map(([c,ev],i)=>{ const dash = aeFeitoNoDashboard(s.id, e.mod, i); return `<li class="${dash?'ae-dash':''}"><label title="${dash?'Marcada automaticamente: o aluno concluiu a tarefa no Dashboard':''}"><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${dash?'data-ae-dash="1" checked onclick="return false" tabindex="-1"':(comp[e.mod+'-'+i]?'checked':'')}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small>${dash?`<em class="ae-dash-tag">${icon('tick','tiny')} Tarefa concluída pelo aluno no Dashboard</em>`:''}</span></label></li>`; }).join('')}</ul>` : ''}
+            ${aberto ? `<ul class="ae-comp">${e.mod==='ABERTURA' ? obCompItensHtml(s) : ''}${m.itens.map(([c,ev],i)=>{ const dash = aeFeitoNoDashboard(s.id, e.mod, i); return `<li class="${dash?'ae-dash':''}"><label title="${dash?'Marcada automaticamente: o aluno concluiu a tarefa no Dashboard':''}"><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${dash?'data-ae-dash="1" checked onclick="return false" tabindex="-1"':(comp[e.mod+'-'+i]?'checked':'')}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small>${dash?`<em class="ae-dash-tag">${icon('tick','tiny')} Tarefa concluída pelo aluno no Dashboard</em>`:''}</span></label></li>`; }).join('')}</ul>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -18369,6 +18366,7 @@ function aeRender(){
   const rest = document.getElementById('ae-hab-padrao');
   if(rest) rest.addEventListener('click', ()=>{ rascunho(); AE_UI.dados.habilidades = null; aeRender(); });
   document.querySelectorAll('[data-ob]').forEach(inp=>inp.addEventListener('change', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(inp.dataset.ob, inp.value)) aeRender(); }));
+  document.querySelectorAll('[data-ob-ok]').forEach(c=>c.addEventListener('change', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(c.dataset.obOk+'_realizada', c.checked ? tzHojeISO() : null)) aeRender(); else c.checked = !c.checked; }));
   document.querySelectorAll('[data-ob-hoje]').forEach(b=>b.addEventListener('click', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(b.dataset.obHoje, tzHojeISO())) aeRender(); }));
   const st = getStudent(AE_UI.sid);
   const adicionarAcao = async ()=>{
