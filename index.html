@@ -11914,8 +11914,14 @@ async function openTarefaModal(id, defaults){
     : (TAREFAS.find(x=>x.id===id) || await recarregarTarefa(id));
   if(!t){ alert('Tarefa não encontrada.'); return; }
   const modal = document.getElementById('modal');
-  document.getElementById('modal-backdrop').classList.add('open');
-  modal.innerHTML = `<div class="modal-body form-modal"><p class="desc">Carregando…</p></div>`;
+  const bdrop = document.getElementById('modal-backdrop');
+  /* Reabrindo a mesma tarefa (ex.: ao marcar uma subtarefa da rotina): mantém a janela onde estava,
+     sem voltar ao topo, para dar check no próximo item sem rolar de novo. */
+  const mesma = !nova && bdrop.classList.contains('open') && modal.dataset.tfAberta===String(id);
+  const rolagem = mesma ? { m: modal.scrollTop, b: bdrop.scrollTop } : null;
+  bdrop.classList.add('open');
+  if(!mesma) modal.innerHTML = `<div class="modal-body form-modal"><p class="desc">Carregando…</p></div>`;
+  modal.dataset.tfAberta = nova ? '' : String(id);
   let coms = [], anexos = [], hist = [];
   if(!nova){
     const [c, a, h] = await Promise.all([
@@ -12027,6 +12033,7 @@ async function openTarefaModal(id, defaults){
     </div>`;
   }
   modal.innerHTML = body();
+  if(rolagem){ modal.scrollTop = rolagem.m; bdrop.scrollTop = rolagem.b; }
   const $ = s=>modal.querySelector(s);
   $('#tf-m-fechar').addEventListener('click', closeModal);
   const lerForm = ()=>({
