@@ -4639,9 +4639,10 @@ async function bootstrapData(){
   if(perr) throw perr;
 
   const me = profiles.find(p=>p.id===currentUser.id);
-  /* Contas de teste do Murilo (uma por perfil de acesso): só ele e as próprias contas de teste as enxergam. */
-  const verTeste = currentUser.id==='8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3' || !!(me && me.conta_teste);
-  profiles = profiles.filter(p=>!p.conta_teste || verTeste || p.id===currentUser.id);
+  /* Contas de teste do Murilo (uma por perfil de acesso): não aparecem em nenhuma área, lista ou seletor
+     (mensagens, equipe, alunos, Radar...). Só se entra nelas pelo seletor de perfis da barra superior;
+     dentro de uma conta de teste, ela enxerga só a si mesma. */
+  profiles = profiles.filter(p=>!p.conta_teste || p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
   /* Equipe interna com áreas bloqueadas (ex.: Suporte dos Mentorados sem Financeiro, Sessões 1:1 e eCRM).
      O banco já não entrega esses dados; aqui é só para o menu e as telas não mostrarem a área. */
