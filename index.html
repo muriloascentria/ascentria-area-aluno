@@ -2209,6 +2209,49 @@
   .pt-toggle{overflow-x:auto;scrollbar-width:none;max-width:min(640px, calc(100vw - 720px));min-width:0;flex:0 1 auto;}
   .topbar-right:has(.pt-toggle){flex-shrink:1;}
   .pt-toggle::-webkit-scrollbar{display:none;}
+  /* Políticas e Fluxos de Trabalho */
+  .pol-alerta{display:flex;gap:8px;align-items:flex-start;background:var(--danger-soft, rgba(220,60,80,.12));border:1px solid var(--danger);border-radius:10px;padding:10px 12px;margin:4px 0 14px;font-size:13px;line-height:1.5;}
+  .pol-alerta .icon{color:var(--danger);margin-top:3px;flex:0 0 auto;}
+  .pol-alerta .link-btn{font-size:13px;}
+  .pol-tabela{min-width:680px;}
+  .pol-st{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;border:1px solid var(--border);white-space:nowrap;}
+  .pol-st-vigente{color:var(--success);border-color:var(--success);}
+  .pol-st-revisao{color:#fff;background:var(--danger);border-color:var(--danger);}
+  .pol-st-construcao{color:var(--text-mute);border-style:dashed;}
+  .pol-socios{display:flex;flex-wrap:wrap;gap:4px;}
+  .pol-socio{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px dashed var(--border);color:var(--text-mute);white-space:nowrap;}
+  .pol-socio.concordo{border-style:solid;border-color:var(--success);color:var(--success);}
+  .pol-socio.revisei{border-style:solid;border-color:var(--accent);color:var(--accent-2);}
+  .pol-socio .icon{width:11px;height:11px;}
+  .pol-novo{display:flex;justify-content:flex-end;margin-top:12px;}
+  .pol-novo .btn-accent,.pol-acoes .btn-accent,.pol-acoes .btn-outline,.pol-abrir-doc{display:inline-flex;align-items:center;gap:6px;text-decoration:none;}
+  .pol-det-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:10px 0 14px;}
+  .pol-det-hd h3{margin:2px 0 6px;font-size:18px;}
+  .pol-det .link-btn,.pol-alerta .link-btn{display:inline-flex;align-items:center;gap:4px;}
+  .pol-minha>p.muted{font-size:12.5px;}
+  .pol-tipo{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--accent);}
+  .pol-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
+  .pol-bloco h4{margin:0 0 10px;font-size:14px;}
+  .pol-minha{border-color:var(--accent);}
+  .pol-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .pol-op{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--bg-elev);}
+  .pol-op.on{border-color:var(--accent);background:var(--accent-soft);}
+  .pol-op input{accent-color:var(--accent);margin-top:3px;}
+  .pol-op b{display:block;font-size:13.5px;}
+  .pol-op small{display:block;font-size:12px;color:var(--text-mute);margin-top:2px;}
+  .pol-anot{margin-top:12px;}
+  .pol-anot-tit{font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px;}
+  .pol-anot-linha{display:grid;grid-template-columns:180px 1fr auto;gap:6px;margin-bottom:6px;align-items:start;}
+  .pol-anot-add{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;}
+  .pol-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .pol-resp{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+  .pol-resp.concordo{border-color:var(--success);}
+  .pol-resp-hd{font-size:13px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .pol-resp-hd .icon{width:13px;height:13px;}
+  .pol-notas{margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.5;}
+  .pol-notas li{margin-bottom:4px;}
+  .pol-trecho{display:inline-block;font-size:11px;font-weight:700;color:var(--accent-2);background:var(--accent-soft);border-radius:6px;padding:0 6px;margin-right:6px;}
+  @media (max-width:640px){ .pol-opcoes{grid-template-columns:1fr;} .pol-anot-linha{grid-template-columns:1fr auto;} .pol-anot-linha textarea{grid-column:1 / 2;} }
   .reu-badge{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:600;color:#fff;background:var(--danger);border-radius:20px;padding:3px 10px;}
   .reu-cont{display:inline-block;min-width:18px;padding:0 6px;border-radius:10px;background:var(--accent,#8d916f);color:#fff;font-size:11px;margin-left:4px;}
   .reu-tabela-wrap{margin-top:6px;}
@@ -2871,6 +2914,7 @@
       <div class="view" id="view-desempenho"></div>
       <div class="view" id="view-dre"></div>
       <div class="view" id="view-reunioes"></div>
+      <div class="view" id="view-politicas"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -2962,6 +3006,7 @@ const NAV_LABELS = {
   desempenho:['chart','Desempenho das Consultoras'],
   dre:['money','DRE'],
   reunioes:['file','Reuniões e Atas'],
+  politicas:['file','Políticas e Fluxos de Trabalho'],
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
@@ -2969,7 +3014,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', reunioes:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', reunioes:'restrict', politicas:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito' };
 
@@ -5792,7 +5837,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
+  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
   if(typeof appBadge==='function') appBadge(pend.length + tf);
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
@@ -5827,6 +5872,12 @@ function notifItens(){
     tarefasNaoLidas().forEach(n=>{
       const t = (typeof TAREFAS!=='undefined' ? TAREFAS : []).find(x=>x.id===n.tarefaId);
       itens.push({ tipo:'tarefa', icone:'check', quando:n.createdAt, titulo:n.texto||'Aviso de tarefa', sub: t ? t.titulo : 'Tarefas', acao: ()=>notifAbrirTarefa(n) });
+    });
+  }
+  if(equipe && typeof polPendentesMeus==='function'){
+    polPreparar();
+    polPendentesMeus().forEach(d=>{
+      itens.push({ tipo:'politica', icone:'file', quando:d.updated_at||d.created_at, titulo:`${d.tipo==='politica'?'Política':'Fluxo de trabalho'} em revisão aguarda você`, sub:d.titulo, acao: ()=>{ POL_UI.aberta = String(d.id); POL_UI.form = null; POL_UI.editando = null; goTo('politicas'); } });
     });
   }
   if(equipe){
@@ -5978,7 +6029,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','dre','reunioes','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','dre','reunioes','politicas','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -6231,7 +6282,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
@@ -14496,6 +14547,7 @@ const EQUIPE_ATALHOS = [
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
+  {view:'politicas',  desc:'Políticas e fluxos de trabalho da Ascentria, com os links, e a revisão dos sócios nos documentos em revisão.'},
   {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
@@ -14513,8 +14565,8 @@ const EQUIPE_ATALHOS = [
 function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
-  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes'].concat(tarefasSouMembro()? ['tarefas'] : []);
-  if(papel==='editor') return ['equipe','mensagens','conteudo','reunioes'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='editor') return ['equipe','mensagens','conteudo','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
   return null; // equipe interna: tudo
 }
 function renderEquipe(){
@@ -14531,10 +14583,11 @@ function renderEquipe(){
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
-          <span class="equipe-desc">${escapeHtml(a.desc)}</span>${a.view==='reunioes' ? reuBadgeHtml() : ''}
+          <span class="equipe-desc">${escapeHtml(a.desc)}</span>${a.view==='reunioes' ? reuBadgeHtml() : ''}${a.view==='politicas' ? polBadgeHtml() : ''}
         </button>`; }).join('')}
     </div>`;
   reuPreparar();
+  polPreparar();
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
 }
 
@@ -15575,6 +15628,222 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape' && document.getEle
    despesas, tarifas, retiradas). Transferências entre contas, empréstimos e aportes de sócios não são
    resultado: aparecem à parte, só para conferência. "Gerar DRE" guarda a foto do mês em fin_dre (só
    Murilo e Carmem leem), e dá para gerar de novo se algum lançamento mudar. */
+/* ================= VIEW: POLÍTICAS E FLUXOS DE TRABALHO =================
+   Lista as políticas e os fluxos de trabalho da Ascentria (documentos no Google Drive, pasta
+   Políticas_Fluxos_Processos_de_Trabalho) com o link de cada um. Documento "Em revisão" vira uma
+   demanda para cada sócio: ele escolhe UMA resposta, "Revisei" (com anotações por trecho) ou
+   "Concordo". Ao responder, sai da demanda dele (some do sino e do aviso). Os sócios cadastram,
+   editam, encerram a revisão ou abrem uma nova rodada (as respostas são por rodada). O time
+   interno vê a lista e os links. Tabelas: politicas_docs e politicas_respostas. */
+const POL_UI = { aba:'politica', docs:null, resp:[], carregando:false, erro:false, aberta:null, form:null, editando:null };
+const POL_STATUS = { vigente:'Vigente', revisao:'Em revisão', construcao:'Em construção' };
+function polSocio(){ return typeof reuSocio==='function' && reuSocio(); }
+function polPodeAbrir(){ return !!currentUser && currentUserRole!=='aluno'; }
+async function polCarregar(){
+  if(POL_UI.carregando || !polPodeAbrir()) return; POL_UI.carregando = true; POL_UI.erro = false;
+  try{
+    const [d, r] = await Promise.all([
+      sb.from('politicas_docs').select('*').eq('ativo', true).order('ordem', {ascending:false}).order('titulo'),
+      sb.from('politicas_respostas').select('*'),
+    ]);
+    if(d.error) throw d.error;
+    POL_UI.docs = d.data || []; POL_UI.resp = (r && r.data) || [];
+  }catch(e){ console.error('politicas', e); POL_UI.erro = true; if(POL_UI.docs===null) POL_UI.docs = []; }
+  POL_UI.carregando = false;
+  if(currentView==='politicas') renderPoliticas();
+  if(currentView==='equipe') renderEquipe();
+  updateNotifBadge();
+}
+let POL_PREPARADO = false;
+function polPreparar(){ try{ if(POL_PREPARADO || !polPodeAbrir()) return; POL_PREPARADO = true; }catch(e){ return; } polCarregar(); }
+function polRespostasDoc(d){ return (POL_UI.resp||[]).filter(r=>String(r.doc_id)===String(d.id) && r.rodada===d.rodada); }
+function polMinhaResposta(d){ const eu = idEfetivo(); return polRespostasDoc(d).find(r=>r.user_id===eu || r.user_id===(currentUser&&currentUser.id)) || null; }
+function polDevoRevisar(d){ return polSocio() && d.status==='revisao' && !polMinhaResposta(d); }
+function polPendentesMeus(){ try{ return (POL_UI.docs||[]).filter(polDevoRevisar); }catch(e){ return []; } }
+function polBadgeHtml(){ const n = polPendentesMeus().length; return n ? `<span class="reu-badge">${n} ${n===1?'documento aguarda':'documentos aguardam'} sua revisão</span>` : ''; }
+function polSocioNome(id){ const p = PEOPLE[id]; return p ? p.name.split(' ')[0] : 'Sócio'; }
+function polStatusPill(d){ return `<span class="pol-st pol-st-${d.status}">${POL_STATUS[d.status]||d.status}</span>`; }
+function polSociosHtml(d){
+  if(d.status!=='revisao') return '<span class="muted">—</span>';
+  const rs = polRespostasDoc(d);
+  return `<div class="pol-socios">${REU_SOCIOS.map(id=>{ const r = rs.find(x=>x.user_id===id); const cls = !r ? 'pend' : r.tipo; const tit = !r ? 'ainda não respondeu' : r.tipo==='concordo' ? 'concordou' : 'revisou com anotações'; return `<span class="pol-socio ${cls}" title="${escapeAttr(polSocioNome(id)+': '+tit)}">${!r ? '○' : r.tipo==='concordo' ? icon('tick','tiny') : icon('edit','tiny')} ${escapeHtml(polSocioNome(id))}</span>`; }).join('')}</div>`;
+}
+function renderPoliticas(){
+  const el = document.getElementById('view-politicas'); if(!el) return;
+  if(!polPodeAbrir()){ el.innerHTML = '<div class="empty-state">Área da equipe interna.</div>'; return; }
+  if(POL_UI.docs===null){ polCarregar(); el.innerHTML = '<h2 class="section-title">Políticas e Fluxos de Trabalho</h2><div class="empty-state">Carregando…</div>'; return; }
+  const d = POL_UI.aberta && POL_UI.docs.find(x=>String(x.id)===String(POL_UI.aberta));
+  if(d){ el.innerHTML = `<h2 class="section-title">Políticas e Fluxos de Trabalho</h2>${polDetalheHtml(d)}`; polDetalheBind(el, d); return; }
+  POL_UI.aberta = null;
+  const pend = polPendentesMeus();
+  const lista = POL_UI.docs.filter(x=>x.tipo===POL_UI.aba).sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
+  const nP = POL_UI.docs.filter(x=>x.tipo==='politica').length, nF = POL_UI.docs.filter(x=>x.tipo==='fluxo').length;
+  const revP = POL_UI.docs.filter(x=>x.tipo==='politica' && polDevoRevisar(x)).length, revF = POL_UI.docs.filter(x=>x.tipo==='fluxo' && polDevoRevisar(x)).length;
+  el.innerHTML = `<h2 class="section-title">Políticas e Fluxos de Trabalho</h2>
+    <p class="section-sub" style="margin-top:-6px">As políticas e os fluxos de trabalho da Ascentria, com o link de cada documento. ${polSocio() ? 'Os que estão <b>Em revisão</b> aguardam a resposta de cada sócio: revisar com anotações ou concordar.' : 'Clique num documento para abrir.'}</p>
+    ${pend.length ? `<div class="pol-alerta">${icon('bell','tiny')} <span><b>${pend.length} ${pend.length===1?'documento aguarda':'documentos aguardam'} a sua revisão:</b> ${pend.map(x=>`<button type="button" class="link-btn" data-pol-abrir="${x.id}">${escapeHtml(x.titulo)}</button>`).join(', ')}</span></div>` : ''}
+    <div class="filter-tabs rd-abas">
+      <button type="button" class="filter-tab ${POL_UI.aba==='politica'?'active':''}" data-pol-aba="politica">Políticas (${nP})${revP?` <span class="reu-cont">${revP}</span>`:''}</button>
+      <button type="button" class="filter-tab ${POL_UI.aba==='fluxo'?'active':''}" data-pol-aba="fluxo">Fluxos de trabalho (${nF})${revF?` <span class="reu-cont">${revF}</span>`:''}</button>
+    </div>
+    ${POL_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="pol-tentar">Tentar de novo</button></div>' : ''}
+    ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Situação</th><th>Link</th><th>Revisão dos sócios</th></tr></thead><tbody>${lista.map(x=>{
+      const minha = polDevoRevisar(x);
+      return `<tr data-pol-abrir="${x.id}" class="${minha?'reu-pend':''}">
+        <td><b>${escapeHtml(x.titulo)}</b>${minha?'<div class="reu-mini-alerta">Aguardando a sua revisão</div>':''}</td>
+        <td>${polStatusPill(x)}</td>
+        <td>${reuUrlOk(x.link) ? `<a href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>Abrir</a>` : '<span class="muted">—</span>'}</td>
+        <td>${polSociosHtml(x)}</td>
+      </tr>`; }).join('')}</tbody></table></div>` : `<div class="empty-state">Nenhum${POL_UI.aba==='politica'?'a política':' fluxo de trabalho'} cadastrado ainda.</div>`}
+    ${polSocio() ? `<div class="pol-novo"><button type="button" class="btn-accent" id="pol-novo">${icon('plus','tiny')} Adicionar ${POL_UI.aba==='politica'?'política':'fluxo de trabalho'}</button></div>` : ''}`;
+  el.querySelectorAll('[data-pol-aba]').forEach(b=>b.addEventListener('click', ()=>{ POL_UI.aba = b.dataset.polAba; renderPoliticas(); }));
+  el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
+  el.querySelectorAll('[data-pol-abrir]').forEach(t=>t.addEventListener('click', ()=>{ POL_UI.aberta = t.dataset.polAbrir; POL_UI.form = null; POL_UI.editando = null; renderPoliticas(); window.scrollTo(0,0); }));
+  const tt = el.querySelector('#pol-tentar'); if(tt) tt.addEventListener('click', ()=>{ POL_UI.docs = null; renderPoliticas(); });
+  const nv = el.querySelector('#pol-novo'); if(nv) nv.addEventListener('click', ()=>polDocForm(null));
+}
+function polRespostaHtml(r, d){
+  const nome = polSocioNome(r.user_id);
+  const notas = Array.isArray(r.anotacoes) ? r.anotacoes.filter(a=>a && (a.texto||'').trim()) : [];
+  return `<div class="pol-resp ${r.tipo}">
+    <div class="pol-resp-hd">${r.tipo==='concordo' ? icon('tick','tiny') : icon('edit','tiny')} <b>${escapeHtml(nome)}</b> ${r.tipo==='concordo' ? `concorda com ${d.tipo==='politica'?'a política':'o fluxo'}` : 'revisou e deixou anotações'} <span class="muted">· ${escapeHtml(fmtDataHora(r.updated_at||r.created_at))}</span></div>
+    ${notas.length ? `<ol class="pol-notas">${notas.map(a=>`<li>${a.trecho ? `<span class="pol-trecho">${escapeHtml(a.trecho)}</span>` : ''}<span>${escapeHtml(a.texto)}</span></li>`).join('')}</ol>` : ''}
+  </div>`;
+}
+function polDetalheHtml(d){
+  const minha = polMinhaResposta(d);
+  const rs = polRespostasDoc(d);
+  const outros = rs.filter(r=>r!==minha);
+  const ehPol = d.tipo==='politica';
+  const f = POL_UI.form || (minha ? { tipo:minha.tipo, notas:(minha.anotacoes||[]).map(a=>({trecho:a.trecho||'', texto:a.texto||''})) } : { tipo:null, notas:[{trecho:'', texto:''}] });
+  if(!f.notas.length) f.notas = [{trecho:'', texto:''}];
+  POL_UI.form = f;
+  const editandoMinha = polSocio() && d.status==='revisao' && (!minha || POL_UI.editando===d.id);
+  const prontos = REU_SOCIOS.filter(id=>rs.some(r=>r.user_id===id)).length;
+  const todosConcordam = REU_SOCIOS.every(id=>rs.some(r=>r.user_id===id && r.tipo==='concordo'));
+  return `<div class="pol-det">
+    <button type="button" class="link-btn" id="pol-voltar">${icon('back','tiny')} Voltar para a lista</button>
+    <div class="pol-det-hd">
+      <div><span class="pol-tipo">${ehPol ? 'Política' : 'Fluxo de trabalho'}</span><h3>${escapeHtml(d.titulo)}</h3>${polStatusPill(d)}${d.status==='revisao' && d.rodada>1 ? ` <span class="muted">· ${d.rodada}ª rodada de revisão</span>` : ''}</div>
+      ${reuUrlOk(d.link) ? `<a class="btn-accent pol-abrir-doc" href="${escapeAttr(d.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir documento</a>` : ''}
+    </div>
+    ${d.status==='revisao' ? `
+      <div class="pol-bloco">
+        <h4>Revisão dos sócios <span class="muted">(${prontos} de ${REU_SOCIOS.length} responderam${todosConcordam ? ' · todos concordam' : ''})</span></h4>
+        ${polSociosHtml(d)}
+      </div>
+      ${polSocio() ? (editandoMinha ? `
+      <div class="pol-bloco pol-minha">
+        <h4>A sua resposta</h4>
+        <p class="muted" style="margin-top:-4px">Leia o documento e escolha uma opção. Ao salvar, ${ehPol?'esta política':'este fluxo'} sai da sua lista de pendências.</p>
+        <div class="pol-opcoes">
+          <label class="pol-op ${f.tipo==='revisei'?'on':''}"><input type="radio" name="pol-tipo" value="revisei" ${f.tipo==='revisei'?'checked':''}><span><b>Revisei</b><small>Fiz a revisão e deixo anotações sobre trechos do documento.</small></span></label>
+          <label class="pol-op ${f.tipo==='concordo'?'on':''}"><input type="radio" name="pol-tipo" value="concordo" ${f.tipo==='concordo'?'checked':''}><span><b>Concordo ${ehPol?'com a política':'com o fluxo de trabalho'}</b><small>Li e estou de acordo com o texto como está.</small></span></label>
+        </div>
+        ${f.tipo==='revisei' ? `
+        <div class="pol-anot">
+          <div class="pol-anot-tit">Anotações ao longo do documento</div>
+          ${f.notas.map((n,i)=>`<div class="pol-anot-linha">
+            <input class="ps-input" data-pol-trecho="${i}" value="${escapeAttr(n.trecho)}" placeholder="Trecho ou item (ex.: 4.2)">
+            <textarea class="ps-input" data-pol-texto="${i}" rows="2" placeholder="Sua anotação sobre esse trecho">${escapeHtml(n.texto)}</textarea>
+            ${f.notas.length>1 ? `<button type="button" class="btn-mini icon-only danger" data-pol-nota-del="${i}" title="Tirar esta anotação">${icon('trash','tiny')}</button>` : ''}
+          </div>`).join('')}
+          <button type="button" class="link-btn pol-anot-add" id="pol-nota-add">${icon('plus','tiny')} Adicionar outra anotação</button>
+        </div>` : ''}
+        <div class="pol-acoes">
+          <button type="button" class="btn-accent" id="pol-salvar" ${f.tipo?'':'disabled'}>${icon('check','tiny')} Salvar resposta</button>
+          ${minha ? '<button type="button" class="btn-outline" id="pol-cancelar">Cancelar</button>' : ''}
+        </div>
+      </div>` : `
+      <div class="pol-bloco">
+        <h4>A sua resposta</h4>
+        ${polRespostaHtml(minha, d)}
+        <button type="button" class="link-btn" id="pol-alterar">${icon('edit','tiny')} Alterar a minha resposta</button>
+      </div>`) : ''}
+      <div class="pol-bloco">
+        <h4>Respostas ${polSocio() ? 'dos outros sócios' : 'dos sócios'}</h4>
+        ${(polSocio() ? outros : rs).length ? (polSocio() ? outros : rs).map(r=>polRespostaHtml(r, d)).join('') : '<p class="muted">Ninguém respondeu ainda.</p>'}
+      </div>` : ''}
+    ${polSocio() ? `<div class="pol-bloco pol-gestao">
+      <h4>Gestão do documento</h4>
+      <div class="pol-acoes">
+        <button type="button" class="btn-outline" id="pol-editar">${icon('edit','tiny')} Editar título, link e situação</button>
+        ${d.status==='revisao' ? `<button type="button" class="btn-outline" id="pol-encerrar">${icon('check','tiny')} Encerrar revisão (fica vigente)</button>` : `<button type="button" class="btn-outline" id="pol-revisar">${icon('edit','tiny')} Colocar em revisão</button>`}
+        <button type="button" class="btn-outline danger" id="pol-remover">${icon('trash','tiny')} Tirar da lista</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:12px">Colocar em revisão de novo abre uma nova rodada: as respostas anteriores ficam guardadas e cada sócio responde outra vez.</p>
+    </div>` : ''}
+  </div>`;
+}
+function polDetalheBind(el, d){
+  const re = ()=>renderPoliticas();
+  el.querySelector('#pol-voltar').addEventListener('click', ()=>{ POL_UI.aberta = null; POL_UI.form = null; POL_UI.editando = null; re(); });
+  const f = POL_UI.form;
+  const guarda = ()=>{ if(!f) return; el.querySelectorAll('[data-pol-trecho]').forEach(i=>{ f.notas[+i.dataset.polTrecho].trecho = i.value; }); el.querySelectorAll('[data-pol-texto]').forEach(i=>{ f.notas[+i.dataset.polTexto].texto = i.value; }); };
+  el.querySelectorAll('input[name="pol-tipo"]').forEach(r=>r.addEventListener('change', ()=>{ guarda(); f.tipo = r.value; re(); }));
+  const na = el.querySelector('#pol-nota-add'); if(na) na.addEventListener('click', ()=>{ guarda(); f.notas.push({trecho:'', texto:''}); re(); setTimeout(()=>{ const t = el.querySelector(`[data-pol-trecho="${f.notas.length-1}"]`); if(t) t.focus(); }, 30); });
+  el.querySelectorAll('[data-pol-nota-del]').forEach(b=>b.addEventListener('click', ()=>{ guarda(); f.notas.splice(+b.dataset.polNotaDel, 1); re(); }));
+  const al = el.querySelector('#pol-alterar'); if(al) al.addEventListener('click', ()=>{ POL_UI.editando = d.id; POL_UI.form = null; re(); });
+  const ca = el.querySelector('#pol-cancelar'); if(ca) ca.addEventListener('click', ()=>{ POL_UI.editando = null; POL_UI.form = null; re(); });
+  const sv = el.querySelector('#pol-salvar');
+  if(sv) sv.addEventListener('click', async ()=>{
+    guarda();
+    const notas = f.tipo==='revisei' ? f.notas.map(n=>({trecho:(n.trecho||'').trim(), texto:(n.texto||'').trim()})).filter(n=>n.texto) : [];
+    if(f.tipo==='revisei' && !notas.length){ alert('Escreva pelo menos uma anotação, ou escolha "Concordo".'); const t = el.querySelector('[data-pol-texto="0"]'); if(t) t.focus(); return; }
+    sv.disabled = true;
+    const linha = { doc_id:d.id, user_id:currentUser.id, rodada:d.rodada, tipo:f.tipo, anotacoes:notas, updated_at:new Date().toISOString() };
+    const { data, error } = await sb.from('politicas_respostas').upsert(linha, { onConflict:'doc_id,user_id,rodada' }).select().single();
+    if(error){ console.error('politicas_respostas', error); alert('Não foi possível salvar: '+(error.message||'')); sv.disabled = false; return; }
+    POL_UI.resp = POL_UI.resp.filter(r=>!(String(r.doc_id)===String(d.id) && r.user_id===linha.user_id && r.rodada===d.rodada)).concat([data||linha]);
+    POL_UI.editando = null; POL_UI.form = null;
+    updateNotifBadge(); re();
+  });
+  const atualizaDoc = async (campos, msg)=>{
+    const { error } = await sb.from('politicas_docs').update(Object.assign({ updated_at:new Date().toISOString() }, campos)).eq('id', d.id);
+    if(error){ console.error('politicas_docs', error); alert('Não foi possível salvar: '+(error.message||'')); return false; }
+    Object.assign(d, campos); updateNotifBadge(); re(); return true;
+  };
+  const ed = el.querySelector('#pol-editar'); if(ed) ed.addEventListener('click', ()=>polDocForm(d));
+  const en = el.querySelector('#pol-encerrar'); if(en) en.addEventListener('click', async ()=>{ if(await showAppConfirm(`Encerrar a revisão de "${d.titulo}"? O documento passa a constar como Vigente e sai da pendência de todos os sócios.`, {title:'Encerrar revisão', confirmLabel:'Encerrar', cancelLabel:'Cancelar'})) atualizaDoc({ status:'vigente' }); });
+  const rv = el.querySelector('#pol-revisar'); if(rv) rv.addEventListener('click', async ()=>{ if(await showAppConfirm(`Colocar "${d.titulo}" em revisão? Cada sócio vai receber a pendência para revisar ou concordar.`, {title:'Colocar em revisão', confirmLabel:'Colocar em revisão', cancelLabel:'Cancelar'})) atualizaDoc({ status:'revisao', rodada:(d.rodada||1) + (polRespostasDoc(d).length ? 1 : 0) }); });
+  const rm = el.querySelector('#pol-remover'); if(rm) rm.addEventListener('click', async ()=>{ if(await showAppConfirm(`Tirar "${d.titulo}" da lista? O arquivo no Drive não é apagado.`, {title:'Tirar da lista', confirmLabel:'Tirar', cancelLabel:'Cancelar'})){ if(await atualizaDoc({ ativo:false })){ POL_UI.docs = POL_UI.docs.filter(x=>x!==d); POL_UI.aberta = null; re(); } } });
+}
+function polDocForm(d){
+  const r = d ? Object.assign({}, d) : { tipo:POL_UI.aba, titulo:'', link:'', status:'vigente' };
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Políticas e Fluxos de Trabalho</div>
+      <h3>${d ? 'Editar documento' : 'Novo documento'}</h3>
+      <label class="ps-label">Tipo</label>
+      <select class="ps-input" id="pdf-tipo"><option value="politica" ${r.tipo==='politica'?'selected':''}>Política</option><option value="fluxo" ${r.tipo==='fluxo'?'selected':''}>Fluxo de trabalho</option></select>
+      <label class="ps-label">Título</label>
+      <input class="ps-input" id="pdf-titulo" value="${escapeAttr(r.titulo)}" placeholder="Ex.: Política de Agendamentos">
+      <label class="ps-label">Link do documento</label>
+      <input class="ps-input" id="pdf-link" value="${escapeAttr(r.link)}" placeholder="https://drive.google.com/...">
+      <label class="ps-label">Situação</label>
+      <select class="ps-input" id="pdf-status">${Object.entries(POL_STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?'selected':''}>${v}${k==='revisao'?' (pede a revisão dos sócios)':''}</option>`).join('')}</select>
+      <div class="modal-actions an-dest-form-acoes">
+        <button type="button" class="btn-accent" id="pdf-salvar">${icon('check','tiny')} Salvar</button>
+        <button type="button" class="btn-outline" id="pdf-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+  const md = document.getElementById('modal');
+  md.querySelector('#pdf-cancelar').addEventListener('click', closeModal);
+  md.querySelector('#pdf-salvar').addEventListener('click', async (e)=>{
+    const v = id=>md.querySelector(id).value.trim();
+    const linha = { tipo:v('#pdf-tipo'), titulo:v('#pdf-titulo'), link:v('#pdf-link'), status:v('#pdf-status'), updated_at:new Date().toISOString() };
+    if(!linha.titulo){ md.querySelector('#pdf-titulo').focus(); return; }
+    if(d && linha.status==='revisao' && d.status!=='revisao' && polRespostasDoc(d).length) linha.rodada = (d.rodada||1)+1;
+    e.currentTarget.disabled = true;
+    const q = d ? sb.from('politicas_docs').update(linha).eq('id', d.id).select().single() : sb.from('politicas_docs').insert(Object.assign({ ordem: Math.max(0, ...(POL_UI.docs||[]).map(x=>x.ordem||0)) + 1 }, linha)).select().single();
+    const { data, error } = await q;
+    if(error){ console.error('politicas_docs', error); alert('Não foi possível salvar: '+(error.message||'')); e.currentTarget.disabled = false; return; }
+    if(d) Object.assign(d, data||linha); else { POL_UI.docs.push(data); POL_UI.aba = data.tipo; }
+    reallyCloseModal(); updateNotifBadge(); renderPoliticas();
+  });
+  modalReturnTo = null; modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
 /* ================= VIEW: REUNIÕES E ATAS =================
    Cada reunião da empresa (as que o Google Meet grava com anotações do Gemini) entra aqui sozinha:
    uma tarefa agendada lê as anotações no Google Drive do Murilo, copia o link da gravação, a
