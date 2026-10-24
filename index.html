@@ -1093,6 +1093,18 @@
   .an-dest-form-acoes{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
   .an-dest-form-acoes .btn-accent{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
   @media (max-width:560px){ .an-dest-item{flex-wrap:wrap;} .an-dest-acoes{width:100%;justify-content:flex-end;} }
+  /* Player de gravações (vídeo do Drive tocando dentro do ePLAT) */
+  .player-ov{position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:16px;}
+  .player-box{width:min(1100px,100%);background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;max-height:100%;}
+  .player-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 10px 16px;}
+  .player-hd strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .player-x{background:var(--bg-elev);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;}
+  .player-video{position:relative;width:100%;padding-top:56.25%;background:#000;}
+  .player-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .player-dica{margin:0;padding:10px 16px 14px;font-size:12px;color:var(--text-mute);line-height:1.5;}
+  .player-dica a{color:var(--accent);margin-left:4px;white-space:nowrap;}
+  body.player-aberto{overflow:hidden;}
+  @media (max-width:560px){ .player-ov{padding:0;align-items:center;} .player-box{border-radius:0;border-left:0;border-right:0;} }
   /* Planilha de Análise Sessões 1:1 */
   /* Larguras fixas: sem isso o navegador dimensiona cada coluna pelo conteúdo, e a tabela muda de
      forma a cada aprendizado preenchido — as três colunas de aprendizados ficavam com tamanhos bem
@@ -8089,7 +8101,7 @@ function renderAgenda(){
         ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a></div>`
         : `<div class="agenda-actions">
             ${l.linkGravacao
-              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('play','tiny')} Assistir</a>`
+              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>`
               : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
             <button type="button" class="btn-outline watched-btn ${watched?'active':''}" data-watched="${l.id}">${watched? icon('check','tiny') : ''} Assistido</button>
           </div>`}
@@ -9736,7 +9748,7 @@ function renderSessoes(){
         </div>
         <div class="notes"><strong>Anotações ${mentorLabel(sess.responsavel)}:</strong><br>${linkify(sess.notes)}</div>
         <div class="foot">
-          ${sess.linkGravacao? `<a class="btn-outline" href="${escapeAttr(sess.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Ver gravação</a>`:''}
+          ${sess.linkGravacao? `<a class="btn-outline" href="${escapeAttr(sess.linkGravacao)}" target="_blank" rel="noopener" data-player="Gravação da sessão">${icon('video')} Ver gravação</a>`:''}
           ${sess.linkTranscricao? `<a class="btn-outline" href="${escapeAttr(sess.linkTranscricao)}" target="_blank" rel="noopener">${icon('download')} Baixar material da sessão</a>`:''}
         </div>
       </div>
@@ -15179,7 +15191,7 @@ function anDestHtml(){
               <div class="an-dest-marks">${anDestAnalistas().map(v=>{ const ok = anDestFeito(anDestReg(d.id, v.userId)); return `<span class="an-dest-mark ${ok?'ok':''}" title="${escapeAttr(v.nome)} ${ok?'assistiu e registrou':'ainda não registrou'}">${ok?icon('tick','tiny'):'✕'} ${escapeHtml(v.nome)}</span>`; }).join('')}</div>
             </div>
             <div class="an-dest-acoes">
-              ${ok ? `<a class="btn-outline an-dest-video" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Assistir</a>` : ''}
+              ${ok ? `<a class="btn-outline an-dest-video" href="${escapeAttr(u)}" target="_blank" rel="noopener" data-player="${escapeAttr(d.titulo||'Vídeo')}">${icon('play','tiny')} Assistir</a>` : ''}
               <button type="button" class="btn-accent btn-abrir" data-an-dest-reg="${d.id}">${anDestAnalistas().some(v=>v.userId===(currentUser&&currentUser.id)) ? 'Registrar' : 'Abrir'}</button>
               ${pode ? `<button type="button" class="btn-mini icon-only" data-an-dest-edit="${d.id}" title="Editar">${icon('edit','tiny')}</button><button type="button" class="btn-mini icon-only danger" data-an-dest-del="${d.id}" title="Tirar do destaque">${icon('trash','tiny')}</button>` : ''}
             </div>
@@ -15383,6 +15395,42 @@ function renderAnalise(){
     });
   });
 }
+/* ================= PLAYER DE GRAVAÇÕES =================
+   As gravações ficam no Google Drive. Abrir o link direto no celular costuma cair no app do Drive
+   ou pedir para baixar o arquivo (vídeos grandes do Meet). Aqui o vídeo toca dentro do próprio
+   ePLAT, pelo player do Drive (/preview), que faz streaming sem baixar. Links que não são do Drive
+   continuam abrindo numa aba nova. */
+function playerDriveId(url){
+  const u = String(url||'');
+  const m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:[^#]*&)?id=)([A-Za-z0-9_-]{10,})/);
+  return m ? m[1] : null;
+}
+function playerAbrir(url, titulo){
+  const id = playerDriveId(url);
+  if(!id) return false;
+  playerFechar();
+  const el = document.createElement('div');
+  el.id = 'player-ov'; el.className = 'player-ov';
+  el.innerHTML = `
+    <div class="player-box" role="dialog" aria-label="${escapeAttr(titulo||'Gravação')}">
+      <div class="player-hd"><strong>${escapeHtml(titulo||'Gravação')}</strong><button type="button" class="player-x" id="player-x" title="Fechar">${icon('x','tiny')}</button></div>
+      <div class="player-video"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe></div>
+      <p class="player-dica">Toque no play para assistir aqui mesmo, sem baixar. Vídeos longos podem levar alguns segundos para começar. Para tela cheia, use o botão do canto do vídeo ou gire o celular.
+        <a href="${escapeAttr(url)}" target="_blank" rel="noopener">Abrir no Google Drive</a></p>
+    </div>`;
+  document.body.appendChild(el);
+  document.body.classList.add('player-aberto');
+  el.addEventListener('click', e=>{ if(e.target===el) playerFechar(); });
+  el.querySelector('#player-x').addEventListener('click', playerFechar);
+  return true;
+}
+function playerFechar(){ const el = document.getElementById('player-ov'); if(el) el.remove(); document.body.classList.remove('player-aberto'); }
+document.addEventListener('click', e=>{
+  const a = e.target.closest && e.target.closest('a[data-player]');
+  if(!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if(playerAbrir(a.getAttribute('href'), a.dataset.player)) e.preventDefault();
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && document.getElementById('player-ov')) playerFechar(); });
 /* ================= DRE (Murilo e Carmem) =================
    Demonstrativo de Resultado de cada mês, montado com os lançamentos do Financeiro do Plat. Cada
    categoria cai numa linha do DRE pelo nome (receitas, impostos, devoluções, repasses e prestadores,
