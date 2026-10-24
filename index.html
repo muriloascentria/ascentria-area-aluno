@@ -2110,7 +2110,6 @@
   .diag-audio-resp{margin-top:6px;}
   .diag-audio-resp .msg-audio,.wf-audio-ok .msg-audio,.wf-review-a .msg-audio{max-width:100%;}
   .rd-abas{margin:0 0 12px;display:flex;gap:10px;flex-wrap:wrap;}
-  .nps-filtros{gap:8px;}
   .nps-backdrop{position:fixed;inset:0;background:rgba(5,5,10,.72);display:flex;align-items:center;justify-content:center;z-index:330;padding:16px;}
   .nps-card{width:100%;max-width:520px;max-height:92vh;overflow-y:auto;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 18px 44px rgba(0,0,0,.5);}
   .nps-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -2133,7 +2132,16 @@
   .nps-obrigado .icon{width:36px;height:36px;color:var(--success);}
   .nps-obrigado p{color:var(--text-dim);font-size:14px;}
   .nps-tile-sub{font-size:11px;color:var(--text-mute);margin-top:2px;}
-  .nps-filtros{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 10px;}
+  h2.section-title.com-titulo{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text);margin:8px 0 14px;}
+  h2.section-title.com-titulo .icon{width:17px;height:17px;color:var(--accent);}
+  .com-nps h2.section-title.com-titulo{margin-top:30px;}
+  .nps-filtros{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:16px 0 12px;padding:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;}
+  .nps-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:7px 6px;border-radius:9px;color:var(--text-dim);font-size:12.5px;font-weight:700;line-height:1.2;text-align:center;min-width:0;}
+  .nps-seg:hover{color:var(--text);}
+  .nps-seg small{font-size:11px;font-weight:600;color:var(--text-mute);}
+  .nps-seg.on{background:var(--accent);color:#fff;}
+  .nps-seg.on small{color:rgba(255,255,255,.85);}
+  @media (max-width:560px){ .nps-filtros{grid-template-columns:repeat(3,minmax(0,1fr));} }
   .nps-lista{display:flex;flex-direction:column;gap:8px;}
   .nps-resp{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);}
   .nps-nota{width:38px;height:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex:0 0 auto;}
@@ -2391,18 +2399,20 @@
   .recado-texto{font-size:16px;line-height:1.6;color:var(--text);margin-top:4px;white-space:normal;word-break:break-word;max-height:46vh;overflow:auto;}
   .recado-acoes{display:flex;justify-content:flex-end;margin-top:20px;}
   .recado-bloco{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
-  .recado-hd{display:flex;align-items:center;gap:7px;font-size:14px;}
-  .recado-hd .icon{width:15px;height:15px;color:var(--accent);}
-  .recado-sub{font-size:12px;color:var(--text-dim);margin:6px 0 10px;}
+  .recado-hd{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;}
+  .recado-hd strong{font-weight:700;}
+  .recado-hd .icon{width:16px;height:16px;color:var(--accent);}
+  .recado-sub{font-size:12.5px;color:var(--text-dim);margin:6px 0 12px;line-height:1.45;}
   .recado-bloco textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:10px 12px;resize:vertical;min-height:64px;}
   .recado-rodape{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;}
   .recado-rodape small{font-size:11.5px;color:var(--text-mute);flex:1;min-width:0;}
   .recado-btns{display:flex;gap:6px;flex-wrap:wrap;}
   @media(max-width:560px){ .recado-rodape{flex-direction:column;align-items:stretch;} .recado-btns{justify-content:flex-end;} }
   .envio-bloco{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
-  .envio-hd{display:flex;align-items:center;gap:7px;font-size:14px;}
-  .envio-hd .icon{width:15px;height:15px;color:var(--accent);}
-  .envio-sub{font-size:12px;color:var(--text-dim);margin:6px 0 12px;}
+  .envio-hd{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;}
+  .envio-hd strong{font-weight:700;}
+  .envio-hd .icon{width:16px;height:16px;color:var(--accent);}
+  .envio-sub{font-size:12.5px;color:var(--text-dim);margin:6px 0 14px;line-height:1.45;}
   .envio-label{font-size:11.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;}
   .envio-campo{margin:0 0 12px;}
   .envio-pessoas{display:flex;flex-wrap:wrap;gap:8px;}
@@ -2434,11 +2444,11 @@
   .envio-item-txt small{font-size:11.5px;color:var(--text-mute);}
   @media(max-width:640px){ .envio-grade{grid-template-columns:minmax(0,1fr);} .envio-rodape{flex-direction:column;align-items:stretch;} .envio-quando{padding-left:0;} }
   @media(max-width:560px){ .alerta-item{row-gap:8px;} .alerta-acoes{flex:1 0 100%;} .alerta-acoes .btn-mini{flex:1;justify-content:center;} }
-  .chk-bloco{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin:0 0 14px;}
-  .chk-txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
-  .chk-txt strong{display:flex;align-items:center;gap:6px;font-size:13.5px;}
-  .chk-txt strong .icon{width:15px;height:15px;color:var(--accent);}
-  .chk-txt small{font-size:11.5px;color:var(--text-mute);}
+  .chk-bloco{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;}
+  .chk-txt{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;}
+  .chk-txt strong{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;}
+  .chk-txt strong .icon{width:16px;height:16px;color:var(--accent);}
+  .chk-txt small{font-size:12.5px;color:var(--text-dim);line-height:1.45;}
   .chk-acoes{display:flex;gap:6px;flex-wrap:wrap;}
   .aniv-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 20px;}
   .aniv-bloco-hd{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px;}
@@ -14806,12 +14816,13 @@ function bindEnvioBloco(){
 function renderComunicacao(){
   const recado = recadoPainelHtml();
   document.getElementById('view-comunicacao').innerHTML = `
-    <p class="section-sub" style="margin-top:2px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
+    <h2 class="section-title com-titulo">${icon('comment')} Comunicação</h2>
+    <p class="section-sub" style="margin-top:-6px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
     ${recado || `<div class="tf-vazio" style="padding:14px">O recado do dia é escrito pela administração. Você vê a janela com o recado ao abrir o sistema.</div>`}
     ${checkpointHtml()}
     ${envioBlocoHtml()}
     <div class="com-nps" id="com-nps">
-      <h2 class="section-title" style="margin-top:28px">${icon('chart')} NPS dos alunos</h2>
+      <h2 class="section-title com-titulo">${icon('chart')} NPS dos alunos</h2>
       ${npsHtmlEquipe()}
     </div>`;
   bindRecadoPainel();
@@ -17332,7 +17343,13 @@ function npsHtmlEquipe(){
   return `
     <p class="section-sub" style="margin-top:0">A pesquisa aparece sozinha para mentorados e alunos do Método aos 4, 8 e 12 meses. NPS = % de promotores (9 e 10) menos % de detratores (0 a 6), de −100 a 100.</p>
     <div class="kpi-row">${tile('NPS geral', rows)}${tile('4 meses', rows.filter(r=>r.marco===4))}${tile('8 meses', rows.filter(r=>r.marco===8))}${tile('12 meses', rows.filter(r=>r.marco===12))}</div>
-    <div class="nps-filtros">${[['todos','Todas'],['4','4 meses'],['8','8 meses'],['12','12 meses'],['detratores','Detratores (0 a 6)']].map(([k,l])=>`<button type="button" class="filter-tab ${f===k?'active':''}" data-nps-f="${k}">${l}</button>`).join('')}</div>
+    <div class="nps-filtros" role="tablist">${[
+      ['todos','Todas', rows.length],
+      ['4','4 meses', rows.filter(r=>r.marco===4).length],
+      ['8','8 meses', rows.filter(r=>r.marco===8).length],
+      ['12','12 meses', rows.filter(r=>r.marco===12).length],
+      ['detratores','Detratores', rows.filter(r=>r.nota<=6).length],
+    ].map(([k,l,n])=>`<button type="button" role="tab" aria-selected="${f===k}" class="nps-seg ${f===k?'on':''}" data-nps-f="${k}">${l}<small>${n} ${n===1?'resposta':'respostas'}</small></button>`).join('')}</div>
     <div class="nps-lista">
       ${vis.map(r=>{ const st = getStudent(r.aluno_id); return `
         <div class="nps-resp">
