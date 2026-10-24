@@ -810,6 +810,7 @@
   /* Seções recolhíveis da Visão Geral */
   .vg-sec-head{display:flex;align-items:center;gap:10px;margin:28px 0 16px;cursor:pointer;user-select:none;}
   .vg-sec-head .section-title{margin:0;}
+  .vg-sec-head.tf-sec-head{margin-top:4px;}
   .vg-sec-head .qtd{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--bg-elev);color:var(--text-dim);}
   .vg-sec-toggle{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-mute);background:none;border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;}
   .vg-sec-toggle .icon{width:14px;height:14px;transition:transform .15s;}
@@ -2457,6 +2458,8 @@
   .chk-txt strong .icon{width:16px;height:16px;color:var(--accent);}
   .chk-txt small{font-size:12.5px;color:var(--text-dim);line-height:1.45;}
   .chk-acoes{display:flex;gap:6px;flex-wrap:wrap;}
+  .type-select.tags-destaque{outline:2px solid var(--accent);outline-offset:4px;border-radius:10px;animation:tagsPulso .8s ease-in-out 3;}
+  @keyframes tagsPulso{50%{outline-color:transparent;}}
   .aniv-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:0 0 20px;}
   .aniv-bloco-hd{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px;}
   .aniv-bloco-hd .icon{width:18px;height:18px;color:var(--accent);}
@@ -4419,10 +4422,74 @@ async function carregarAnivComunidade(){
   try{
     const { data, error } = await sb.rpc('aniversariantes_hoje_comunidade');
     if(error) throw error;
-    ANIV_COMUNIDADE = (data||[]).map(r=>({ id:r.id, nome:r.name||'', initials:r.initials||'', color:r.color||'#8d916f', avatarUrl:r.avatar_url||null, idade:null }));
+    ANIV_COMUNIDADE = (data||[]).map(r=>({ id:r.id, nome:r.name||'', initials:r.initials||'', color:r.color||'#8d916f', avatarUrl:r.avatar_url||null, idade:null, jaParabenizei:!!r.ja_parabenizei }));
   }catch(e){ console.error('aniversariantes', e); ANIV_COMUNIDADE = []; }
   ANIV_COMUNIDADE_CARREGANDO = false;
   renderAniversarioCanto();
+  anivAlunoAtualizarInicio();
+}
+/* Aviso fixo "Aniversariantes de hoje" no Início do aluno, como o do time interno. Não tem botão de
+   fechar: cada colega sai do aviso assim que o aluno publica ou comenta no mural marcando a pessoa
+   (@Nome), e o aviso inteiro some quando não sobra ninguém para parabenizar. */
+function anivAlunoPendentes(){
+  return (ANIV_COMUNIDADE||[]).filter(a=>!a.jaParabenizei);
+}
+function aniversariantesAlunoHtml(){
+  if(currentUserRole!=='aluno') return '';
+  if(ANIV_COMUNIDADE===null){ carregarAnivComunidade(); return '<div id="aniv-aluno-slot"></div>'; }
+  const lista = anivAlunoPendentes();
+  if(!lista.length) return '<div id="aniv-aluno-slot"></div>';
+  return `<div id="aniv-aluno-slot">
+    <div class="aniv-bloco">
+      <div class="aniv-bloco-hd">${icon('gift')} <strong>Aniversariantes de hoje</strong> <span class="aniv-qtd">${lista.length}</span></div>
+      <div class="aniv-bloco-lista">
+        ${lista.map(a=>`
+          <div class="aniv-bloco-item">
+            ${initialsAvatar(a.initials, a.color, 40, a.avatarUrl)}
+            <div class="aniv-bloco-txt">
+              <strong>${escapeHtml(a.nome)}</strong>
+              <small>Faz aniversário hoje</small>
+            </div>
+            <button class="btn-mini" data-aniv-parabenizar="${escapeAttr(a.id)}" title="Deixar os parabéns no mural da Comunidade">${icon('gift','tiny')}<span> Parabenizar</span></button>
+          </div>`).join('')}
+      </div>
+      <small class="aniv-bloco-pe">Deixe os parabéns no mural da Comunidade. O aviso sai assim que você publicar marcando a pessoa.</small>
+    </div></div>`;
+}
+function anivAlunoBind(raiz){
+  (raiz||document).querySelectorAll('[data-aniv-parabenizar]').forEach(b=>b.addEventListener('click', ()=>{
+    const a = (ANIV_COMUNIDADE||[]).find(x=>x.id===b.dataset.anivParabenizar);
+    if(a) anivAbrirParabens([a]);
+  }));
+}
+function anivAlunoAtualizarInicio(){
+  const slot = document.getElementById('aniv-aluno-slot');
+  if(!slot) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = aniversariantesAlunoHtml();
+  const novo = tmp.firstElementChild;
+  slot.replaceWith(novo);
+  anivAlunoBind(novo);
+}
+function anivAbrirParabens(lista){
+  goTo('comunidade');
+  setTimeout(()=>{
+    const ta = document.getElementById('new-post');
+    if(!ta) return;
+    // Já entra com a pessoa marcada (@Nome Completo), então ela recebe o aviso no sininho.
+    lista.forEach(a=>presetMention(ta, {id:a.id, name:a.nome}));
+    ta.value = 'Feliz aniversário, ' + lista.map(a=>'@'+a.nome).join(' e ') + '! 🎉';
+    ta.focus();
+    ta.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 80);
+}
+/* Chamado depois que o aluno publica ou comenta: quem foi marcado sai do aviso na hora. */
+function anivMarcarParabenizados(mencoes){
+  if(currentUserRole!=='aluno' || !ANIV_COMUNIDADE) return;
+  const ids = (mencoes && mencoes.mentions) || [];
+  let mudou = false;
+  ANIV_COMUNIDADE.forEach(a=>{ if(!a.jaParabenizei && ids.includes(a.id)){ a.jaParabenizei = true; mudou = true; } });
+  if(mudou){ renderAniversarioCanto(); anivAlunoAtualizarInicio(); }
 }
 function renderAniversarioCanto(){
   const antigo = document.getElementById('aniv-canto');
@@ -4433,9 +4500,10 @@ function renderAniversarioCanto(){
 
   const equipe = currentRole==='staff';
   const alunoDeVerdade = currentUserRole==='aluno';
-  if(alunoDeVerdade && ANIV_COMUNIDADE===null){ carregarAnivComunidade(); return; }
-  if(!alunoDeVerdade && !STUDENTS.length) return;
-  const lista = alunoDeVerdade ? ANIV_COMUNIDADE : aniversariantesHoje(equipe ? null : getViewingTier());
+  // O aluno de verdade vê o aviso fixo no Início (aniversariantesAlunoHtml), não este cartão.
+  if(alunoDeVerdade) return;
+  if(!STUDENTS.length) return;
+  const lista = aniversariantesHoje(equipe ? null : getViewingTier());
   if(!lista.length) return;
 
   const el = document.createElement('div');
@@ -5010,6 +5078,7 @@ async function createCommunityPost(authorId, type, text, courseId, audience, men
   const m = mencoes || {mentions:[], mentionAll:false};
   const { data, error } = await sb.from('community_posts').insert({author_id:authorId, type, text, course_id:courseId||null, audience:audience||'mentorado', mentions:m.mentions||[], mention_all:!!m.mentionAll}).select().single();
   if(error) throw error;
+  anivMarcarParabenizados(m);
   return {id:data.id, authorId:data.author_id, type:data.type, time:timeAgo(data.created_at), text:data.text, courseId:data.course_id||null, audience:data.audience||'mentorado', notifyAuthor:false, likes:0, liked:false, comments:[]};
 }
 /* Liga os botões "Sobre a aula: X — abrir aula" de qualquer lista de posts renderizada, para abrir
@@ -5178,6 +5247,7 @@ async function syncCommunityComment(postId, authorId, text, replyToCommentId, me
   const m = mencoes || {mentions:[], mentionAll:false};
   const { data, error } = await sb.from('community_comments').insert({post_id:postId, author_id:authorId, text, reply_to_comment_id: replyToCommentId||null, mentions:m.mentions||[], mention_all:!!m.mentionAll}).select().single();
   if(error) throw error;
+  anivMarcarParabenizados(m);
   return data.id;
 }
 function syncCommunityPostDelete(postId){
@@ -6482,6 +6552,8 @@ function renderInicioCurso(s){
       ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
     </div>
 
+    ${aniversariantesAlunoHtml()}
+
     ${essenciaBannerHtml()}
     ${premioBannerHtml()}
 
@@ -6491,6 +6563,7 @@ function renderInicioCurso(s){
   bindOpenCourseTags(document.getElementById('view-inicio'));
   premioBindBanner(document.getElementById('view-inicio'));
   eeBindBanner(document.getElementById('view-inicio'));
+  anivAlunoBind(document.getElementById('view-inicio'));
 }
 function renderInicio(){
   const s = getStudent(currentStudentId);
@@ -6525,6 +6598,8 @@ function renderInicio(){
       <div class="stat-card"><div class="label">Turma</div><div class="value" style="font-size:14px">${s.turma}</div></div>
     </div>
 
+    ${aniversariantesAlunoHtml()}
+
     ${epInicioHtml(s)}
 
     ${essenciaBannerHtml()}
@@ -6550,6 +6625,7 @@ function renderInicio(){
   bindOpenCourseTags(document.getElementById('view-inicio'));
   premioBindBanner(document.getElementById('view-inicio'));
   eeBindBanner(document.getElementById('view-inicio'));
+  anivAlunoBind(document.getElementById('view-inicio'));
 }
 
 /* ---- Formulário "Diagnóstico Inicial" — renderizado no lugar do Início até o aluno enviar ---- */
@@ -7086,6 +7162,7 @@ function bindCourseComments(c){
       const ta = modalEl.querySelector('#cm-new-post');
       if(!ta.value.trim()) return;
       postBtn.disabled = true;
+      if(!(await confirmarDuvidaRepetida(selectedCoursePostType, '#cm-type-select'))){ postBtn.disabled = false; return; }
       try{
         const post = await createCommunityPost(actingAuthorId(), selectedCoursePostType, ta.value.trim(), c.id, getViewingTier(), extractMentions(ta));
         COMMUNITY_POSTS.unshift(post);
@@ -7554,6 +7631,31 @@ function pwaIniciar(){
 }
 pwaIniciar();
 
+/* Quem publica como "Dúvida" aciona a equipe interna. Muitos alunos não percebem que a TAG ficou em
+   Dúvida (é a padrão nos comentários das aulas), então, se as duas últimas publicações dele já foram
+   dúvidas, perguntamos antes de publicar a terceira. Devolve true para seguir com a publicação. */
+async function confirmarDuvidaRepetida(tipo, seletorTags){
+  if(tipo!=='duvida' || currentRole!=='aluno') return true;
+  let ultimas = [];
+  try{
+    const { data, error } = await sb.from('community_posts').select('type').eq('author_id', actingAuthorId()).order('created_at', {ascending:false}).limit(2);
+    if(error) throw error;
+    ultimas = data || [];
+  }catch(e){ console.error('duvidas seguidas', e); return true; }
+  if(ultimas.length<2 || !ultimas.every(x=>x.type==='duvida')) return true;
+  const ok = await showAppConfirm('Suas duas últimas publicações foram marcadas como Dúvida, e toda dúvida chama a equipe da Ascentria para responder. Se não for uma dúvida, troque a TAG logo abaixo da caixa de mensagem (Interação, Conquista etc.) antes de publicar.', {
+    title:'Isto é mesmo uma dúvida?', confirmLabel:'Sim, é uma dúvida', cancelLabel:'Vou trocar a TAG'
+  });
+  if(!ok && seletorTags){
+    const el = document.querySelector(seletorTags);
+    if(el){
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.classList.add('tags-destaque');
+      setTimeout(()=>el.classList.remove('tags-destaque'), 2400);
+    }
+  }
+  return ok;
+}
 function showAppConfirm(message, opts){
   const o = opts || {};
   const confirmLabel = o.confirmLabel || 'Confirmar';
@@ -8026,6 +8128,7 @@ function renderComunidade(){
         return;
       }
       postBtn.disabled = true;
+      if(!(await confirmarDuvidaRepetida(selectedPostType, '#type-select'))){ postBtn.disabled = false; return; }
       try{
         const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim(), null, currentCommunityAudience, extractMentions(ta));
         COMMUNITY_POSTS.unshift(post);
@@ -11845,7 +11948,14 @@ function renderTarefas(){
   } else {
     corpo = tarefasUI.modo==='quadro' ? tarefasKanbanHtml(lista) : tarefasTabelaHtml(lista);
   }
+  const tfFechado = !!tarefasUI.recolhidos.__tarefas;
   el.innerHTML = `
+    <div class="vg-sec-head tf-sec-head" data-tf-recolher="__tarefas">
+      <h2 class="section-title com-titulo">${icon('check')} Tarefas</h2>
+      <span class="qtd">${kpis.pend} pendente${kpis.pend===1?'':'s'}</span>
+      <button type="button" class="vg-sec-toggle ${tfFechado?'fechado':''}">${icon('down')} ${tfFechado?'Expandir':'Recolher'}</button>
+    </div>
+    <div ${tfFechado?'hidden':''}>
     <div class="tf-topo">
       <div class="kpi-row" style="flex:1">
         <div class="kpi-tile"><div class="label">Minhas pendentes</div><div class="value">${kpis.pend}</div></div>
@@ -11901,6 +12011,7 @@ function renderTarefas(){
     <p class="busca-info">${lista.length} tarefa${lista.length===1?'':'s'}${tarefasFiltroAtivo()?' com esses filtros':''}${tarefasUI.aba!=='concluidas' && f.status==='abertas' ? ' · concluídas ficam na aba "Concluídas"' : ''}</p>
 
     ${corpo}
+    </div>
 
     ${tarefasSouAdmin() ? tarefasAdminHtml() : ''}
   `;
@@ -11909,7 +12020,7 @@ function renderTarefas(){
 function tarefasAdminHtml(){
   return `
     <div class="vg-sec-head" data-tf-recolher="__admin" style="margin-top:34px">
-      <h2 class="section-title">${icon('lock')} Membros do módulo</h2>
+      <h2 class="section-title com-titulo">${icon('lock')} Membros do módulo</h2>
       <span class="qtd">${TAREFAS_EQUIPE.filter(m=>m.ativo).length} de ${TAREFAS_EQUIPE.length}</span>
       <button type="button" class="vg-sec-toggle ${tarefasUI.recolhidos.__admin?'fechado':''}">${icon('down')} ${tarefasUI.recolhidos.__admin?'Expandir':'Recolher'}</button>
     </div>
