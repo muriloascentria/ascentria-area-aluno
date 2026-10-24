@@ -2860,6 +2860,10 @@
     <button class="nav-item restrict" id="nav-mensagens" data-view="mensagens" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-radar" data-view="radar" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-desempenho" data-view="desempenho" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-dre" data-view="dre" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-reunioes" data-view="reunioes" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-politicas" data-view="politicas" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
     <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
@@ -4179,7 +4183,7 @@ async function alertaResolver(id){
   if(error){ alert('Não foi possível resolver: '+(error.message||'')); return; }
   ACOMP_ALERTAS = ACOMP_ALERTAS.filter(a=>a.id!==id);
   updateNotifBadge();
-  if(currentView==='equipe') renderEquipe();
+  if(currentView==='equipe') renderEquipe(); else navSincronizarEquipe();
 }
 /* Lista de quem sumiu — a equipe precisa de uma ação diferente de mandar mensagem. */
 function alertasAcompHtml(){
@@ -6199,6 +6203,8 @@ function setRole(role){
     staffBloqueios().forEach(v=>{ const el = v==='ecrm' ? document.getElementById('nav-ecrm') : document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'none'; });
     if(STAFF_BLOQUEIOS.size) document.getElementById('role-consultora').style.display = 'none';
   }
+  /* Desempenho, DRE, Reuniões e Políticas (e as demais áreas) seguem as mesmas regras do Início. */
+  if(staffNav) navSincronizarEquipe();
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
@@ -14592,16 +14598,18 @@ function gtBindEdicao(el, freq){
   });
 }
 
+/* Atalhos do Início da equipe: os MESMOS itens do menu lateral, na mesma ordem (VIEWS_EQUIPE) e com
+   as mesmas regras de acesso (equipeViewPode). O Início só mostra o que estiver visível no menu. */
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
+  {view:'comunicacao',desc:'Recado do dia para a equipe, checkpoint quinzenal, envio coletivo e NPS dos alunos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
-  {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint quinzenal que sai para os mentorados.'},
+  {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
+  {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
+  {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
+  {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
   {view:'politicas',  desc:'Políticas internas da Ascentria, com os POPs de cada área, os links e a revisão dos sócios nos documentos em revisão.'},
-  {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
-  {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
-  {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
-  {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
   {view:'vendas',     desc:'Sessões 1:1 de venda, indicadores e objeções dos leads.'},
@@ -14610,7 +14618,28 @@ const EQUIPE_ATALHOS = [
   {view:'financeiro', desc:'Extrato, contas a receber e a pagar, faturamento e anexos.'},
   {view:'treinamento',desc:'Aulas REC do time e o registro de aprendizados de cada pessoa.'},
   {view:'gestaotime', desc:'Funções de cada pessoa e a rotina diária, semanal e mensal, com a evolução de cada um.'},
+  {view:'ecrm',       desc:'CRM de vendas da mentoria, com o funil dos leads e as conversas. Abre em outra aba.', link:'https://www.ecrm.digital'},
 ];
+/* Quem pode ver cada área da equipe (vale para o menu lateral e para o Início). */
+function equipeViewPode(v){
+  const permitidas = viewsDoPapel();
+  if(permitidas && !permitidas.includes(v)) return false;
+  if(staffBloqueios().has(v)) return false;
+  if(v==='tarefas') return tarefasSouMembro();
+  if(v==='gestaotime') return souMurilo();
+  if(v==='radar') return radarPode();
+  if(v==='desempenho') return avPode();
+  if(v==='dre') return drePode();
+  if(v==='reunioes') return reuPodeAbrir();
+  if(v==='politicas') return polPodeAbrir();
+  return true;
+}
+/* Acerta o menu lateral da equipe com as mesmas regras do Início (chamado ao trocar de modo e ao abrir o
+   Início, porque algumas permissões, como Reuniões, só ficam conhecidas depois de carregar os dados). */
+function navSincronizarEquipe(){
+  if(currentUserRole!=='staff' || currentRole==='aluno') return;
+  VIEWS_EQUIPE.forEach(v=>{ if(v==='equipe') return; const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = equipeViewPode(v) ? 'flex' : 'none'; });
+}
 /* O que cada papel interno pode abrir (a barra lateral e a trava do goTo seguem a mesma lista). */
 function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
@@ -14629,7 +14658,7 @@ function renderEquipe(){
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
     ${aniversariantesEquipeHtml()}
     <div class="equipe-grid">
-      ${EQUIPE_ATALHOS.filter(a=>(a.view!=='tarefas' || tarefasSouMembro()) && (a.view!=='gestaotime' || souMurilo()) && (a.view!=='radar' || radarPode()) && (a.view!=='desempenho' || avPode()) && (a.view!=='dre' || drePode()) && (a.view!=='reunioes' || reuPodeAbrir()) && !staffBloqueios().has(a.view) && (!permitidas || permitidas.includes(a.view))).map(a=>{ const [ic,label] = NAV_LABELS[a.view]; return `
+      ${EQUIPE_ATALHOS.filter(a=> a.view==='ecrm' ? (()=>{ const e = document.getElementById('nav-ecrm'); return !!e && e.style.display!=='none'; })() : equipeViewPode(a.view)).map(a=>{ const [ic,label] = a.view==='ecrm' ? ['idcard','eCRM'] : NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
@@ -14638,7 +14667,12 @@ function renderEquipe(){
     </div>`;
   reuPreparar();
   polPreparar();
-  document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.equipeGo)));
+  document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>{
+    const v = b.dataset.equipeGo;
+    if(v==='ecrm'){ window.open('https://www.ecrm.digital', '_blank', 'noopener'); return; }
+    goTo(v);
+  }));
+  navSincronizarEquipe();
 }
 
 /* ================= VIEW: COMUNICAÇÃO (equipe interna) =================
@@ -15706,7 +15740,7 @@ async function polCarregar(){
   }catch(e){ console.error('politicas', e); POL_UI.erro = true; if(POL_UI.docs===null) POL_UI.docs = []; }
   POL_UI.carregando = false;
   if(currentView==='politicas') renderPoliticas();
-  if(currentView==='equipe') renderEquipe();
+  if(currentView==='equipe') renderEquipe(); else navSincronizarEquipe();
   updateNotifBadge();
 }
 let POL_PREPARADO = false;
@@ -15916,6 +15950,7 @@ async function reuCarregar(){
   REU_UI.carregando = false;
   if(currentView==='reunioes') renderReunioes();
   if(currentView==='equipe'){ const b = document.querySelector('#view-equipe [data-equipe-go="reunioes"]'); if(b || reuPodeAbrir()) renderEquipe(); }
+  navSincronizarEquipe();
 }
 let REU_PREPARADO = false;
 function reuPreparar(){ if(REU_PREPARADO || !currentUser || currentUserRole==='aluno') return; REU_PREPARADO = true; reuCarregar(); }
