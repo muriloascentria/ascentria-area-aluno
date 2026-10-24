@@ -4131,10 +4131,12 @@ function aniversariantesClientes(hoje){
   });
   return lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
 }
-/* ---- Checkpoint semanal ----
-   Toda segunda-feira, às 7h, cada mentorado recebe no Acompanhamento uma mensagem da equipe
-   perguntando como está indo a semana. O disparo é feito pelo banco (agendador do Supabase), então
-   acontece mesmo com ninguém logado; o texto muda a cada semana, num rodízio de dez modelos.
+/* ---- Checkpoint quinzenal ----
+   A cada duas semanas, na segunda-feira às 7h (a partir de 02/11/2026), cada mentorado recebe no
+   Acompanhamento uma mensagem em nome da Sandra, citando a Viviane, perguntando pelas tarefas e aulas.
+   Só recebe quem já concluiu o onboarding do eSIS (ou, sem onboarding registrado, quem está há mais de
+   30 dias na plataforma). O disparo é feito pelo banco (agendador do Supabase), então acontece mesmo
+   com ninguém logado; o texto muda a cada envio, num rodízio de dez modelos.
    Este bloco só mostra a situação e permite pausar/retomar, além de um envio manual. */
 let CHECKPOINT_INFO = null;
 let ACOMP_ALERTAS = [];   // mentorados que não responderam dois checkpoints seguidos
@@ -4160,7 +4162,7 @@ function alertasAcompHtml(){
   return `
     <div class="alerta-bloco">
       <div class="alerta-hd">${icon('bell')} <strong>Mentorados sem resposta</strong> <span class="alerta-qtd">${ACOMP_ALERTAS.length}</span></div>
-      <p class="alerta-sub">Não responderam os dois últimos checkpoints semanais. Vale um contato por fora do sistema — ligação, WhatsApp ou um encontro — em vez de mais uma mensagem.</p>
+      <p class="alerta-sub">Não responderam os dois últimos checkpoints quinzenais. Vale um contato por fora do sistema — ligação, WhatsApp ou um encontro — em vez de mais uma mensagem.</p>
       <div class="alerta-lista">
         ${ACOMP_ALERTAS.map(a=>{ const st = getStudent(a.alunoId); return `
           <div class="alerta-item">
@@ -4309,15 +4311,17 @@ async function carregarCheckpoint(){
 function checkpointHtml(){
   const c = CHECKPOINT_INFO;
   if(!c || currentRole!=='staff') return '';
-  const ultima = c.ultima_semana ? `${c.ultimos_envios} ${c.ultimos_envios===1?'mensagem':'mensagens'} na semana de ${tzDataCurta(c.ultima_semana)}` : 'ainda não houve disparo';
+  const ultima = c.ultima_semana ? `${c.ultimos_envios} ${c.ultimos_envios===1?'mensagem':'mensagens'} em ${tzDataCurta(c.ultima_semana)}` : 'ainda não houve disparo';
+  const proximo = c.ativo && c.proximo_envio ? ` · próximo envio: ${tzDataCurta(c.proximo_envio)}` : '';
+  const aguard = c.aguardando ? ` · ${c.aguardando} em onboarding (ainda não recebe${c.aguardando===1?'':'m'})` : '';
   return `
     <div class="chk-bloco">
       <div class="chk-txt">
-        <strong>${icon('comment','tiny')} Checkpoint semanal dos mentorados</strong>
-        <small>${c.ativo ? 'Ligado' : 'Pausado'} · toda segunda-feira às 7h, como ${escapeHtml((c.remetente_nome||'').split(' ')[0])} · ${c.mentorados} mentorado${c.mentorados===1?'':'s'} · último envio: ${ultima}</small>
+        <strong>${icon('comment','tiny')} Checkpoint quinzenal dos mentorados</strong>
+        <small>${c.ativo ? 'Ligado' : 'Pausado'} · a cada duas semanas, na segunda-feira às 7h, como ${escapeHtml((c.remetente_nome||'').split(' ')[0])}, citando a Viviane · recebem ${c.mentorados} mentorado${c.mentorados===1?'':'s'}${aguard} · último envio: ${ultima}${proximo}</small>
       </div>
       <div class="chk-acoes">
-        <button type="button" class="btn-mini" id="chk-agora" title="Enviar o checkpoint desta semana agora (quem já recebeu não recebe de novo)">${icon('reply','tiny')}<span> Enviar agora</span></button>
+        <button type="button" class="btn-mini" id="chk-agora" title="Enviar o checkpoint agora, fora da quinzena (só para quem já pode receber e ainda não recebeu nesta semana)">${icon('reply','tiny')}<span> Enviar agora</span></button>
         <button type="button" class="btn-mini ${c.ativo?'danger':''}" id="chk-toggle">${c.ativo ? 'Pausar' : 'Retomar'}</button>
       </div>
     </div>`;
@@ -4326,7 +4330,7 @@ function bindCheckpoint(){
   const t = document.getElementById('chk-toggle');
   if(t) t.addEventListener('click', async ()=>{
     const ligar = !(CHECKPOINT_INFO && CHECKPOINT_INFO.ativo);
-    if(!ligar && !(await showAppConfirm('Pausar o checkpoint semanal? Os mentorados deixam de receber a mensagem de segunda-feira até você retomar.', {title:'Pausar checkpoint', confirmLabel:'Pausar'}))) return;
+    if(!ligar && !(await showAppConfirm('Pausar o checkpoint quinzenal? Os mentorados deixam de receber a mensagem até você retomar.', {title:'Pausar checkpoint', confirmLabel:'Pausar'}))) return;
     t.disabled = true;
     const { error } = await sb.rpc('checkpoint_ativar', {p_ativo: ligar});
     if(error){ alert('Não foi possível alterar: '+(error.message||'')); t.disabled = false; return; }
@@ -4334,11 +4338,11 @@ function bindCheckpoint(){
   });
   const a = document.getElementById('chk-agora');
   if(a) a.addEventListener('click', async ()=>{
-    if(!(await showAppConfirm('Enviar o checkpoint desta semana agora para os mentorados que ainda não receberam?', {title:'Enviar checkpoint', confirmLabel:'Enviar'}))) return;
+    if(!(await showAppConfirm('Enviar o checkpoint agora, fora da quinzena, para os mentorados que já podem receber e ainda não receberam nesta semana?', {title:'Enviar checkpoint', confirmLabel:'Enviar'}))) return;
     a.disabled = true;
     const { data, error } = await sb.rpc('enviar_checkpoint_semanal', {p_forcar: true});
     if(error){ alert('Não foi possível enviar: '+(error.message||'')); a.disabled = false; return; }
-    alert(data ? `Checkpoint enviado para ${data} mentorado${data===1?'':'s'}.` : 'Todos os mentorados já tinham recebido o checkpoint desta semana.');
+    alert(data ? `Checkpoint enviado para ${data} mentorado${data===1?'':'s'}.` : 'Todos os mentorados que podem receber já tinham recebido o checkpoint nesta semana.');
     await carregarCheckpoint(); if(currentView==='comunicacao') renderComunicacao();
   });
 }
@@ -14566,7 +14570,7 @@ function gtBindEdicao(el, freq){
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
-  {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint semanal que sai para os mentorados.'},
+  {view:'comunicacao',desc:'Recado do dia para a equipe e o checkpoint quinzenal que sai para os mentorados.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
   {view:'politicas',  desc:'Políticas internas da Ascentria, com os POPs de cada área, os links e a revisão dos sócios nos documentos em revisão.'},
   {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
@@ -14614,8 +14618,8 @@ function renderEquipe(){
 
 /* ================= VIEW: COMUNICAÇÃO (equipe interna) =================
    Junta num lugar só as duas coisas que saem da equipe para as pessoas: o recado do dia, que o
-   Murilo escreve e aparece numa janela para todo mundo da equipe interna, e o checkpoint semanal,
-   que o sistema manda sozinho toda segunda-feira para os mentorados. Antes os dois ficavam soltos
+   Murilo escreve e aparece numa janela para todo mundo da equipe interna, e o checkpoint quinzenal,
+   que o sistema manda sozinho a cada duas semanas, na segunda-feira, para os mentorados. Antes os dois ficavam soltos
    no Início; aqui têm espaço para respirar e o Início volta a ser só os atalhos. */
 /* ============ ENVIO COLETIVO PARA OS MENTORADOS (só o Murilo) ============ */
 /* Mesma pessoa autorizada no banco (policy da tabela envios_coletivos). */
