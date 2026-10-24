@@ -11637,8 +11637,10 @@ function tarefaPessoaHtml(id, tam){
 function tarefaPrioHtml(p){ return `<span class="tf-prio ${p}">${TAREFAS_PRIO[p]||p}</span>`; }
 function tarefaStatusSelect(t){
   const pode = tarefasPossoEditar(t);
-  const opts = Object.entries(TAREFAS_STATUS).filter(([k])=> k!=='cancelada' || tarefasSouDono(t) || t.status==='cancelada');
-  return `<select class="tf-status ${t.status}" data-tf-status="${t.id}" ${pode?'':'disabled'} title="${pode?'Alterar situação':'Só o responsável ou quem criou altera'}">${opts.map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select>`;
+  /* "Concluída" não aparece no menu: concluir é sempre pelo check no canto da tarefa. A opção só fica
+     (sem poder ser escolhida) quando a tarefa já está concluída, para o menu mostrar a situação certa. */
+  const opts = Object.entries(TAREFAS_STATUS).filter(([k])=> (k!=='cancelada' || tarefasSouDono(t) || t.status==='cancelada') && (k!=='concluida' || t.status==='concluida'));
+  return `<select class="tf-status ${t.status}" data-tf-status="${t.id}" ${pode?'':'disabled'} title="${pode?'Alterar situação (para concluir, use o check)':'Só o responsável ou quem criou altera'}">${opts.map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''} ${k==='concluida'?'disabled':''}>${v}</option>`).join('')}</select>`;
 }
 function tarefaPrazoHtml(t){
   if(!t.prazoData) return `<span class="tf-prazo vazio">${icon('calendar','tiny')} sem prazo</span>`;
@@ -11990,7 +11992,7 @@ async function openTarefaModal(id, defaults){
         <div><label class="ps-label">Prazo</label><input class="ps-input" type="date" id="tf-m-data" value="${escapeAttr(t.prazoData)}" ${ro(dono)}>${dono ? prazoAtalhosHtml('tf-m-data') : ''}</div>
         <div><label class="ps-label">Horário (opcional)</label><input class="ps-input" type="time" id="tf-m-hora" value="${escapeAttr(t.prazoHora)}" ${ro(dono)}></div>
         <div><label class="ps-label">Situação</label>
-          <select class="ps-input" id="tf-m-status" ${ro(podeEditar)}>${Object.entries(TAREFAS_STATUS).filter(([k])=>k!=='cancelada' || dono || t.status==='cancelada').map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
+          <select class="ps-input" id="tf-m-status" ${ro(podeEditar)}>${Object.entries(TAREFAS_STATUS).filter(([k])=>(k!=='cancelada' || dono || t.status==='cancelada') && (k!=='concluida' || t.status==='concluida')).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''} ${k==='concluida'?'disabled':''}>${v}</option>`).join('')}</select></div>
         ${t.concluidaEm ? `<div><label class="ps-label">Concluída</label><div style="font-size:13px;padding-top:8px">${tzDataHora(t.concluidaEm, true)} por ${escapeHtml((tarefasMembro(t.concluidaPor)||getPerson(t.concluidaPor)||{name:'—'}).name.split(' ')[0])}</div></div>` : ''}
       </div>
       <label class="ps-label">Outros responsáveis <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
