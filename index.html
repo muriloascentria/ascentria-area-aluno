@@ -1652,6 +1652,7 @@
   .tf-filtros + .busca-info{margin:14px 0 18px;}
   .tf-filtros .ps-input{margin:0;width:100%;min-width:0;font-size:13px;}
   .tf-filtros .tf-busca{grid-column:span 2;}
+  .tf-filtros-rotulo{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mute);margin:4px 0 8px;}
   .tf-limpar-link{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:0;background:none;border:0;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;}
   .tf-filtros .btn-outline{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px;height:38px;box-sizing:border-box;margin:0;width:100%;}
   .tf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
@@ -11993,6 +11994,7 @@ function renderTarefas(){
       </div>
     </div>
 
+    <div class="tf-filtros-rotulo">Filtros</div>
     <div class="tf-filtros">
       <input class="ps-input tf-busca" type="text" id="tf-busca" value="${escapeAttr(tarefasUI.busca)}" placeholder="Buscar por título ou descrição…">
       ${selPessoas('tf-f-resp', f.responsavel, 'Responsável: todos')}
