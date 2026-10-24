@@ -2405,20 +2405,34 @@
   .envio-sub{font-size:12px;color:var(--text-dim);margin:6px 0 12px;}
   .envio-label{font-size:11.5px;font-weight:700;color:var(--text-mute);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;}
   .envio-campo{margin:0 0 12px;}
-  .envio-sw{display:inline-flex;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:3px;gap:2px;max-width:100%;flex-wrap:nowrap;}
-  .envio-sw button{padding:7px 14px;border-radius:16px;font-size:12px;font-weight:700;color:var(--text-dim);white-space:nowrap;}
-  .envio-sw button.on{background:var(--accent);color:#fff;}
+  .envio-pessoas{display:flex;flex-wrap:wrap;gap:8px;}
+  .envio-pessoa{display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border:1px solid var(--border);border-radius:999px;background:var(--bg-card);color:var(--text-dim);font-size:13px;font-weight:600;transition:border-color .15s,background .15s,color .15s;}
+  .envio-pessoa .avatar{flex:0 0 auto;}
+  .envio-pessoa:hover{border-color:var(--accent);color:var(--text);}
+  .envio-pessoa.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 14%, var(--bg-card));color:var(--text);box-shadow:0 0 0 1px var(--accent) inset;}
+  .envio-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;}
+  .envio-ops{display:flex;flex-direction:column;gap:8px;}
+  .envio-op{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);color:var(--text);transition:border-color .15s,background .15s;}
+  .envio-op:hover{border-color:var(--accent);}
+  .envio-op.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--bg-card));}
+  .envio-op-radio{flex:0 0 auto;width:16px;height:16px;margin-top:2px;border-radius:50%;border:2px solid var(--text-mute);position:relative;}
+  .envio-op.on .envio-op-radio{border-color:var(--accent);}
+  .envio-op.on .envio-op-radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--accent);}
+  .envio-op-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .envio-op-txt b{font-size:13.5px;font-weight:700;}
+  .envio-op-txt small{font-size:12px;color:var(--text-mute);line-height:1.35;}
   .envio-bloco textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:10px 12px;resize:vertical;min-height:84px;}
-  .envio-quando{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .envio-quando{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;}
+  .envio-quando input{flex:1 1 120px;min-width:0;}
   .envio-quando input{background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:8px 10px;}
-  .envio-rodape{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;}
+  .envio-rodape{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:14px;}
   .envio-rodape small{font-size:11.5px;color:var(--text-mute);flex:1;min-width:0;}
   .envio-lista{margin-top:14px;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;}
   .envio-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);}
   .envio-item-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
   .envio-item-txt strong{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .envio-item-txt small{font-size:11.5px;color:var(--text-mute);}
-  @media(max-width:560px){ .envio-rodape{flex-direction:column;align-items:stretch;} .envio-sw button{padding:7px 10px;font-size:11.5px;} }
+  @media(max-width:640px){ .envio-grade{grid-template-columns:minmax(0,1fr);} .envio-rodape{flex-direction:column;align-items:stretch;} .envio-quando{padding-left:0;} }
   @media(max-width:560px){ .alerta-item{row-gap:8px;} .alerta-acoes{flex:1 0 100%;} .alerta-acoes .btn-mini{flex:1;justify-content:center;} }
   .chk-bloco{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin:0 0 14px;}
   .chk-txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
@@ -14660,8 +14674,11 @@ function fmtDataHora(iso){
 function envioBlocoHtml(){
   if(!envioSouAutor()) return '';
   const agendar = envioUI.modo === 'agendar';
-  const pessoas = ENVIO_REMETENTES.map(r=>
-    `<button type="button" data-envio-rem="${r.id}" class="${envioUI.remetente===r.id?'on':''}">${escapeHtml(r.nome)}</button>`).join('');
+  const pessoas = ENVIO_REMETENTES.map(r=>{
+    const p = PEOPLE[r.id] || {};
+    return `<button type="button" data-envio-rem="${r.id}" class="envio-pessoa ${envioUI.remetente===r.id?'on':''}" aria-pressed="${envioUI.remetente===r.id}">${initialsAvatar(p.initials||r.nome.slice(0,2).toUpperCase(), p.color||'#8d916f', 26, p.avatarUrl)}<span>${escapeHtml(r.nome)}</span></button>`;
+  }).join('');
+  const op = (attr, val, atual, titulo, desc)=>`<button type="button" ${attr}="${val}" class="envio-op ${atual===val?'on':''}" aria-pressed="${atual===val}"><span class="envio-op-radio"></span><span class="envio-op-txt"><b>${titulo}</b><small>${desc}</small></span></button>`;
   const lista = ENVIOS_LISTA.length ? `
     <div class="envio-lista">
       ${ENVIOS_LISTA.map(e=>`
@@ -14680,7 +14697,7 @@ function envioBlocoHtml(){
 
       <div class="envio-campo">
         <p class="envio-label">Enviar como</p>
-        <div class="envio-sw" id="envio-remetentes">${pessoas}</div>
+        <div class="envio-pessoas" id="envio-remetentes">${pessoas}</div>
       </div>
 
       <div class="envio-campo">
@@ -14688,28 +14705,28 @@ function envioBlocoHtml(){
         <textarea id="envio-texto" rows="4" maxlength="1200" placeholder="Escreva aqui o que todos vão receber...">${escapeHtml(envioUI.texto)}</textarea>
       </div>
 
-      <div class="envio-campo">
-        <p class="envio-label">Como chega</p>
-        <div class="envio-sw" id="envio-canal">
-          <button type="button" data-envio-canal="mensagem" class="${envioUI.canal==='mensagem'?'on':''}">Mensagem</button>
-          <button type="button" data-envio-canal="notificacao" class="${envioUI.canal==='notificacao'?'on':''}">Notificação</button>
+      <div class="envio-grade">
+        <div class="envio-campo">
+          <p class="envio-label">Como chega</p>
+          <div class="envio-ops" id="envio-canal">
+            ${op('data-envio-canal','mensagem',envioUI.canal,'Mensagem','Abre uma conversa 1 a 1, e o mentorado pode responder.')}
+            ${op('data-envio-canal','notificacao',envioUI.canal,'Notificação','Só um aviso no celular de quem tem o app instalado.')}
+          </div>
         </div>
-      </div>
-
-      <div class="envio-campo">
-        <p class="envio-label">Quando</p>
-        <div class="envio-sw" id="envio-modo">
-          <button type="button" data-envio-modo="agora" class="${!agendar?'on':''}">Agora</button>
-          <button type="button" data-envio-modo="agendar" class="${agendar?'on':''}">Agendar</button>
+        <div class="envio-campo">
+          <p class="envio-label">Quando</p>
+          <div class="envio-ops" id="envio-modo">
+            ${op('data-envio-modo','agora',envioUI.modo,'Agora','Sai assim que você confirmar.')}
+            ${op('data-envio-modo','agendar',envioUI.modo,'Agendar','Escolha o dia e o horário do envio.')}
+            ${agendar ? `<div class="envio-quando">
+              <input type="date" id="envio-data" value="${escapeAttr(envioUI.data)}" aria-label="Dia do envio">
+              <input type="time" id="envio-hora" value="${escapeAttr(envioUI.hora)}" aria-label="Horário do envio">
+            </div>` : ''}
+          </div>
         </div>
-        ${agendar ? `<div class="envio-quando">
-          <input type="date" id="envio-data" value="${escapeAttr(envioUI.data)}">
-          <input type="time" id="envio-hora" value="${escapeAttr(envioUI.hora)}">
-        </div>` : ''}
       </div>
 
       <div class="envio-rodape">
-        <small>${envioUI.canal==='mensagem' ? 'Vai abrir uma conversa 1 a 1 — os mentorados podem responder.' : 'Só um aviso no celular de quem tem o app instalado, sem conversa.'}</small>
         <div class="recado-btns">
           <button type="button" class="btn-accent btn-mini" id="envio-disparar">${agendar?'Agendar':'Enviar agora'}</button>
         </div>
