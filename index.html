@@ -2141,7 +2141,9 @@
   .nps-tile-sub{font-size:11px;color:var(--text-mute);margin-top:2px;}
   h2.section-title.com-titulo{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text);margin:8px 0 14px;}
   h2.section-title.com-titulo .icon{width:17px;height:17px;color:var(--accent);}
-  .com-nps h2.section-title.com-titulo{margin-top:30px;}
+  .com-nps h2.section-title.com-titulo{margin-top:0;}
+  .vg-sec-head.com-sec-head{margin:8px 0 14px;}
+  .com-nps .vg-sec-head.com-sec-head{margin-top:30px;}
   .nps-filtros{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:16px 0 12px;padding:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;}
   .nps-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:7px 6px;border-radius:9px;color:var(--text-dim);font-size:12.5px;font-weight:700;line-height:1.2;text-align:center;min-width:0;}
   .nps-seg:hover{color:var(--text);}
@@ -14981,18 +14983,37 @@ function bindEnvioBloco(){
   });
 }
 
+/* Seções recolhíveis da Comunicação (lembradas neste navegador). */
+const COM_RECOLHIDOS = (()=>{ try{ return JSON.parse(localStorage.getItem('ascentria-com-recolhidos')||'{}')||{}; }catch(e){ return {}; } })();
+function comSecHead(chave, titulo){
+  const f = !!COM_RECOLHIDOS[chave];
+  return `<div class="vg-sec-head com-sec-head" data-com-recolher="${chave}">
+      <h2 class="section-title com-titulo">${titulo}</h2>
+      <button type="button" class="vg-sec-toggle ${f?'fechado':''}">${icon('down')} ${f?'Expandir':'Recolher'}</button>
+    </div>`;
+}
 function renderComunicacao(){
   const recado = recadoPainelHtml();
   document.getElementById('view-comunicacao').innerHTML = `
-    <h2 class="section-title com-titulo">${icon('comment')} Comunicação</h2>
+    ${comSecHead('com', icon('comment')+' Comunicação')}
+    <div ${COM_RECOLHIDOS.com?'hidden':''}>
     <p class="section-sub" style="margin-top:-6px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
     ${recado || `<div class="tf-vazio" style="padding:14px">O recado do dia é escrito pela administração. Você vê a janela com o recado ao abrir o sistema.</div>`}
     ${checkpointHtml()}
     ${envioBlocoHtml()}
+    </div>
     <div class="com-nps" id="com-nps">
-      <h2 class="section-title com-titulo">${icon('chart')} NPS dos alunos</h2>
+      ${comSecHead('nps', icon('chart')+' NPS dos alunos')}
+      <div ${COM_RECOLHIDOS.nps?'hidden':''}>
       ${npsHtmlEquipe()}
+      </div>
     </div>`;
+  document.querySelectorAll('#view-comunicacao [data-com-recolher]').forEach(h=>h.addEventListener('click', ()=>{
+    const k = h.dataset.comRecolher;
+    COM_RECOLHIDOS[k] = !COM_RECOLHIDOS[k];
+    try{ localStorage.setItem('ascentria-com-recolhidos', JSON.stringify(COM_RECOLHIDOS)); }catch(e){}
+    renderComunicacao();
+  }));
   bindRecadoPainel();
   bindCheckpoint();
   bindEnvioBloco();
