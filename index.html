@@ -4410,16 +4410,32 @@ function chaveAniversarioHoje(){
 function primeiroNome(n){ return String(n||'').trim().split(/\s+/)[0] || n; }
 /* Cartãozinho no canto da tela, como o aviso de aniversários das redes sociais. Aparece só nos dias
    em que há aniversariante e some quando a pessoa fecha (volta no próximo aniversário, não no mesmo dia). */
+/* Para o aluno de verdade, a lista vem do banco (aniversariantes_hoje_comunidade): mentorados veem os
+   mentorados e alunos do Método veem os alunos do Método, só com nome e foto, porque o cadastro (com a
+   data de nascimento) dos colegas não chega ao navegador do aluno. */
+let ANIV_COMUNIDADE = null, ANIV_COMUNIDADE_CARREGANDO = false;
+async function carregarAnivComunidade(){
+  if(ANIV_COMUNIDADE_CARREGANDO) return; ANIV_COMUNIDADE_CARREGANDO = true;
+  try{
+    const { data, error } = await sb.rpc('aniversariantes_hoje_comunidade');
+    if(error) throw error;
+    ANIV_COMUNIDADE = (data||[]).map(r=>({ id:r.id, nome:r.name||'', initials:r.initials||'', color:r.color||'#8d916f', avatarUrl:r.avatar_url||null, idade:null }));
+  }catch(e){ console.error('aniversariantes', e); ANIV_COMUNIDADE = []; }
+  ANIV_COMUNIDADE_CARREGANDO = false;
+  renderAniversarioCanto();
+}
 function renderAniversarioCanto(){
   const antigo = document.getElementById('aniv-canto');
   if(antigo) antigo.remove();
-  if(!STUDENTS.length) return;
   let dispensado = false;
   try{ dispensado = localStorage.getItem(chaveAniversarioHoje())==='1'; }catch(e){}
   if(dispensado) return;
 
   const equipe = currentRole==='staff';
-  const lista = aniversariantesHoje(equipe ? null : getViewingTier());
+  const alunoDeVerdade = currentUserRole==='aluno';
+  if(alunoDeVerdade && ANIV_COMUNIDADE===null){ carregarAnivComunidade(); return; }
+  if(!alunoDeVerdade && !STUDENTS.length) return;
+  const lista = alunoDeVerdade ? ANIV_COMUNIDADE : aniversariantesHoje(equipe ? null : getViewingTier());
   if(!lista.length) return;
 
   const el = document.createElement('div');
@@ -4434,7 +4450,7 @@ function renderAniversarioCanto(){
           ${initialsAvatar(a.initials, a.color, 34, a.avatarUrl)}
           <div class="aniv-info">
             <div class="aniv-nome">${escapeHtml(a.nome)}</div>
-            <div class="aniv-sub">${a.idade? 'Fazendo '+a.idade+' anos' : 'Hoje é o dia dela'}${equipe? ' · '+tierLabel(a) : ''}</div>
+            <div class="aniv-sub">${a.idade? 'Fazendo '+a.idade+' anos' : 'Faz aniversário hoje'}${equipe? ' · '+tierLabel(a) : ''}</div>
           </div>
         </div>`).join('')}
     </div>
