@@ -1148,6 +1148,12 @@
   .an-links .link-btn .icon{width:11px;height:11px;}
   .an-table .vendas-actions-cell{white-space:nowrap;text-align:right;}
   .an-table .btn-abrir{padding:6px 14px;font-size:12px;}
+  .an-crm{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);background:var(--bg-elev);padding:10px 14px;margin-top:12px;}
+  .an-crm-hd{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13.5px;margin-bottom:6px;}
+  .an-crm-hd small{flex-basis:100%;font-size:11.5px;color:var(--text-mute);}
+  .an-crm-bloco{margin-top:6px;}
+  .an-crm-bloco>span{display:block;font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);margin-bottom:2px;}
+  .an-crm-bloco p{margin:2px 0;font-size:13px;line-height:1.5;white-space:normal;word-break:break-word;}
   .an-pessoa{border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-top:10px;}
   .an-pessoa.locked{opacity:.8;}
   .an-pessoa .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:700;}
@@ -16714,6 +16720,30 @@ function renderDesempenho(){
           </details>` : `<div class="empty-state" style="padding:24px 10px">Nenhuma venda avaliada ainda. Abra uma sessão na Análise Sessões 1:1 e preencha a avaliação.</div>`}
       </div>`; }).join('')}`;
 }
+/* Registro da consultora (o que ela preencheu no CRM ao terminar a reunião e que chega sozinho ao
+   Registro de Sessões 1:1): objeções e observações aparecem aqui na análise, para o treinador ler
+   antes de registrar o que precisa melhorar. Vem da sessão vinculada (venda_sessao_id) ou, nas linhas
+   adicionadas à mão, da sessão com o mesmo lead (e a mesma data, quando houver). */
+function analiseVendaDe(a){
+  if(a.vendaSessaoId){ const v = VENDA_SESSOES.find(x=>String(x.id)===String(a.vendaSessaoId)); if(v) return v; }
+  const nome = String(a.leadNome||'').trim().toLowerCase(); if(!nome) return null;
+  const cands = VENDA_SESSOES.filter(v=>String(v.lead||'').trim().toLowerCase()===nome);
+  if(!cands.length) return null;
+  const data = String(a.dataVenda||'').trim();
+  return cands.find(v=>data && (v.dataTexto===data || formatDateBR(v.dataSessao||'')===data)) || (cands.length===1 ? cands[0] : null);
+}
+function analiseRegistroCrmHtml(a){
+  const v = analiseVendaDe(a);
+  if(!v) return '';
+  const objs = [v.objecoes, v.objecoes2].filter(o=>vendaTemRegistro(o, VENDAS_SEM_OBJECAO));
+  const obs = vendaTemRegistro(v.observacoes, VENDAS_SEM_OBSERVACAO) ? v.observacoes : '';
+  const det = [v.vendedor ? 'Consultora: '+v.vendedor : '', v.resultado ? 'Resultado: '+v.resultado : '', v.produto ? 'Produto: '+v.produto : ''].filter(Boolean).join(' · ');
+  return `<div class="an-crm">
+    <div class="an-crm-hd">${icon('idcard','tiny')} <b>Registro da consultora no CRM</b>${det ? `<small>${escapeHtml(det)}</small>` : ''}</div>
+    <div class="an-crm-bloco"><span>Objeções</span>${objs.length ? objs.map((o,i)=>`<p><b>${objs.length>1 ? `Objeção ${i+1}: ` : ''}</b>${linkify(o)}</p>`).join('') : '<p class="muted">Não foram registradas objeções.</p>'}</div>
+    <div class="an-crm-bloco"><span>Observações</span>${obs ? `<p>${linkify(obs).replace(/\n/g,'<br>')}</p>` : '<p class="muted">Não foram registradas observações.</p>'}</div>
+  </div>`;
+}
 function openAnaliseModal(id){
   const a = ANALISE_SESSOES.find(x=>x.id===id);
   if(!a) return;
@@ -16750,6 +16780,7 @@ function openAnaliseModal(id){
           ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : ''}
         </div>
       </div>`}
+      ${analiseRegistroCrmHtml(a)}
       <h4 style="margin:14px 0 2px">Análises</h4>
       <p class="section-sub" style="margin:0 0 4px;font-size:12px">Cada pessoa registra só no próprio espaço; os demais ficam bloqueados.${podeVerColegas ? '' : ' As análises das colegas aparecem depois que você salvar a sua.'}</p>
       ${analiseVendedorasDe(a).map(v=>{
