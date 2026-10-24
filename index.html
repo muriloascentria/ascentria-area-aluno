@@ -1615,10 +1615,23 @@
 
   .empty-state{text-align:center;padding:40px 20px;color:var(--text-mute);font-size:13px;}
   /* ---- Tarefas (equipe interna) ---- */
-  .tf-topo{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px;}
-  .tf-topo-acoes{display:flex;gap:10px;align-items:center;padding-top:6px;}
-  .tf-topo-acoes .btn-accent,.tf-topo-acoes .btn-outline{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}
-  .tf-sino span{font-weight:800;}
+  /* Topo: os quatro destaques dividem a linha por igual; à direita, Nova tarefa em cima e Avisos
+     embaixo, os dois com a mesma largura e altura, somando a altura dos destaques. */
+  .tf-topo{display:grid;grid-template-columns:minmax(0,1fr) 172px;gap:14px;align-items:stretch;margin-bottom:18px;}
+  .tf-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0;}
+  .tf-kpis .kpi-tile{min-width:0;}
+  .tf-topo-acoes{display:grid;grid-template-rows:1fr 1fr;gap:8px;}
+  .tf-topo-acoes .btn-accent,.tf-topo-acoes .btn-outline{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;width:100%;height:100%;min-height:38px;box-sizing:border-box;padding:0 12px;margin:0;font-size:13px;}
+  .tf-sino-n{font-weight:800;min-width:20px;padding:1px 6px;border-radius:10px;background:var(--bg-elev);font-size:11.5px;}
+  .tf-sino.tem .tf-sino-n{background:var(--danger);color:#fff;}
+  /* Abas e modo de visualização no mesmo estilo de botões segmentados (mesma altura e fonte). */
+  .tf-navbar{display:flex;gap:12px;align-items:stretch;margin-bottom:14px;flex-wrap:wrap;}
+  .tf-seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;}
+  .tf-seg-abas{flex:1 1 520px;}
+  .tf-seg-modo{flex:0 0 auto;grid-auto-columns:96px;}
+  .tf-seg-btn{display:flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 10px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--text-dim);white-space:nowrap;background:none;border:0;cursor:pointer;min-width:0;}
+  .tf-seg-btn:hover{color:var(--text);}
+  .tf-seg-btn.on{background:var(--accent);color:#fff;}
   .tf-sino.tem{border-color:var(--danger);color:var(--danger);}
   .tf-kpi-atr .value{color:var(--danger);}
   .tf-notifs{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin:-6px 0 16px;}
@@ -1632,16 +1645,14 @@
   .tf-notif-tipo.atrasada,.tf-notif-tipo.mencao{background:var(--danger);}
   .tf-notif-tipo.vence_em_breve,.tf-notif-tipo.prazo{background:#f59e0b;}
   .tf-notif-tipo.concluida{background:var(--success);}
-  .tf-abas{align-items:center;}
-  .tf-modo{margin-left:auto;display:flex;gap:6px;}
-  .tf-modo .filter-tab{display:inline-flex;align-items:center;gap:5px;}
-  .tf-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px;}
+  /* Filtros em grade de quatro colunas iguais: busca + responsável + criador; situação, prioridade,
+     prazo e ordem; período (tipo, de, até) e Limpar. Todas as caixas com a mesma largura e altura. */
+  .tf-filtros{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:center;margin-bottom:4px;}
   .tf-filtros + .busca-info{margin:14px 0 18px;}
-  .tf-filtros .ps-input{margin:0;width:auto;min-width:150px;}
-  .tf-filtros .tf-busca{flex:1 1 240px;}
-  .tf-periodo{display:inline-flex;gap:6px;align-items:center;}
-  .tf-periodo .ps-input{min-width:120px;}
-  .tf-filtros .btn-outline{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+  .tf-filtros .ps-input{margin:0;width:100%;min-width:0;font-size:13px;}
+  .tf-filtros .tf-busca{grid-column:span 2;}
+  .tf-filtros .tf-periodo{display:contents;}
+  .tf-filtros .btn-outline{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px;height:38px;box-sizing:border-box;margin:0;width:100%;}
   .tf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
   .tf-kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start;}
   .tf-coluna{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:10px;}
@@ -1758,7 +1769,7 @@
   .tf-hist-item small{color:var(--text-mute);margin-right:6px;}
   .tf-m-acoes{flex-wrap:wrap;gap:8px;margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
   .tf-m-acoes .danger-text{color:var(--danger);}
-  @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} .tf-modo{margin-left:0;} }
+  @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} }
   /* ---- Emojis ---- */
   .emoji-btn{width:38px;height:38px;font-size:19px;line-height:1;padding:0;border-radius:10px;background:none;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
   .emoji-btn:hover{background:var(--bg-card);border-color:var(--accent);}
@@ -2706,11 +2717,12 @@
     .stat-row{gap:8px;}
     .section-title{font-size:17px;}
     /* Tarefas: filtros em duas colunas, datas lado a lado */
-    .tf-filtros .ps-input{min-width:0;flex:1 1 calc(50% - 4px);}
-    .tf-filtros .tf-busca{flex:1 1 100%;}
-    .tf-periodo{flex:1 1 100%;display:flex;gap:6px;} .tf-periodo .ps-input{min-width:0;flex:1;}
-    .tf-topo-acoes{width:100%;justify-content:space-between;padding-top:0;}
-    .tf-topo-acoes .btn-accent{flex:1;justify-content:center;}
+    .tf-filtros{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .tf-topo{grid-template-columns:1fr;}
+    .tf-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .tf-topo-acoes{grid-template-rows:none;grid-template-columns:1fr 1fr;}
+    .tf-seg-abas{flex:1 1 100%;grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));}
+    .tf-seg-modo{flex:1 1 100%;grid-auto-columns:minmax(0,1fr);}
     .tf-kanban{grid-template-columns:1fr;}
     .tf-card-meta .tf-status{margin-left:0;}
     /* Acompanhamento Interno: seletor e botões em coluna, ocupando a largura */
@@ -2768,8 +2780,7 @@
   .tf-filtros input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:0;}
   @media (max-width:880px), (pointer:coarse){
     /* No celular: Criação/Conclusão e as duas datas dividem a mesma linha, sem nada sair da tela. */
-    .tf-periodo{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr);gap:6px;flex:1 1 100%;}
-    .tf-periodo .ps-input{min-width:0;width:100%;padding-left:8px;padding-right:6px;}
+    .tf-filtros .tf-periodo .ps-input{padding-left:8px;padding-right:6px;}
   }
 </style>
 </head>
@@ -11959,25 +11970,27 @@ function renderTarefas(){
     </div>
     <div ${tfFechado?'hidden':''}>
     <div class="tf-topo">
-      <div class="kpi-row" style="flex:1">
+      <div class="kpi-row tf-kpis">
         <div class="kpi-tile"><div class="label">Minhas pendentes</div><div class="value">${kpis.pend}</div></div>
         <div class="kpi-tile ${kpis.atr?'tf-kpi-atr':''}"><div class="label">Atrasadas</div><div class="value">${kpis.atr}</div></div>
         <div class="kpi-tile"><div class="label">Vencem hoje</div><div class="value">${kpis.hoje}</div></div>
         <div class="kpi-tile"><div class="label">Delegadas em aberto</div><div class="value">${kpis.deleg}</div></div>
       </div>
       <div class="tf-topo-acoes">
-        <button type="button" class="btn-outline tf-sino ${tarefasNaoLidas().length?'tem':''}" id="tf-notifs-btn">${icon('bell')} <span>${tarefasNaoLidas().length}</span></button>
         <button type="button" class="btn-accent" id="tf-nova">${icon('plus')} Nova tarefa</button>
+        <button type="button" class="btn-outline tf-sino ${tarefasNaoLidas().length?'tem':''}" id="tf-notifs-btn" title="Avisos de tarefas">${icon('bell')} Avisos <span class="tf-sino-n">${tarefasNaoLidas().length}</span></button>
       </div>
     </div>
     ${tarefasUI.notifsAberto ? tarefasNotifPanelHtml() : ''}
 
-    <div class="community-filters tf-abas">
-      ${abas.map(([k,v])=>`<button type="button" class="filter-tab ${tarefasUI.aba===k?'active':''}" data-tf-aba="${k}">${v}</button>`).join('')}
-      <span class="tf-modo">
-        <button type="button" class="filter-tab ${tarefasUI.modo==='quadro'?'active':''}" data-tf-modo="quadro" title="Quadro">${icon('chart','tiny')} Quadro</button>
-        <button type="button" class="filter-tab ${tarefasUI.modo==='lista'?'active':''}" data-tf-modo="lista" title="Lista">${icon('folder','tiny')} Lista</button>
-      </span>
+    <div class="tf-navbar">
+      <div class="tf-seg tf-seg-abas" role="tablist">
+        ${abas.map(([k,v])=>`<button type="button" class="tf-seg-btn ${tarefasUI.aba===k?'on':''}" data-tf-aba="${k}">${v}</button>`).join('')}
+      </div>
+      <div class="tf-seg tf-seg-modo">
+        <button type="button" class="tf-seg-btn ${tarefasUI.modo==='quadro'?'on':''}" data-tf-modo="quadro" title="Ver em quadro">${icon('chart','tiny')} Quadro</button>
+        <button type="button" class="tf-seg-btn ${tarefasUI.modo==='lista'?'on':''}" data-tf-modo="lista" title="Ver em lista">${icon('folder','tiny')} Lista</button>
+      </div>
     </div>
 
     <div class="tf-filtros">
@@ -11997,17 +12010,17 @@ function renderTarefas(){
         <option value="semana" ${f.prazo==='semana'?'selected':''}>Próximos 7 dias</option>
         <option value="sem" ${f.prazo==='sem'?'selected':''}>Sem prazo</option>
       </select>
-      <span class="tf-periodo">
-        <select class="ps-input" id="tf-f-periodo-tipo"><option value="criacao" ${f.periodoTipo==='criacao'?'selected':''}>Criação</option><option value="conclusao" ${f.periodoTipo==='conclusao'?'selected':''}>Conclusão</option></select>
-        <input class="ps-input" type="date" id="tf-f-de" value="${escapeAttr(f.de)}" title="De">
-        <input class="ps-input" type="date" id="tf-f-ate" value="${escapeAttr(f.ate)}" title="Até">
-      </span>
       <select class="ps-input" id="tf-ordem">
         <option value="prazo" ${tarefasUI.ordem==='prazo'?'selected':''}>Ordenar: prazo</option>
         <option value="prioridade" ${tarefasUI.ordem==='prioridade'?'selected':''}>Ordenar: prioridade</option>
         <option value="criacao" ${tarefasUI.ordem==='criacao'?'selected':''}>Ordenar: mais recentes</option>
         <option value="atualizacao" ${tarefasUI.ordem==='atualizacao'?'selected':''}>Ordenar: atualização</option>
       </select>
+      <span class="tf-periodo">
+        <select class="ps-input" id="tf-f-periodo-tipo"><option value="criacao" ${f.periodoTipo==='criacao'?'selected':''}>Período: criação</option><option value="conclusao" ${f.periodoTipo==='conclusao'?'selected':''}>Período: conclusão</option></select>
+        <input class="ps-input" type="date" id="tf-f-de" value="${escapeAttr(f.de)}" title="De">
+        <input class="ps-input" type="date" id="tf-f-ate" value="${escapeAttr(f.ate)}" title="Até">
+      </span>
       ${tarefasFiltroAtivo() ? `<button type="button" class="btn-outline" id="tf-limpar">${icon('x','tiny')} Limpar</button>` : ''}
     </div>
     <p class="busca-info">${lista.length} tarefa${lista.length===1?'':'s'}${tarefasFiltroAtivo()?' com esses filtros':''}${tarefasUI.aba!=='concluidas' && f.status==='abertas' ? ' · concluídas ficam na aba "Concluídas"' : ''}</p>
@@ -15004,7 +15017,7 @@ function renderComunicacao(){
     </div>
     <div class="com-nps" id="com-nps">
       ${comSecHead('nps', icon('chart')+' NPS dos alunos')}
-      <div ${COM_RECOLHIDOS.nps?'hidden':''}>
+      <div id="com-nps-corpo" ${COM_RECOLHIDOS.nps?'hidden':''}>
       ${npsHtmlEquipe()}
       </div>
     </div>`;
@@ -15017,11 +15030,24 @@ function renderComunicacao(){
   bindRecadoPainel();
   bindCheckpoint();
   bindEnvioBloco();
-  const nps = document.getElementById('com-nps');
-  if(nps){
-    nps.querySelectorAll('[data-nps-f]').forEach(b=>b.addEventListener('click', ()=>{ NPS_UI.filtro = b.dataset.npsF; renderComunicacao(); document.getElementById('com-nps')?.scrollIntoView({block:'start'}); }));
-    nps.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
-  }
+  comNpsBind();
+}
+/* Trocar o filtro do NPS redesenha só a área do NPS: a tela não pula e a barra de rolagem fica onde
+   estava; muda apenas o conteúdo abaixo dos filtros. */
+function comNpsBind(){
+  const corpo = document.getElementById('com-nps-corpo');
+  if(!corpo) return;
+  corpo.querySelectorAll('[data-nps-f]').forEach(b=>b.addEventListener('click', ()=>{
+    NPS_UI.filtro = b.dataset.npsF;
+    const roladores = [document.scrollingElement, ...document.querySelectorAll('.main, .content, main')].filter(Boolean);
+    const pos = roladores.map(r=>r.scrollTop);
+    corpo.style.minHeight = corpo.offsetHeight + 'px';  // evita que a página encolha e puxe a rolagem
+    corpo.innerHTML = npsHtmlEquipe();
+    comNpsBind();
+    roladores.forEach((r,i)=>{ r.scrollTop = pos[i]; });
+    setTimeout(()=>{ corpo.style.minHeight = ''; }, 0);
+  }));
+  corpo.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
 }
 
 /* ================= VIEW: VISÃO GERAL (somente equipe interna) ================= */
