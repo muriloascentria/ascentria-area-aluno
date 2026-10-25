@@ -430,6 +430,9 @@
      lado a lado, com a mesma altura. */
   .ee-link-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
   .ee-link-rotulo{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mute);margin-bottom:10px;}
+  /* Faixas do Prêmio: as seis opções sempre na mesma linha. */
+  .nps-filtros.pe-faixas{grid-template-columns:repeat(6,minmax(0,1fr));}
+  @media (max-width:560px){ .nps-filtros.pe-faixas .nps-seg{font-size:9.5px;letter-spacing:0;padding:7px 2px;} }
   .ee-csv-pe{display:flex;justify-content:flex-end;margin-top:12px;}
   .ee-csv-pe .btn-outline{display:flex;align-items:center;gap:6px;}
   .ee-link-linha{display:flex;gap:10px;align-items:stretch;}
@@ -18110,7 +18113,7 @@ function premioHtmlEquipe(){
     <div class="ev-abas">${PREMIO_EDICOES.map(([k,l])=>`<button type="button" class="ev-aba ${PREMIO_UI.edicao===k?'on':''}" data-pe-ed="${k}">${icon('calendar','tiny')} ${l}</button>`).join('')}</div>
     <p class="section-sub" style="margin-top:0">Respostas do formulário "Seus resultados podem ser premiados", aberto pelo banner no Início (alunos do Método e mentorados) e pelo link externo. Cada pessoa participa uma vez por edição e declara que as informações são verídicas. As participações de edições anteriores ficam guardadas.</p>
     <div class="kpi-row">${tile('Participações', rows.length)}${tile('Mais de R$ 30 mil/mês', conta('f30'))}${tile('Mais de R$ 20 mil/mês', conta('f20'))}${tile('Mais de R$ 10 mil/mês', conta('f10'))}${tile('Mais de R$ 5 mil/mês', conta('f5'))}</div>
-    <div class="nps-filtros">${[['todos','Todas'],['f30','+ R$ 30 mil'],['f20','+ R$ 20 mil'],['f10','+ R$ 10 mil'],['f5','+ R$ 5 mil'],['f0','Até R$ 5 mil']].map(([k,l])=>`<button type="button" class="filter-tab ${f===k?'active':''}" data-pe-f="${k}">${l}</button>`).join('')}</div>
+    <div class="nps-filtros pe-faixas">${[['todos','Todas'],['f30','+ R$ 30 mil'],['f20','+ R$ 20 mil'],['f10','+ R$ 10 mil'],['f5','+ R$ 5 mil'],['f0','Até R$ 5 mil']].map(([k,l])=>`<button type="button" class="nps-seg ${f===k?'on':''}" data-pe-f="${k}">${l}<small>${k==='todos'? rows.length : conta(k)}</small></button>`).join('')}</div>
     <div class="pe-lista">
       ${vis.map(r=>{ const s = getStudent(r.aluno_id); const fx = premioFaixa(r); return `
         <div class="pe-item">
