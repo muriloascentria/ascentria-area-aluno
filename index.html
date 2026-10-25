@@ -2885,6 +2885,7 @@
     <button class="nav-item restrict" id="nav-mensagens" data-view="mensagens" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-radar" data-view="radar" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-evento" data-view="evento" style="display:none"></button>
     <button class="nav-item restrict" id="nav-desempenho" data-view="desempenho" style="display:none"></button>
     <button class="nav-item restrict" id="nav-dre" data-view="dre" style="display:none"></button>
     <button class="nav-item restrict" id="nav-reunioes" data-view="reunioes" style="display:none"></button>
@@ -2973,6 +2974,7 @@
       <div class="view" id="view-treinamento"></div>
       <div class="view" id="view-gestaotime"></div>
       <div class="view" id="view-radar"></div>
+      <div class="view" id="view-evento"></div>
       <div class="view" id="view-planner"></div>
       <div class="view" id="view-desempenho"></div>
       <div class="view" id="view-dre"></div>
@@ -3066,6 +3068,7 @@ const NAV_LABELS = {
   treinamento:['play','Treinamento Time'],
   gestaotime:['target','Gestão do Time'],
   radar:['radar','Radar dos Mentorados'],
+  evento:['award','Evento Essência Experience'],
   desempenho:['chart','Desempenho das Consultoras'],
   dre:['money','DRE'],
   reunioes:['file','Reuniões e Atas'],
@@ -6182,7 +6185,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','desempenho','dre','reunioes','politicas','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','radar','evento','desempenho','dre','reunioes','politicas','interno','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -6305,6 +6308,7 @@ function setRole(role){
   document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-gestaotime').style.display = (staffNav && souMurilo()) ? 'flex' : 'none';
   document.getElementById('nav-radar').style.display = (staffNav && radarPode()) ? 'flex' : 'none';
+  document.getElementById('nav-evento').style.display = (staffNav && radarPode()) ? 'flex' : 'none';
   /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
   if(staffNav && staffBloqueios().size){
@@ -6410,7 +6414,7 @@ function goTo(view){
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
-  if(view==='radar' && !radarPode()) view = 'equipe';
+  if((view==='radar' || view==='evento') && !radarPode()) view = 'equipe';
   if(view==='desempenho' && !avPode()) view = 'equipe';
   if(view==='dre' && !drePode()) view = 'equipe';
   if(view==='reunioes' && !reuPodeAbrir()) view = 'equipe';
@@ -6437,7 +6441,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
                comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno'];
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
@@ -14752,6 +14756,7 @@ const EQUIPE_ATALHOS = [
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
+  {view:'evento',     desc:'Prêmio Essência Experience e as inscrições do evento, com os links para quem não tem acesso ao PLAT.'},
   {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
   {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
@@ -14773,7 +14778,7 @@ function equipeViewPode(v){
   if(staffBloqueios().has(v)) return false;
   if(v==='tarefas') return tarefasSouMembro();
   if(v==='gestaotime') return souMurilo();
-  if(v==='radar') return radarPode();
+  if(v==='radar' || v==='evento') return radarPode();
   if(v==='desempenho') return avPode();
   if(v==='dre') return drePode();
   if(v==='reunioes') return reuPodeAbrir();
@@ -18028,7 +18033,7 @@ async function eeCarregarEquipe(){
   try{ const { data, error } = await sb.from('ee_inscricoes').select('*').eq('edicao', EE_EDICAO.id).order('created_at', {ascending:false}); if(error) throw error; EE_UI.rows = data || []; }
   catch(e){ console.error('ee equipe', e); EE_UI.rows = []; }
   EE_UI.carregando = false;
-  if(currentView==='radar') renderRadar();
+  if(currentView==='evento') renderEvento();
 }
 function eeHtmlEquipe(){
   if(EE_UI.rows===null){ if(!EE_UI.carregando) eeCarregarEquipe(); return '<div class="empty-state">Carregando as inscrições…</div>'; }
@@ -18057,7 +18062,7 @@ async function premioCarregarEquipe(){
   try{ const { data, error } = await sb.from('premio_ee2026').select('*').order('created_at', {ascending:false}); if(error) throw error; PREMIO_UI.rows = data || []; }
   catch(e){ console.error('premio equipe', e); PREMIO_UI.rows = []; }
   PREMIO_UI.carregando = false;
-  if(currentView==='radar') renderRadar();
+  if(currentView==='evento') renderEvento();
 }
 function premioHtmlEquipe(){
   if(PREMIO_UI.rows===null){ if(!PREMIO_UI.carregando) premioCarregarEquipe(); return '<div class="empty-state">Carregando as participações…</div>'; }
@@ -18093,9 +18098,7 @@ function premioHtmlEquipe(){
 const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-bb26-eec09ba778c4','e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'];
 const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
 const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
-const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, aba:'mentorados' };
-function radarAbasHtml(){ return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${RADAR_UI.aba==='mentorados'?'active':''}" data-rd-aba="mentorados">Mentorados</button><button type="button" class="filter-tab ${RADAR_UI.aba==='nps'?'active':''}" data-rd-aba="nps">NPS</button><button type="button" class="filter-tab ${RADAR_UI.aba==='premio'?'active':''}" data-rd-aba="premio">Prêmio Essência Experience</button><button type="button" class="filter-tab ${RADAR_UI.aba==='ee'?'active':''}" data-rd-aba="ee">Inscrições Essência Experience</button></div>`; }
-function radarBindAbas(el){ el.querySelectorAll('[data-rd-aba]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.aba = b.dataset.rdAba; renderRadar(); })); }
+const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{} };
 function radarPode(){
   return currentUserRole==='staff' && !!currentUser && RADAR_UIDS.includes(idEfetivo());
 }
@@ -18208,35 +18211,38 @@ async function radarCarregar(){
   RADAR_UI.carregando = false;
   if(currentView==='radar') renderRadar();
 }
+/* ================= VIEW: EVENTO ESSÊNCIA EXPERIENCE =================
+   Prêmio e inscrições do evento (antes ficavam em abas do Radar dos Mentorados). Mesmo acesso do Radar. */
+const EVENTO_UI = { aba:'premio' };
+function renderEvento(){
+  const el = document.getElementById('view-evento');
+  if(!el) return;
+  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e do Customer Success.</div>'; return; }
+  const abas = `
+    <h2 class="section-title com-titulo">${icon('award')} Evento Essência Experience</h2>
+    <div class="tf-navbar"><div class="tf-seg tf-seg-abas" role="tablist">
+      <button type="button" class="tf-seg-btn ${EVENTO_UI.aba==='premio'?'on':''}" data-ev-aba="premio">Prêmio Essência Experience</button>
+      <button type="button" class="tf-seg-btn ${EVENTO_UI.aba==='ee'?'on':''}" data-ev-aba="ee">Inscrições Essência Experience</button>
+    </div></div>`;
+  if(EVENTO_UI.aba==='ee'){
+    el.innerHTML = abas + eeHtmlEquipe();
+    const csv = el.querySelector('#ee-csv'); if(csv) csv.addEventListener('click', eeCsv);
+    const cp = el.querySelector('#ee-copiar'); if(cp) cp.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(eeLinkPublico()); cp.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', eeLinkPublico()); } });
+  } else {
+    el.innerHTML = abas + premioHtmlEquipe();
+    el.querySelectorAll('[data-pe-f]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.filtro = b.dataset.peF; renderEvento(); }));
+    el.querySelectorAll('[data-pe-ed]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.edicao = b.dataset.peEd; PREMIO_UI.filtro = 'todos'; renderEvento(); }));
+    const pc = el.querySelector('#premio-copiar'); if(pc) pc.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(premioLinkPublico()); pc.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', premioLinkPublico()); } });
+  }
+  el.querySelectorAll('[data-ev-aba]').forEach(b=>b.addEventListener('click', ()=>{ EVENTO_UI.aba = b.dataset.evAba; renderEvento(); }));
+  el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+}
 function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
   if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e do Customer Success.</div>'; return; }
+  // O NPS não aparece mais aqui (fica em Comunicação), mas a nota entra no alerta de cada mentorado.
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
-  if(RADAR_UI.aba==='ee'){
-    el.innerHTML = radarAbasHtml() + eeHtmlEquipe();
-    radarBindAbas(el);
-    const csv = el.querySelector('#ee-csv'); if(csv) csv.addEventListener('click', eeCsv);
-    const cp = el.querySelector('#ee-copiar'); if(cp) cp.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(eeLinkPublico()); cp.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', eeLinkPublico()); } });
-    el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
-    return;
-  }
-  if(RADAR_UI.aba==='premio'){
-    el.innerHTML = radarAbasHtml() + premioHtmlEquipe();
-    radarBindAbas(el);
-    el.querySelectorAll('[data-pe-f]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.filtro = b.dataset.peF; renderRadar(); }));
-    el.querySelectorAll('[data-pe-ed]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.edicao = b.dataset.peEd; PREMIO_UI.filtro = 'todos'; renderRadar(); }));
-    const pc = el.querySelector('#premio-copiar'); if(pc) pc.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(premioLinkPublico()); pc.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', premioLinkPublico()); } });
-    el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
-    return;
-  }
-  if(RADAR_UI.aba==='nps'){
-    el.innerHTML = radarAbasHtml() + npsHtmlEquipe();
-    radarBindAbas(el);
-    el.querySelectorAll('[data-nps-f]').forEach(b=>b.addEventListener('click', ()=>{ NPS_UI.filtro = b.dataset.npsF; renderRadar(); }));
-    el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
-    return;
-  }
   if(RADAR_UI.rows===null && !RADAR_UI.carregando && !RADAR_UI.erro){ radarCarregar(); }
   if(RADAR_UI.carregando && RADAR_UI.rows===null){ el.innerHTML = '<div class="empty-state">Carregando o radar…</div>'; return; }
   if(RADAR_UI.erro){
@@ -18261,7 +18267,7 @@ function renderRadar(){
     </button>`;
   const dado = (rotulo, valor, alerta)=>`<div class="rd-dado ${alerta?'rd-dado-'+alerta:''}"><span>${rotulo}</span><strong>${valor}</strong></div>`;
   const nivelDe = (d, am, ve)=> d===null ? 'vermelho' : d>=ve ? 'vermelho' : d>=am ? 'amarelo' : '';
-  el.innerHTML = radarAbasHtml() + `
+  el.innerHTML = `
     <p class="section-sub" style="margin-top:0">Vermelhos primeiro, com o motivo escrito ao lado. Os números são calculados na hora em que a tela abre.
       <button type="button" class="link-btn" id="rd-atualizar">Atualizar</button></p>
     <div class="kpi-row rd-kpis">
@@ -18316,7 +18322,6 @@ function renderRadar(){
         </div>`; }).join('') || `<div class="empty-state">${lista.length ? 'Ninguém nesse filtro.' : 'Nenhum mentorado ainda.'}</div>`}
     </div>
     <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', pagamento em atraso':''} ou nota de 0 a 6 no último NPS (amarelo com 7 ou 8). Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal há 14 dias (o checkpoint automático não conta) e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
-  radarBindAbas(el);
   el.querySelectorAll('[data-rd-filtro]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.filtro = RADAR_UI.filtro===b.dataset.rdFiltro ? 'todos' : b.dataset.rdFiltro; renderRadar(); }));
   const lim = document.getElementById('rd-limpar'); if(lim) lim.addEventListener('click', ()=>{ RADAR_UI.filtro = 'todos'; RADAR_UI.busca = ''; renderRadar(); });
   document.getElementById('rd-atualizar').addEventListener('click', ()=>{ RADAR_UI.rows = null; renderRadar(); });
