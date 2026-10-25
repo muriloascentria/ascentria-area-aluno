@@ -430,12 +430,13 @@
      lado a lado, com a mesma altura. */
   .ee-link-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
   .ee-link-rotulo{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mute);margin-bottom:10px;}
-  /* Faixas do Prêmio: as seis opções sempre na mesma linha. */
-  .nps-filtros.pe-faixas{grid-template-columns:repeat(6,minmax(0,1fr));}
-  .nps-filtros.pe-faixas .nps-seg{flex-direction:row;gap:6px;white-space:nowrap;}
-  .nps-filtros.pe-faixas .nps-seg small{font-size:11px;font-weight:800;padding:1px 6px;border-radius:9px;background:var(--bg-elev);}
-  .nps-filtros.pe-faixas .nps-seg.on small{background:rgba(255,255,255,.22);}
-  @media (max-width:560px){ .nps-filtros.pe-faixas .nps-seg{font-size:9px;letter-spacing:0;padding:7px 2px;gap:3px;white-space:normal;} .nps-filtros.pe-faixas .nps-seg small{font-size:9px;padding:0 4px;} }
+  /* Prêmio: os seis quadros de contagem numa linha só, e cada um funciona como filtro. */
+  .pe-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:6px 0 16px;}
+  .pe-tile{min-width:0;text-align:left;cursor:pointer;font:inherit;color:inherit;transition:border-color .15s,background .15s;}
+  .pe-tile .value{font-size:22px;}
+  .pe-tile:hover{border-color:var(--accent);}
+  .pe-tile.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 16%, var(--bg-card));box-shadow:inset 0 0 0 1px var(--accent);}
+  @media (max-width:720px){ .pe-tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;} .pe-tile{padding:10px;} .pe-tile .value{font-size:18px;} }
   .ee-csv-pe{display:flex;justify-content:flex-end;margin-top:12px;}
   .ee-csv-pe .btn-outline{display:flex;align-items:center;gap:6px;}
   .ee-link-linha{display:flex;gap:10px;align-items:stretch;}
@@ -18110,13 +18111,13 @@ function premioHtmlEquipe(){
   const f = PREMIO_UI.filtro;
   const vis = rows.filter(r=> f==='todos' || premioFaixa(r).c===f);
   const conta = c=> rows.filter(r=>premioFaixa(r).c===c).length;
-  const tile = (rot, n)=>`<div class="kpi-tile"><div class="label">${rot}</div><div class="value" style="font-size:22px">${n}</div></div>`;
+  // Os quadros de contagem são também o filtro: clicar mostra só aquela faixa (clicar de novo volta a todas).
+  const tile = (k, rot, n)=>`<button type="button" class="kpi-tile pe-tile ${f===k?'on':''}" data-pe-f="${k}"><div class="label">${rot}</div><div class="value">${n}</div></button>`;
   return `
     ${eeLinkBoxHtml(premioLinkPublico(), 'premio-copiar')}
     <div class="ev-abas">${PREMIO_EDICOES.map(([k,l])=>`<button type="button" class="ev-aba ${PREMIO_UI.edicao===k?'on':''}" data-pe-ed="${k}">${icon('calendar','tiny')} ${l}</button>`).join('')}</div>
     <p class="section-sub" style="margin-top:0">Respostas do formulário "Seus resultados podem ser premiados", aberto pelo banner no Início (alunos do Método e mentorados) e pelo link externo. Cada pessoa participa uma vez por edição e declara que as informações são verídicas. As participações de edições anteriores ficam guardadas.</p>
-    <div class="kpi-row">${tile('Participações', rows.length)}${tile('Mais de R$ 30 mil/mês', conta('f30'))}${tile('Mais de R$ 20 mil/mês', conta('f20'))}${tile('Mais de R$ 10 mil/mês', conta('f10'))}${tile('Mais de R$ 5 mil/mês', conta('f5'))}</div>
-    <div class="nps-filtros pe-faixas">${[['todos','Todas'],['f30','+ R$ 30 mil'],['f20','+ R$ 20 mil'],['f10','+ R$ 10 mil'],['f5','+ R$ 5 mil'],['f0','Até R$ 5 mil']].map(([k,l])=>`<button type="button" class="nps-seg ${f===k?'on':''}" data-pe-f="${k}">${l}<small>${k==='todos'? rows.length : conta(k)}</small></button>`).join('')}</div>
+    <div class="pe-tiles">${tile('todos','Participações', rows.length)}${tile('f30','Mais de R$ 30 mil/mês', conta('f30'))}${tile('f20','Mais de R$ 20 mil/mês', conta('f20'))}${tile('f10','Mais de R$ 10 mil/mês', conta('f10'))}${tile('f5','Mais de R$ 5 mil/mês', conta('f5'))}${tile('f0','Até R$ 5 mil/mês', conta('f0'))}</div>
     <div class="pe-lista">
       ${vis.map(r=>{ const s = getStudent(r.aluno_id); const fx = premioFaixa(r); return `
         <div class="pe-item">
@@ -18269,7 +18270,7 @@ function renderEvento(){
     eeBindCopiar(el.querySelector('#ee-copiar'), eeLinkPublico());
   } else {
     el.innerHTML = abas + premioHtmlEquipe();
-    el.querySelectorAll('[data-pe-f]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.filtro = b.dataset.peF; renderEvento(); }));
+    el.querySelectorAll('[data-pe-f]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.filtro = (PREMIO_UI.filtro===b.dataset.peF ? 'todos' : b.dataset.peF); renderEvento(); }));
     el.querySelectorAll('[data-pe-ed]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.edicao = b.dataset.peEd; PREMIO_UI.filtro = 'todos'; renderEvento(); }));
     eeBindCopiar(el.querySelector('#premio-copiar'), premioLinkPublico());
   }
