@@ -2410,8 +2410,12 @@
   .reu-enviar-box{border:1px solid var(--border);border-radius:10px;padding:12px;}
   .reu-enviar-box p{margin:4px 0 8px;font-size:12.5px;}
   .reu-pauta-add{display:flex;gap:8px;margin:6px 0 14px;}
-  .reu-pauta-add input{flex:1;min-width:0;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font:inherit;background:var(--bg-card);color:inherit;}
-  .reu-pauta-add button{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;width:auto !important;flex:0 0 auto;padding:10px 16px;}
+  /* Caixa e botão com a mesma altura (40px, borda incluída); texto da caixa no mesmo tamanho do texto de apoio (13px). */
+  .reu-pauta-add{align-items:center;}
+  .reu-pauta-add input{flex:1;min-width:0;height:40px;box-sizing:border-box;padding:0 12px;margin:0;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:13px;line-height:normal;background:var(--bg-card);color:inherit;}
+  .reu-pauta-add input::placeholder{font-size:13px;}
+  .reu-pauta-add button{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;width:auto !important;flex:0 0 auto;height:40px !important;min-height:0 !important;box-sizing:border-box;margin:0 !important;padding:0 16px !important;font-size:13px;line-height:1;border-radius:10px;}
+  .reu-pauta-add button .icon{width:15px;height:15px;}
   .reu-acoes .btn-primary,.reu-acoes .btn-outline{width:auto !important;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;}
   .reu-assinar .btn-primary{width:100%;}
   .reu-pautas{display:flex;flex-direction:column;gap:6px;}
