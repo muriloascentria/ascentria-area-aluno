@@ -1657,6 +1657,7 @@
   .ev-aba{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 12px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;min-width:0;text-align:center;}
   .ev-aba:hover{color:var(--text);border-color:var(--accent);}
   .ev-aba.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .ev-aba.on .reu-cont{background:rgba(255,255,255,.25);}
   @media (max-width:560px){ .ev-aba{font-size:10.5px;height:auto;min-height:44px;padding:8px;letter-spacing:.03em;} }
   .tf-navbar .tf-seg-btn{text-transform:uppercase;letter-spacing:.06em;font-size:11.5px;font-weight:800;}
   .tf-sino.tem{border-color:var(--danger);color:var(--danger);}
@@ -16190,16 +16191,16 @@ function reuUrlOk(u){ return /^https:\/\//i.test(String(u||'')) ? u : null; }
 function reuAbas(){
   if(!reuSocio()) return '';
   const np = (REU_UI.pautas||[]).filter(p=>!p.concluida).length;
-  return `<div class="filter-tabs rd-abas"><button type="button" class="filter-tab ${REU_UI.aba==='reunioes'?'active':''}" data-reu-aba="reunioes">Reuniões e atas</button><button type="button" class="filter-tab ${REU_UI.aba==='pautas'?'active':''}" data-reu-aba="pautas">Pautas da próxima reunião${np?` <span class="reu-cont">${np}</span>`:''}</button></div>`;
+  return `<div class="ev-abas"><button type="button" class="ev-aba ${REU_UI.aba==='reunioes'?'on':''}" data-reu-aba="reunioes">${icon('video','tiny')} Reuniões e atas</button><button type="button" class="ev-aba ${REU_UI.aba==='pautas'?'on':''}" data-reu-aba="pautas">${icon('file','tiny')} Pautas da próxima reunião${np?` <span class="reu-cont">${np}</span>`:''}</button></div>`;
 }
 function renderReunioes(){
   const el = document.getElementById('view-reunioes'); if(!el) return;
   if(!reuPodeAbrir()){ el.innerHTML = '<div class="empty-state">Área dos sócios. Quando o Murilo enviar uma ata para você, ela aparece aqui.</div>'; return; }
-  if(REU_UI.lista===null){ reuCarregar(); el.innerHTML = '<h2 class="section-title">Reuniões e Atas</h2><div class="empty-state">Carregando as reuniões…</div>'; return; }
+  if(REU_UI.lista===null){ reuCarregar(); el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Reuniões e Atas</h2><div class="empty-state">Carregando as reuniões…</div>`; return; }
   if(reuSocio() && REU_UI.pautas===null && !REU_UI.pautasCarregando) reuPautasCarregar();
-  if(REU_UI.aba==='pautas' && reuSocio()){ el.innerHTML = `<h2 class="section-title">Reuniões e Atas</h2>${reuAbas()}${reuPautasHtml()}`; reuBindAbas(el); reuPautasBind(el); return; }
+  if(REU_UI.aba==='pautas' && reuSocio()){ el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Reuniões e Atas</h2>${reuAbas()}${reuPautasHtml()}`; reuBindAbas(el); reuPautasBind(el); return; }
   const r = REU_UI.aberta && (REU_UI.lista||[]).find(x=>x.id===REU_UI.aberta);
-  if(r){ el.innerHTML = `<h2 class="section-title">Reuniões e Atas</h2>${reuAbas()}${reuDetalheHtml(r)}`; reuBindAbas(el); reuDetalheBind(el, r); return; }
+  if(r){ el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Reuniões e Atas</h2>${reuAbas()}${reuDetalheHtml(r)}`; reuBindAbas(el); reuDetalheBind(el, r); return; }
   REU_UI.aberta = null;
   const lista = REU_UI.lista||[];
   const linhas = lista.map(x=>{
@@ -16214,7 +16215,7 @@ function renderReunioes(){
       <td>${x.ata ? icon('check') : '<span class="muted">—</span>'}</td>
       <td><span class="reu-ass ${esp.length && ass===esp.length ? 'ok':''}">${ass}/${esp.length}</span></td>
     </tr>`; }).join('');
-  el.innerHTML = `<h2 class="section-title">Reuniões e Atas</h2>
+  el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Reuniões e Atas</h2>
     <p class="section-sub" style="margin-top:-6px">${reuSocio() ? 'As reuniões entram aqui sozinhas depois que terminam (segunda e quarta às 8h, sexta às 13h). Clique numa linha para ver vídeo, transcrição, ata e concordâncias.' : 'Atas que o Murilo enviou para você ler e dar a sua concordância.'}</p>
     ${reuAbas()}
     ${REU_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="reu-tentar">Tentar de novo</button></div>' : ''}
