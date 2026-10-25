@@ -426,8 +426,17 @@
   .ee-page .pr-fim h2{color:var(--ee-verde);}
   .ee-page .ee-assina b{color:var(--ee-verde);}
   .ee-campo{margin:0 0 14px;}
-  .ee-link-box{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;font-size:13px;}
-  .ee-link-box code{font-size:12.5px;word-break:break-all;background:var(--bg-elev);padding:4px 8px;border-radius:6px;}
+  /* Caixa do link público (Prêmio e Inscrições): rótulo em cima; embaixo, o link e o botão de copiar
+     lado a lado, com a mesma altura. */
+  .ee-link-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
+  .ee-link-rotulo{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mute);margin-bottom:10px;}
+  .ee-csv-pe{display:flex;justify-content:flex-end;margin-top:12px;}
+  .ee-csv-pe .btn-outline{display:flex;align-items:center;gap:6px;}
+  .ee-link-linha{display:flex;gap:10px;align-items:stretch;}
+  .ee-link-url{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:9px;background:var(--bg-elev);border:1px solid var(--border);font-size:13px;color:var(--text);text-decoration:none;}
+  .ee-link-url .icon{flex:0 0 auto;color:var(--accent);}
+  .ee-link-url span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ee-link-linha .btn-accent{flex:0 0 auto;display:flex;align-items:center;gap:6px;height:40px;padding:0 16px;margin:0;white-space:nowrap;box-sizing:border-box;}
   .ee-campo label{display:block;font-size:15px;font-weight:600;margin:0 0 6px;}
   .ee-assina{font-size:14px;line-height:1.6;color:#3a3936;margin:26px 0 0;text-align:center;}
   /* ---- Prêmio Essência Experience 2026: banner no Início, página do formulário e aba da equipe ---- */
@@ -18041,16 +18050,34 @@ async function eeCarregarEquipe(){
   EE_UI.carregando = false;
   if(currentView==='evento') renderEvento();
 }
+function eeLinkBoxHtml(url, idBotao){
+  return `<div class="ee-link-box">
+    <div class="ee-link-rotulo">Link para quem não tem acesso ao Essência PLAT</div>
+    <div class="ee-link-linha">
+      <a class="ee-link-url" href="${escapeAttr(url)}" target="_blank" rel="noopener" title="${escapeAttr(url)}">${icon('externallink','tiny')}<span>${escapeHtml(url)}</span></a>
+      <button type="button" class="btn-accent" id="${idBotao}">${icon('copy','tiny')} <span>Copiar link</span></button>
+    </div>
+  </div>`;
+}
+/* Copia o link e mostra "Link copiado!" por dois segundos, sem mudar o tamanho do botão. */
+function eeBindCopiar(btn, url){
+  if(!btn) return;
+  btn.addEventListener('click', async ()=>{
+    const rot = btn.querySelector('span');
+    try{ await navigator.clipboard.writeText(url); }catch(e){ prompt('Copie o link:', url); return; }
+    if(rot){ rot.textContent = 'Link copiado!'; setTimeout(()=>{ rot.textContent = 'Copiar link'; }, 2000); }
+  });
+}
 function eeHtmlEquipe(){
   if(EE_UI.rows===null){ if(!EE_UI.carregando) eeCarregarEquipe(); return '<div class="empty-state">Carregando as inscrições…</div>'; }
   const rows = EE_UI.rows;
   const conf = rows.filter(r=>r.confirma).length;
-  const linkBox = `<div class="ee-link-box"><span>Link para quem não tem acesso ao Plat:</span><code>${escapeHtml(eeLinkPublico())}</code><button type="button" class="btn-outline" id="ee-copiar">${icon('copy','tiny')} Copiar link</button></div>`;
+  const linkBox = eeLinkBoxHtml(eeLinkPublico(), 'ee-copiar');
   return linkBox + `<p class="section-sub" style="margin-top:0">Inscrições feitas pelo banner do Início e pelo link externo para o Essência Experience de ${EE_EDICAO.curta}, em ${EE_EDICAO.local}. ${rows.length} inscrição(ões), ${conf} com participação confirmada.</p>
-    ${rows.length ? `<div style="margin-bottom:10px"><button type="button" class="btn-outline" id="ee-csv">${icon('download','tiny')} Baixar planilha (CSV)</button></div>
-    <div class="table-wrap"><table class="check-table"><thead><tr><th>Data</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Área</th><th>Participação</th><th>Confirma</th></tr></thead><tbody>
+    ${rows.length ? `<div class="table-wrap"><table class="check-table"><thead><tr><th>Data</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Área</th><th>Participação</th><th>Confirma</th></tr></thead><tbody>
       ${rows.map(r=>`<tr><td style="white-space:nowrap">${tzDataCurta(String(r.created_at).slice(0,10))}</td><td>${getStudent(r.aluno_id) ? `<button type="button" class="vg-nome-btn" data-rd-acomp="${r.aluno_id}">${escapeHtml(r.nome)}</button>` : escapeHtml(r.nome)}</td><td>${whatsappCell(r.whatsapp)}</td><td>${escapeHtml(r.email)}</td><td>${escapeHtml(r.area_atuacao)}</td><td>${r.vinculo==='convidado' ? 'Convidado(a)'+(r.convidado_por?` de ${escapeHtml(r.convidado_por)}`:'') : 'Mentorado(a)/aluno(a)'}${r.aluno_id ? '' : ' <span class="muted">· pelo link</span>'}</td><td>${r.confirma ? 'Sim' : 'Não'}</td></tr>`).join('')}
-    </tbody></table></div>` : '<div class="empty-state">Nenhuma inscrição ainda. Elas aparecem aqui assim que os alunos preenchem o formulário pelo banner do Início.</div>'}`;
+    </tbody></table></div>
+    <div class="ee-csv-pe"><button type="button" class="btn-outline" id="ee-csv">${icon('download','tiny')} Baixar planilha (CSV)</button></div>` : '<div class="empty-state">Nenhuma inscrição ainda. Elas aparecem aqui assim que os alunos preenchem o formulário pelo banner do Início.</div>'}`;
 }
 function eeCsv(){
   const cab = ['Data','Nome','WhatsApp','E-mail','Área de atuação','Participação','Quem convidou','Confirma','Consentimento de dados','Uso de imagem e voz','Contato','Produto'];
@@ -18079,7 +18106,7 @@ function premioHtmlEquipe(){
   const conta = c=> rows.filter(r=>premioFaixa(r).c===c).length;
   const tile = (rot, n)=>`<div class="kpi-tile"><div class="label">${rot}</div><div class="value" style="font-size:22px">${n}</div></div>`;
   return `
-    <div class="ee-link-box"><span>Link para quem não tem acesso ao Plat:</span><code>${escapeHtml(premioLinkPublico())}</code><button type="button" class="btn-outline" id="premio-copiar">${icon('copy','tiny')} Copiar link</button></div>
+    ${eeLinkBoxHtml(premioLinkPublico(), 'premio-copiar')}
     <div class="nps-filtros">${PREMIO_EDICOES.map(([k,l])=>`<button type="button" class="filter-tab ${PREMIO_UI.edicao===k?'active':''}" data-pe-ed="${k}">${l}</button>`).join('')}</div>
     <p class="section-sub" style="margin-top:0">Respostas do formulário "Seus resultados podem ser premiados", aberto pelo banner no Início (alunos do Método e mentorados) e pelo link externo. Cada pessoa participa uma vez por edição e declara que as informações são verídicas. As participações de edições anteriores ficam guardadas.</p>
     <div class="kpi-row">${tile('Participações', rows.length)}${tile('Mais de R$ 30 mil/mês', conta('f30'))}${tile('Mais de R$ 20 mil/mês', conta('f20'))}${tile('Mais de R$ 10 mil/mês', conta('f10'))}${tile('Mais de R$ 5 mil/mês', conta('f5'))}</div>
@@ -18233,12 +18260,12 @@ function renderEvento(){
   if(EVENTO_UI.aba==='ee'){
     el.innerHTML = abas + eeHtmlEquipe();
     const csv = el.querySelector('#ee-csv'); if(csv) csv.addEventListener('click', eeCsv);
-    const cp = el.querySelector('#ee-copiar'); if(cp) cp.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(eeLinkPublico()); cp.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', eeLinkPublico()); } });
+    eeBindCopiar(el.querySelector('#ee-copiar'), eeLinkPublico());
   } else {
     el.innerHTML = abas + premioHtmlEquipe();
     el.querySelectorAll('[data-pe-f]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.filtro = b.dataset.peF; renderEvento(); }));
     el.querySelectorAll('[data-pe-ed]').forEach(b=>b.addEventListener('click', ()=>{ PREMIO_UI.edicao = b.dataset.peEd; PREMIO_UI.filtro = 'todos'; renderEvento(); }));
-    const pc = el.querySelector('#premio-copiar'); if(pc) pc.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(premioLinkPublico()); pc.textContent = 'Link copiado!'; }catch(e){ prompt('Copie o link:', premioLinkPublico()); } });
+    eeBindCopiar(el.querySelector('#premio-copiar'), premioLinkPublico());
   }
   el.querySelectorAll('[data-ev-aba]').forEach(b=>b.addEventListener('click', ()=>{ EVENTO_UI.aba = b.dataset.evAba; renderEvento(); }));
   el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
