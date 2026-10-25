@@ -15974,13 +15974,13 @@ function polSociosHtml(d){
 function renderPoliticas(){
   const el = document.getElementById('view-politicas'); if(!el) return;
   if(!polPodeAbrir()){ el.innerHTML = '<div class="empty-state">Área da equipe interna.</div>'; return; }
-  if(POL_UI.docs===null){ polCarregar(); el.innerHTML = '<h2 class="section-title">Políticas Internas</h2><div class="empty-state">Carregando…</div>'; return; }
+  if(POL_UI.docs===null){ polCarregar(); el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Políticas Internas</h2><div class="empty-state">Carregando…</div>`; return; }
   const d = POL_UI.aberta && POL_UI.docs.find(x=>String(x.id)===String(POL_UI.aberta));
-  if(d){ el.innerHTML = `<h2 class="section-title">Políticas Internas</h2>${polDetalheHtml(d)}`; polDetalheBind(el, d); return; }
+  if(d){ el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Políticas Internas</h2>${polDetalheHtml(d)}`; polDetalheBind(el, d); return; }
   POL_UI.aberta = null;
   const pend = polPendentesMeus();
   const lista = POL_UI.docs.filter(x=>x.tipo==='politica').sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
-  el.innerHTML = `<h2 class="section-title">Políticas Internas</h2>
+  el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Políticas Internas</h2>
     <p class="section-sub" style="margin-top:-6px">As políticas internas da Ascentria, com o link de cada documento. Os procedimentos operacionais padrão (POPs) ficam dentro de cada política. ${polSocio() ? 'Os que estão <b>Em revisão</b> aguardam a resposta de cada sócio: revisar com anotações ou concordar.' : 'Clique num documento para abrir.'}</p>
     ${pend.length ? `<div class="pol-alerta">${icon('bell','tiny')} <span><b>${pend.length} ${pend.length===1?'documento aguarda':'documentos aguardam'} a sua revisão:</b> ${pend.map(x=>`<button type="button" class="link-btn" data-pol-abrir="${x.id}">${escapeHtml(x.titulo)}</button>`).join(', ')}</span></div>` : ''}
     ${POL_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="pol-tentar">Tentar de novo</button></div>' : ''}
