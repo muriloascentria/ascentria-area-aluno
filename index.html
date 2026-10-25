@@ -432,7 +432,10 @@
   .ee-link-rotulo{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mute);margin-bottom:10px;}
   /* Faixas do Prêmio: as seis opções sempre na mesma linha. */
   .nps-filtros.pe-faixas{grid-template-columns:repeat(6,minmax(0,1fr));}
-  @media (max-width:560px){ .nps-filtros.pe-faixas .nps-seg{font-size:9.5px;letter-spacing:0;padding:7px 2px;} }
+  .nps-filtros.pe-faixas .nps-seg{flex-direction:row;gap:6px;white-space:nowrap;}
+  .nps-filtros.pe-faixas .nps-seg small{font-size:11px;font-weight:800;padding:1px 6px;border-radius:9px;background:var(--bg-elev);}
+  .nps-filtros.pe-faixas .nps-seg.on small{background:rgba(255,255,255,.22);}
+  @media (max-width:560px){ .nps-filtros.pe-faixas .nps-seg{font-size:9px;letter-spacing:0;padding:7px 2px;gap:3px;white-space:normal;} .nps-filtros.pe-faixas .nps-seg small{font-size:9px;padding:0 4px;} }
   .ee-csv-pe{display:flex;justify-content:flex-end;margin-top:12px;}
   .ee-csv-pe .btn-outline{display:flex;align-items:center;gap:6px;}
   .ee-link-linha{display:flex;gap:10px;align-items:stretch;}
