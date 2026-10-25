@@ -10810,7 +10810,7 @@ function renderInterno(){
     </div>`;
   const intHead = (chave, ic, titulo, qtd)=> `
     <div class="vg-sec-head" data-int-toggle="${chave}">
-      <h2 class="section-title">${ic? icon(ic)+' ' : ''}${titulo}</h2>
+      <h2 class="section-title com-titulo">${ic? icon(ic)+' ' : ''}${titulo}</h2>
       ${qtd===null||qtd===undefined ? '' : `<span class="qtd">${qtd}</span>`}
       <button type="button" class="vg-sec-toggle ${aberto[chave]?'':'fechado'}" title="${aberto[chave]?'Recolher':'Expandir'}">${icon('down')} ${aberto[chave]?'Recolher':'Expandir'}</button>
     </div>`;
