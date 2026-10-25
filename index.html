@@ -2419,6 +2419,8 @@
   .reu-acoes .btn-primary,.reu-acoes .btn-outline{width:auto !important;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;}
   .reu-assinar .btn-primary{width:100%;}
   .reu-pautas{display:flex;flex-direction:column;gap:6px;}
+  .vg-sec-head.reu-feitas-head{margin:22px 0 10px;}
+  .vg-sec-head.reu-feitas-head .reu-feitas-tit{margin:0;}
   .reu-pauta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
   .reu-pauta-chk{display:flex;gap:10px;align-items:flex-start;flex:1;min-width:200px;cursor:pointer;font-size:14px;}
   .reu-pauta-chk input{width:20px;height:20px;margin-top:1px;flex:0 0 auto;}
@@ -16581,9 +16583,20 @@ function reuPautasHtml(){
   return `<p class="section-sub" style="margin-top:0">Escreva aqui o que precisa ser falado na próxima reunião. Durante a reunião, dê o check em cada pauta tratada.</p>
     <div class="reu-pauta-add"><input type="text" id="reu-pauta-nova" maxlength="400" placeholder="Nova pauta para a próxima reunião"><button type="button" class="btn-primary" id="reu-pauta-ok">${icon('plus')} Adicionar</button></div>
     <div class="reu-pautas">${abertas.length ? abertas.map(linha).join('') : '<p class="muted">Nenhuma pauta em aberto.</p>'}</div>
-    ${feitas.length ? `<h4 class="reu-feitas-tit">Já tratadas</h4><div class="reu-pautas">${feitas.map(linha).join('')}</div>` : ''}`;
+    ${feitas.length ? `<div class="vg-sec-head reu-feitas-head" data-reu-feitas-toggle>
+        <h4 class="reu-feitas-tit">Já tratadas</h4><span class="qtd">${feitas.length}</span>
+        <button type="button" class="vg-sec-toggle ${reuFeitasFechado()?'fechado':''}">${icon('down')} ${reuFeitasFechado()?'Expandir':'Recolher'}</button>
+      </div>
+      <div class="reu-pautas" ${reuFeitasFechado()?'hidden':''}>${feitas.map(linha).join('')}</div>` : ''}`;
 }
+/* "Já tratadas" recolhível; a escolha fica lembrada neste navegador. */
+function reuFeitasFechado(){ try{ return localStorage.getItem('ascentria-reu-feitas-fechado')==='1'; }catch(e){ return false; } }
 function reuPautasBind(el){
+  const tg = el.querySelector('[data-reu-feitas-toggle]');
+  if(tg) tg.addEventListener('click', ()=>{
+    try{ localStorage.setItem('ascentria-reu-feitas-fechado', reuFeitasFechado() ? '0' : '1'); }catch(e){}
+    renderReunioes();
+  });
   const inp = el.querySelector('#reu-pauta-nova');
   const add = async ()=>{
     const texto = (inp.value||'').trim(); if(!texto) return;
