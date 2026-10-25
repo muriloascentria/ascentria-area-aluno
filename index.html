@@ -18107,7 +18107,7 @@ function premioHtmlEquipe(){
   const tile = (rot, n)=>`<div class="kpi-tile"><div class="label">${rot}</div><div class="value" style="font-size:22px">${n}</div></div>`;
   return `
     ${eeLinkBoxHtml(premioLinkPublico(), 'premio-copiar')}
-    <div class="nps-filtros">${PREMIO_EDICOES.map(([k,l])=>`<button type="button" class="filter-tab ${PREMIO_UI.edicao===k?'active':''}" data-pe-ed="${k}">${l}</button>`).join('')}</div>
+    <div class="ev-abas">${PREMIO_EDICOES.map(([k,l])=>`<button type="button" class="ev-aba ${PREMIO_UI.edicao===k?'on':''}" data-pe-ed="${k}">${icon('calendar','tiny')} ${l}</button>`).join('')}</div>
     <p class="section-sub" style="margin-top:0">Respostas do formulário "Seus resultados podem ser premiados", aberto pelo banner no Início (alunos do Método e mentorados) e pelo link externo. Cada pessoa participa uma vez por edição e declara que as informações são verídicas. As participações de edições anteriores ficam guardadas.</p>
     <div class="kpi-row">${tile('Participações', rows.length)}${tile('Mais de R$ 30 mil/mês', conta('f30'))}${tile('Mais de R$ 20 mil/mês', conta('f20'))}${tile('Mais de R$ 10 mil/mês', conta('f10'))}${tile('Mais de R$ 5 mil/mês', conta('f5'))}</div>
     <div class="nps-filtros">${[['todos','Todas'],['f30','+ R$ 30 mil'],['f20','+ R$ 20 mil'],['f10','+ R$ 10 mil'],['f5','+ R$ 5 mil'],['f0','Até R$ 5 mil']].map(([k,l])=>`<button type="button" class="filter-tab ${f===k?'active':''}" data-pe-f="${k}">${l}</button>`).join('')}</div>
