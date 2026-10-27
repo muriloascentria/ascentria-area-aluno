@@ -16775,7 +16775,7 @@ function renderAnalise(){
       </tr></thead>
       <tbody>
         ${lista.map(a=>`<tr>
-          <td><span class="an-lead"><button type="button" class="an-lead-link" data-an-ir-venda="${escapeAttr(a.vendaSessaoId||'')}" data-an-ir-nome="${escapeAttr(a.leadNome||'')}" title="Abrir no Registro de Sessões 1:1">${escapeHtml(a.leadNome||'—')}</button>${avPode() && AVALIACOES[a.id] ? ` <span class="av-pill" title="Avaliação de ${escapeAttr(AVALIACOES[a.id].consultora)}">${avPillTxt(AVALIACOES[a.id])}</span>` : ''}</span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
+          <td><span class="an-lead"><button type="button" class="an-lead-link" data-an-ir-venda="${escapeAttr(a.vendaSessaoId||'')}" data-an-ir-nome="${escapeAttr(a.leadNome||'')}" title="Abrir no Registro de Sessões 1:1">${escapeHtml(a.leadNome||'—')}</button></span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
           <td><div class="an-links">
             ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo') : `<span class="link-btn an-subindo" title="Vídeo ainda subindo">${icon('upload','tiny')} Subindo</span>`}
             ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : `<span class="link-btn an-subindo" title="Análise ainda subindo">${icon('upload','tiny')} Subindo</span>`}
