@@ -1416,6 +1416,16 @@
   .ob-campo .ps-input{padding:5px 8px;font-size:12.5px;}
   .ae-comp li.ob-nota{padding:8px 0;}
   .ae-comp li.ob-nota small{font-size:12px;color:var(--text-dim);}
+  /* Acompanhamento unificado (Acompanhamento Interno) */
+  .ae-tiles.int-tiles{grid-template-columns:repeat(4,minmax(0,1fr));margin:6px 0 18px;}
+  .int-analise{margin-top:4px;}
+  .int-enc-pill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:12px;border:1px solid var(--accent);color:var(--accent-2,var(--accent));background:var(--accent-soft);white-space:nowrap;}
+  .int-enc-pill .icon{width:11px;height:11px;}
+  .add-form .int-enc-campo{grid-column:span 2;min-width:0;}
+  @media (max-width:560px){ .add-form .int-enc-campo{grid-column:1 / -1;} }
+  .int-enc-vazio p{margin:4px 0 0;font-size:12.5px;color:var(--text-mute);background:var(--bg-elev);border:1px dashed var(--border);border-radius:8px;padding:8px 10px;}
+  .int-vinc{margin-top:5px;font-size:11.5px;color:var(--accent-2,var(--accent));font-weight:600;}
+  @media (max-width:900px){ .ae-tiles.int-tiles{grid-template-columns:repeat(2,minmax(0,1fr));} }
   .ae-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
   .ae-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;min-width:0;}
   .ae-rot{font-size:11px;color:var(--text-mute);font-weight:600;margin-bottom:5px;}
@@ -3939,7 +3949,7 @@ let internoDiagTab = 'wispform';
    A escolha de cada pessoa é lembrada no próprio navegador dela. */
 /* Seções recolhíveis do Acompanhamento Interno (mesmo padrão da Visão Geral). O estado fica salvo
    no navegador, então cada pessoa da equipe mantém as seções do jeito que deixou. */
-const INTERNO_SECOES_PADRAO = {diag:false, checklist:true, encontros:true, contatos:true, futuros:true, internos:true};
+const INTERNO_SECOES_PADRAO = { analise:true, competencias:false,diag:false, checklist:true, encontros:true, contatos:true, futuros:true, internos:true};
 function getInternoAberto(){
   let salvo = {};
   try{ salvo = JSON.parse(localStorage.getItem('ascentria-interno-aberto')||'{}') || {}; }catch(e){ salvo = {}; }
@@ -4788,7 +4798,7 @@ function mapProfileRow(p){
       objetivo12meses: diag.objetivo_12meses || '—', horasSemana: diag.horas_semana || '—',
       wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
-    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : []})),
+    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null})),
     sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||'',responsavel:x.responsavel||''})),
     contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,tipo:c.tipo||'',responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
     registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
@@ -5006,7 +5016,7 @@ async function bootstrapData(){
       sb.from('internal_records').select('*').order('created_at',{ascending:false}).then(({data:irRows})=>{
         (irRows||[]).forEach(r=>{
           const st = getStudent(r.student_id);
-          if(st) st.registrosInternos.push({id:r.id, data:r.data||'', autorNome:(PEOPLE[r.autor_id]&&PEOPLE[r.autor_id].name)||'—', texto:r.texto});
+          if(st) st.registrosInternos.push({id:r.id, data:r.data||'', autorNome:(PEOPLE[r.autor_id]&&PEOPLE[r.autor_id].name)||'—', texto:r.texto, contatoId:r.contato_id||null, criadoEm:r.created_at||''});
         });
       }),
       // Registro de Sessões 1:1 (vendas).
@@ -5316,7 +5326,7 @@ function syncChecklistItemStatus(id, status){
   syncNow(sb.from('checklist_items').update({status}).eq('id', id));
 }
 async function syncChecklistItemInsert(sid, item){
-  const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[]}).select().single();
+  const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[], contato_id:item.contatoId||null}).select().single();
   if(error) throw error;
   return data.id;
 }
@@ -5334,7 +5344,7 @@ function syncInternalDiagAnswer(sid, diagType, idx, answer){
   syncNow(sb.from('internal_diag_answers').upsert({student_id:sid, diag_type:diagType, idx, answer}));
 }
 async function syncInternalRecordInsert(sid, r){
-  const { data, error } = await sb.from('internal_records').insert({student_id:sid, autor_id:actingAuthorId(), data:r.data, texto:r.texto}).select().single();
+  const { data, error } = await sb.from('internal_records').insert({student_id:sid, autor_id:actingAuthorId(), data:r.data, texto:r.texto, contato_id:r.contatoId||null}).select().single();
   if(error) throw error;
   return data.id;
 }
@@ -10707,6 +10717,7 @@ function openTarefaEditModal(s, t){
         </div>
       </div>
       <div class="field full"><label>Observações</label><textarea class="ps-input" id="te-obs" rows="2">${escapeHtml(t.obs||'')}</textarea></div>
+      <div class="field full"><label>Encontro em que a tarefa foi definida</label>${intEncontroSelect(s, 'te-encontro', t.contatoId, true)}${(s.contatos||[]).length ? '' : '<small class="ae-dica">Nenhum encontro registrado ainda com este mentorado.</small>'}</div>
       <div class="field full"><label>Aulas e atividades de apoio (<span id="te-count">${apoioContagem(sel)}</span>)</label>
         ${aulaPickHtml(t.aulas, 'te')}
       </div>
@@ -10730,13 +10741,15 @@ function openTarefaEditModal(s, t){
       prazo: prazoIsoParaTexto(document.getElementById('te-prazo').value) || ((t.prazo && !prazoTextoParaIso(t.prazo)) ? t.prazo : '—'),
       status: document.getElementById('te-status').value,
       obs: document.getElementById('te-obs').value.trim(),
+      contato_id: document.getElementById('te-encontro').value ? Number(document.getElementById('te-encontro').value) : null,
       aulas: apoioOrdenar(sel),
     };
     const btn = document.getElementById('te-save'); btn.disabled = true;
     try{ await syncChecklistItemUpdate(t.id, campos); }
     catch(e){ console.error(e); alert('Não foi possível salvar: '+(e.message||'')); btn.disabled = false; return; }
-    Object.assign(t, campos);
+    Object.assign(t, campos); t.contatoId = campos.contato_id; delete t.contato_id;
     closeModal();
+    aeSincronizarProximaAcao(s);
     renderInterno();
   });
 }
@@ -10777,8 +10790,215 @@ function contatoTipoLabel(c){
   const t = c.tipo || (c.linkGravacao || c.linkTranscricao ? 'meet' : '');
   return t==='meet' ? 'Google Meet' : t==='presencial' ? 'Presencial' : t==='whatsapp' ? 'WhatsApp' : t==='plat' ? 'Mensagem no Plat' : '—';
 }
+/* ================= ACOMPANHAMENTO UNIFICADO =================
+   Tudo o que se registra sobre um mentorado fica no Acompanhamento Interno: a situação calculada pela
+   plataforma, a análise da equipe, o checklist (que substituiu a antiga lista de "Ações"), os
+   encontros, os registros internos (que reuniram as antigas "Observações") e as competências por
+   módulo. "Abrir acompanhamento" (Visão Geral e Radar) traz para cá, já com o mentorado escolhido.
+   Cada tarefa nova do checklist e cada registro interno novo ficam presos a um encontro do Registro
+   de Contatos (checklist_items.contato_id / internal_records.contato_id). */
+function intDataIso(txt){ const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(String(txt||'').trim()); if(!m) return ''; const y = m[3].length===2 ? '20'+m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+function intHojeTxt(){ return prazoIsoParaTexto(tzHojeISO()); }
+function intEncontros(s){ return (s.contatos||[]).slice().sort((a,b)=> (intDataIso(b.data)||'').localeCompare(intDataIso(a.data)||'') || (Number(b.id)-Number(a.id))); }
+function intEncontroLabel(s, id){ const c = (s.contatos||[]).find(x=>String(x.id)===String(id)); if(!c) return ''; return `${c.data||'sem data'} · ${contatoTipoLabel(c)}${c.responsavel ? ' · '+c.responsavel : ''}`; }
+function intEncontroSelect(s, idSel, sel, opcional){
+  const lista = intEncontros(s);
+  return `<select class="ps-input" id="${idSel}"><option value="">${opcional ? 'Sem encontro vinculado' : 'Escolha o encontro…'}</option>${lista.map(c=>`<option value="${c.id}" ${String(c.id)===String(sel)?'selected':''}>${escapeHtml(intEncontroLabel(s, c.id))}</option>`).join('')}</select>`;
+}
+function intEncontroCampo(s, idSel, rotulo){
+  if(!(s.contatos||[]).length) return `<div class="field full int-enc-vazio"><label>${rotulo}</label><p>Nenhum encontro registrado com este mentorado. Registre o encontro em <button type="button" class="link-btn" data-int-ir="contatos">Registro de Contatos</button> e depois volte aqui.</p></div>`;
+  return `<div class="field int-enc-campo"><label>${rotulo}</label>${intEncontroSelect(s, idSel, '', false)}</div>`;
+}
+function intEncontroPill(s, id){ const l = id && intEncontroLabel(s, id); return l ? `<span class="int-enc-pill" title="Encontro vinculado">${icon('calendar','tiny')} ${escapeHtml(l)}</span>` : ''; }
+function intVinculosHtml(s, cid){
+  const nt = (s.checklist||[]).filter(t=>String(t.contatoId)===String(cid)).length;
+  const nr = (s.registrosInternos||[]).filter(r=>String(r.contatoId)===String(cid)).length;
+  if(!nt && !nr) return '';
+  return `<div class="int-vinc">${[nt ? `${nt} tarefa${nt>1?'s':''} no checklist` : '', nr ? `${nr} registro${nr>1?'s':''} interno${nr>1?'s':''}` : ''].filter(Boolean).join(' · ')}</div>`;
+}
+/* A "Próxima ação" do Radar passa a vir do checklist: a tarefa pendente de prazo mais próximo
+   (ou a mais recente, se nenhuma tiver data). */
+async function aeSincronizarProximaAcao(s){
+  if(!s) return;
+  const pend = (s.checklist||[]).filter(t=>t.status!=='Concluída');
+  const comData = pend.map(t=>({t, iso:prazoTextoParaIso(t.prazo)})).filter(x=>x.iso).sort((a,b)=>a.iso.localeCompare(b.iso));
+  const prox = comData.length ? comData[0] : (pend.length ? {t: pend.slice().sort((a,b)=>Number(b.id)-Number(a.id))[0], iso:null} : null);
+  const campos = { student_id: s.id, proxima_acao: prox ? prox.t.tarefa : null, prazo: prox ? prox.iso : null, proxima_acao_resp: null };
+  try{
+    const { error } = await sb.from('acompanhamento_evolucao').upsert(campos, { onConflict:'student_id' });
+    if(error) throw error;
+    if(AE_UI.sid===s.id) AE_UI.dados = Object.assign({}, AE_UI.dados||{}, { proxima_acao:campos.proxima_acao, prazo:campos.prazo, proxima_acao_resp:null });
+  }catch(e){ console.error('próxima ação (checklist)', e); }
+}
+async function intAeCarregar(sid){
+  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.ob = null; AE_UI.carregando = true; AE_UI.erro = false; AE_UI.abertos = {}; AE_UI.form = null;
+  try{
+    const [r1, r2] = await Promise.all([
+      sb.from('acompanhamento_evolucao').select('*').eq('student_id', sid).maybeSingle(),
+      sb.from('onboarding_jornada').select('*').eq('student_id', sid).maybeSingle(),
+    ]);
+    if(r1.error) throw r1.error;
+    AE_UI.dados = r1.data || null;
+    AE_UI.ob = (r2 && !r2.error && r2.data) ? r2.data : null;
+  }catch(e){ console.error('acompanhamento_evolucao', e); AE_UI.erro = true; }
+  AE_UI.carregando = false;
+  if(currentView==='interno' && currentStudentId===sid) renderInterno();
+}
+function intAeVal(campo, padrao){ return (AE_UI.form && campo in AE_UI.form) ? AE_UI.form[campo] : padrao; }
+function intSituacaoHtml(s, d){
+  const salvo = AE_UI.dados || {};
+  const sit = aeSituacao(s, Object.assign({}, salvo, AE_UI.form && AE_UI.form.estagio_atual ? {estagio_atual:AE_UI.form.estagio_atual} : {}));
+  const alinCls = sit.alinhamento==='Alinhado' ? 'ok' : sit.alinhamento==='Revisar' ? 'rev' : 'ver';
+  const tile = (rot, val, extra)=>`<div class="ae-tile"><div class="ae-rot">${rot}</div><div class="ae-val">${val}</div>${extra? `<div class="ae-extra">${extra}</div>` : ''}</div>`;
+  return `<div class="ae-tiles int-tiles">
+    ${tile('Progresso na plataforma', sit.progresso+'%', `<div class="module-bar"><div class="fill" style="width:${sit.progresso}%"></div></div>`)}
+    ${tile('Progresso do mentorado', s.progressoMentorado+'%')}
+    ${tile('Meta', sit.metaPendente ? '<span class="ae-pill rev">Meta pendente</span>' : '<span class="ae-pill ok">Tudo em dia</span>')}
+    ${tile('Dias restantes', sit.dias<0 ? '<span style="color:var(--danger)">encerrada</span>' : sit.dias+' dias')}
+    ${tile('Dias consumidos', sit.consumidos===null ? '—' : sit.consumidos+' dias', 'régua de 365 dias')}
+    ${tile('Estágio esperado', sit.esperado ? `<span class="stage-tag ${aeEstagio(sit.esperado).cls}">${escapeHtml(sit.esperado)}</span>` : 'Verificar prazo')}
+    ${tile('Alinhamento', `<span class="ae-pill ${alinCls}">${sit.alinhamento}</span>`)}
+    ${tile('Nicho'+((d.subnicho||'').trim()? ' / Subnicho' : ''), `<span style="font-size:13px">${escapeHtml(d.nicho||'—')}${(d.subnicho||'').trim()? ' — '+escapeHtml(d.subnicho) : ''}</span>`)}
+  </div>`;
+}
+function intAnaliseHtml(s){
+  if(AE_UI.carregando || AE_UI.sid!==s.id) return '<div class="empty-state">Carregando a análise…</div>';
+  const salvo = AE_UI.dados || {};
+  const sit = aeSituacao(s, salvo);
+  const est = intAeVal('estagio_atual', sit.atual);
+  const habPadrao = AE_HABILIDADES[est] || '';
+  const hab = intAeVal('habilidades', salvo.habilidades || habPadrao);
+  const nivel = intAeVal('nivel', salvo.nivel||''), prio = intAeVal('prioridade', salvo.prioridade||'');
+  const quem = salvo.updated_by && (PEOPLE[salvo.updated_by] || {}).name;
+  return `${AE_UI.erro ? '<div class="ae-erro">Não foi possível carregar o que já foi salvo. Recarregue a página.</div>' : ''}
+    <div class="ae-form int-analise">
+      <div class="field"><label>Estágio atual</label>
+        <select class="ps-input" id="ae-estagio">${AE_ESTAGIOS.map(e=>`<option value="${escapeAttr(e.label)}" ${e.label===est?'selected':''}>${escapeHtml(e.label)}${e.label===sit.estagioPlataforma?' (pelo calendário)':''}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Nível de implementação</label>
+        <select class="ps-input" data-ae-f="nivel"><option value="">—</option>${AE_NIVEIS.map(n=>`<option ${nivel===n?'selected':''}>${n}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Prioridade</label>
+        <select class="ps-input" data-ae-f="prioridade"><option value="">Usar a sugerida</option>${AE_PRIORIDADES.map(n=>`<option ${prio===n?'selected':''}>${n}</option>`).join('')}</select>
+        <small class="ae-dica">Sugerida pela plataforma: <b>${escapeHtml(sit.sugerida)}</b></small>
+      </div>
+      <div class="field full"><label>Pendências anteriores</label><textarea class="ps-input" data-ae-f="pendencias" rows="2" placeholder="O que ficou pendente das etapas anteriores">${escapeHtml(intAeVal('pendencias', salvo.pendencias||''))}</textarea></div>
+      <div class="field full"><label>Habilidades a desenvolver agora</label><textarea class="ps-input" data-ae-f="habilidades" rows="2">${escapeHtml(hab)}</textarea>
+        ${hab && hab!==habPadrao ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
+    </div>
+    <div class="ae-rodape">
+      <span class="ae-atualizado">${salvo.updated_at ? `Última atualização: ${escapeHtml(tzDataHora(salvo.updated_at, true))}${quem? ' por '+escapeHtml(quem.split(' ')[0]) : ''}` : 'Ainda sem análise registrada.'}</span>
+      <button type="button" class="btn-accent" id="ae-salvar">${icon('check','tiny')} Salvar análise</button>
+    </div>
+    <p class="kpi-note" style="margin-top:6px">A próxima ação que aparece no Radar vem do Checklist de Acompanhamento: a tarefa pendente com o prazo mais próximo.</p>`;
+}
+function intCompetenciasHtml(s){
+  if(AE_UI.carregando || AE_UI.sid!==s.id) return '<div class="empty-state">Carregando as competências…</div>';
+  const salvo = AE_UI.dados || {};
+  const sit = aeSituacao(s, salvo);
+  const comp = salvo.competencias || {};
+  const estMod = aeEstagio(sit.atual).mod;
+  if(!(estMod in AE_UI.abertos)) AE_UI.abertos[estMod] = true;
+  return `<p class="section-sub" style="margin-top:0">Marcadas sozinhas quando o aluno conclui a tarefa no Dashboard; a equipe pode marcar as demais. O onboarding dos primeiros 30 dias fica dentro da Abertura. Tudo aqui salva na hora.</p>
+    <div class="ae-modulos">
+    ${AE_ESTAGIOS.map(e=>{
+      const m = AE_COMPETENCIAS[e.mod];
+      const feitos = m.itens.filter((_,i)=>comp[e.mod+'-'+i] || aeFeitoNoDashboard(s.id, e.mod, i)).length + (e.mod==='ABERTURA' ? obFeitos() : 0);
+      const total = m.itens.length + (e.mod==='ABERTURA' ? OB_ETAPAS.length : 0);
+      const aberto = !!AE_UI.abertos[e.mod];
+      return `<div class="ae-mod ${e.label===sit.atual?'atual':''}">
+        <button type="button" class="ae-mod-cab" data-ae-mod="${e.mod}">
+          <span class="stage-tag ${e.cls}">${escapeHtml(e.label)}</span><span class="ae-mod-prazo">${escapeHtml(m.prazo)}</span>
+          ${e.label===sit.atual ? '<span class="ae-mod-agora">estágio atual</span>' : ''}
+          <span class="ae-mod-cont ${feitos===total?'ok':''}">${feitos}/${total}</span>${icon(aberto?'up':'down','tiny')}
+        </button>
+        ${aberto ? `<ul class="ae-comp">${e.mod==='ABERTURA' ? obCompItensHtml(s) : ''}${m.itens.map(([c,ev],i)=>{ const dash = aeFeitoNoDashboard(s.id, e.mod, i); return `<li class="${dash?'ae-dash':''}"><label title="${dash?'Marcada automaticamente: o aluno concluiu a tarefa no Dashboard':''}"><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${dash?'data-ae-dash="1" checked onclick="return false" tabindex="-1"':(comp[e.mod+'-'+i]?'checked':'')}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small>${dash?`<em class="ae-dash-tag">${icon('tick','tiny')} Tarefa concluída pelo aluno no Dashboard</em>`:''}</span></label></li>`; }).join('')}</ul>` : ''}
+      </div>`;
+    }).join('')}
+    </div>`;
+}
+function intAeBind(s){
+  const v = document.getElementById('view-interno'); if(!v || AE_UI.sid!==s.id || AE_UI.carregando) return;
+  const guarda = (campo, valor)=>{ AE_UI.form = AE_UI.form || {}; AE_UI.form[campo] = valor; };
+  v.querySelectorAll('[data-ae-f]').forEach(el=>el.addEventListener(el.tagName==='SELECT'?'change':'input', ()=>guarda(el.dataset.aeF, el.value)));
+  const est = v.querySelector('#ae-estagio');
+  if(est) est.addEventListener('change', ()=>{
+    const salvo = AE_UI.dados || {};
+    const antes = intAeVal('estagio_atual', aeSituacao(s, salvo).atual);
+    const habAtual = (v.querySelector('[data-ae-f="habilidades"]')||{}).value || '';
+    guarda('estagio_atual', est.value);
+    if(!habAtual.trim() || habAtual.trim()===(AE_HABILIDADES[antes]||'') || Object.values(AE_HABILIDADES).includes(habAtual.trim())) guarda('habilidades', AE_HABILIDADES[est.value]||'');
+    AE_UI.abertos[aeEstagio(est.value).mod] = true;
+    renderInterno();
+  });
+  const rest = v.querySelector('#ae-hab-padrao');
+  if(rest) rest.addEventListener('click', ()=>{ guarda('habilidades', AE_HABILIDADES[intAeVal('estagio_atual', aeSituacao(s, AE_UI.dados||{}).atual)]||''); renderInterno(); });
+  const sv = v.querySelector('#ae-salvar');
+  if(sv) sv.addEventListener('click', async ()=>{
+    const salvo = AE_UI.dados || {};
+    const sit = aeSituacao(s, salvo);
+    const est2 = intAeVal('estagio_atual', sit.atual);
+    const hab = String(intAeVal('habilidades', salvo.habilidades || AE_HABILIDADES[est2] || '')).trim();
+    const row = {
+      student_id: s.id,
+      estagio_atual: est2===sit.estagioPlataforma ? null : est2,
+      nivel: intAeVal('nivel', salvo.nivel||'') || null,
+      prioridade: intAeVal('prioridade', salvo.prioridade||'') || null,
+      pendencias: String(intAeVal('pendencias', salvo.pendencias||'')).trim() || null,
+      habilidades: (hab && hab!==AE_HABILIDADES[est2]) ? hab : null,
+      updated_at: new Date().toISOString(), updated_by: currentUser.id,
+    };
+    sv.disabled = true; sv.textContent = 'Salvando…';
+    const { data, error } = await sb.from('acompanhamento_evolucao').upsert(row, { onConflict:'student_id' }).select().single();
+    if(error){ console.error(error); alert('Não foi possível salvar: '+(error.message||'')); sv.disabled = false; sv.innerHTML = `${icon('check','tiny')} Salvar análise`; return; }
+    AE_UI.dados = data || Object.assign({}, salvo, row); AE_UI.form = null;
+    renderInterno();
+    const b2 = document.getElementById('ae-salvar'); if(b2){ b2.innerHTML = `${icon('check','tiny')} Salvo`; setTimeout(()=>{ const b3 = document.getElementById('ae-salvar'); if(b3) b3.innerHTML = `${icon('check','tiny')} Salvar análise`; }, 1800); }
+  });
+  v.querySelectorAll('[data-ae-mod]').forEach(b=>b.addEventListener('click', ()=>{ AE_UI.abertos[b.dataset.aeMod] = !AE_UI.abertos[b.dataset.aeMod]; renderInterno(); }));
+  v.querySelectorAll('[data-ae-comp]:not([data-ae-dash])').forEach(c=>c.addEventListener('change', async ()=>{
+    const comp2 = Object.assign({}, (AE_UI.dados||{}).competencias || {});
+    if(c.checked) comp2[c.dataset.aeComp] = true; else delete comp2[c.dataset.aeComp];
+    const { data, error } = await sb.from('acompanhamento_evolucao').upsert({ student_id:s.id, competencias:comp2 }, { onConflict:'student_id' }).select().single();
+    if(error){ console.error(error); alert('Não foi possível salvar a competência: '+(error.message||'')); c.checked = !c.checked; return; }
+    AE_UI.dados = Object.assign({}, AE_UI.dados||{}, { competencias: (data && data.competencias) || comp2 });
+    renderInterno();
+  }));
+  v.querySelectorAll('[data-ob]').forEach(inp=>inp.addEventListener('change', async ()=>{ if(await obSalvar(inp.dataset.ob, inp.value)) renderInterno(); }));
+  v.querySelectorAll('[data-ob-ok]').forEach(c=>c.addEventListener('change', async ()=>{ if(await obSalvar(c.dataset.obOk+'_realizada', c.checked ? tzHojeISO() : null)) renderInterno(); else c.checked = !c.checked; }));
+}
+function intAbrirSecao(chave){
+  setInternoAberto(chave, true);
+  renderInterno();
+  setTimeout(()=>{ const h = document.querySelector(`#view-interno [data-int-toggle="${chave}"]`); if(h) h.scrollIntoView({behavior:'smooth', block:'start'}); }, 30);
+}
+function intVincularRegistro(s, r){
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Registros Internos da Equipe</div>
+      <h3>Vincular a um encontro</h3>
+      <p class="desc">${escapeHtml(String(r.texto||'').slice(0,220))}${String(r.texto||'').length>220?'…':''}</p>
+      <div class="field full"><label>Encontro</label>${intEncontroSelect(s, 'rv-encontro', r.contatoId, true)}</div>
+      <div class="modal-actions an-dest-form-acoes">
+        <button type="button" class="btn-accent" id="rv-salvar">${icon('check','tiny')} Salvar</button>
+        <button type="button" class="btn-outline" id="rv-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+  modalReturnTo = null; modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('rv-cancelar').addEventListener('click', closeModal);
+  document.getElementById('rv-salvar').addEventListener('click', async (e)=>{
+    const val = document.getElementById('rv-encontro').value || null;
+    e.currentTarget.disabled = true;
+    const { error } = await sb.from('internal_records').update({ contato_id: val }).eq('id', r.id);
+    if(error){ alert('Não foi possível salvar: '+(error.message||'')); e.currentTarget.disabled = false; return; }
+    r.contatoId = val ? Number(val) : null;
+    reallyCloseModal(); renderInterno();
+  });
+}
 function renderInterno(){
   const s = getStudent(currentStudentId);
+  if(s && AE_UI.sid!==s.id) intAeCarregar(s.id);
   const d = s.diagnostico;
   const groups = internoDiagTab==='wispform' ? WISPFORM_QUESTIONS : DIAGNOSTICO_ABERTURA_QUESTIONS;
   const answers = getInternalAnswers(s.id, internoDiagTab);
@@ -10825,10 +11045,7 @@ function renderInterno(){
       </div>
     </div>
 
-    <div class="stat-row">
-      <div class="stat-card"><div class="label">Progresso do mentorado</div><div class="value individual">${s.progressoMentorado}%</div></div>
-      <div class="stat-card"><div class="label">Nicho${(d.subnicho||'').trim()? ' / Subnicho' : ''}</div><div class="value" style="font-size:13.5px">${escapeHtml(d.nicho||'—')}${(d.subnicho||'').trim()? ' — '+escapeHtml(d.subnicho) : ''}</div></div>
-    </div>
+    ${intSituacaoHtml(s, d)}
 
     ${intHead('diag', 'idcard', 'Diagnóstico de Abertura', null)}
     ${intBody('diag')}
@@ -10840,28 +11057,35 @@ function renderInterno(){
       <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
     </div>
 
+    ${intHead('analise', 'chart', 'Análise da Equipe', null)}
+    ${intBody('analise')}
+      ${intAnaliseHtml(s)}
+    </div>
+
     ${intHead('checklist', 'check', 'Checklist de Acompanhamento', s.checklist.length)}
     ${intBody('checklist')}
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Nº</th><th>Tarefa</th><th>Aulas de apoio</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th><th></th></tr></thead>
+        <thead><tr><th>Nº</th><th>Tarefa</th><th>Encontro</th><th>Aulas de apoio</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Observações</th><th></th></tr></thead>
         <tbody>
           ${s.checklist.map(t=>`
             <tr>
               <td>${t.id}</td>
               <td style="min-width:220px">${t.tarefa}</td>
+              <td style="min-width:150px">${intEncontroPill(s, t.contatoId) || `<button class="btn-mini" data-edit-task="${t.id}" title="Vincular esta tarefa a um encontro">${icon('calendar','tiny')} Vincular encontro</button>`}</td>
               <td style="min-width:160px">${aulasChipsHtml(t.aulas)}<div><button class="btn-mini" data-task-aulas="${t.id}" title="Escolher aulas de apoio">${icon('edit','tiny')} ${(t.aulas||[]).length? 'Editar' : 'Vincular aulas'}</button></div></td>
               <td><span class="resp-pill">${t.responsavel}</span></td>
               <td>${t.prazo}</td>
               <td><button class="status-pill ${statusClass(t.status)}" data-check="${t.id}">${t.status}</button></td>
               <td style="min-width:160px">${linkify(t.obs)||'—'}</td>
-              <td style="white-space:nowrap"><button class="btn-mini" data-edit-task="${t.id}" title="Editar tarefa">${icon('edit')}</button> <button class="btn-mini danger" data-del-task="${t.id}" title="Excluir tarefa">${icon('trash')}</button></td>
+              <td style="white-space:nowrap"><button class="btn-mini" data-task-equipe="${t.id}" title="Criar tarefa para a equipe a partir deste item">${icon('plus','tiny')} Tarefa p/ equipe</button> <button class="btn-mini" data-edit-task="${t.id}" title="Editar tarefa">${icon('edit')}</button> <button class="btn-mini danger" data-del-task="${t.id}" title="Excluir tarefa">${icon('trash')}</button></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     </div>
     <div class="add-form form-tarefa">
+      ${intEncontroCampo(s, 'new-task-encontro', 'Encontro em que a tarefa foi definida *')}
       <div class="field full"><label>Nova tarefa</label><textarea class="ps-input" id="new-task-tarefa" rows="1" placeholder="Descreva a tarefa..."></textarea></div>
       <div class="field"><label>Responsável</label>
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
@@ -10906,7 +11130,7 @@ function renderInterno(){
               <td style="white-space:nowrap">${c.data}</td>
               <td style="white-space:nowrap">${contatoTipoLabel(c)}</td>
               <td><span class="resp-pill">${escapeHtml(c.responsavel)}</span></td>
-              <td style="min-width:260px">${resumoCell(c.resumo, 'ct-'+c.id)}</td>
+              <td style="min-width:260px">${resumoCell(c.resumo, 'ct-'+c.id)}${intVinculosHtml(s, c.id)}</td>
               <td>${c.linkGravacao? `<a class="btn-mini" href="${escapeAttr(c.linkGravacao)}" target="_blank" rel="noopener">${icon('video')} Abrir</a>` : '—'}</td>
               <td>${c.linkTranscricao? `<a class="btn-mini" href="${escapeAttr(c.linkTranscricao)}" target="_blank" rel="noopener">${icon('folder')} Abrir</a>` : '—'}</td>
               <td style="white-space:nowrap">${c.syncedToSessions
@@ -10981,31 +11205,49 @@ function renderInterno(){
     ${intHead('internos', 'lock', 'Registros Internos da Equipe', s.registrosInternos.length)}
     ${intBody('internos')}
     <div class="wf-warning" style="margin:2px 0 14px">
-      ${icon('lock')} Estas anotações são 100% internas — o aluno NUNCA verá este conteúdo, em nenhuma tela da plataforma. Use para observações sensíveis, avaliações e sinais de atenção da equipe sobre o mentorado.
+      ${icon('lock')} Estas anotações são 100% internas — o aluno NUNCA verá este conteúdo, em nenhuma tela da plataforma. Aqui ficam as observações sensíveis, avaliações e sinais de atenção da equipe sobre o mentorado, incluindo as antigas "Observações" do acompanhamento. Cada registro novo fica vinculado ao encontro em que surgiu.
     </div>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Data</th><th>Autor</th><th>Registro</th><th></th></tr></thead>
+        <thead><tr><th>Data</th><th>Autor</th><th>Encontro</th><th>Registro</th><th></th></tr></thead>
         <tbody id="internal-records-tbody">
           ${s.registrosInternos.map(r=>`
             <tr>
               <td style="white-space:nowrap">${escapeHtml(r.data||'—')}</td>
               <td><span class="resp-pill">${escapeHtml(r.autorNome||'—')}</span></td>
-              <td style="min-width:280px">${linkify(r.texto)}</td>
-              <td><button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
+              <td style="min-width:150px">${intEncontroPill(s, r.contatoId) || '<span style="color:var(--text-mute)">—</span>'}</td>
+              <td style="min-width:280px">${linkify(r.texto).replace(/\n/g,'<br>')}</td>
+              <td style="white-space:nowrap"><button class="btn-mini" data-rec-encontro="${r.id}" title="${r.contatoId?'Trocar o encontro vinculado':'Vincular a um encontro'}">${icon('calendar','tiny')} ${r.contatoId?'Trocar':'Vincular'}</button> <button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
             </tr>
-          `).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum registro interno ainda.</td></tr>`}
+          `).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum registro interno ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
     <div class="add-form">
-      <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-record-data" placeholder="Ex.: 25/08/2026"></div>
+      ${intEncontroCampo(s, 'new-record-encontro', 'Encontro *')}
+      <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-record-data" value="${escapeAttr(intHojeTxt())}" placeholder="Ex.: 25/08/2026"></div>
       <div class="field full"><label>Registro / Análise</label><textarea class="ps-input" id="new-record-texto" placeholder="Observação interna sobre o mentorado..."></textarea></div>
       <div class="actions"><button class="btn-accent" id="add-record-btn">${icon('plus')} Adicionar registro interno</button></div>
     </div>
     </div>
+
+    ${intHead('competencias', 'target', 'Onboarding e Competências por Módulo', null)}
+    ${intBody('competencias')}
+      ${intCompetenciasHtml(s)}
+    </div>
   `;
   document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
+  intAeBind(s);
+  document.querySelectorAll('#view-interno [data-int-ir]').forEach(b=>b.addEventListener('click', ()=>intAbrirSecao(b.dataset.intIr)));
+  document.querySelectorAll('#view-interno [data-rec-encontro]').forEach(b=>b.addEventListener('click', ()=>{ const r = s.registrosInternos.find(x=>String(x.id)===b.dataset.recEncontro); if(r) intVincularRegistro(s, r); }));
+  document.querySelectorAll('#view-interno [data-task-equipe]').forEach(b=>b.addEventListener('click', ()=>{
+    const t = s.checklist.find(x=>String(x.id)===b.dataset.taskEquipe); if(!t) return;
+    openTarefaModal(null, {
+      titulo: (s.name ? s.name.split(' ')[0]+': ' : '') + String(t.tarefa).replace(/<[^>]+>/g,'').slice(0,180),
+      descricao: `Item do Checklist de Acompanhamento de ${s.name}${t.contatoId ? ' (encontro de '+intEncontroLabel(s, t.contatoId)+')' : ''}.\n\n${String(t.tarefa).replace(/<[^>]+>/g,'')}`,
+      prazoData: prazoTextoParaIso(t.prazo) || undefined,
+    });
+  }));
   /* Seletor de mentorado */
   {
     const btn = document.getElementById('aluno-picker-btn');
@@ -11091,21 +11333,26 @@ function renderInterno(){
       const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(t.status)+1)%STATUS_CYCLE.length];
       t.status = next;
       syncChecklistItemStatus(t.id, t.status);
+      aeSincronizarProximaAcao(s);
       renderInterno();
     });
   });
   document.getElementById('add-task-btn').addEventListener('click', async ()=>{
     const tarefa = document.getElementById('new-task-tarefa').value.trim();
     if(!tarefa) return;
+    const encSel = document.getElementById('new-task-encontro');
+    if(!encSel){ alert('Antes de criar a tarefa, registre o encontro com o mentorado em Registro de Contatos.'); intAbrirSecao('contatos'); return; }
+    if(!encSel.value){ alert('Escolha o encontro em que esta tarefa foi definida.'); encSel.focus(); return; }
     const responsavel = document.getElementById('new-task-resp').value;
     const prazo = prazoIsoParaTexto(document.getElementById('new-task-prazo').value) || '—';
     const btn = document.getElementById('add-task-btn');
     btn.disabled = true;
-    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: apoioOrdenar(novaTarefaAulas)};
+    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: apoioOrdenar(novaTarefaAulas), contatoId: Number(encSel.value)};
     try{
       item.id = await syncChecklistItemInsert(s.id, item);
       s.checklist.push(item);
       novaTarefaAulas = new Set();
+      aeSincronizarProximaAcao(s);
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
@@ -11128,6 +11375,7 @@ function renderInterno(){
       const id = btn.dataset.delTask;
       syncChecklistItemDelete(id);
       s.checklist = s.checklist.filter(t=>t.id!=id);
+      aeSincronizarProximaAcao(s);
       renderInterno();
     });
   });
@@ -11258,6 +11506,8 @@ function renderInterno(){
       }
       syncContatoDelete(id);
       s.contatos = s.contatos.filter(x=>x.id!=id);
+      s.checklist.forEach(t=>{ if(String(t.contatoId)===String(id)) t.contatoId = null; });
+      s.registrosInternos.forEach(r=>{ if(String(r.contatoId)===String(id)) r.contatoId = null; });
       renderInterno();
     });
   });
@@ -11265,9 +11515,12 @@ function renderInterno(){
     const data = document.getElementById('new-record-data').value.trim();
     const texto = document.getElementById('new-record-texto').value.trim();
     if(!texto) return;
+    const encR = document.getElementById('new-record-encontro');
+    if(!encR){ alert('Antes do registro, cadastre o encontro com o mentorado em Registro de Contatos.'); intAbrirSecao('contatos'); return; }
+    if(!encR.value){ alert('Escolha o encontro a que este registro se refere.'); encR.focus(); return; }
     const btn = document.getElementById('add-record-btn');
     btn.disabled = true;
-    const r = {data, texto, autorNome:(currentUserProfile&&currentUserProfile.name)||'—'};
+    const r = {data, texto, autorNome:(currentUserProfile&&currentUserProfile.name)||'—', contatoId: Number(encR.value), criadoEm: new Date().toISOString()};
     try{
       r.id = await syncInternalRecordInsert(s.id, r);
       s.registrosInternos.unshift(r);
@@ -18443,61 +18696,9 @@ function aeFeitoNoDashboard(sid, mod, i){
   const item = m[1][i]; if(!item) return false;
   try{ const st = getModuleChecklistState(sid, m[0]); return !!(st && st[item-1]); }catch(e){ return false; }
 }
-/* Quem pode assinar como responsável por inserir a ação: o time interno (papel staff), sem as vendedoras nem o editor. */
-function aeResponsaveis(atual){
-  const lista = Object.entries(PEOPLE||{}).map(([id,p])=>Object.assign({id}, p)).filter(p=>p.role==='staff' && p.name);
-  if(atual && !lista.some(p=>p.id===atual) && PEOPLE[atual]) lista.push(Object.assign({id:atual}, PEOPLE[atual]));
-  return lista.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-}
 const AE_NIVEIS = ['Não iniciado','Em desenvolvimento','Concluído','Precisa de apoio'];
 const AE_PRIORIDADES = ['Baixa','Média','Alta','Urgente'];
-const AE_UI = { sid:null, dados:null, carregando:false, abertos:{}, acoes:[], nova:{texto:'',prazo:'',resp:''}, obs:[], obsRasc:'' };
-/* Histórico de observações do acompanhamento (só a equipe vê): cada "Salvar observação" grava uma
-   entrada com data e autor, listada acima da caixa de texto. */
-function aeObsHtml(){
-  const lista = AE_UI.obs || [];
-  if(!lista.length) return '<p class="ae-acoes-vazio">Nenhuma observação registrada ainda.</p>';
-  return lista.map(o=>{
-    const p = o.created_by && PEOPLE[o.created_by];
-    const quem = p ? p.name.split(' ')[0] : 'Equipe';
-    return `<div class="ae-obs-item"><div class="ae-obs-cab"><b>${escapeHtml(quem)}</b> · ${escapeHtml(tzDataHora(o.created_at, true))}<button type="button" class="ae-obs-del" data-ae-obs-del="${o.id}" title="Excluir esta observação">${icon('trash','tiny')}</button></div><div class="ae-obs-txt">${escapeHtml(o.texto)}</div></div>`;
-  }).join('');
-}
-/* Ações do acompanhamento: cada ação inserida fica listada (histórico) e pode ser enviada para as Metas
-   do mentorado (vira item da aba Metas dele) e/ou virar tarefa de alguém da equipe. A "próxima ação"
-   que aparece no cartão do Radar é a mais recente ainda não concluída. */
-function aeAcaoAtual(){ return (AE_UI.acoes||[]).find(a=>!a.concluida) || null; }
-async function aeAcoesSincronizarResumo(){
-  const a = aeAcaoAtual();
-  const campos = { student_id: AE_UI.sid, proxima_acao: a ? a.texto : null, prazo: a ? a.prazo : null, proxima_acao_resp: a && !a.resp_mentorado ? a.responsavel : null };
-  try{
-    const { data, error } = await sb.from('acompanhamento_evolucao').upsert(campos, { onConflict:'student_id' }).select().single();
-    if(error) throw error;
-    AE_UI.dados = Object.assign({}, AE_UI.dados||{}, { proxima_acao: campos.proxima_acao, prazo: campos.prazo, proxima_acao_resp: campos.proxima_acao_resp });
-    void data;
-  }catch(e){ console.error('resumo da ação', e); }
-}
-function aeAcaoRespNome(a){
-  if(a.resp_mentorado) return 'Mentorado(a)';
-  const p = a.responsavel && PEOPLE[a.responsavel];
-  return p ? p.name.split(' ')[0] : 'sem responsável';
-}
-function aeAcoesHtml(s){
-  const lista = AE_UI.acoes || [];
-  if(!lista.length) return '<p class="ae-acoes-vazio">Nenhuma ação registrada ainda.</p>';
-  return lista.map(a=>`<div class="ae-acao-item ${a.concluida?'feita':''}">
-    <label class="ae-acao-ok" title="${a.concluida?'Reabrir ação':'Marcar como concluída'}"><input type="checkbox" data-ae-acao-ok="${a.id}" ${a.concluida?'checked':''}></label>
-    <div class="ae-acao-corpo">
-      <div class="ae-acao-txt">${escapeHtml(a.texto)}</div>
-      <small>${a.prazo ? 'até '+escapeHtml(tzDataCurta(a.prazo)) : 'sem prazo'} · ${escapeHtml(aeAcaoRespNome(a))} · registrada em ${escapeHtml(tzDataCurta(String(a.created_at).slice(0,10)))}</small>
-      <div class="ae-acao-btns">
-        ${a.meta_id ? `<span class="ae-acao-pill">${icon('check','tiny')} Nas Metas do mentorado</span>` : `<button type="button" class="btn-mini" data-ae-acao-meta="${a.id}">${icon('target','tiny')} Enviar para as Metas do mentorado</button>`}
-        ${a.tarefa_id ? `<button type="button" class="ae-acao-pill link" data-ae-acao-vertarefa="${a.tarefa_id}">${icon('check','tiny')} Tarefa criada · abrir</button>` : `<button type="button" class="btn-mini" data-ae-acao-tarefa="${a.id}">${icon('plus','tiny')} Criar tarefa para a equipe</button>`}
-        <button type="button" class="btn-mini danger" data-ae-acao-del="${a.id}">${icon('trash','tiny')}</button>
-      </div>
-    </div>
-  </div>`).join('');
-}
+const AE_UI = { sid:null, dados:null, ob:null, carregando:false, erro:false, abertos:{}, form:null };
 function aeEstagio(label){ return AE_ESTAGIOS.find(e=>e.label===label) || AE_ESTAGIOS[0]; }
 /* Situação calculada (as mesmas fórmulas da planilha). */
 function aeSituacao(s, salvo){
@@ -18574,259 +18775,16 @@ async function obSalvar(campo, valor){
   AE_UI.ob = data;
   return true;
 }
-/* Volta ao acompanhamento depois de criar a tarefa, sem perder a lista já carregada. */
-function abrirAcompanhamentoVoltar(sid){
-  if(AE_UI.sid!==sid){ abrirAcompanhamento(sid); return; }
-  document.getElementById('modal-backdrop').classList.add('open');
-  modalReturnTo = null; modalCloseGuard = null;
-  aeRender();
-}
-async function abrirAcompanhamento(sid){
-  AE_UI.sid = sid; AE_UI.dados = null; AE_UI.ob = null; AE_UI.carregando = true; AE_UI.abertos = {}; AE_UI.acoes = []; AE_UI.nova = {texto:'',prazo:'',resp:''}; AE_UI.obs = []; AE_UI.obsRasc = '';
-  aeRender();
-  document.getElementById('modal-backdrop').classList.add('open');
-  modalReturnTo = null; modalCloseGuard = null;
-  try{
-    const [r1, r2, r3, r4] = await Promise.all([
-      sb.from('acompanhamento_evolucao').select('*').eq('student_id', sid).maybeSingle(),
-      sb.from('acompanhamento_acoes').select('*').eq('student_id', sid).order('created_at', {ascending:false}),
-      sb.from('acompanhamento_observacoes').select('*').eq('student_id', sid).order('created_at', {ascending:false}),
-      sb.from('onboarding_jornada').select('*').eq('student_id', sid).maybeSingle(),
-    ]);
-    if(r1.error) throw r1.error;
-    AE_UI.ob = (r4 && !r4.error && r4.data) ? r4.data : null;
-    AE_UI.dados = r1.data || null;
-    AE_UI.acoes = (r2 && !r2.error && r2.data) ? r2.data : [];
-    AE_UI.obs = (r3 && !r3.error && r3.data) ? r3.data : [];
-  }catch(e){ console.error('acompanhamento_evolucao', e); AE_UI.erro = true; }
-  AE_UI.carregando = false;
-  if(AE_UI.sid===sid) aeRender();
-}
-function aeRender(){
-  const s = getStudent(AE_UI.sid); if(!s) return;
-  const salvo = AE_UI.dados || {};
-  const sit = aeSituacao(s, salvo);
-  const est = aeEstagio(sit.atual);
-  const comp = salvo.competencias || {};
-  if(!(est.mod in AE_UI.abertos)) AE_UI.abertos[est.mod] = true;
-  const habil = salvo.habilidades || AE_HABILIDADES[sit.atual] || '';
-  const tile = (rot, val, extra)=>`<div class="ae-tile"><div class="ae-rot">${rot}</div><div class="ae-val">${val}</div>${extra? `<div class="ae-extra">${extra}</div>` : ''}</div>`;
-  const alinCls = sit.alinhamento==='Alinhado' ? 'ok' : sit.alinhamento==='Revisar' ? 'rev' : 'ver';
-  const quem = salvo.updated_by && (PEOPLE[salvo.updated_by] || {}).name;
-  document.getElementById('modal').innerHTML = `
-    <div class="modal-body form-modal ae-modal">
-      <button class="modal-close" id="ae-fechar" title="Fechar">${icon('x')}</button>
-      <div class="ae-topo">${initialsAvatar(s.initials, s.color, 48, s.avatarUrl)}<div><div class="cat">Acompanhamento da evolução</div><h3 style="margin:2px 0 0">${escapeHtml(s.name)}</h3><div class="ae-sub">Turma ${escapeHtml(String(s.turma||'—'))}${s.diagnostico && s.diagnostico.nicho && s.diagnostico.nicho!=='—' ? ' · '+escapeHtml(s.diagnostico.nicho) : ''}</div></div></div>
-      ${AE_UI.carregando ? '<div class="empty-state">Carregando o acompanhamento…</div>' : `
-      ${AE_UI.erro ? '<div class="ae-erro">Não foi possível carregar o que já foi salvo. Tente fechar e abrir de novo.</div>' : ''}
-      <div class="ae-sec-tit">Situação na plataforma</div>
-      <div class="ae-tiles">
-        ${tile('Progresso na plataforma', sit.progresso+'%', `<div class="module-bar"><div class="fill" style="width:${sit.progresso}%"></div></div>`)}
-        ${tile('Meta', sit.metaPendente ? '<span class="ae-pill rev">Meta pendente</span>' : '<span class="ae-pill ok">Tudo em dia</span>')}
-        ${tile('Dias restantes', sit.dias<0 ? '<span style="color:var(--danger)">encerrada</span>' : sit.dias+' dias')}
-        ${tile('Dias consumidos', sit.consumidos===null ? '—' : sit.consumidos+' dias', 'régua de 365 dias')}
-        ${tile('Estágio esperado', sit.esperado ? `<span class="stage-tag ${aeEstagio(sit.esperado).cls}">${escapeHtml(sit.esperado)}</span>` : 'Verificar prazo')}
-        ${tile('Alinhamento', `<span class="ae-pill ${alinCls}">${sit.alinhamento}</span>`)}
-      </div>
-      <div class="ae-sec-tit">Análise da equipe</div>
-      <div class="ae-form">
-        <div class="field"><label>Estágio atual</label>
-          <select class="ps-input" id="ae-estagio">${AE_ESTAGIOS.map(e=>`<option value="${escapeAttr(e.label)}" ${e.label===sit.atual?'selected':''}>${escapeHtml(e.label)}${e.label===sit.estagioPlataforma?' (pelo calendário)':''}</option>`).join('')}</select>
-        </div>
-        <div class="field"><label>Nível de implementação</label>
-          <select class="ps-input" id="ae-nivel"><option value="">—</option>${AE_NIVEIS.map(n=>`<option ${salvo.nivel===n?'selected':''}>${n}</option>`).join('')}</select>
-        </div>
-        <div class="field"><label>Prioridade</label>
-          <select class="ps-input" id="ae-prioridade"><option value="">Usar a sugerida</option>${AE_PRIORIDADES.map(n=>`<option ${salvo.prioridade===n?'selected':''}>${n}</option>`).join('')}</select>
-          <small class="ae-dica">Sugerida pela plataforma: <b>${escapeHtml(sit.sugerida)}</b></small>
-        </div>
-        <div class="field full"><label>Pendências anteriores</label><textarea class="ps-input" id="ae-pendencias" rows="2" placeholder="O que ficou pendente das etapas anteriores">${escapeHtml(salvo.pendencias||'')}</textarea></div>
-        <div class="field full"><label>Habilidades a desenvolver agora</label><textarea class="ps-input" id="ae-habilidades" rows="2">${escapeHtml(habil)}</textarea>
-          ${salvo.habilidades ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
-        <div class="field full ae-acoes"><label>Ações</label>
-          <textarea class="ps-input" id="ae-acao" rows="2" placeholder="Nova ação: o que o mentorado (ou a equipe) faz a seguir">${escapeHtml(AE_UI.nova.texto||'')}</textarea>
-          <div class="ae-linha2 ae-acao-nova">
-            <div class="field"><label>Prazo</label><input class="ps-input" type="date" id="ae-prazo" value="${escapeAttr(AE_UI.nova.prazo||'')}"></div>
-            <div class="field"><label>Responsável</label>
-              ${(()=>{ const sel = AE_UI.nova.resp || (currentUser && (PEOPLE[currentUser.id]||{}).role==='staff' ? currentUser.id : ''); return `<select class="ps-input" id="ae-resp"><option value="">—</option><option value="__mentorado" ${sel==='__mentorado'?'selected':''}>Mentorado(a)</option>${aeResponsaveis(sel==='__mentorado'?'':sel).map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>`; })()}
-            </div>
-            <button type="button" class="btn-accent ae-acao-add" id="ae-acao-add">${icon('plus','tiny')} Adicionar ação</button>
-          </div>
-          <div class="ae-acoes-lista">${aeAcoesHtml(s)}</div>
-        </div>
-        <div class="field full ae-obs"><label>Observações</label>
-          <div class="ae-obs-lista">${aeObsHtml()}</div>
-          <textarea class="ps-input" id="ae-obs" rows="3" placeholder="Nova observação">${escapeHtml(AE_UI.obsRasc||'')}</textarea>
-          <div class="ae-obs-acoes"><button type="button" class="btn-accent ae-acao-add" id="ae-obs-salvar">${icon('check','tiny')} Salvar observação</button></div>
-        </div>
-      </div>
-      <div class="ae-sec-tit">Competências por módulo <small>marcadas sozinhas quando o aluno conclui a tarefa no Dashboard; a equipe pode marcar as demais</small></div>
-      <div class="ae-modulos">
-        ${AE_ESTAGIOS.map(e=>{
-          const m = AE_COMPETENCIAS[e.mod];
-          const feitos = m.itens.filter((_,i)=>comp[e.mod+'-'+i] || aeFeitoNoDashboard(s.id, e.mod, i)).length + (e.mod==='ABERTURA' ? obFeitos() : 0);
-          const total = m.itens.length + (e.mod==='ABERTURA' ? OB_ETAPAS.length : 0);
-          const aberto = !!AE_UI.abertos[e.mod];
-          return `<div class="ae-mod ${e.label===sit.atual?'atual':''}">
-            <button type="button" class="ae-mod-cab" data-ae-mod="${e.mod}">
-              <span class="stage-tag ${e.cls}">${escapeHtml(e.label)}</span><span class="ae-mod-prazo">${escapeHtml(m.prazo)}</span>
-              ${e.label===sit.atual ? '<span class="ae-mod-agora">estágio atual</span>' : ''}
-              <span class="ae-mod-cont ${feitos===total?'ok':''}">${feitos}/${total}</span>${icon(aberto?'up':'down','tiny')}
-            </button>
-            ${aberto ? `<ul class="ae-comp">${e.mod==='ABERTURA' ? obCompItensHtml(s) : ''}${m.itens.map(([c,ev],i)=>{ const dash = aeFeitoNoDashboard(s.id, e.mod, i); return `<li class="${dash?'ae-dash':''}"><label title="${dash?'Marcada automaticamente: o aluno concluiu a tarefa no Dashboard':''}"><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${dash?'data-ae-dash="1" checked onclick="return false" tabindex="-1"':(comp[e.mod+'-'+i]?'checked':'')}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small>${dash?`<em class="ae-dash-tag">${icon('tick','tiny')} Tarefa concluída pelo aluno no Dashboard</em>`:''}</span></label></li>`; }).join('')}</ul>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="ae-rodape">
-        <span class="ae-atualizado">${salvo.updated_at ? `Última atualização: ${escapeHtml(tzDataHora(salvo.updated_at, true))}${quem? ' por '+escapeHtml(quem.split(' ')[0]) : ''}` : 'Ainda sem análise registrada.'}</span>
-        <button type="button" class="btn-accent" id="ae-salvar">${icon('check','tiny')} Salvar acompanhamento</button>
-      </div>`}
-    </div>`;
-  document.getElementById('ae-fechar').addEventListener('click', closeModal);
-  if(AE_UI.carregando) return;
-  /* Guarda o que foi digitado antes de redesenhar (abrir um módulo, trocar o estágio). */
-  const coletar = ()=>{
-    const comp2 = Object.assign({}, (AE_UI.dados||{}).competencias || {});
-    document.querySelectorAll('[data-ae-comp]:not([data-ae-dash])').forEach(c=>{ if(c.checked) comp2[c.dataset.aeComp] = true; else delete comp2[c.dataset.aeComp]; });
-    const est2 = document.getElementById('ae-estagio').value;
-    const hab = document.getElementById('ae-habilidades').value.trim();
-    return {
-      student_id: AE_UI.sid,
-      estagio_atual: est2===sit.estagioPlataforma ? null : est2,
-      nivel: document.getElementById('ae-nivel').value || null,
-      prioridade: document.getElementById('ae-prioridade').value || null,
-      pendencias: document.getElementById('ae-pendencias').value.trim() || null,
-      habilidades: (hab && hab!==AE_HABILIDADES[est2]) ? hab : null,
-      proxima_acao: aeAcaoAtual() ? aeAcaoAtual().texto : null,
-      proxima_acao_resp: aeAcaoAtual() && !aeAcaoAtual().resp_mentorado ? aeAcaoAtual().responsavel : null,
-      prazo: aeAcaoAtual() ? aeAcaoAtual().prazo : null,
-      competencias: comp2,
-    };
-  };
-  const guardaNova = ()=>{ const ob = document.getElementById('ae-obs'); if(ob) AE_UI.obsRasc = ob.value; const t = document.getElementById('ae-acao'); if(t) AE_UI.nova = { texto:t.value, prazo:document.getElementById('ae-prazo').value, resp:document.getElementById('ae-resp').value }; };
-  const rascunho = ()=>{ guardaNova(); AE_UI.dados = Object.assign({}, AE_UI.dados||{}, coletar(), {updated_at:(AE_UI.dados||{}).updated_at, updated_by:(AE_UI.dados||{}).updated_by}); AE_UI.sujo = true; };
-  document.querySelectorAll('[data-ae-mod]').forEach(b=>b.addEventListener('click', ()=>{ rascunho(); AE_UI.abertos[b.dataset.aeMod] = !AE_UI.abertos[b.dataset.aeMod]; aeRender(); }));
-  document.getElementById('ae-estagio').addEventListener('change', e=>{
-    const habAtual = document.getElementById('ae-habilidades').value.trim();
-    const eraPadrao = !habAtual || Object.values(AE_HABILIDADES).includes(habAtual);
-    rascunho();
-    if(eraPadrao) AE_UI.dados.habilidades = null;   // acompanha o texto padrão do novo estágio
-    AE_UI.abertos[aeEstagio(e.target.value).mod] = true;
-    aeRender();
-  });
-  const rest = document.getElementById('ae-hab-padrao');
-  if(rest) rest.addEventListener('click', ()=>{ rascunho(); AE_UI.dados.habilidades = null; aeRender(); });
-  document.querySelectorAll('[data-ob]').forEach(inp=>inp.addEventListener('change', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(inp.dataset.ob, inp.value)) aeRender(); }));
-  document.querySelectorAll('[data-ob-ok]').forEach(c=>c.addEventListener('change', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(c.dataset.obOk+'_realizada', c.checked ? tzHojeISO() : null)) aeRender(); else c.checked = !c.checked; }));
-  document.querySelectorAll('[data-ob-hoje]').forEach(b=>b.addEventListener('click', async ()=>{ const suj = AE_UI.sujo; rascunho(); AE_UI.sujo = suj; if(await obSalvar(b.dataset.obHoje, tzHojeISO())) aeRender(); }));
-  const st = getStudent(AE_UI.sid);
-  const adicionarAcao = async ()=>{
-    guardaNova();
-    const texto = (AE_UI.nova.texto||'').trim();
-    if(!texto) return null;
-    const resp = AE_UI.nova.resp;
-    const row = { student_id: AE_UI.sid, texto, prazo: AE_UI.nova.prazo || null, responsavel: (resp && resp!=='__mentorado') ? resp : null, resp_mentorado: resp==='__mentorado', created_by: currentUser.id };
-    const { data, error } = await sb.from('acompanhamento_acoes').insert(row).select().single();
-    if(error){ console.error(error); alert('Não foi possível adicionar a ação: '+(error.message||'')); return null; }
-    AE_UI.acoes.unshift(data);
-    AE_UI.nova = { texto:'', prazo:'', resp: resp };
-    await aeAcoesSincronizarResumo();
-    return data;
-  };
-  document.getElementById('ae-acao-add').addEventListener('click', async ()=>{
-    const b = document.getElementById('ae-acao-add'); b.disabled = true;
-    rascunho();
-    const ok = await adicionarAcao();
-    if(!ok){ b.disabled = false; const t = document.getElementById('ae-acao'); if(t && !t.value.trim()) t.focus(); return; }
-    aeRender();
-  });
-  const acaoPor = id=> AE_UI.acoes.find(a=>a.id===id);
-  const atualizaAcao = async (a, campos)=>{
-    const { error } = await sb.from('acompanhamento_acoes').update(campos).eq('id', a.id);
-    if(error){ console.error(error); alert('Não foi possível atualizar a ação: '+(error.message||'')); return false; }
-    Object.assign(a, campos); return true;
-  };
-  document.querySelectorAll('[data-ae-acao-ok]').forEach(c=>c.addEventListener('change', async ()=>{
-    const a = acaoPor(c.dataset.aeAcaoOk); if(!a) return;
-    rascunho();
-    if(await atualizaAcao(a, {concluida: c.checked})) await aeAcoesSincronizarResumo();
-    aeRender();
-  }));
-  document.querySelectorAll('[data-ae-acao-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    const a = acaoPor(b.dataset.aeAcaoDel); if(!a) return;
-    if(!confirm('Excluir esta ação da lista? A meta ou a tarefa já criada a partir dela não é apagada.')) return;
-    rascunho();
-    const { error } = await sb.from('acompanhamento_acoes').delete().eq('id', a.id);
-    if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
-    AE_UI.acoes = AE_UI.acoes.filter(x=>x!==a);
-    await aeAcoesSincronizarResumo();
-    aeRender();
-  }));
-  document.querySelectorAll('[data-ae-acao-meta]').forEach(b=>b.addEventListener('click', async ()=>{
-    const a = acaoPor(b.dataset.aeAcaoMeta); if(!a || !st) return;
-    rascunho();
-    b.disabled = true;
-    const prazoTxt = a.prazo ? a.prazo.split('-').reverse().join('/') : '—';
-    const item = { tarefa: a.texto, responsavel: 'Mentorado', prazo: prazoTxt, status: 'Pendente', obs: '', aulas: [] };
-    try{
-      item.id = await syncChecklistItemInsert(st.id, item);
-      st.checklist.push(item);
-      await atualizaAcao(a, { meta_id: item.id });
-    }catch(e){ console.error(e); alert('Não foi possível enviar para as Metas: '+(e.message||'')); }
-    aeRender();
-  }));
-  document.querySelectorAll('[data-ae-acao-tarefa]').forEach(b=>b.addEventListener('click', ()=>{
-    const a = acaoPor(b.dataset.aeAcaoTarefa); if(!a) return;
-    rascunho();
-    const sid = AE_UI.sid;
-    const nome = st ? st.name : '';
-    openTarefaModal(null, {
-      titulo: (nome ? nome.split(' ')[0]+': ' : '') + String(a.texto).slice(0,180),
-      descricao: `Ação do acompanhamento de ${nome}.\n\n${a.texto}`,
-      responsavelId: a.responsavel || undefined,
-      prazoData: a.prazo || undefined,
-      onSalvo: async (tid)=>{ await atualizaAcao(a, { tarefa_id: tid }); setTimeout(()=>abrirAcompanhamentoVoltar(sid), 50); },
-    });
-  }));
-  const salvarObs = async ()=>{
-    const ta = document.getElementById('ae-obs');
-    const texto = (ta && ta.value || '').trim();
-    if(!texto) return true;
-    const { data, error } = await sb.from('acompanhamento_observacoes').insert({ student_id: AE_UI.sid, texto, created_by: currentUser.id }).select().single();
-    if(error){ console.error(error); alert('Não foi possível salvar a observação: '+(error.message||'')); return false; }
-    AE_UI.obs.unshift(data); AE_UI.obsRasc = '';
-    return true;
-  };
-  document.getElementById('ae-obs-salvar').addEventListener('click', async ()=>{
-    const b = document.getElementById('ae-obs-salvar');
-    const ta = document.getElementById('ae-obs');
-    if(!(ta.value||'').trim()){ ta.focus(); return; }
-    b.disabled = true;
-    rascunho();
-    if(await salvarObs()) AE_UI.obsRasc = '';
-    aeRender();
-  });
-  document.querySelectorAll('[data-ae-obs-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirm('Excluir esta observação do histórico?')) return;
-    rascunho();
-    const { error } = await sb.from('acompanhamento_observacoes').delete().eq('id', b.dataset.aeObsDel);
-    if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
-    AE_UI.obs = AE_UI.obs.filter(o=>o.id!==b.dataset.aeObsDel);
-    aeRender();
-  }));
-  document.querySelectorAll('[data-ae-acao-vertarefa]').forEach(b=>b.addEventListener('click', ()=>{ rascunho(); openTarefaModal(b.dataset.aeAcaoVertarefa); }));
-  document.getElementById('ae-salvar').addEventListener('click', async ()=>{
-    const btn = document.getElementById('ae-salvar');
-    if((document.getElementById('ae-acao').value||'').trim()){ btn.disabled = true; await adicionarAcao(); }
-    if((document.getElementById('ae-obs').value||'').trim()){ btn.disabled = true; await salvarObs(); }
-    const row = Object.assign(coletar(), { updated_at: new Date().toISOString(), updated_by: currentUser.id });
-    btn.disabled = true; btn.textContent = 'Salvando…';
-    const { data, error } = await sb.from('acompanhamento_evolucao').upsert(row, { onConflict:'student_id' }).select().single();
-    if(error){ console.error(error); alert('Não foi possível salvar: '+(error.message||'')); btn.disabled = false; btn.innerHTML = `${icon('check','tiny')} Salvar acompanhamento`; return; }
-    AE_UI.dados = data || row; AE_UI.sujo = false;
-    aeRender();
-    const b2 = document.getElementById('ae-salvar'); if(b2){ b2.innerHTML = `${icon('check','tiny')} Salvo`; setTimeout(()=>{ const b3 = document.getElementById('ae-salvar'); if(b3) b3.innerHTML = `${icon('check','tiny')} Salvar acompanhamento`; }, 1800); }
-  });
+/* "Abrir acompanhamento" (Visão Geral e Radar): leva ao Acompanhamento Interno já com o mentorado
+   escolhido. A antiga janela separada foi incorporada lá (ver ACOMPANHAMENTO UNIFICADO). */
+function abrirAcompanhamento(sid){
+  if(!getStudent(sid)) return;
+  if(document.getElementById('modal-backdrop').classList.contains('open')) reallyCloseModal();
+  currentStudentId = sid;
+  panelQuadrantId = null;
+  if(typeof novaTarefaAulas!=='undefined') novaTarefaAulas.clear();
+  goTo('interno');
+  window.scrollTo(0,0);
 }
 
 function renderVisaoGeral(){
