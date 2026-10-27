@@ -1247,6 +1247,7 @@
   .an-links .link-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:86px;height:24px;box-sizing:border-box;padding:0 8px;margin:0;font-size:10.5px;font-weight:700;line-height:1;border:1px solid var(--border);border-radius:12px;white-space:nowrap;text-decoration:none;}
   .an-links .link-btn .icon{width:11px;height:11px;}
   .an-links .an-subindo{opacity:.55;cursor:default;pointer-events:none;}
+  .an-links .an-texto{display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:22px;pointer-events:auto;}
   .an-links{flex-wrap:nowrap;}
   .an-table .vendas-actions-cell{white-space:nowrap;text-align:right;}
   .an-table .btn-abrir{padding:6px 14px;font-size:12px;}
@@ -16529,9 +16530,10 @@ const ANALISE_VENDEDORAS = [
 function analiseLinkCell(url, rotulo){
   const u = String(url||'').trim();
   if(!u) return '<span style="color:var(--text-mute)">—</span>';
-  return /^https?:\/\//i.test(u)
-    ? `<a class="link-btn" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} ${escapeHtml(rotulo)}</a>`
-    : escapeHtml(u);
+  if(/^https?:\/\//i.test(u)) return `<a class="link-btn" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} ${escapeHtml(rotulo)}</a>`;
+  /* Texto digitado no lugar do link ("Subindo", "Venda no Evento Presencial"...) vira botão apagado, do mesmo tamanho. */
+  if(/^subindo/i.test(u)) return `<span class="link-btn an-subindo" title="${escapeAttr(rotulo)} ainda subindo">${icon('upload','tiny')} Subindo</span>`;
+  return `<span class="link-btn an-subindo an-texto" title="${escapeAttr(u)}">${escapeHtml(u)}</span>`;
 }
 /* Data da venda em ISO (dd/mm/aaaa da planilha); sem data, usa a data de criação da linha. */
 function analiseDataISO(a){
