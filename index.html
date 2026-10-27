@@ -1614,6 +1614,11 @@
   .vendas-alert-card .vac-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--individual);margin-bottom:10px;}
   .vendas-alert-card .vac-title .icon{stroke:var(--individual);width:15px;height:15px;}
   .vac-list{font-size:12.5px;color:var(--text-dim);}
+  .ajuda-q{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:5px;border-radius:50%;border:1.5px solid var(--text-mute);color:var(--text-dim);font-size:10.5px;font-weight:800;line-height:1;cursor:help;vertical-align:middle;text-transform:none;letter-spacing:0;}
+  .ajuda-q:hover, .ajuda-q:focus{border-color:var(--accent);color:var(--text);outline:none;}
+  .ajuda-pop{display:none;position:absolute;top:calc(100% + 8px);left:-10px;z-index:400;width:290px;max-width:80vw;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:12.5px;font-weight:400;line-height:1.5;text-align:left;white-space:normal;cursor:default;}
+  .ajuda-pop strong{color:var(--text);}
+  .ajuda-q:hover .ajuda-pop, .ajuda-q:focus .ajuda-pop{display:block;}
   .vac-item{margin-bottom:5px;}
   .vendas-alert-card .vac-empty{font-size:12.5px;color:var(--text-mute);}
   .vendas-meta{margin:0 0 16px;}
@@ -15514,13 +15519,39 @@ const VENDAS_FORMATO_OPTS = ['Videochamada','Videochamada e WhatsApp','WhatsApp'
 const VENDAS_PRESENCA_OPTS = ['Show','No-show'];
 const VENDAS_RESULTADO_OPTS = ['Vendido','Não vendido','Incompleto','Desqualificado'];
 /* O que cada resultado significa (o mesmo texto aparece no Registro da sessão do eCRM). */
+/* Seções com título em caixa alta e botão Recolher/Expandir, para telas que não são o Acompanhamento
+   Interno. Cada tela guarda no navegador o que a pessoa deixou recolhido (chave eplat_sec_<tela>). */
+function secRecAberto(tela){ try{ return JSON.parse(localStorage.getItem('eplat_sec_'+tela)||'{}') || {}; }catch(e){ return {}; } }
+function secRecHead(tela, chave, ic, titulo, qtd){
+  const ab = secRecAberto(tela)[chave] !== false;
+  return `<div class="vg-sec-head" data-sec-rec="${tela}:${chave}">
+      <h2 class="section-title com-titulo">${ic? icon(ic)+' ' : ''}${titulo}</h2>
+      ${qtd===null||qtd===undefined ? '' : `<span class="qtd">${qtd}</span>`}
+      <button type="button" class="vg-sec-toggle ${ab?'':'fechado'}" title="${ab?'Recolher':'Expandir'}">${icon('down')} ${ab?'Recolher':'Expandir'}</button>
+    </div>`;
+}
+function secRecBody(tela, chave){ return `<div class="int-sec-corpo" id="sec-rec-${tela}-${chave}" ${secRecAberto(tela)[chave] !== false ? '' : 'hidden'}>`; }
+function secRecBind(tela, raiz){
+  if(!raiz) return;
+  raiz.querySelectorAll(`[data-sec-rec^="${tela}:"]`).forEach(head=>head.addEventListener('click', ()=>{
+    const chave = head.dataset.secRec.split(':')[1];
+    const corpo = document.getElementById('sec-rec-'+tela+'-'+chave); if(!corpo) return;
+    const abrindo = corpo.hidden;
+    corpo.hidden = !abrindo;
+    const btn = head.querySelector('.vg-sec-toggle');
+    btn.classList.toggle('fechado', !abrindo);
+    btn.title = abrindo? 'Recolher' : 'Expandir';
+    btn.innerHTML = `${icon('down')} ${abrindo? 'Recolher' : 'Expandir'}`;
+    try{ const a = secRecAberto(tela); a[chave] = abrindo; localStorage.setItem('eplat_sec_'+tela, JSON.stringify(a)); }catch(e){}
+  }));
+}
 const VENDAS_RESULTADO_SIGNIFICA = {
   'Vendido': 'A pessoa comprou.',
   'Não vendido': 'A reunião foi até o final e a pessoa não comprou (no eCRM: coluna Perdido apresentado).',
   'Incompleto': 'A reunião foi interrompida pelo lead, não chegando até o final.',
   'Desqualificado': 'A pessoa não tem o perfil para a mentoria.'
 };
-const vendasResultadoAjuda = () => `<small style="display:block;margin-top:4px;color:var(--text-muted,#777);line-height:1.4"><strong>Não vendido</strong> = a reunião foi até o final e a pessoa não comprou. <strong>Incompleto</strong> = a reunião foi interrompida pelo lead, não chegando até o final. <strong>Desqualificado</strong> = a pessoa não tem o perfil para a mentoria.</small>`;
+const vendasResultadoAjuda = () => `<span class="ajuda-q" tabindex="0" aria-label="O que significa cada resultado">?<span class="ajuda-pop" role="tooltip"><strong>Vendido</strong> = a pessoa comprou.<br><strong>Não vendido</strong> = a reunião foi até o final e a pessoa não comprou.<br><strong>Incompleto</strong> = a reunião foi interrompida pelo lead, não chegando até o final.<br><strong>Desqualificado</strong> = a pessoa não tem o perfil para a mentoria.</span></span>`;
 function selectOpts(opts, current){
   return `<option value="">—</option>` + opts.map(o=>`<option value="${escapeAttr(o)}" ${current===o?'selected':''}>${escapeHtml(o)}</option>`).join('');
 }
@@ -15712,8 +15743,9 @@ function renderVendas(){
     </div>
     <p class="kpi-note" style="margin:12px 0 22px">${filtroAtivo ? `Indicadores do recorte: <strong>${escapeHtml(recorte)}</strong>.` : 'Indicadores de todas as sessões — mudam conforme os filtros abaixo.'} ${base.length} registrada${base.length===1?'':'s'} no total, sendo ${noShowSessoes.length} no-show${noShowSessoes.length===1?'':'s'}. Sessões realizadas e taxa de fechamento não contam no-shows; eles só entram na taxa de no-show.</p>
 
-    <h2 class="section-title">${icon('idcard')} Registro de Sessões 1:1</h2>
-    <p class="section-sub" style="margin-top:-6px">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
+    ${secRecHead('vendas', 'lista', 'idcard', 'Registro de Sessões 1:1', base.length)}
+    ${secRecBody('vendas', 'lista')}
+    <p class="section-sub" style="margin-top:0">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
     <div class="add-form" style="margin-bottom:14px">
       <div class="field"><label>Vendedor</label>
         <select class="ps-input" id="vendas-filtro-vendedor">
@@ -15721,12 +15753,11 @@ function renderVendas(){
           ${vendedores.map(v=>`<option value="${escapeAttr(v)}" ${vendasFiltroVendedor===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}
         </select>
       </div>
-      <div class="field"><label>Resultado</label>
+      <div class="field"><label>Resultado ${vendasResultadoAjuda()}</label>
         <select class="ps-input" id="vendas-filtro-resultado">
           <option value="todos">Todos</option>
           ${resultados.map(r=>`<option value="${escapeAttr(r)}" ${vendasFiltroResultado===r?'selected':''}>${escapeHtml(r)}</option>`).join('')}
         </select>
-        ${vendasResultadoAjuda()}
       </div>
       <div class="field"><label>Mês</label>
         <select class="ps-input" id="vendas-filtro-mes">
@@ -15775,8 +15806,10 @@ function renderVendas(){
         </tbody>
       </table>
     </div>
+    </div>
 
-    <h2 class="section-title" style="margin-top:26px">${icon('plus')} Registrar nova sessão</h2>
+    ${secRecHead('vendas', 'nova', 'plus', 'Registrar nova sessão', null)}
+    ${secRecBody('vendas', 'nova')}
     <div class="add-form">
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-venda-data"></div>
       <div class="field full"><label>Lead</label><input class="ps-input" type="text" id="new-venda-lead" placeholder="Nome do lead"></div>
@@ -15794,9 +15827,8 @@ function renderVendas(){
       <div class="field"><label>Presença</label>
         <select class="ps-input" id="new-venda-presenca">${selectOpts(VENDAS_PRESENCA_OPTS,'')}</select>
       </div>
-      <div class="field"><label>Resultado</label>
+      <div class="field"><label>Resultado ${vendasResultadoAjuda()}</label>
         <select class="ps-input" id="new-venda-resultado">${selectOpts(VENDAS_RESULTADO_OPTS,'')}</select>
-        ${vendasResultadoAjuda()}
       </div>
       <div class="field"><label>Valor</label><input class="ps-input" type="text" id="new-venda-valor" placeholder="Ex.: R$ 5.997,00"></div>
       <div class="field full"><label>Objeção 1</label><textarea class="ps-input" id="new-venda-objecao1"></textarea></div>
@@ -15805,7 +15837,9 @@ function renderVendas(){
       <div class="field full"><label>Link do contrato</label><input class="ps-input" type="text" id="new-venda-contrato" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-venda-btn">${icon('plus')} Registrar sessão</button></div>
     </div>
+    </div>
   `;
+  secRecBind('vendas', document.getElementById('view-vendas'));
   document.getElementById('vendas-filtro-vendedor').addEventListener('change', e=>{ vendasFiltroVendedor = e.target.value; renderVendas(); });
   document.getElementById('vendas-filtro-resultado').addEventListener('change', e=>{ vendasFiltroResultado = e.target.value; renderVendas(); });
   document.getElementById('vendas-filtro-mes').addEventListener('change', e=>{ vendasFiltroMes = e.target.value; renderVendas(); });
@@ -15907,9 +15941,8 @@ function openEditVendaModal(id){
         <select class="ps-input" id="ev-formato">${selectOpts(VENDAS_FORMATO_OPTS, v.formato)}</select>
         <label class="ps-label">Presença</label>
         <select class="ps-input" id="ev-presenca">${selectOpts(VENDAS_PRESENCA_OPTS, v.presenca)}</select>
-        <label class="ps-label">Resultado</label>
+        <label class="ps-label">Resultado ${vendasResultadoAjuda()}</label>
         <select class="ps-input" id="ev-resultado">${selectOpts(VENDAS_RESULTADO_OPTS, v.resultado)}</select>
-        ${vendasResultadoAjuda()}
         <label class="ps-label">Valor</label>
         <input class="ps-input" type="text" id="ev-valor" value="${escapeAttr(v.valorTexto)}">
         <label class="ps-label">Objeção 1</label>
