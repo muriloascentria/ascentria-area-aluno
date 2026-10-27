@@ -16682,7 +16682,7 @@ function renderReunioes(){
   const areas = Array.from(new Set(todas.map(x=>x.area||'Estratégica')));
   if(REU_UI.area!=='todas' && !areas.includes(REU_UI.area)) REU_UI.area = 'todas';
   const lista = REU_UI.area==='todas' ? todas : todas.filter(x=>(x.area||'Estratégica')===REU_UI.area);
-  const ORDEM_AREAS = ['Estratégica','Desenvolvimento','Financeiro','Marketing','Processos e Automação'];
+  const ORDEM_AREAS = ['Estratégica','Produto','Educação','Marca e Conteúdo','Vendas','Processos e Automação','Financeiro','Desenvolvimento'];
   const filtroArea = areas.length > 1 ? `<div class="community-filters reu-areas">${['todas', ...ORDEM_AREAS.filter(a=>areas.includes(a)), ...areas.filter(a=>!ORDEM_AREAS.includes(a))].map(a=>`<button type="button" class="filter-tab ${REU_UI.area===a?'active':''}" data-reu-area="${escapeHtml(a)}">${a==='todas'?'Todas':escapeHtml(a==='Estratégica'?'Estratégicas':a)}</button>`).join('')}</div>` : '';
   const linhas = lista.map(x=>{
     const esp = reuEsperados(x), ass = esp.filter(p=>reuAssinouEsperado(x, p.id)).length;
@@ -16697,7 +16697,7 @@ function renderReunioes(){
       <td><span class="reu-ass ${esp.length && ass===esp.length ? 'ok':''}">${ass}/${esp.length}</span></td>
     </tr>`; }).join('');
   el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Reuniões e Atas</h2>
-    <p class="section-sub" style="margin-top:-6px">${reuSocio() ? 'As reuniões entram aqui sozinhas depois que terminam: as estratégicas da Ascentria e as reuniões de área (Desenvolvimento, Financeiro, Marketing, Processos e Automação). Clique numa linha para ver vídeo, transcrição, ata e concordâncias.' : 'Atas que o Murilo enviou para você ler e dar a sua concordância.'}</p>
+    <p class="section-sub" style="margin-top:-6px">${reuSocio() ? 'As reuniões entram aqui sozinhas depois que terminam: as estratégicas da Ascentria e as reuniões de área (Produto, Educação, Marca e Conteúdo, Vendas, Processos e Automação, Financeiro e Desenvolvimento). Clique numa linha para ver vídeo, transcrição, ata e concordâncias.' : 'Atas que o Murilo enviou para você ler e dar a sua concordância.'}</p>
     ${reuAbas()}
     ${filtroArea}
     ${REU_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="reu-tentar">Tentar de novo</button></div>' : ''}
