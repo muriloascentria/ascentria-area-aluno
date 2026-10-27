@@ -1399,6 +1399,10 @@
   .ap-vazio{padding:10px 8px;font-size:12.5px;color:var(--text-mute);font-style:italic;}
   .diag-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:22px;}
   .diag-panel .ps-section:first-of-type .ps-h{margin-top:0;}
+  .diag-fonte{margin:14px 0 4px;}
+  .diag-fonte-tag{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--text-mute);}
+  .diag-fonte-tag.abertura{background:rgba(160,170,120,.16);color:var(--text);}
+  .diag-mod + .diag-mod{border-top:1px solid var(--border);padding-top:6px;}
   .field-error{color:var(--danger);font-size:11.5px;margin:-6px 0 10px;}
   /* Acompanhamento da evolução */
   .modal:has(.ae-modal){max-width:860px;}
@@ -10127,36 +10131,54 @@ function renderMetas(){
 
 /* ================= VIEW: ACOMPANHAMENTO INTERNO (somente equipe interna) ================= */
 function statusClass(status){ return 'status-'+status.replace('í','i').replace('á','a'); }
-function diagPanelHtml(groups, answers, editing){
-  let idx = 0;
-  return groups.map(g=>{
-    const rows = g.perguntas.map(q=>{
-      const i = idx++;
-      const val = answers[i];
-      if(editing[i]){
-        return `
-          <div class="diag-qa">
-            <label class="ps-label">${q.text}</label>
-            ${diagParse(val).audio ? `<div class="diag-audio-resp">${diagAudioHtml(diagParse(val).audio, currentStudentId)}</div>` : ''}
-            <textarea class="ps-input" id="diag-input-${i}" placeholder="${diagParse(val).audio ? 'Resposta em áudio. Se quiser, escreva um resumo...' : 'Resposta ainda não registrada...'}">${escapeHtml(diagParse(val).texto)}</textarea>
-            <div class="diag-qa-actions">
-              <button class="btn-mini" data-diag-save="${i}">${icon('tick')} Salvar</button>
-              ${val? `<button class="btn-mini" data-diag-cancel="${i}">Cancelar</button>` : ''}
-            </div>
-          </div>`;
-      }
-      return `
-        <div class="diag-qa">
-          <label class="ps-label">${q.text}</label>
-          <div class="diag-answer">${diagRespostaHtml(val, currentStudentId)}</div>
-          <div class="diag-qa-actions">
-            <button class="btn-mini" data-diag-edit="${i}">${icon('idcard')} Editar</button>
-            <button class="btn-mini danger" data-diag-delete="${i}">${icon('trash')} Excluir</button>
-          </div>
-        </div>`;
-    }).join('');
-    return `<div class="ps-section"><div class="ps-h">${g.cat}</div>${rows}</div>`;
-  }).join('');
+function diagQaHtml(tipo, i, q, val, editando){
+  const k = tipo+':'+i;
+  if(editando){
+    return `
+      <div class="diag-qa">
+        <label class="ps-label">${q.text}</label>
+        ${diagParse(val).audio ? `<div class="diag-audio-resp">${diagAudioHtml(diagParse(val).audio, currentStudentId)}</div>` : ''}
+        <textarea class="ps-input" id="diag-input-${tipo}-${i}" placeholder="${diagParse(val).audio ? 'Resposta em áudio. Se quiser, escreva um resumo...' : 'Resposta ainda não registrada...'}">${escapeHtml(diagParse(val).texto)}</textarea>
+        <div class="diag-qa-actions">
+          <button class="btn-mini" data-diag-save="${k}">${icon('tick')} Salvar</button>
+          ${val? `<button class="btn-mini" data-diag-cancel="${k}">Cancelar</button>` : ''}
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="diag-qa">
+      <label class="ps-label">${q.text}</label>
+      <div class="diag-answer">${diagRespostaHtml(val, currentStudentId)}</div>
+      <div class="diag-qa-actions">
+        <button class="btn-mini" data-diag-edit="${k}">${icon('idcard')} Editar</button>
+        <button class="btn-mini danger" data-diag-delete="${k}">${icon('trash')} Excluir</button>
+      </div>
+    </div>`;
+}
+/* Formulário de Abertura (mentorado) e Formulário Diagnóstico de Abertura (equipe) juntos, módulo a módulo:
+   em cada módulo vêm primeiro as respostas do mentorado e logo depois as do diagnóstico feito pela equipe. */
+function diagPanelUnificadoHtml(sid){
+  const fontes = [
+    { tipo:'wispform', titulo:'Formulário de Abertura', grupos:WISPFORM_QUESTIONS },
+    { tipo:'abertura', titulo:'Formulário Diagnóstico de Abertura', grupos:DIAGNOSTICO_ABERTURA_QUESTIONS },
+  ].map(f=>{
+    const ans = getInternalAnswers(sid, f.tipo), ed = getInternalEditing(sid, f.tipo);
+    let off = 0; const ini = f.grupos.map(g=>{ const o = off; off += g.perguntas.length; return o; });
+    return Object.assign(f, { ans, ed, ini });
+  });
+  const n = Math.max(...fontes.map(f=>f.grupos.length));
+  let html = '';
+  for(let gi=0; gi<n; gi++){
+    const titulo = (fontes[0].grupos[gi] || fontes[1].grupos[gi]).cat;
+    html += `<div class="ps-section diag-mod"><div class="ps-h">${escapeHtml(titulo)}</div>`;
+    fontes.forEach(f=>{
+      const g = f.grupos[gi]; if(!g) return;
+      html += `<div class="diag-fonte"><span class="diag-fonte-tag ${f.tipo}">${f.titulo}</span></div>`;
+      html += g.perguntas.map((q,qi)=>{ const i = f.ini[gi]+qi; return diagQaHtml(f.tipo, i, q, f.ans[i], f.ed[i]); }).join('');
+    });
+    html += `</div>`;
+  }
+  return html;
 }
 /* ---- Editar Dados do Aluno (equipe interna) — necessário para matricular alunos reais ---- */
 function openEditAlunoModal(s){
@@ -11074,9 +11096,6 @@ function renderInterno(){
   const s = getStudent(currentStudentId);
   if(s && AE_UI.sid!==s.id) intAeCarregar(s.id);
   const d = s.diagnostico;
-  const groups = internoDiagTab==='wispform' ? WISPFORM_QUESTIONS : DIAGNOSTICO_ABERTURA_QUESTIONS;
-  const answers = getInternalAnswers(s.id, internoDiagTab);
-  const editing = getInternalEditing(s.id, internoDiagTab);
   const aberto = getInternoAberto();
   /* Seletor de mentorado (no lugar da lista que ficava no menu da foto): ordem alfabética, com foto,
      e uma busca por nome pra achar rápido. Escolher abre o acompanhamento da pessoa aqui mesmo. */
@@ -11123,12 +11142,8 @@ function renderInterno(){
 
     ${intHead('diag', 'idcard', 'Diagnóstico de Abertura', null)}
     ${intBody('diag')}
-      <p class="section-sub" style="margin-top:2px">Formulário de Abertura (respondido pelo mentorado) e Formulário Diagnóstico de Abertura (preenchido pela equipe), pergunta a pergunta.</p>
-      <div class="community-filters" id="diag-tabs">
-        <button class="filter-tab ${internoDiagTab==='wispform'?'active':''}" data-diagtab="wispform">Formulário de Abertura</button>
-        <button class="filter-tab ${internoDiagTab==='abertura'?'active':''}" data-diagtab="abertura">Formulário Diagnóstico de Abertura</button>
-      </div>
-      <div class="diag-panel" id="diag-panel">${diagPanelHtml(groups, answers, editing)}</div>
+      <p class="section-sub" style="margin-top:2px">Módulo a módulo: primeiro as respostas do Formulário de Abertura (respondido pelo mentorado) e logo depois as do Formulário Diagnóstico de Abertura (preenchido pela equipe).</p>
+      <div class="diag-panel" id="diag-panel">${diagPanelUnificadoHtml(s.id)}</div>
     </div>
 
     ${intHead('checklist', 'check', 'Checklist de Acompanhamento', s.checklist.length)}
@@ -11370,39 +11385,30 @@ function renderInterno(){
     setInternoAberto(k, abrindo);
   }));
   document.getElementById('acomp-pdf-btn').addEventListener('click',()=>exportAcompanhamentoPDF(s));
-  document.querySelectorAll('#diag-tabs [data-diagtab]').forEach(btn=>{
-    btn.addEventListener('click',()=>{ internoDiagTab = btn.dataset.diagtab; renderInterno(); });
-  });
   { const dp = document.getElementById('diag-panel'); if(dp && dp.querySelector('[data-msg-audio]')) msgAudioCarregar(dp); }
+  const diagK = v=>{ const [tipo, i] = String(v).split(':'); return { tipo, i:+i, ans:getInternalAnswers(s.id, tipo), ed:getInternalEditing(s.id, tipo) }; };
   document.querySelectorAll('#diag-panel [data-diag-save]').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      const i = +btn.dataset.diagSave;
-      const ta = document.getElementById('diag-input-'+i);
-      answers[i] = diagMontar(ta.value, diagParse(answers[i]).audio);
-      editing[i] = false;
-      syncInternalDiagAnswer(s.id, internoDiagTab, i, answers[i]);
+      const k = diagK(btn.dataset.diagSave);
+      const ta = document.getElementById('diag-input-'+k.tipo+'-'+k.i);
+      k.ans[k.i] = diagMontar(ta.value, diagParse(k.ans[k.i]).audio);
+      k.ed[k.i] = false;
+      syncInternalDiagAnswer(s.id, k.tipo, k.i, k.ans[k.i]);
       renderInterno();
     });
   });
   document.querySelectorAll('#diag-panel [data-diag-cancel]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      editing[+btn.dataset.diagCancel] = false;
-      renderInterno();
-    });
+    btn.addEventListener('click',()=>{ const k = diagK(btn.dataset.diagCancel); k.ed[k.i] = false; renderInterno(); });
   });
   document.querySelectorAll('#diag-panel [data-diag-edit]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      editing[+btn.dataset.diagEdit] = true;
-      renderInterno();
-    });
+    btn.addEventListener('click',()=>{ const k = diagK(btn.dataset.diagEdit); k.ed[k.i] = true; renderInterno(); });
   });
   document.querySelectorAll('#diag-panel [data-diag-delete]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       if(!confirmDelete('Excluir esta resposta do diagnóstico? Essa ação não pode ser desfeita.')) return;
-      const i = +btn.dataset.diagDelete;
-      answers[i] = '';
-      editing[i] = true;
-      syncInternalDiagAnswer(s.id, internoDiagTab, i, '');
+      const k = diagK(btn.dataset.diagDelete);
+      k.ans[k.i] = ''; k.ed[k.i] = true;
+      syncInternalDiagAnswer(s.id, k.tipo, k.i, '');
       renderInterno();
     });
   });
