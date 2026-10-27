@@ -10959,7 +10959,7 @@ function exportAcompanhamentoPDF(s){
       ${vendas.length? vendas.map(v=>{
         const an = analiseDaVenda(v.id);
         const aprend = an ? [
-          ['Diego', an.diegoAp1, an.diegoAp2], ['Carmem', an.carmemAp1, an.carmemAp2], ['Viviane', an.vivianeAp1, an.vivianeAp2], ['Adriana', an.adrianaAp1, an.adrianaAp2],
+          ['Diego', an.diegoAp1, an.diegoAp2], ['Carmem', an.carmemAp1, an.carmemAp2], ['Adriana', an.adrianaAp1, an.adrianaAp2],
         ].filter(x=>x[1]||x[2]) : [];
         return `
         <div class="cols" style="margin-bottom:8px">
@@ -16464,9 +16464,7 @@ const ANALISE_VENDEDORAS = [
    ap:['diegoAp1','diegoAp2'],    campoAp:['diego_aprendizado1','diego_aprendizado2']},
   {key:'carmem',  nome:'Carmem',  userId:'3ac4f0c3-4db3-4f98-b9b8-c021da4db519', assistiu:'carmemAssistiu',  campoAssistiu:'carmem_assistiu',
    ap:['carmemAp1','carmemAp2'],  campoAp:['carmem_aprendizado1','carmem_aprendizado2']},
-  /* ate: última data de venda em que a pessoa ainda analisa. Viviane saiu das vendas em out/2026. */
-  {key:'viviane', nome:'Viviane', userId:'e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28', assistiu:'vivianeAssistiu', campoAssistiu:'viviane_assistiu', ate:'2026-09-30',
-   ap:['vivianeAp1','vivianeAp2'], campoAp:['viviane_aprendizado1','viviane_aprendizado2']},
+  /* Viviane saiu das vendas em out/2026: coluna e análises dela removidas da Análise Sessões 1:1. */
   {key:'adriana', nome:'Adriana', userId:'4703b11a-7061-4d49-857c-9a571d43bb76', assistiu:'adrianaAssistiu', campoAssistiu:'adriana_assistiu',
    ap:['adrianaAp1','adrianaAp2'], campoAp:['adriana_aprendizado1','adriana_aprendizado2']},
 ];
