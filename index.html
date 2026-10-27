@@ -2451,6 +2451,8 @@
   .reu-enc-vlista small{color:var(--text-mute);font-size:11.5px;}
   .reu-enc-novo{display:grid;grid-template-columns:2fr 1fr 2fr;gap:8px;margin-top:10px;}
   .reu-enc-novo .reu-acoes{grid-column:1/-1;margin-top:0;}
+  .reu-area-tag{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:var(--shared-soft);color:var(--text);vertical-align:middle;}
+  .reu-areas{margin:6px 0 12px;}
   .reu-enc-novo .reu-busca{margin-bottom:0;}
   .reu-mini-add{margin-top:10px;display:inline-flex;gap:6px;align-items:center;}
   @media (max-width:640px){ .reu-enc-novo{grid-template-columns:1fr;} }
@@ -16620,7 +16622,7 @@ function polDocForm(d){
    a concordância com a ata. A aba "Pautas da próxima reunião" é dos sócios: escreve a pauta antes
    e dá o check quando ela for tratada. */
 const REU_SOCIOS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b9b8-c021da4db519','8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc','a29026ae-d252-4456-bb26-eec09ba778c4'];
-const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'', enc:{}, encTf:{}, encVinc:null, encVincBusca:'', encNovo:false, ataAberta:false };
+const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'', enc:{}, encTf:{}, encVinc:null, encVincBusca:'', encNovo:false, ataAberta:false, area:'todas' };
 function reuSocio(){ return (currentUserRole==='staff' || currentUserRole==='vendas' || currentUserRole==='editor') && !!currentUser && REU_SOCIOS.includes(idEfetivo()); }
 function reuSouMurilo(){ return !!currentUser && (currentUser.id===REU_SOCIOS[0] || (!!(currentUserProfile&&currentUserProfile.contaTeste) && (!currentUserProfile.espelhoDe || currentUserProfile.espelhoDe===REU_SOCIOS[0]))); }
 function reuPodeAbrir(){ if(!currentUser || currentUserRole==='aluno') return false; if(reuSocio()) return true; return (REU_UI.envios||[]).some(e=>e.user_id===currentUser.id && e.ativo); }
@@ -16628,7 +16630,7 @@ async function reuCarregar(){
   if(REU_UI.carregando) return; REU_UI.carregando = true; REU_UI.erro = false;
   try{
     const [r, e, a] = await Promise.all([
-      sb.from('reunioes').select('id,titulo,data,meet_link,evento_link,video_url,transcricao_url,notas_url,participantes,ata,status,updated_at').eq('ativo', true).order('data', {ascending:false}),
+      sb.from('reunioes').select('id,titulo,area,data,meet_link,evento_link,video_url,transcricao_url,notas_url,participantes,ata,status,updated_at').eq('ativo', true).order('data', {ascending:false}),
       sb.from('reuniao_envios').select('*'),
       sb.from('reuniao_assinaturas').select('*'),
     ]);
@@ -16676,13 +16678,18 @@ function renderReunioes(){
   const r = REU_UI.aberta && (REU_UI.lista||[]).find(x=>x.id===REU_UI.aberta);
   if(r){ el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Reuniões e Atas</h2>${reuAbas()}${reuDetalheHtml(r)}`; reuBindAbas(el); reuDetalheBind(el, r); return; }
   REU_UI.aberta = null;
-  const lista = REU_UI.lista||[];
+  const todas = REU_UI.lista||[];
+  const areas = Array.from(new Set(todas.map(x=>x.area||'Estratégica')));
+  if(REU_UI.area!=='todas' && !areas.includes(REU_UI.area)) REU_UI.area = 'todas';
+  const lista = REU_UI.area==='todas' ? todas : todas.filter(x=>(x.area||'Estratégica')===REU_UI.area);
+  const ORDEM_AREAS = ['Estratégica','Desenvolvimento','Financeiro','Marketing','Processos e Automação'];
+  const filtroArea = areas.length > 1 ? `<div class="community-filters reu-areas">${['todas', ...ORDEM_AREAS.filter(a=>areas.includes(a)), ...areas.filter(a=>!ORDEM_AREAS.includes(a))].map(a=>`<button type="button" class="filter-tab ${REU_UI.area===a?'active':''}" data-reu-area="${escapeHtml(a)}">${a==='todas'?'Todas':escapeHtml(a==='Estratégica'?'Estratégicas':a)}</button>`).join('')}</div>` : '';
   const linhas = lista.map(x=>{
     const esp = reuEsperados(x), ass = esp.filter(p=>reuAssinouEsperado(x, p.id)).length;
     const minha = reuDevoAssinar(x);
     return `<tr data-reu-abrir="${x.id}" class="${minha?'reu-pend':''}">
       <td class="reu-td-data">${escapeHtml(reuDataTxt(x.data))}</td>
-      <td><b>${escapeHtml(x.titulo)}</b>${minha?'<div class="reu-mini-alerta">Aguardando sua concordância</div>':''}</td>
+      <td><b>${escapeHtml(x.titulo)}</b>${(x.area||'Estratégica')!=='Estratégica' ? ` <span class="reu-area-tag">${escapeHtml(x.area)}</span>` : ''}${minha?'<div class="reu-mini-alerta">Aguardando sua concordância</div>':''}</td>
       <td>${reuUrlOk(x.meet_link||x.evento_link) ? `<a href="${escapeHtml(x.meet_link||x.evento_link)}" target="_blank" rel="noopener" data-stop>Abrir</a>` : '<span class="muted">—</span>'}</td>
       <td>${reuUrlOk(x.video_url) ? icon('video') : '<span class="muted">aguardando</span>'}</td>
       <td>${x.status==='transcricao_parcial' ? '<span class="muted">chegando</span>' : icon('file')}</td>
@@ -16690,13 +16697,15 @@ function renderReunioes(){
       <td><span class="reu-ass ${esp.length && ass===esp.length ? 'ok':''}">${ass}/${esp.length}</span></td>
     </tr>`; }).join('');
   el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Reuniões e Atas</h2>
-    <p class="section-sub" style="margin-top:-6px">${reuSocio() ? 'As reuniões entram aqui sozinhas depois que terminam (segunda e quarta às 8h, sexta às 13h). Clique numa linha para ver vídeo, transcrição, ata e concordâncias.' : 'Atas que o Murilo enviou para você ler e dar a sua concordância.'}</p>
+    <p class="section-sub" style="margin-top:-6px">${reuSocio() ? 'As reuniões entram aqui sozinhas depois que terminam: as estratégicas da Ascentria e as reuniões de área (Desenvolvimento, Financeiro, Marketing, Processos e Automação). Clique numa linha para ver vídeo, transcrição, ata e concordâncias.' : 'Atas que o Murilo enviou para você ler e dar a sua concordância.'}</p>
     ${reuAbas()}
+    ${filtroArea}
     ${REU_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="reu-tentar">Tentar de novo</button></div>' : ''}
     ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela"><thead><tr><th>Data</th><th>Reunião</th><th>Link</th><th>Vídeo</th><th>Transcrição</th><th>Ata</th><th>Concordância</th></tr></thead><tbody>${linhas}</tbody></table></div>`
       : '<div class="empty-state">Nenhuma reunião ainda. A primeira aparece aqui assim que terminar e o Google Meet salvar as anotações.</div>'}`;
   reuBindAbas(el);
   const t = el.querySelector('#reu-tentar'); if(t) t.addEventListener('click', ()=>{ REU_UI.lista = null; renderReunioes(); });
+  el.querySelectorAll('[data-reu-area]').forEach(b=>b.addEventListener('click', ()=>{ REU_UI.area = b.dataset.reuArea; renderReunioes(); }));
   el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
   el.querySelectorAll('[data-reu-abrir]').forEach(tr=>tr.addEventListener('click', ()=>{ REU_UI.aberta = tr.dataset.reuAbrir; REU_UI.verVideo = false; REU_UI.editando = false; REU_UI.enviando = false; REU_UI.encVinc = null; REU_UI.encNovo = false; renderReunioes(); window.scrollTo(0,0); }));
 }
