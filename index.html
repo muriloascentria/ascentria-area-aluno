@@ -3960,6 +3960,7 @@ let LIVE_SESSIONS = []; // populado em runtime a partir do Supabase (ver bootstr
 let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/visível pra equipe interna, ver bootstrapData
 let ANALISE_SESSOES = []; // Análise Sessões 1:1 — uma linha por sessão registrada (ver bootstrapData)
 let analiseBusca = '';
+let analiseNovoId = null; // lead recém-adicionado à mão: aparece mesmo antes de ter análise
 let aulasBusca = '';                       // busca na aba Aulas (título da aula ou nome de material anexado)
 let vgBusca = { mentorados:'', curso:'' }; // busca por nome nas listas da Visão Geral
 let vgAberto = { mentorados:true, curso:true, codigos:true }; // listas da Visão Geral recolhidas/expandidas
@@ -16680,10 +16681,13 @@ function anDestBind(){
     if(error){ console.error(error); alert('Não foi possível tirar.'); anDestCarregar(); }
   }));
 }
+function anTemAnalise(a){ return ANALISE_VENDEDORAS.some(v=> a[v.assistiu] || String(a[v.ap[0]]||'').trim() || String(a[v.ap[1]]||'').trim()); }
 function renderAnalise(){
   const busca = analiseBusca.trim().toLowerCase();
   const lista = ANALISE_SESSOES
-    .filter(a=>!busca || (a.leadNome||'').toLowerCase().includes(busca) || (a.whatsapp||'').toLowerCase().includes(busca))
+    /* Só as sessões já analisadas. Buscando pelo nome ou WhatsApp, aparece também a sessão ainda sem análise,
+       para quem for analisar conseguir abrir e registrar. */
+    .filter(a=> busca ? ((a.leadNome||'').toLowerCase().includes(busca) || (a.whatsapp||'').toLowerCase().includes(busca)) : (a.id===analiseNovoId || anTemAnalise(a)))
     .slice()
     .sort((a,b)=> (b.ordem||0)-(a.ordem||0) || String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 
@@ -16700,6 +16704,7 @@ function renderAnalise(){
       </div>
       <div class="actions"><button class="btn-accent" id="analise-add">${icon('plus','ps-plus')} Adicionar lead manualmente</button></div>
     </div>
+    <p class="section-sub" style="margin:-4px 0 12px">Aparecem aqui só as sessões que já têm análise registrada. Para analisar uma sessão nova, busque o lead pelo nome ou WhatsApp.</p>
 
     <div class="table-wrap"><table class="check-table an-table">
       <colgroup>
@@ -16748,7 +16753,7 @@ function renderAnalise(){
     try{
       const row = await syncAnaliseInsert('');
       ANALISE_SESSOES.unshift(mapAnaliseRow(row));
-      analiseBusca = '';
+      analiseBusca = ''; analiseNovoId = row.id;
       renderAnalise();
       openAnaliseModal(row.id);
     }catch(e){ console.error(e); btn.disabled = false; }
