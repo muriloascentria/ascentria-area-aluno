@@ -1434,6 +1434,9 @@
   .add-form .int-enc-campo{grid-column:span 2;min-width:0;}
   @media (max-width:560px){ .add-form .int-enc-campo{grid-column:1 / -1;} }
   .add-form.form-tarefa .int-enc-campo{grid-column:1 / -1;}
+  .add-form.form-registro{grid-template-columns:3fr 1fr;}
+  .add-form.form-registro .int-enc-campo{grid-column:auto;}
+  .add-form.form-registro .ps-input{width:100%;max-width:none;}
   .add-form.form-tarefa .int-enc-campo select.ps-input{width:100%;max-width:none;}
   .int-enc-vazio p{margin:4px 0 0;font-size:12.5px;color:var(--text-mute);background:var(--bg-elev);border:1px dashed var(--border);border-radius:8px;padding:8px 10px;}
   .int-aulas-acoes{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;}
@@ -11329,7 +11332,7 @@ function renderInterno(){
         </tbody>
       </table>
     </div>
-    <div class="add-form">
+    <div class="add-form form-registro">
       ${intEncontroCampo(s, 'new-record-encontro', 'Encontro *')}
       <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-record-data" value="${escapeAttr(intHojeTxt())}" placeholder="Ex.: 25/08/2026"></div>
       <div class="field full"><label>Registro / Análise</label><textarea class="ps-input" id="new-record-texto" placeholder="Observação interna sobre o mentorado..."></textarea></div>
