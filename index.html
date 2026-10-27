@@ -3811,8 +3811,16 @@ async function ensureCourseComments(courseId){
     console.error('Não foi possível carregar os comentários da aula', e);
   }
 }
-/* Sininho: calculado no banco, não mais varrendo a comunidade inteira no navegador. */
+/* Sininho: calculado no banco, não mais varrendo a comunidade inteira no navegador.
+   A lista é refeita também ao voltar para a aba, ao abrir o sino e a cada 2 minutos. Antes ela só se
+   atualizava ao recarregar a página ou quando a própria pessoa comentava: se outra pessoa da equipe
+   (ou você em outro aparelho) respondesse a dúvida, o aviso continuava no sino até recarregar. */
+let PEND_ULTIMA = 0;
+function refreshPendenciasSeVelho(ms){ if(!currentUser) return; if(Date.now()-PEND_ULTIMA > (ms||20000)) refreshPendencias(); }
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshPendenciasSeVelho(15000); });
+setInterval(()=>{ if(!document.hidden) refreshPendenciasSeVelho(110000); }, 120000);
 async function refreshPendencias(){
+  PEND_ULTIMA = Date.now();
   try{
     const { data, error } = await sb.rpc('comunidade_pendencias_detalhe');
     if(error) throw error;
@@ -5990,7 +5998,7 @@ function setupNav(){
     openSetNewPasswordModal('change');
   });
   /* Sininho: abre um painel listando cada aviso (quem, o quê, quando). Clicar num item leva ao lugar certo. */
-  document.getElementById('notif-btn').addEventListener('click',(e)=>{ e.stopPropagation(); notifPainelToggle(); });
+  document.getElementById('notif-btn').addEventListener('click',(e)=>{ e.stopPropagation(); notifPainelToggle(); refreshPendenciasSeVelho(5000); });
   document.addEventListener('click', (e)=>{ const p = document.getElementById('notif-painel'); if(p && !p.hidden && !p.contains(e.target)) notifPainelFechar(); });
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') notifPainelFechar(); });
   document.getElementById('menu-btn').addEventListener('click',()=>{
