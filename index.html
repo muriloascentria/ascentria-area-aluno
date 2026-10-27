@@ -1307,6 +1307,12 @@
   .goal-aula.locked{opacity:.55;}
   .aula-pick{display:flex;flex-direction:column;gap:8px;}
   .prazo-atalhos{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .prazo-linha{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+  .prazo-linha > input{flex:1 1 auto;min-width:128px;width:auto;margin:0;}
+  .prazo-linha .prazo-atalhos{margin-top:0;flex-wrap:nowrap;flex:0 0 auto;gap:5px;}
+  .prazo-linha .prazo-atalho{white-space:nowrap;padding:5px 9px;font-size:11.5px;}
+  @media (max-width:560px){ .prazo-linha .pz-d{display:none;} .prazo-linha .prazo-atalho{padding:5px 8px;} .prazo-linha > input{min-width:0;} }
+  .tf-m-grid > div:has(> .prazo-linha), .te-grid > .field:has(> .prazo-linha){grid-column:1/-1;}
   .prazo-atalho{font-family:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);cursor:pointer;}
   .prazo-atalho:hover{border-color:var(--accent);color:var(--text);}
   .prazo-atalho.on{border-color:var(--accent);background:var(--accent-soft);color:var(--text);}
@@ -1559,7 +1565,7 @@
   .add-form .field[hidden]{display:none;}
   .add-form .field.full{grid-column:1/-1;}
   /* Formulários do Acompanhamento Interno com colunas fixas, pra cada linha ocupar a largura toda */
-  .add-form.form-tarefa{grid-template-columns:1fr 1fr 2.2fr;}
+  .add-form.form-tarefa{grid-template-columns:1fr 2fr 2fr;}
   .add-form.form-contato{grid-template-columns:1.3fr .9fr 1fr 1.4fr 1.4fr;}
   .add-form.form-contato.sem-links{grid-template-columns:1.3fr .9fr 1fr;}
   .add-form.form-agenda{grid-template-columns:2.2fr 1.3fr 1fr 1fr;}
@@ -2398,7 +2404,7 @@
   .reu-enc-vlista button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:inherit;cursor:pointer;}
   .reu-enc-vlista button:hover{border-color:var(--accent);}
   .reu-enc-vlista small{color:var(--text-mute);font-size:11.5px;}
-  .reu-enc-novo{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:10px;}
+  .reu-enc-novo{display:grid;grid-template-columns:2fr 1fr 2fr;gap:8px;margin-top:10px;}
   .reu-enc-novo .reu-acoes{grid-column:1/-1;margin-top:0;}
   .reu-enc-novo .reu-busca{margin-bottom:0;}
   .reu-mini-add{margin-top:10px;display:inline-flex;gap:6px;align-items:center;}
@@ -10674,8 +10680,12 @@ function mentorLabel(responsavel){
 function prazoMaisDias(n){ const d = new Date(); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function prazoIsoParaTexto(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||'')); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
 function prazoTextoParaIso(t){ const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(t||'').trim()); return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : ''; }
+/* Campo de prazo com os atalhos +10/+15/+20 dias na mesma linha do calendário. */
+function prazoCampoHtml(inputHtml, alvoId, comAtalhos){
+  return `<div class="prazo-linha">${inputHtml}${comAtalhos===false ? '' : prazoAtalhosHtml(alvoId)}</div>`;
+}
 function prazoAtalhosHtml(alvoId){
-  return `<div class="prazo-atalhos">${[10,15,20].map(n=>`<button type="button" class="prazo-atalho" data-prazo-mais="${n}" data-prazo-alvo="${alvoId}">+${n} dias</button>`).join('')}</div>`;
+  return `<div class="prazo-atalhos">${[10,15,20].map(n=>`<button type="button" class="prazo-atalho" data-prazo-mais="${n}" data-prazo-alvo="${alvoId}" title="+${n} dias">+${n}<span class="pz-d"> dias</span></button>`).join('')}</div>`;
 }
 document.addEventListener('click', e=>{
   const b = e.target.closest && e.target.closest('[data-prazo-mais]');
@@ -10829,7 +10839,7 @@ function openTarefaEditModal(s, t){
         <div class="field"><label>Responsável</label>
           <select class="ps-input" id="te-resp">${['Mentorado','Mentor'].map(r=>`<option value="${r}" ${t.responsavel===r?'selected':''}>${r}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Prazo</label><input class="ps-input" type="date" id="te-prazo" value="${escapeAttr(prazoTextoParaIso(t.prazo))}">${prazoAtalhosHtml('te-prazo')}${t.prazo && t.prazo!=='—' && !prazoTextoParaIso(t.prazo) ? `<small class="prazo-antigo">Prazo atual: ${escapeHtml(t.prazo)}</small>` : ''}</div>
+        <div class="field"><label>Prazo</label>${prazoCampoHtml(`<input class="ps-input" type="date" id="te-prazo" value="${escapeAttr(prazoTextoParaIso(t.prazo))}">`, 'te-prazo')}${t.prazo && t.prazo!=='—' && !prazoTextoParaIso(t.prazo) ? `<small class="prazo-antigo">Prazo atual: ${escapeHtml(t.prazo)}</small>` : ''}</div>
         <div class="field"><label>Status</label>
           <select class="ps-input" id="te-status">${['Pendente','Concluída','Atrasada'].map(st=>`<option value="${st}" ${t.status===st?'selected':''}>${st}</option>`).join('')}</select>
         </div>
@@ -11184,7 +11194,7 @@ function renderInterno(){
       <div class="field"><label>Responsável</label>
         <select class="ps-input" id="new-task-resp"><option value="Mentorado">Mentorado</option><option value="Mentor">Mentor</option></select>
       </div>
-      <div class="field"><label>Prazo</label><input class="ps-input" type="date" id="new-task-prazo" value="${prazoMaisDias(10)}">${prazoAtalhosHtml('new-task-prazo')}</div>
+      <div class="field"><label>Prazo</label>${prazoCampoHtml(`<input class="ps-input" type="date" id="new-task-prazo" value="${prazoMaisDias(10)}">`, 'new-task-prazo')}</div>
       <div class="field aulas-apoio"><label>Aulas e atividades de apoio (opcional · <span id="nt-count">${apoioContagem(novaTarefaAulas)}</span>)</label>
         ${aulaPickHtml([...novaTarefaAulas], 'nt')}
       </div>
@@ -12551,7 +12561,7 @@ async function openTarefaModal(id, defaults){
           <select class="ps-input" id="tf-m-resp" ${ro(dono && (podeDelegarAgora || nova))}>${ativos.map(m=>`<option value="${m.userId}" ${t.responsavelId===m.userId?'selected':''} ${(!podeDelegarAgora && m.userId!==eu && m.userId!==t.responsavelId)?'disabled':''}>${escapeHtml(m.name)}</option>`).join('')}</select></div>
         <div><label class="ps-label">Prioridade</label>
           <select class="ps-input" id="tf-m-prio" ${ro(dono)}>${Object.entries(TAREFAS_PRIO).map(([k,v])=>`<option value="${k}" ${t.prioridade===k?'selected':''}>${v}</option>`).join('')}</select></div>
-        <div><label class="ps-label">Prazo</label><input class="ps-input" type="date" id="tf-m-data" value="${escapeAttr(t.prazoData)}" ${ro(dono)}>${dono ? prazoAtalhosHtml('tf-m-data') : ''}</div>
+        <div><label class="ps-label">Prazo</label>${prazoCampoHtml(`<input class="ps-input" type="date" id="tf-m-data" value="${escapeAttr(t.prazoData)}" ${ro(dono)}>`, 'tf-m-data', !!dono)}</div>
         <div><label class="ps-label">Horário (opcional)</label><input class="ps-input" type="time" id="tf-m-hora" value="${escapeAttr(t.prazoHora)}" ${ro(dono)}></div>
         <div><label class="ps-label">Situação</label>
           <select class="ps-input" id="tf-m-status" ${ro(podeEditar)}>${Object.entries(TAREFAS_STATUS).filter(([k])=>(k!=='cancelada' || dono || t.status==='cancelada') && (k!=='concluida' || t.status==='concluida')).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''} ${k==='concluida'?'disabled':''}>${v}</option>`).join('')}</select></div>
@@ -13164,8 +13174,7 @@ function gtfAbrirForm(grupo, ini){
         <label class="ps-label">Responsáveis <small style="font-weight:400;color:var(--text-mute)">(pode marcar mais de um)</small></label>
         <div class="gtf-resp-lista">${membros.map(m=>`<label class="${r.resps.includes(m.id)?'on':''}"><input type="checkbox" data-gtf-resp="${m.id}" ${r.resps.includes(m.id)?'checked':''}> ${escapeHtml(m.nome)}</label>`).join('')}</div>
         <label class="ps-label">Prazo <small style="font-weight:400;color:var(--text-mute)">(opcional)</small></label>
-        <input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}">
-        ${prazoAtalhosHtml('gtf-prazo')}
+        ${prazoCampoHtml(`<input class="ps-input" type="date" id="gtf-prazo" value="${escapeAttr(r.prazo||'')}">`, 'gtf-prazo')}
         <div class="modal-actions gtf-acoes">
           <button type="button" class="btn-accent" id="gtf-criar">${icon('plus','tiny')} Criar tarefa</button>
           <button type="button" class="btn-outline" id="gtf-cancelar">Cancelar</button>
@@ -16782,7 +16791,7 @@ function reuEncHtml(r){
   const novo = socio && REU_UI.encNovo ? `<div class="reu-enc-novo">
       <input type="text" class="reu-busca" id="reu-enc-n-acao" placeholder="O que fazer">
       <input type="text" class="reu-busca" id="reu-enc-n-resp" placeholder="Responsável">
-      <input type="text" class="reu-busca" id="reu-enc-n-prazo" placeholder="Prazo (ex.: 20/10/2026)">
+      ${prazoCampoHtml(`<input type="date" class="reu-busca" id="reu-enc-n-prazo" title="Prazo" aria-label="Prazo">`, 'reu-enc-n-prazo')}
       <div class="reu-acoes"><button type="button" class="btn-primary" id="reu-enc-n-ok">Adicionar</button><button type="button" class="btn-outline" id="reu-enc-n-cancel">Cancelar</button></div></div>`
     : (socio ? `<button type="button" class="btn-outline reu-mini-add" id="reu-enc-n-abrir">${icon('plus','tiny')} Adicionar encaminhamento</button>` : '');
   return `${lista.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th><th>Tarefa</th>${socio?'<th></th>':''}</tr></thead><tbody>${linhas}</tbody></table></div>` : '<p class="muted">Nenhum encaminhamento.</p>'}${novo}`;
@@ -16876,7 +16885,7 @@ function reuEncBind(el, r){
   on('reu-enc-n-cancel', ()=>{ REU_UI.encNovo = false; renderReunioes(); });
   on('reu-enc-n-ok', async ()=>{
     const acao = document.getElementById('reu-enc-n-acao').value.trim(); if(!acao){ alert('Escreva o que precisa ser feito.'); return; }
-    const row = { reuniao_id:r.id, acao, responsavel:document.getElementById('reu-enc-n-resp').value.trim(), prazo:document.getElementById('reu-enc-n-prazo').value.trim(), ordem: lista.reduce((m,x)=>Math.max(m, x.ordem||0), 0)+1 };
+    const row = { reuniao_id:r.id, acao, responsavel:document.getElementById('reu-enc-n-resp').value.trim(), prazo:prazoIsoParaTexto(document.getElementById('reu-enc-n-prazo').value), ordem: lista.reduce((m,x)=>Math.max(m, x.ordem||0), 0)+1 };
     const { data, error } = await sb.from('reuniao_encaminhamentos').insert(row).select().single();
     if(error){ alert('Não consegui adicionar agora. Tente de novo.'); return; }
     lista.push(data); REU_UI.encNovo = false; renderReunioes();
