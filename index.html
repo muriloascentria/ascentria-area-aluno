@@ -1437,6 +1437,9 @@
   @media (max-width:560px){ .add-form .int-enc-campo{grid-column:1 / -1;} }
   .add-form.form-tarefa .int-enc-campo{grid-column:1 / -1;}
   .add-form.form-registro{grid-template-columns:3fr 1fr;}
+  .add-form.form-venda{grid-template-columns:repeat(4, minmax(0,1fr));align-items:start;}
+  .add-form.form-venda .fv-lead{grid-column:span 3;}
+  .add-form.form-venda .ps-input{width:100%;max-width:none;}
   .add-form.vendas-filtros{grid-template-columns:repeat(3, minmax(0,1fr)) minmax(0,1.4fr) auto;}
   .add-form.vendas-filtros .actions{justify-self:end;}
   .add-form.vendas-filtros .actions .btn-outline{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;height:38px;padding:0 14px;}
@@ -1623,7 +1626,7 @@
   .vendas-alert-card .vac-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--individual);margin-bottom:10px;}
   .vendas-alert-card .vac-title .icon{stroke:var(--individual);width:15px;height:15px;}
   .vac-list{font-size:12.5px;color:var(--text-dim);}
-  .ajuda-q{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:5px;border-radius:50%;border:1.5px solid var(--text-mute);color:var(--text-dim);font-size:10.5px;font-weight:800;line-height:1;cursor:help;vertical-align:middle;text-transform:none;letter-spacing:0;}
+  .ajuda-q{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin:-4px 0 -4px 5px;border-radius:50%;border:1.5px solid var(--text-mute);color:var(--text-dim);font-size:10.5px;font-weight:800;line-height:1;cursor:help;vertical-align:middle;text-transform:none;letter-spacing:0;}
   .ajuda-q:hover, .ajuda-q:focus{border-color:var(--accent);color:var(--text);outline:none;}
   .ajuda-pop{display:none;position:absolute;top:calc(100% + 8px);left:-10px;z-index:400;width:290px;max-width:80vw;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:12.5px;font-weight:400;line-height:1.5;text-align:left;white-space:normal;cursor:default;}
   .ajuda-pop strong{color:var(--text);}
@@ -15822,9 +15825,9 @@ function renderVendas(){
 
     ${secRecHead('vendas', 'nova', 'plus', 'Registrar nova sessão', null)}
     ${secRecBody('vendas', 'nova')}
-    <div class="add-form">
+    <div class="add-form form-venda">
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-venda-data"></div>
-      <div class="field full"><label>Lead</label><input class="ps-input" type="text" id="new-venda-lead" placeholder="Nome do lead"></div>
+      <div class="field fv-lead"><label>Lead</label><input class="ps-input" type="text" id="new-venda-lead" placeholder="Nome do lead"></div>
       <div class="field"><label>WhatsApp</label><input class="ps-input" type="text" id="new-venda-whatsapp" placeholder="(00) 00000-0000"></div>
       <div class="field"><label>Vendedor</label>
         <select class="ps-input" id="new-venda-vendedor">${selectOpts(VENDAS_VENDEDOR_OPTS,'')}</select>
@@ -15832,7 +15835,9 @@ function renderVendas(){
       <div class="field"><label>Produto</label>
         <select class="ps-input" id="new-venda-produto">${selectOpts(VENDAS_PRODUTO_OPTS,'')}</select>
       </div>
-      <div class="field" style="align-self:flex-end"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="new-venda-upsell"> Upsell (upgrade)</label></div>
+      <div class="field"><label>Upsell (upgrade)</label>
+        <select class="ps-input" id="new-venda-upsell"><option value="nao">Não</option><option value="sim">Sim</option></select>
+      </div>
       <div class="field"><label>Formato</label>
         <select class="ps-input" id="new-venda-formato">${selectOpts(VENDAS_FORMATO_OPTS,'')}</select>
       </div>
@@ -15905,7 +15910,7 @@ function renderVendas(){
       whatsapp: document.getElementById('new-venda-whatsapp').value.trim(),
       vendedor: document.getElementById('new-venda-vendedor').value,
       produto: document.getElementById('new-venda-produto').value,
-      upsell: document.getElementById('new-venda-upsell').checked,
+      upsell: document.getElementById('new-venda-upsell').value==='sim',
       formato: document.getElementById('new-venda-formato').value,
       presenca: document.getElementById('new-venda-presenca').value,
       resultado: document.getElementById('new-venda-resultado').value,
