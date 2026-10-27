@@ -11299,7 +11299,7 @@ function renderInterno(){
             <tr>
               <td style="white-space:nowrap">${escapeHtml(r.data||'—')}</td>
               <td><span class="resp-pill">${escapeHtml(r.autorNome||'—')}</span></td>
-              <td style="min-width:150px">${intEncontroPill(s, r.contatoId) || '<span style="color:var(--text-mute)">—</span>'}</td>
+              <td style="white-space:nowrap">${intEncontroData(s, r.contatoId) || '<span style="color:var(--text-mute)">—</span>'}</td>
               <td style="min-width:280px">${linkify(r.texto).replace(/\n/g,'<br>')}</td>
               <td style="white-space:nowrap"><button class="btn-mini" data-rec-encontro="${r.id}" title="${r.contatoId?'Trocar o encontro vinculado':'Vincular a um encontro'}">${icon('calendar','tiny')} ${r.contatoId?'Trocar':'Vincular'}</button> <button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
             </tr>
