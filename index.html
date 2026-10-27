@@ -2122,6 +2122,8 @@
   .rd-motivos{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px;}
   .rd-motivos li{font-size:12px;line-height:1.3;padding:4px 9px;border-radius:999px;background:var(--individual-soft);color:var(--text);}
   .rd-motivos li.rd-m2{background:var(--danger-soft);}
+  .rd-espera-ok{margin-left:6px;font:inherit;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);border-radius:999px;padding:1px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;vertical-align:middle;}
+  .rd-espera-ok:hover{border-color:var(--success);color:var(--success);}
   .rd-ok{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--success);}
   .rd-mais{background:none;border:0;padding:0;margin-top:8px;font:inherit;font-size:12px;color:var(--text-mute);cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
   .rd-dados{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:8px;margin-top:10px;}
@@ -18700,7 +18702,7 @@ function rdEstagioEsperado(s){
 }
 function rdAvaliar(s, r){
   const motivos = []; // nivel 2 = vermelho, 1 = amarelo
-  const add = (nivel, txt)=>motivos.push({nivel, txt});
+  const add = (nivel, txt, chave)=>motivos.push({nivel, txt, chave});
   // 1. Acesso
   const dAcesso = rdDiasDesde(r.ultimo_acesso);
   if(dAcesso===null) add(2, 'Nunca entrou no Plat');
@@ -18712,8 +18714,8 @@ function rdAvaliar(s, r){
   if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv);
   // 3. Mensagem do aluno esperando a equipe
   const hEspera = rdHorasDesde(r.aguardando_desde);
-  if(hEspera!==null && hEspera>=48) add(2, `Esperando resposta da equipe há ${rdTempo(hEspera)}`);
-  else if(hEspera!==null && hEspera>=24) add(1, `Esperando resposta da equipe há ${rdTempo(hEspera)}`);
+  if(hEspera!==null && hEspera>=48) add(2, `Esperando resposta da equipe há ${rdTempo(hEspera)}`, 'espera');
+  else if(hEspera!==null && hEspera>=24) add(1, `Esperando resposta da equipe há ${rdTempo(hEspera)}`, 'espera');
   // 4. Aluno que parou de responder
   if(r.ult_msg_equipe && (!r.ult_msg_aluno || new Date(r.ult_msg_aluno) < new Date(r.ult_msg_equipe))){
     const d = r.ult_msg_aluno ? rdDiasDesde(r.ult_msg_aluno) : null;
@@ -18834,12 +18836,14 @@ function rdResolverMomento(s, m){
   };
   passo1();
 }
+/* O radar se atualiza sozinho: ao abrir a tela (se os dados tiverem mais de 2 minutos) e a cada 5 minutos com a tela aberta. */
+setInterval(()=>{ if(currentView==='radar' && !document.hidden && RADAR_UI.rows && !RADAR_UI.carregando) radarCarregar(); }, 5*60*1000);
 async function radarCarregar(){
   RADAR_UI.carregando = true; RADAR_UI.erro = false;
   try{
     const { data, error } = await sb.rpc('radar_mentorados');
     if(error) throw error;
-    RADAR_UI.rows = data || [];
+    RADAR_UI.rows = data || []; RADAR_UI.carregadoEm = Date.now();
     const rr = await sb.from('radar_momentos_resolvidos').select('student_id,chave,resolvido_por,resolvido_em');
     RADAR_UI.resolvidos = {};
     ((rr && rr.data) || []).forEach(x=>{ RADAR_UI.resolvidos[x.student_id+'|'+x.chave] = x; });
@@ -18880,6 +18884,7 @@ function renderRadar(){
   // O NPS não aparece mais aqui (fica em Comunicação), mas a nota entra no alerta de cada mentorado.
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
   if(RADAR_UI.rows===null && !RADAR_UI.carregando && !RADAR_UI.erro){ radarCarregar(); }
+  else if(RADAR_UI.rows && !RADAR_UI.carregando && Date.now()-(RADAR_UI.carregadoEm||0) > 2*60*1000){ radarCarregar(); }
   if(RADAR_UI.carregando && RADAR_UI.rows===null){ el.innerHTML = '<div class="empty-state">Carregando o radar…</div>'; return; }
   if(RADAR_UI.erro){
     el.innerHTML = `<div class="empty-state">Não consegui carregar o radar agora.<br><br><button type="button" class="btn-outline" id="rd-tentar">Tentar de novo</button></div>`;
@@ -18904,7 +18909,7 @@ function renderRadar(){
   const dado = (rotulo, valor, alerta)=>`<div class="rd-dado ${alerta?'rd-dado-'+alerta:''}"><span>${rotulo}</span><strong>${valor}</strong></div>`;
   const nivelDe = (d, am, ve)=> d===null ? 'vermelho' : d>=ve ? 'vermelho' : d>=am ? 'amarelo' : '';
   el.innerHTML = `
-    <p class="section-sub" style="margin-top:0">Vermelhos primeiro, com o motivo escrito ao lado. Os números são calculados na hora em que a tela abre.
+    <p class="section-sub" style="margin-top:0">Vermelhos primeiro, com o motivo escrito ao lado. Os números se atualizam sozinhos ao abrir a tela e a cada 5 minutos com ela aberta.
       <button type="button" class="link-btn" id="rd-atualizar">Atualizar</button></p>
     <div class="kpi-row rd-kpis">
       ${tile('vermelho','Em risco', qtd(2), 'Mostrar só os mentorados em vermelho')}
@@ -18947,7 +18952,7 @@ function renderRadar(){
               <button type="button" class="btn-mini" data-rd-acomp="${s.id}">${icon('chart','tiny')}<span> Acompanhamento</span></button>
             </div>
           </div>
-          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${escapeHtml(m.txt)}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
+          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
           <button type="button" class="rd-mais" data-rd-abrir="${s.id}">${icon(aberto?'up':'down','tiny')} ${aberto?'Esconder detalhes':'Ver detalhes'}</button>
           ${aberto ? `
           <div class="rd-dados">
@@ -18971,6 +18976,13 @@ function renderRadar(){
   bindBuscaInput('rd-busca', v=>{ RADAR_UI.busca = v; }, renderRadar);
   el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
   el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
+  el.querySelectorAll('[data-rd-espera-ok]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id = b.dataset.rdEsperaOk; b.disabled = true;
+    const { error } = await sb.from('radar_espera_ok').upsert({ aluno_id:id, ate:new Date().toISOString(), por:currentUser.id }, { onConflict:'aluno_id' });
+    if(error){ alert('Não foi possível tirar o alerta: '+(error.message||'')); b.disabled = false; return; }
+    const r = (RADAR_UI.rows||[]).find(x=>x.aluno_id===id); if(r) r.aguardando_desde = null;
+    renderRadar();
+  }));
   el.querySelectorAll('[data-rd-resolver]').forEach(b=>b.addEventListener('click', ()=>{
     const st = getStudent(b.dataset.rdResolver); if(!st) return;
     const m = rdMomentos(st).find(x=>x.chave===b.dataset.rdChave); if(m) rdResolverMomento(st, m);
