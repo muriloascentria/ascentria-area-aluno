@@ -1092,7 +1092,7 @@
   /* Indicadores do topo do Financeiro interno */
   /* Destaque fixado no topo da Análise Sessões 1:1 */
   .an-dest{border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;}
-  .an-dest-hd h3{margin:4px 0 10px;font-size:16px;}
+  .an-dest-hd h3{margin:4px 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
   .an-dest-pin{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);}
   .an-dest-lista{display:flex;flex-direction:column;gap:8px;}
   .an-dest-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);}
@@ -1108,7 +1108,7 @@
   .an-dest-mark.ok{color:var(--success);border-color:var(--success);}
   .an-dest-mark .icon{width:11px;height:11px;}
   .an-dest-video{display:inline-flex;align-items:center;gap:5px;text-decoration:none;white-space:nowrap;}
-  .an-dest-add{margin-top:10px;display:inline-flex;align-items:center;gap:4px;font-size:12.5px;}
+  .an-dest-add{margin-top:12px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;}
   .an-dest-novo{display:flex;justify-content:flex-end;margin:-4px 0 14px;}
   .an-dest-novo .btn-outline{display:inline-flex;align-items:center;gap:5px;}
   .an-dest-form-acoes{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
@@ -16152,10 +16152,11 @@ function anDestHtml(){
               ${pode ? `<button type="button" class="btn-mini icon-only" data-an-dest-edit="${d.id}" title="Editar">${icon('edit','tiny')}</button><button type="button" class="btn-mini icon-only danger" data-an-dest-del="${d.id}" title="Tirar do destaque">${icon('trash','tiny')}</button>` : ''}
             </div>
           </div>`; }).join('')}</div>
-        ${pode ? `<button type="button" class="link-btn an-dest-add" data-an-dest-add="${escapeAttr(autor)}">${icon('plus','tiny')} Adicionar a este destaque</button>` : ''}
+        ${pode ? `<button type="button" class="btn-outline an-dest-add" data-an-dest-add="${escapeAttr(autor)}">${icon('plus','tiny')} Adicionar a este destaque</button>` : ''}
       </div>`;
   }).join('');
-  return blocos + (pode ? `<div class="an-dest-novo"><button type="button" class="btn-outline" data-an-dest-add="">${icon('plus','tiny')} Novo destaque fixado</button></div>` : '');
+  /* Sem nenhum destaque ainda, o botão de criar o primeiro continua aparecendo. */
+  return blocos + (pode && !AN_DEST.length ? `<div class="an-dest-novo"><button type="button" class="btn-outline" data-an-dest-add="">${icon('plus','tiny')} Novo destaque fixado</button></div>` : '');
 }
 function anDestForm(d, autorIni){
   const r = d ? Object.assign({}, d) : { autor:autorIni||'', titulo:'', descricao:'', link:'', data:'' };
@@ -16273,9 +16274,11 @@ function renderAnalise(){
 
   document.getElementById('view-analise').innerHTML = `
 
-    <h2 class="section-title">${icon('chart')} Análise Sessões 1:1</h2>
-    <p class="section-sub" style="margin-top:-6px">✓ = analisou e registrou · ✕ = ainda não. Clique em <strong>Abrir</strong> para ver os links e registrar a sua análise — cada pessoa só escreve no próprio espaço.</p>
-    ${anDestHtml()}
+    ${(()=>{ const dh = anDestHtml(); return dh ? `${secRecHead('analise', 'dest', 'award', 'Destaques fixados', (AN_DEST||[]).length)}
+    ${secRecBody('analise', 'dest')}${dh}</div>` : ''; })()}
+    ${secRecHead('analise', 'lista', 'chart', 'Análise Sessões 1:1', null)}
+    ${secRecBody('analise', 'lista')}
+    <p class="section-sub" style="margin-top:0">✓ = analisou e registrou · ✕ = ainda não. Clique em <strong>Abrir</strong> para ver os links e registrar a sua análise — cada pessoa só escreve no próprio espaço.</p>
     <div class="add-form" style="margin-bottom:14px">
       <div class="field full"><label>Buscar por lead ou WhatsApp</label>
         <input class="ps-input" type="text" id="analise-busca" value="${escapeAttr(analiseBusca)}" placeholder="Digite o nome do lead">
@@ -16311,8 +16314,9 @@ function renderAnalise(){
         </tr>`).join('') || `<tr><td colspan="${4+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse termo.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
       </tbody>
     </table></div>
+    </div>
   `;
-
+  secRecBind('analise', document.getElementById('view-analise'));
   anDestBind();
   const buscaEl = document.getElementById('analise-busca');
   buscaEl.addEventListener('input', e=>{ analiseBusca = e.target.value; });
