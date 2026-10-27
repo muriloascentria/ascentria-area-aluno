@@ -1437,6 +1437,9 @@
   @media (max-width:560px){ .add-form .int-enc-campo{grid-column:1 / -1;} }
   .add-form.form-tarefa .int-enc-campo{grid-column:1 / -1;}
   .add-form.form-registro{grid-template-columns:3fr 1fr;}
+  .add-form.vendas-filtros{grid-template-columns:repeat(3, minmax(0,1fr)) minmax(0,1.4fr) auto;}
+  .add-form.vendas-filtros .actions{justify-self:end;}
+  .add-form.vendas-filtros .actions .btn-outline{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;height:38px;padding:0 14px;}
   .add-form.form-aula{grid-template-columns:3fr 1.2fr 1.2fr;}
   .add-form.form-material{grid-template-columns:3fr 1fr;}
   .add-form.form-evento{grid-template-columns:repeat(5, minmax(0,1fr));align-items:start;}
@@ -15755,7 +15758,7 @@ function renderVendas(){
     ${secRecHead('vendas', 'lista', 'idcard', 'Registro de Sessões 1:1', base.length)}
     ${secRecBody('vendas', 'lista')}
     <p class="section-sub" style="margin-top:0">Cada linha é uma sessão de venda 1:1 registrada pela equipe. Use os filtros para localizar rapidamente.</p>
-    <div class="add-form" style="margin-bottom:14px">
+    <div class="add-form vendas-filtros" style="margin-bottom:14px">
       <div class="field"><label>Vendedor</label>
         <select class="ps-input" id="vendas-filtro-vendedor">
           <option value="todos">Todos</option>
