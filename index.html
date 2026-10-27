@@ -882,6 +882,8 @@
   .fin-busca{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 4px;}
   .fin-tabs-row{display:flex;gap:8px;align-items:stretch;flex-wrap:nowrap;margin-top:10px;}
   .fin-tabs{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .fin-contas-abas{display:grid;gap:8px;margin:10px 0 14px;}
+  .fin-contas-abas .cf-month-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;box-sizing:border-box;padding:0 10px;font-size:12px;font-weight:600;}
   .fin-busca .ps-input{height:38px;box-sizing:border-box;}
   @media (max-width:640px){ .fin-tabs-row{flex-wrap:wrap;} .fin-tabs{flex-basis:100%;} #fin-pdf-btn{flex:1;} }
   #fin-pdf-btn, .cf-month-btn[data-fintab]{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;box-sizing:border-box;font-size:12px;font-weight:600;padding:0 14px;line-height:1;border-radius:var(--radius-sm);}
@@ -20731,7 +20733,7 @@ function renderFinLancamentos(container){
     finExtratoConta = contaAtual;
 
     subAbasExtrato = opcoes.length ? `
-      <div class="community-filters" style="margin-top:-6px">
+      <div class="fin-contas-abas" style="grid-template-columns:repeat(${opcoes.length},minmax(0,1fr))">
         ${opcoes.map(o=>`<button type="button" class="cf-month-btn ${o.id===contaAtual?'active':''}" data-finconta="${escapeAttr(o.id)}">${icon('money','tiny')} ${escapeHtml(o.nome)}</button>`).join('')}
       </div>` : '';
 
