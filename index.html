@@ -1437,6 +1437,14 @@
   @media (max-width:560px){ .add-form .int-enc-campo{grid-column:1 / -1;} }
   .add-form.form-tarefa .int-enc-campo{grid-column:1 / -1;}
   .add-form.form-registro{grid-template-columns:3fr 1fr;}
+  .add-form.cli-link-form{grid-template-columns:minmax(0,1fr) auto;align-items:end;}
+  .add-form.cli-busca-form{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;align-items:end;}
+  .add-form.cli-busca-form .actions{gap:8px;}
+  .add-form.cli-busca-form .actions .btn-outline{height:38px;padding:0 14px;}
+  #view-clientes .add-form .actions .btn-outline, #view-clientes .add-form .actions .btn-accent{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .add-form.cli-link-form .ps-input{width:100%;max-width:none;height:38px;box-sizing:border-box;}
+  .add-form.cli-link-form .actions .btn-accent{height:38px;padding:0 16px;}
+  @media (max-width:640px){ .add-form.cli-link-form{grid-template-columns:minmax(0,1fr) auto !important;} .add-form.cli-link-form .actions .btn-accent{padding:0 10px;} }
   .add-form.form-venda{grid-template-columns:repeat(4, minmax(0,1fr));align-items:start;}
   .add-form.form-venda .fv-lead{grid-column:span 3;}
   .add-form.form-venda .ps-input{width:100%;max-width:none;}
@@ -19312,22 +19320,23 @@ function renderClientes(){
       <div class="kpi-tile"><div class="label">Alunos ainda fora da lista</div><div class="value">${alunosSemCliente().length}</div></div>
     </div>
 
-    <h2 class="section-title">${icon('idcard')} Registro de Clientes</h2>
-    <p class="section-sub" style="margin-top:-6px">Cadastre direto por aqui ou compartilhe o link do formulário público — assim que a pessoa preencher, o cadastro cai nesta lista. Alunos da Mentoria e do Método entram pela sincronização, já vinculados e etiquetados.</p>
+    ${secRecHead('clientes', 'lista', 'idcard', 'Registro de Clientes', CLIENTES_REGISTRO.length)}
+    ${secRecBody('clientes', 'lista')}
+    <p class="section-sub" style="margin-top:0">Cadastre direto por aqui ou compartilhe o link do formulário público — assim que a pessoa preencher, o cadastro cai nesta lista. Alunos da Mentoria e do Método entram pela sincronização, já vinculados e etiquetados.</p>
     <div class="add-form" style="margin-bottom:10px;align-items:flex-end">
       <div class="actions" style="gap:8px;flex-wrap:wrap">
         <button class="btn-accent" id="clientes-novo">${icon('plus')} Novo cliente</button>
         <button class="btn-outline" id="clientes-sync-alunos" ${alunosSemCliente().length? '' : 'disabled'} title="Cria o cadastro dos alunos que ainda não estão nesta lista">${icon('upload')} Sincronizar alunos${alunosSemCliente().length? ` (${alunosSemCliente().length})` : ''}</button>
       </div>
     </div>
-    <div class="add-form" style="margin-bottom:14px;align-items:flex-end">
-      <div class="field full">
+    <div class="add-form cli-link-form" style="margin-bottom:14px">
+      <div class="field">
         <label>Link do formulário público de cadastro</label>
         <input class="ps-input" type="text" id="clientes-link" value="${escapeAttr(publicUrl)}" readonly>
       </div>
       <div class="actions"><button class="btn-accent" id="clientes-copy-link">${icon('externallink')} Copiar link</button></div>
     </div>
-    <div class="add-form" style="margin-bottom:10px">
+    <div class="add-form cli-busca-form" style="margin-bottom:10px">
       <div class="field"><label>Buscar por nome, e-mail, CPF ou TAG</label><input class="ps-input" type="text" id="clientes-busca" value="${escapeAttr(clientesBusca||'')}" placeholder="Digite para buscar..."></div>
       <div class="field"><label>Ordenar por</label>
         <select class="ps-input" id="clientes-ordem">
@@ -19360,7 +19369,9 @@ function renderClientes(){
         </tbody>
       </table>
     </div>
+    </div>
   `;
+  secRecBind('clientes', document.getElementById('view-clientes'));
   document.getElementById('clientes-copy-link').addEventListener('click', ()=>{
     const inp = document.getElementById('clientes-link');
     inp.select();
