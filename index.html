@@ -10507,9 +10507,8 @@ function exportAcompanhamentoPDF(s){
         </table></div>
       </div>
 
-      <h2>Estágio e habilidades</h2>
+      <h2>Habilidades a desenvolver</h2>
       ${aeOk ? `<table class="dados">
-        ${linha('Estágio atual', aeSit.atual)}
         ${linha('Habilidades a desenvolver agora', aeSalvo.habilidades || AE_HABILIDADES[aeSit.atual] || '')}
         ${linha('Próxima ação (do checklist)', aeSalvo.proxima_acao ? aeSalvo.proxima_acao + (aeSalvo.prazo ? ' · até '+dataBonita(aeSalvo.prazo) : '') : '')}
       </table>` : '<p class="vazio">Os dados do acompanhamento ainda estavam carregando. Abra o Acompanhamento Interno deste mentorado, espere carregar e gere o PDF de novo.</p>'}
@@ -10968,15 +10967,12 @@ function intAnaliseHtml(s){
   const quem = salvo.updated_by && (PEOPLE[salvo.updated_by] || {}).name;
   return `${AE_UI.erro ? '<div class="ae-erro">Não foi possível carregar o que já foi salvo. Recarregue a página.</div>' : ''}
     <div class="ae-form int-analise">
-      <div class="field"><label>Estágio atual</label>
-        <select class="ps-input" id="ae-estagio">${AE_ESTAGIOS.map(e=>`<option value="${escapeAttr(e.label)}" ${e.label===est?'selected':''}>${escapeHtml(e.label)}${e.label===sit.estagioPlataforma?' (pelo calendário)':''}</option>`).join('')}</select>
-      </div>
       <div class="field full"><label>Habilidades a desenvolver agora</label><textarea class="ps-input" data-ae-f="habilidades" rows="2">${escapeHtml(hab)}</textarea>
         ${hab && hab!==habPadrao ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
     </div>
     <div class="ae-rodape int-analise-rod">
-      <span class="ae-atualizado">${salvo.updated_at ? `Última atualização: ${escapeHtml(tzDataHora(salvo.updated_at, true))}${quem? ' por '+escapeHtml(quem.split(' ')[0]) : ''}` : 'Estágio e habilidades ainda não registrados.'}</span>
-      <button type="button" class="btn-accent" id="ae-salvar">${icon('check','tiny')} Salvar estágio e habilidades</button>
+      <span class="ae-atualizado">${salvo.updated_at ? `Última atualização: ${escapeHtml(tzDataHora(salvo.updated_at, true))}${quem? ' por '+escapeHtml(quem.split(' ')[0]) : ''}` : 'Habilidades ainda não registradas.'}</span>
+      <button type="button" class="btn-accent" id="ae-salvar">${icon('check','tiny')} Salvar habilidades</button>
     </div>`;
 }
 function intCompetenciasHtml(s){
@@ -11034,10 +11030,10 @@ function intAeBind(s){
     };
     sv.disabled = true; sv.textContent = 'Salvando…';
     const { data, error } = await sb.from('acompanhamento_evolucao').upsert(row, { onConflict:'student_id' }).select().single();
-    if(error){ console.error(error); alert('Não foi possível salvar: '+(error.message||'')); sv.disabled = false; sv.innerHTML = `${icon('check','tiny')} Salvar estágio e habilidades`; return; }
+    if(error){ console.error(error); alert('Não foi possível salvar: '+(error.message||'')); sv.disabled = false; sv.innerHTML = `${icon('check','tiny')} Salvar habilidades`; return; }
     AE_UI.dados = data || Object.assign({}, salvo, row); AE_UI.form = null;
     renderInterno();
-    const b2 = document.getElementById('ae-salvar'); if(b2){ b2.innerHTML = `${icon('check','tiny')} Salvo`; setTimeout(()=>{ const b3 = document.getElementById('ae-salvar'); if(b3) b3.innerHTML = `${icon('check','tiny')} Salvar estágio e habilidades`; }, 1800); }
+    const b2 = document.getElementById('ae-salvar'); if(b2){ b2.innerHTML = `${icon('check','tiny')} Salvo`; setTimeout(()=>{ const b3 = document.getElementById('ae-salvar'); if(b3) b3.innerHTML = `${icon('check','tiny')} Salvar habilidades`; }, 1800); }
   });
   v.querySelectorAll('[data-ae-mod]').forEach(b=>b.addEventListener('click', ()=>{ AE_UI.abertos[b.dataset.aeMod] = !AE_UI.abertos[b.dataset.aeMod]; renderInterno(); }));
   v.querySelectorAll('[data-ae-comp]:not([data-ae-dash])').forEach(c=>c.addEventListener('change', async ()=>{
