@@ -1514,6 +1514,10 @@
   .int-enc-pill.ag{border-style:dashed;}
   .add-form.form-registro{grid-template-columns:3fr 1fr;}
   .add-form.cli-link-form{grid-template-columns:minmax(0,1fr) auto;align-items:end;}
+  .add-form.cli-acoes{grid-template-columns:1fr;}
+  .add-form.cli-acoes .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
+  .add-form.cli-acoes .actions > button{height:40px;justify-content:center;width:100%;box-sizing:border-box;}
+  @media (max-width:560px){ .add-form.cli-acoes .actions{grid-template-columns:1fr;} }
   .add-form.cli-busca-form{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;align-items:end;}
   .add-form.cli-busca-form .actions{gap:8px;}
   .add-form.cli-busca-form .actions .btn-outline{height:38px;padding:0 14px;}
@@ -19803,8 +19807,8 @@ function renderClientes(){
     ${secRecHead('clientes', 'lista', 'idcard', 'Registro de Clientes', CLIENTES_REGISTRO.length)}
     ${secRecBody('clientes', 'lista')}
     <p class="section-sub" style="margin-top:0">Cadastre direto por aqui ou compartilhe o link do formulário público — assim que a pessoa preencher, o cadastro cai nesta lista. Alunos da Mentoria e do Método entram pela sincronização, já vinculados e etiquetados.</p>
-    <div class="add-form" style="margin-bottom:10px;align-items:flex-end">
-      <div class="actions" style="gap:8px;flex-wrap:wrap">
+    <div class="add-form cli-acoes" style="margin-bottom:10px">
+      <div class="actions">
         <button class="btn-accent" id="clientes-novo">${icon('plus')} Novo cliente</button>
         <button class="btn-outline" id="clientes-sync-alunos" ${alunosSemCliente().length? '' : 'disabled'} title="Cria o cadastro dos alunos que ainda não estão nesta lista">${icon('upload')} Sincronizar alunos${alunosSemCliente().length? ` (${alunosSemCliente().length})` : ''}</button>
       </div>
