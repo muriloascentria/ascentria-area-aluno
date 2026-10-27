@@ -2083,13 +2083,16 @@
   .rd-momentos-hd strong{letter-spacing:.08em;}
   .rd-mom-aluno{padding:8px 0;border-top:1px solid var(--border);}
   .rd-mom-aluno:first-of-type{border-top:0;}
-  .rd-mom-nome{font-weight:700;}
+  .rd-mom-nome{font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.03em;line-height:1.3;}
   .rd-mom-lista{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;}
-  .rd-mom-lista li{font-size:13px;color:var(--text-dim);}
+  .rd-mom-lista li{font-size:12px;line-height:1.3;color:var(--text-dim);}
   .rd-mom-lista li > span:first-child{margin-right:10px;}
   .rd-mom-lista li.ok > span:first-child{text-decoration:line-through;opacity:.7;}
-  .rd-mom-btn{font-size:11px;font-weight:700;letter-spacing:.05em;vertical-align:middle;}
-  .rd-mom-res{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent-2);background:var(--accent-soft);padding:3px 9px;border-radius:12px;vertical-align:middle;}
+  .rd-mom-btn{font-size:11px;font-weight:700;letter-spacing:.05em;vertical-align:middle;color:var(--danger) !important;border:1px solid var(--danger) !important;background:rgba(244,63,94,.12) !important;border-radius:12px !important;padding:3px 10px !important;display:inline-flex;align-items:center;gap:4px;}
+  .rd-mom-btn:hover{background:rgba(244,63,94,.22) !important;}
+  .rd-mom-btn .icon{stroke:var(--danger);}
+  .rd-mom-res{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--success);background:rgba(34,197,94,.14);border:1px solid var(--success);padding:3px 9px;border-radius:12px;vertical-align:middle;}
+  .rd-mom-res .icon{stroke:var(--success);}
   .rd-momento{font-size:12.5px;color:var(--text-dim);line-height:1.4;}
   .rd-momento .vg-nome-btn{font-size:12.5px;}
   .rd-lista{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
@@ -18868,7 +18871,7 @@ function renderRadar(){
           const quem = res && res.resolvido_por && PEOPLE[res.resolvido_por] ? PEOPLE[res.resolvido_por].name.split(' ')[0] : '';
           return `<li class="${res?'ok':''}"><span>${escapeHtml(m.txt)}</span>${res
             ? `<span class="rd-mom-res" title="${escapeAttr(res.resolvido_em ? tzDataHora(res.resolvido_em, true) : '')}">${icon('check','tiny')} RESOLVIDO${quem? ' POR '+escapeHtml(quem.toUpperCase()) : ''}</span>`
-            : `<button type="button" class="btn-mini rd-mom-btn" data-rd-resolver="${g.s.id}" data-rd-chave="${escapeAttr(m.chave)}">${icon('check','tiny')} RESOLVIDO</button>`}</li>`; }).join('')}</ul>
+            : `<button type="button" class="btn-mini rd-mom-btn" data-rd-resolver="${g.s.id}" data-rd-chave="${escapeAttr(m.chave)}">${icon('check','tiny')} RESOLVER</button>`}</li>`; }).join('')}</ul>
       </div>`).join('')}
     </div>` : ''}
     <div class="busca-bar larga" style="margin-top:14px">
