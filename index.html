@@ -11206,11 +11206,10 @@ function renderInterno(){
     ${intBody('checklist')}
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Nº</th><th>Tarefa</th><th>Encontro</th><th>Aulas de apoio</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Tarefa p/ equipe</th><th></th></tr></thead>
+        <thead><tr><th>Tarefa</th><th>Encontro</th><th>Aulas de apoio</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Tarefa p/ equipe</th><th></th></tr></thead>
         <tbody>
           ${s.checklist.map(t=>`
             <tr>
-              <td>${t.id}</td>
               <td style="min-width:220px">${t.tarefa}</td>
               <td style="white-space:nowrap">${intEncontroData(s, t.contatoId) || `<button class="btn-mini" data-edit-task="${t.id}" title="Vincular esta tarefa a um encontro">${icon('calendar','tiny')} Vincular encontro</button>`}</td>
               <td style="min-width:140px">${(t.aulas||[]).length
