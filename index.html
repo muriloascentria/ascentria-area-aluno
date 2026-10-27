@@ -1102,6 +1102,8 @@
   .ps-remove .icon{width:14px;height:14px;}
   .ps-add{margin-top:2px;}
   .ps-plus{width:13px;height:13px;}
+  .backup-btn{display:inline-flex !important;flex-direction:row !important;align-items:center;gap:8px;white-space:nowrap;}
+  .backup-btn .icon{flex:0 0 auto;margin:0;}
   .ps-swatches{display:flex;gap:10px;flex-wrap:wrap;}
   .ps-swatch{display:flex;align-items:center;gap:6px;}
   .ps-swatch-dot{width:20px;height:20px;border-radius:6px;border:1px solid var(--border);flex-shrink:0;}
@@ -4007,7 +4009,7 @@ let analiseBusca = '';
 let analiseNovoId = null; // lead recém-adicionado à mão: aparece mesmo antes de ter análise
 let aulasBusca = '';                       // busca na aba Aulas (título da aula ou nome de material anexado)
 let vgBusca = { mentorados:'', curso:'' }; // busca por nome nas listas da Visão Geral
-let vgAberto = { mentorados:true, curso:true, codigos:true }; // listas da Visão Geral recolhidas/expandidas
+let vgAberto = { mentorados:true, curso:true, codigos:true, backup:true }; // listas da Visão Geral recolhidas/expandidas
 let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
 let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/visível pra equipe interna, ver bootstrapData
 /* Financeiro interno da Ascentria (equipe interna) — controle de Contas a Receber/Pagar da empresa,
@@ -19615,7 +19617,7 @@ function renderVisaoGeral(){
   const secHead = (chave, ic, titulo, total, mostrando)=> `
     <div class="vg-sec-head" data-vg-toggle="${chave}">
       <h2 class="section-title com-titulo">${icon(ic)} ${titulo}</h2>
-      <span class="qtd">${mostrando!==total? `${mostrando} de ${total}` : total}</span>
+      ${total==null ? '' : `<span class="qtd">${mostrando!==total? `${mostrando} de ${total}` : total}</span>`}
       <button type="button" class="vg-sec-toggle ${vgAberto[chave]?'':'fechado'}" title="${vgAberto[chave]?'Recolher':'Expandir'}">${icon('down')} ${vgAberto[chave]?'Recolher':'Expandir'}</button>
     </div>`;
   const totalMentorados = mentoradosTodos.length;
@@ -19742,12 +19744,15 @@ function renderVisaoGeral(){
     </div>
     </div>
 
-    <h2 class="section-title com-titulo" style="margin-top:28px">${icon('download')} Backup dos Dados</h2>
-    <p class="section-sub" style="margin-top:-6px">Baixa um arquivo com <strong>todos</strong> os dados da plataforma (alunos, cadastros, painéis, progresso, comunidade, vendas, clientes e financeiro). Guarde esse arquivo fora daqui — no Google Drive, por exemplo. Fazer isso uma vez por mês já protege você: o backup automático da Supabase só guarda os últimos 7 dias, então algo apagado por engano e percebido depois disso não teria de onde voltar.</p>
+    <div style="margin-top:28px"></div>
+    ${secHead('backup','download','Backup dos Dados')}
+    <div id="vg-sec-backup" style="${vgAberto.backup?'':'display:none'}">
+    <p class="section-sub" style="margin-top:4px">Baixa um arquivo com <strong>todos</strong> os dados da plataforma (alunos, cadastros, painéis, progresso, comunidade, vendas, clientes e financeiro). Guarde esse arquivo fora daqui — no Google Drive, por exemplo. Fazer isso uma vez por mês já protege você: o backup automático da Supabase só guarda os últimos 7 dias, então algo apagado por engano e percebido depois disso não teria de onde voltar.</p>
     <div class="cf-actions">
-      <button class="btn-accent" id="backup-btn">${icon('download','ps-plus')} Exportar backup</button>
+      <button class="btn-accent backup-btn" id="backup-btn">${icon('download','ps-plus')} Exportar backup</button>
     </div>
     <div id="backup-status" class="backup-status"></div>
+    </div>
 
   `;
   document.getElementById('backup-btn').addEventListener('click', exportarBackup);
