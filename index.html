@@ -879,18 +879,39 @@
   .vg-sec-toggle .icon{width:14px;height:14px;transition:transform .15s;}
   .vg-sec-toggle.fechado .icon{transform:rotate(-90deg);}
   /* Busca do Financeiro */
-  .fin-busca{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 4px;}
-  .fin-tabs-row{display:flex;gap:8px;align-items:stretch;flex-wrap:nowrap;margin-top:10px;}
-  .fin-tabs{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
-  .fin-contas-abas{display:grid;gap:8px;margin:10px 0 14px;}
-  .fin-contas-abas .cf-month-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;box-sizing:border-box;padding:0 10px;font-size:12px;font-weight:600;}
-  .fin-busca .ps-input{height:38px;box-sizing:border-box;}
-  @media (max-width:640px){ .fin-tabs-row{flex-wrap:wrap;} .fin-tabs{flex-basis:100%;} #fin-pdf-btn{flex:1;} }
-  #fin-pdf-btn, .cf-month-btn[data-fintab]{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;box-sizing:border-box;font-size:12px;font-weight:600;padding:0 14px;line-height:1;border-radius:var(--radius-sm);}
+  /* Financeiro: todos os controles no mesmo desenho, barras segmentadas e campos de 40px. */
+  .seg{display:flex;gap:4px;padding:3px;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-sizing:border-box;min-height:40px;}
+  .seg > .cf-month-btn{flex:1 1 0;min-width:0;height:32px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:var(--text-dim);font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;box-sizing:border-box;}
+  .seg > .cf-month-btn:hover{background:var(--bg-card);color:var(--text);border:0;}
+  .seg > .cf-month-btn.active{background:var(--accent-soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--accent);border:0;}
+  .seg-prim{min-height:44px;}
+  .seg-prim > .cf-month-btn{height:36px;text-transform:uppercase;letter-spacing:.06em;font-size:12px;font-weight:700;}
+  .seg-prim > .cf-month-btn.active{background:var(--accent);color:#fff;box-shadow:none;}
+  .fin-subtabs{margin-bottom:16px;}
+  .fin-filtros{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:10px;margin:2px 0 14px;}
+  .fin-nav{display:flex;gap:10px;align-items:stretch;margin:0;flex-wrap:nowrap;}
+  .fin-ano{display:flex;align-items:center;gap:6px;height:40px;padding:0 6px 0 12px;background:var(--bg-elev);border:1px solid var(--border);border-radius:12px;box-sizing:border-box;flex:0 0 auto;margin:0;cursor:text;}
+  .fin-ano span{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);}
+  .fin-ano input.ps-input{width:72px;height:32px;border:0;background:transparent;padding:0 4px;margin:0;font-weight:700;font-size:14px;}
+  .fin-nav .cf-months{flex:1;}
+  .fin-busca{display:flex;gap:10px;margin:0;flex-wrap:nowrap;align-items:stretch;}
+  .fin-busca .ps-input{height:40px;margin:0;border-radius:12px;box-sizing:border-box;}
+  .fin-busca input.ps-input{flex:1;min-width:0;}
+  .fin-busca select.ps-input{width:210px;flex:0 0 210px;}
+  .fin-busca .btn-outline{height:40px;border-radius:12px;display:inline-flex;align-items:center;gap:6px;}
+  .fin-tabs-row{display:flex;gap:10px;align-items:stretch;margin:0 0 12px;}
+  .fin-tabs{flex:1;}
+  #fin-pdf-btn{height:40px;border-radius:12px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:600;box-sizing:border-box;flex:0 0 auto;}
   #fin-pdf-btn .icon{width:13px;height:13px;}
-  .fin-busca .ps-input{margin:0;}
-  .fin-busca input.ps-input{flex:1;min-width:220px;}
-  .fin-busca select.ps-input{width:auto;min-width:160px;}
+  .fin-contas-abas{margin:0 0 14px;min-height:36px;max-width:520px;}
+  .fin-contas-abas > .cf-month-btn{height:28px;font-size:12px;}
+  [data-flnew]{display:inline-flex !important;align-items:center;gap:6px;height:40px;border-radius:12px !important;padding:0 18px !important;}
+  @media (max-width:760px){
+    .fin-nav{flex-wrap:wrap;} .fin-nav .cf-months{flex-basis:100%;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));}
+    .fin-busca{flex-wrap:wrap;} .fin-busca input.ps-input{flex-basis:100%;} .fin-busca select.ps-input{flex:1 1 140px;width:auto;}
+    .fin-tabs-row{flex-wrap:wrap;} .fin-tabs{flex-basis:100%;} #fin-pdf-btn{flex:1;}
+    .seg-prim{flex-wrap:wrap;} .seg-prim > .cf-month-btn{flex:1 1 40%;}
+  }
   .fin-busca-info{font-size:12px;color:var(--text-mute);margin:6px 0 10px;}
   .fin-busca-info strong{color:var(--text);}
   .app-confirm-card .app-confirm-opts{display:flex;flex-direction:column;gap:8px;margin:14px 0 6px;}
@@ -1131,14 +1152,6 @@
   .cfx-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;}
   /* Financeiro interno da Ascentria (equipe interna) — Lançamentos (Contas a Receber/Pagar/Extrato) +
      cadastros de Categoria, Conta e Forma de Pagamento, compartilhados entre a equipe. */
-  .fin-subtabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
-  .fin-nav{flex-wrap:nowrap;align-items:flex-end;}
-  .fin-nav .cf-months{flex:1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;}
-  .fin-nav .cf-month-btn{height:38px;box-sizing:border-box;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;}
-  .fin-nav #fin-year{height:38px;box-sizing:border-box;}
-  @media (max-width:760px){ .fin-nav{flex-wrap:wrap;} .fin-nav .cf-months{grid-template-columns:repeat(6,minmax(0,1fr));flex-basis:100%;} }
-  [data-flnew]{display:inline-flex !important;align-items:center;gap:6px;}
-  .fin-subtabs .cf-month-btn{flex:1 1 0;min-width:120px;display:inline-flex;align-items:center;justify-content:center;height:38px;box-sizing:border-box;text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
   .fin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px;}
   .fin-toggle-row{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
   .fin-toggle-row > .ps-label{display:block;margin-bottom:8px;}
@@ -20376,7 +20389,7 @@ async function confirmClientesImport(rows){
    Método (aquele é pessoal de cada aluno; este é da Ascentria). */
 function renderFinanceiro(){
   document.getElementById('view-financeiro').innerHTML = `
-    <div class="fin-subtabs">
+    <div class="fin-subtabs seg seg-prim">
       <button type="button" class="cf-month-btn ${finSubView==='lancamentos'?'active':''}" data-finsub="lancamentos">Lançamentos</button>
       <button type="button" class="cf-month-btn ${finSubView==='faturamento'?'active':''}" data-finsub="faturamento">Faturamento</button>
       <button type="button" class="cf-month-btn ${finSubView==='categorias'?'active':''}" data-finsub="categorias">Categorias</button>
@@ -20733,7 +20746,7 @@ function renderFinLancamentos(container){
     finExtratoConta = contaAtual;
 
     subAbasExtrato = opcoes.length ? `
-      <div class="fin-contas-abas" style="grid-template-columns:repeat(${opcoes.length},minmax(0,1fr))">
+      <div class="fin-contas-abas seg">
         ${opcoes.map(o=>`<button type="button" class="cf-month-btn ${o.id===contaAtual?'active':''}" data-finconta="${escapeAttr(o.id)}">${icon('money','tiny')} ${escapeHtml(o.nome)}</button>`).join('')}
       </div>` : '';
 
@@ -20781,11 +20794,10 @@ function renderFinLancamentos(container){
       <div class="fin-resumo-card"><div class="label">Faturado em ${MESES_LONGO[finView.month]}</div><div class="value pos">${formatBRL(resumo.faturadoMes)}</div><div class="hint">já recebido no mês</div></div>
       <div class="fin-resumo-card"><div class="label">Faturado em ${finView.year}</div><div class="value pos">${formatBRL(resumo.faturadoAno)}</div><div class="hint">já recebido no ano</div></div>
     </div>
-    <div class="cf-nav fin-nav">
-      <div class="cf-year-wrap"><label class="ps-label">Ano</label>
-        <input type="number" class="ps-input" id="fin-year" value="${finView.year}">
-      </div>
-      <div class="cf-months">
+    <div class="fin-filtros">
+    <div class="fin-nav">
+      <label class="fin-ano" for="fin-year"><span>Ano</span><input type="number" class="ps-input" id="fin-year" value="${finView.year}"></label>
+      <div class="cf-months seg">
         ${MESES_LONGO.map((m,i)=>`<button type="button" class="cf-month-btn ${i===finView.month?'active':''}" data-finmonth="${i}">${m.slice(0,3)}</button>`).join('')}
       </div>
     </div>
@@ -20804,9 +20816,10 @@ function renderFinLancamentos(container){
       </select>
       ${finBuscaAtiva()? `<button type="button" class="btn-outline" id="fin-busca-limpar">${icon('x','tiny')} Limpar</button>` : ''}
     </div>
+    </div>
     ${buscando? '' : `
-    <div class="community-filters fin-tabs-row">
-      <div class="fin-tabs">
+    <div class="fin-tabs-row">
+      <div class="fin-tabs seg">
         <button type="button" class="cf-month-btn ${finTab==='receber'?'active':''}" data-fintab="receber">Contas a Receber</button>
         <button type="button" class="cf-month-btn ${finTab==='pagar'?'active':''}" data-fintab="pagar">Contas a Pagar</button>
         <button type="button" class="cf-month-btn ${finTab==='extrato'?'active':''}" data-fintab="extrato">Extrato</button>
