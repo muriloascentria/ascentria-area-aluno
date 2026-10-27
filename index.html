@@ -2069,6 +2069,16 @@
   .rd-momentos{margin-top:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
   .rd-momentos-hd{display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:2px;}
   .rd-momentos-hd .icon{width:16px;height:16px;color:var(--accent);}
+  .rd-momentos-hd strong{letter-spacing:.08em;}
+  .rd-mom-aluno{padding:8px 0;border-top:1px solid var(--border);}
+  .rd-mom-aluno:first-of-type{border-top:0;}
+  .rd-mom-nome{font-weight:700;}
+  .rd-mom-lista{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;}
+  .rd-mom-lista li{font-size:13px;color:var(--text-dim);}
+  .rd-mom-lista li > span:first-child{margin-right:10px;}
+  .rd-mom-lista li.ok > span:first-child{text-decoration:line-through;opacity:.7;}
+  .rd-mom-btn{font-size:11px;font-weight:700;letter-spacing:.05em;vertical-align:middle;}
+  .rd-mom-res{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent-2);background:var(--accent-soft);padding:3px 9px;border-radius:12px;vertical-align:middle;}
   .rd-momento{font-size:12.5px;color:var(--text-dim);line-height:1.4;}
   .rd-momento .vg-nome-btn{font-size:12.5px;}
   .rd-lista{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
@@ -18561,7 +18571,7 @@ function premioHtmlEquipe(){
 const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-bb26-eec09ba778c4','e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'];
 const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
 const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
-const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{} };
+const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, resolvidos:{} };
 function radarPode(){
   return currentUserRole==='staff' && !!currentUser && RADAR_UIDS.includes(idEfetivo());
 }
@@ -18648,21 +18658,89 @@ function rdMomentos(s){
   const out = [];
   const dias = rdDiasDeMatricula(s);
   if(dias!==null){
-    if(dias>=23 && dias<=30) out.push({em:30-dias, txt: dias===30 ? 'Completa 30 dias de mentoria hoje' : `Completa 30 dias de mentoria em ${30-dias} dia${30-dias>1?'s':''}`});
+    if(dias>=23 && dias<=30) out.push({chave:'30d', em:30-dias, txt: dias===30 ? 'Completa 30 dias de mentoria hoje' : `Completa 30 dias de mentoria em ${30-dias} dia${30-dias>1?'s':''}`});
     const f = rdFator(s);
     const proxLim = RADAR_REGUA.find(lim=>lim > Math.max(0,dias)*f);
     if(proxLim){
       const diaTroca = Math.ceil(proxLim/f) + 1;
       const falta = diaTroca - dias;
       const prox = RADAR_ESTAGIOS[RADAR_REGUA.indexOf(proxLim)+1];
-      if(falta>=0 && falta<=7) out.push({em:falta, txt: falta===0 ? `Entra hoje em ${prox} pelo cronograma` : `Entra em ${prox} pelo cronograma em ${falta} dia${falta>1?'s':''}`});
+      if(falta>=0 && falta<=7) out.push({chave:'mod:'+prox, em:falta, txt: falta===0 ? `Entra hoje em ${prox} pelo cronograma` : `Entra em ${prox} pelo cronograma em ${falta} dia${falta>1?'s':''}`});
     }
   }
   try{
     const rest = diasRestantes(s);
-    if(rest>=0 && rest<=30) out.push({em:rest, txt: rest===0 ? 'Mentoria termina hoje' : `Mentoria termina em ${rest} dia${rest>1?'s':''} (hora de falar de renovação e depoimento)`});
+    if(rest>=0 && rest<=30) out.push({chave:'fim', em:rest, txt: rest===0 ? 'Mentoria termina hoje' : `Mentoria termina em ${rest} dia${rest>1?'s':''} (hora de falar de renovação e depoimento)`});
   }catch(e){}
   return out;
+}
+function rdMomentosAgrupados(momentos){
+  const grupos = [];
+  momentos.forEach(m=>{ let g = grupos.find(x=>x.s.id===m.s.id); if(!g){ g = { s:m.s, itens:[] }; grupos.push(g); } g.itens.push(m); });
+  return grupos;
+}
+/* RESOLVIDO num momento-chave: primeiro a pergunta; com "Sim", o que foi analisado vira um registro
+   interno no Acompanhamento Interno do mentorado e o momento fica marcado com o nome de quem resolveu. */
+function rdResolverMomento(s, m){
+  const passo1 = ()=>{
+    document.getElementById('modal').innerHTML = `
+      <div class="modal-body form-modal">
+        <div class="cat">Radar dos Mentorados · ${escapeHtml(s.name)}</div>
+        <h3>${escapeHtml(m.txt)}</h3>
+        <p class="desc" style="font-size:14.5px;color:var(--text)">Você estudou o caso deste mentorado para que o estágio que ele está indo esteja coerente com as suas ações?</p>
+        <div class="modal-actions an-dest-form-acoes">
+          <button type="button" class="btn-accent" id="rdm-sim">${icon('check','tiny')} Sim</button>
+          <button type="button" class="btn-outline" id="rdm-nao">Ainda não</button>
+        </div>
+      </div>`;
+    modalReturnTo = null; modalCloseGuard = null;
+    document.getElementById('modal-backdrop').classList.add('open');
+    document.getElementById('rdm-sim').addEventListener('click', passo2);
+    document.getElementById('rdm-nao').addEventListener('click', ()=>{
+      document.querySelector('#modal .modal-body').innerHTML = `
+        <div class="cat">Radar dos Mentorados · ${escapeHtml(s.name)}</div>
+        <h3>Estude o caso antes de resolver</h3>
+        <p class="desc">Abra o Acompanhamento Interno, veja o checklist, os encontros e as competências do mentorado e confira se as ações combinadas estão coerentes com o estágio para onde ele está indo. Depois volte aqui e marque como resolvido.</p>
+        <div class="modal-actions an-dest-form-acoes">
+          <button type="button" class="btn-accent" id="rdm-abrir">${icon('chart','tiny')} Abrir Acompanhamento Interno</button>
+          <button type="button" class="btn-outline" id="rdm-fechar">Fechar</button>
+        </div>`;
+      document.getElementById('rdm-fechar').addEventListener('click', closeModal);
+      document.getElementById('rdm-abrir').addEventListener('click', ()=>{ reallyCloseModal(); abrirAcompanhamento(s.id); });
+    });
+  };
+  const passo2 = ()=>{
+    const temEnc = (s.contatos||[]).length > 0;
+    document.querySelector('#modal .modal-body').innerHTML = `
+      <div class="cat">Radar dos Mentorados · ${escapeHtml(s.name)}</div>
+      <h3>Registre no Acompanhamento Interno</h3>
+      <p class="desc">Escreva o que você analisou e o que foi definido, para a equipe acompanhar a evolução de ${escapeHtml(s.name.split(' ')[0])}. Vai para os Registros Internos da Equipe.</p>
+      <div class="field full"><label>Momento</label><div class="int-hab-auto">${escapeHtml(m.txt)}</div></div>
+      <div class="field full"><label>Análise e ações *</label><textarea class="ps-input" id="rdm-texto" rows="4" placeholder="O que você viu no caso e quais ações estão alinhadas ao próximo estágio..."></textarea></div>
+      ${temEnc ? `<div class="field full"><label>Encontro relacionado (opcional)</label>${intEncontroSelect(s, 'rdm-encontro', '', true)}</div>` : ''}
+      <div class="modal-actions an-dest-form-acoes">
+        <button type="button" class="btn-accent" id="rdm-salvar">${icon('check','tiny')} Registrar e marcar como resolvido</button>
+        <button type="button" class="btn-outline" id="rdm-cancelar">Cancelar</button>
+      </div>`;
+    document.getElementById('rdm-cancelar').addEventListener('click', closeModal);
+    document.getElementById('rdm-texto').focus();
+    document.getElementById('rdm-salvar').addEventListener('click', async (e)=>{
+      const analise = document.getElementById('rdm-texto').value.trim();
+      if(!analise){ alert('Escreva o que você analisou antes de marcar como resolvido.'); document.getElementById('rdm-texto').focus(); return; }
+      const encSel = document.getElementById('rdm-encontro');
+      const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Salvando…';
+      const r = { data:intHojeTxt(), texto:`Momento-chave (Radar): ${m.txt}\n\n${analise}`, autorNome:(currentUserProfile&&currentUserProfile.name)||'—', contatoId: encSel && encSel.value ? Number(encSel.value) : null, criadoEm:new Date().toISOString() };
+      try{
+        r.id = await syncInternalRecordInsert(s.id, r);
+        (s.registrosInternos = s.registrosInternos || []).unshift(r);
+        const { data, error } = await sb.from('radar_momentos_resolvidos').insert({ student_id:s.id, chave:m.chave, texto_momento:m.txt, analise, record_id:r.id, resolvido_por:currentUser.id }).select('student_id,chave,resolvido_por,resolvido_em').single();
+        if(error) throw error;
+        RADAR_UI.resolvidos[s.id+'|'+m.chave] = data || { student_id:s.id, chave:m.chave, resolvido_por:currentUser.id, resolvido_em:new Date().toISOString() };
+        reallyCloseModal(); renderRadar();
+      }catch(err){ console.error(err); alert('Não foi possível salvar: '+((err&&err.message)||'')); btn.disabled = false; btn.innerHTML = `${icon('check','tiny')} Registrar e marcar como resolvido`; }
+    });
+  };
+  passo1();
 }
 async function radarCarregar(){
   RADAR_UI.carregando = true; RADAR_UI.erro = false;
@@ -18670,6 +18748,9 @@ async function radarCarregar(){
     const { data, error } = await sb.rpc('radar_mentorados');
     if(error) throw error;
     RADAR_UI.rows = data || [];
+    const rr = await sb.from('radar_momentos_resolvidos').select('student_id,chave,resolvido_por,resolvido_em');
+    RADAR_UI.resolvidos = {};
+    ((rr && rr.data) || []).forEach(x=>{ RADAR_UI.resolvidos[x.student_id+'|'+x.chave] = x; });
   }catch(e){ console.error('radar_mentorados', e); RADAR_UI.erro = true; RADAR_UI.rows = null; }
   RADAR_UI.carregando = false;
   if(currentView==='radar') renderRadar();
@@ -18741,8 +18822,15 @@ function renderRadar(){
     </div>
     ${momentos.length ? `
     <div class="rd-momentos">
-      <div class="rd-momentos-hd">${icon('calendar')} <strong>Momentos-chave dos próximos dias</strong></div>
-      ${momentos.map(m=>`<div class="rd-momento"><button type="button" class="vg-nome-btn" data-rd-acomp="${m.s.id}">${escapeHtml(m.s.name)}</button> <span>${escapeHtml(m.txt)}</span></div>`).join('')}
+      <div class="rd-momentos-hd">${icon('calendar')} <strong>MOMENTOS-CHAVE DOS PRÓXIMOS DIAS</strong></div>
+      ${rdMomentosAgrupados(momentos).map(g=>`<div class="rd-mom-aluno">
+        <button type="button" class="vg-nome-btn rd-mom-nome" data-rd-acomp="${g.s.id}">${escapeHtml(g.s.name)}</button>
+        <ul class="rd-mom-lista">${g.itens.map(m=>{ const res = RADAR_UI.resolvidos[g.s.id+'|'+m.chave];
+          const quem = res && res.resolvido_por && PEOPLE[res.resolvido_por] ? PEOPLE[res.resolvido_por].name.split(' ')[0] : '';
+          return `<li class="${res?'ok':''}"><span>${escapeHtml(m.txt)}</span>${res
+            ? `<span class="rd-mom-res" title="${escapeAttr(res.resolvido_em ? tzDataHora(res.resolvido_em, true) : '')}">${icon('check','tiny')} RESOLVIDO${quem? ' POR '+escapeHtml(quem.toUpperCase()) : ''}</span>`
+            : `<button type="button" class="btn-mini rd-mom-btn" data-rd-resolver="${g.s.id}" data-rd-chave="${escapeAttr(m.chave)}">${icon('check','tiny')} RESOLVIDO</button>`}</li>`; }).join('')}</ul>
+      </div>`).join('')}
     </div>` : ''}
     <div class="busca-bar larga" style="margin-top:14px">
       <input class="ps-input" type="text" id="rd-busca" value="${escapeAttr(RADAR_UI.busca)}" placeholder="Buscar mentorado pelo nome…">
@@ -18791,6 +18879,10 @@ function renderRadar(){
   bindBuscaInput('rd-busca', v=>{ RADAR_UI.busca = v; }, renderRadar);
   el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
   el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
+  el.querySelectorAll('[data-rd-resolver]').forEach(b=>b.addEventListener('click', ()=>{
+    const st = getStudent(b.dataset.rdResolver); if(!st) return;
+    const m = rdMomentos(st).find(x=>x.chave===b.dataset.rdChave); if(m) rdResolverMomento(st, m);
+  }));
   el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
   el.querySelectorAll('[data-open-staff]').forEach(b=>b.addEventListener('click', ()=>{ currentStudentId = b.dataset.openStaff; panelQuadrantId = null; setRole('aluno'); }));
 }
