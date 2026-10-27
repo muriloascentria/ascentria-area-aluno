@@ -1126,6 +1126,13 @@
   /* Financeiro interno da Ascentria (equipe interna) — Lançamentos (Contas a Receber/Pagar/Extrato) +
      cadastros de Categoria, Conta e Forma de Pagamento, compartilhados entre a equipe. */
   .fin-subtabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .fin-nav{flex-wrap:nowrap;align-items:flex-end;}
+  .fin-nav .cf-months{flex:1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;}
+  .fin-nav .cf-month-btn{height:38px;box-sizing:border-box;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;}
+  .fin-nav #fin-year{height:38px;box-sizing:border-box;}
+  @media (max-width:760px){ .fin-nav{flex-wrap:wrap;} .fin-nav .cf-months{grid-template-columns:repeat(6,minmax(0,1fr));flex-basis:100%;} }
+  [data-flnew]{display:inline-flex !important;align-items:center;gap:6px;}
+  .fin-subtabs .cf-month-btn{flex:1 1 0;min-width:120px;display:inline-flex;align-items:center;justify-content:center;height:38px;box-sizing:border-box;text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
   .fin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px;}
   .fin-toggle-row{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
   .fin-toggle-row > .ps-label{display:block;margin-bottom:8px;}
@@ -20768,7 +20775,7 @@ function renderFinLancamentos(container){
       <div class="fin-resumo-card"><div class="label">Faturado em ${MESES_LONGO[finView.month]}</div><div class="value pos">${formatBRL(resumo.faturadoMes)}</div><div class="hint">já recebido no mês</div></div>
       <div class="fin-resumo-card"><div class="label">Faturado em ${finView.year}</div><div class="value pos">${formatBRL(resumo.faturadoAno)}</div><div class="hint">já recebido no ano</div></div>
     </div>
-    <div class="cf-nav">
+    <div class="cf-nav fin-nav">
       <div class="cf-year-wrap"><label class="ps-label">Ano</label>
         <input type="number" class="ps-input" id="fin-year" value="${finView.year}">
       </div>
