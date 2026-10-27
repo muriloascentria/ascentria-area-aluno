@@ -10361,6 +10361,18 @@ function exportAcompanhamentoPDF(s){
   const hoje = new Date();
   const geradoEm = String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
 
+  /* Situação, análise da equipe, competências e onboarding (os mesmos dados do Acompanhamento Interno).
+     Vêm do que já está carregado na tela para este mentorado. */
+  const aeOk = AE_UI.sid===s.id && !AE_UI.carregando;
+  const aeSalvo = aeOk ? (AE_UI.dados || {}) : {};
+  const aeSit = aeSituacao(s, aeSalvo);
+  const aeComp = aeSalvo.competencias || {};
+  const encLabel = (id)=> id ? intEncontroLabel(s, id) : '';
+  const encontrosAsc = intEncontros(s).slice().reverse();
+  const tarefasSemEnc = tarefas.filter(t=>!t.contatoId || !encLabel(t.contatoId));
+  const regsSemEnc = (s.registrosInternos||[]).filter(r=>!r.contatoId || !encLabel(r.contatoId));
+  const txtLimpo = (t)=> String(t||'').replace(/<[^>]+>/g,'');
+  const obRows = (()=>{ const o = aeOk ? AE_UI.ob : null; const prev = obPrevistas(s, o); return OB_ETAPAS.map(e=>({ nome:e.nome, resp:e.resp, st: obStatus(e, o, prev[e.k]).txt })); })();
   const linha = (rotulo, valor)=> `<tr><th>${escapeHtml(rotulo)}</th><td>${escapeHtml(valor==null||valor===''? '—' : String(valor))}</td></tr>`;
   const linksHtml = (links)=> links.length? ' ' + links.map(l=>`<a href="${escapeAttr(l.url)}">${escapeHtml(l.rotulo)}</a>`).join(' · ') : '';
   const eventoHtml = (e)=> `
@@ -10407,6 +10419,17 @@ function exportAcompanhamentoPDF(s){
       .mod span{ float:right; color:#666; font-size:10px; }
       .vazio{ color:#999; font-style:italic; }
       .aviso{ background:#fbf3e8; border:1px solid #e0c9a6; border-radius:6px; padding:9px 11px; margin-top:8px; font-size:10.5px; }
+      .enc{ border:1px solid #eee; border-left:3px solid #ab6f30; border-radius:4px; padding:7px 10px; margin-bottom:8px; page-break-inside:avoid; }
+      .enc-cab{ font-size:11px; }
+      .enc-sub{ font-size:9.5px; text-transform:uppercase; letter-spacing:.4px; color:#8a5a26; margin-top:5px; }
+      .enc ul, ul.comp{ margin:3px 0 0 16px; padding:0; }
+      .enc li{ margin:2px 0; }
+      .enc-meta{ color:#777; font-size:9.5px; }
+      .comp-mod{ margin-bottom:9px; page-break-inside:avoid; }
+      .comp-cab span{ color:#666; font-size:10px; margin-left:6px; }
+      ul.comp{ list-style:none; margin-left:2px; }
+      ul.comp li{ margin:2px 0; color:#666; }
+      ul.comp li.ok{ color:#1a1a1a; }
       .rodape{ margin-top:26px; padding-top:9px; border-top:1px solid #e6d7c2; font-size:9.5px; color:#888; }
     </style></head><body>
       <div class="pdf-header">
@@ -10459,6 +10482,32 @@ function exportAcompanhamentoPDF(s){
         ${linha('Objetivo em 12 meses', d.objetivo12meses)}
       </table>
 
+      <h2>Situação na plataforma</h2>
+      <div class="cols">
+        <div><table class="dados">
+          ${linha('Progresso na plataforma', aeSit.progresso+'%')}
+          ${linha('Progresso do mentorado', (s.progressoMentorado||0)+'%')}
+          ${linha('Meta', aeSit.metaPendente ? 'Meta pendente' : 'Tudo em dia')}
+          ${linha('Dias restantes', aeSit.dias<0 ? 'encerrada' : aeSit.dias+' dias')}
+        </table></div>
+        <div><table class="dados">
+          ${linha('Dias consumidos', aeSit.consumidos===null ? '' : aeSit.consumidos+' dias (régua de 365)')}
+          ${linha('Estágio esperado', aeSit.esperado || 'Verificar prazo')}
+          ${linha('Estágio atual', aeSit.atual)}
+          ${linha('Alinhamento', aeSit.alinhamento)}
+        </table></div>
+      </div>
+
+      <h2>Análise da equipe</h2>
+      ${aeOk ? `<table class="dados">
+        ${linha('Nível de implementação', aeSalvo.nivel)}
+        ${linha('Prioridade', aeSalvo.prioridade || ('Sugerida: '+aeSit.sugerida))}
+        ${linha('Pendências anteriores', aeSalvo.pendencias)}
+        ${linha('Habilidades a desenvolver agora', aeSalvo.habilidades || AE_HABILIDADES[aeSit.atual] || '')}
+        ${linha('Próxima ação (do checklist)', aeSalvo.proxima_acao ? aeSalvo.proxima_acao + (aeSalvo.prazo ? ' · até '+dataBonita(aeSalvo.prazo) : '') : '')}
+        ${linha('Última atualização', aeSalvo.updated_at ? tzDataHora(aeSalvo.updated_at, true) + (aeSalvo.updated_by && PEOPLE[aeSalvo.updated_by] ? ' por '+PEOPLE[aeSalvo.updated_by].name : '') : 'sem análise registrada')}
+      </table>` : '<p class="vazio">A análise da equipe ainda estava carregando. Abra o Acompanhamento Interno deste mentorado, espere carregar e gere o PDF de novo.</p>'}
+
       <h2>Processo de venda</h2>
       ${vendas.length? vendas.map(v=>{
         const an = analiseDaVenda(v.id);
@@ -10498,14 +10547,54 @@ function exportAcompanhamentoPDF(s){
       <h2>Checklist de acompanhamento</h2>
       <p class="sub">${feitas} de ${tarefas.length} tarefas concluídas.</p>
       ${tarefas.length? `<table class="grade">
-        <thead><tr><th style="width:38%">Tarefa</th><th>Responsável</th><th>Prazo</th><th>Status</th><th style="width:26%">Observações</th></tr></thead>
+        <thead><tr><th style="width:34%">Tarefa</th><th style="width:16%">Encontro</th><th>Responsável</th><th>Prazo</th><th>Status</th><th style="width:20%">Observações</th></tr></thead>
         <tbody>${tarefas.map(t=>`<tr>
           <td>${escapeHtml(t.tarefa)}${(t.aulas||[]).length? `<div style="color:#666;font-size:9.5px;margin-top:2px">Aulas de apoio: ${escapeHtml((t.aulas||[]).map(id=>(getCourse(id)||{}).title).filter(Boolean).join(' · '))}</div>` : ''}</td>
+          <td>${escapeHtml(encLabel(t.contatoId) || '—')}</td>
           <td>${escapeHtml(t.responsavel)}</td>
           <td>${escapeHtml(t.prazo)}</td>
           <td>${escapeHtml(t.status)}</td>
           <td>${escapeHtml(t.obs||'—')}</td>
         </tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhuma tarefa registrada.</p>'}
+
+      <h2>Encontros e o que foi definido em cada um</h2>
+      <p class="sub">Cada encontro do Registro de Contatos, com as tarefas do checklist e os registros internos vinculados a ele.</p>
+      ${encontrosAsc.length ? encontrosAsc.map(c=>{
+        const ts = tarefas.filter(t=>String(t.contatoId)===String(c.id));
+        const rs = (s.registrosInternos||[]).filter(r=>String(r.contatoId)===String(c.id));
+        return `<div class="enc">
+          <div class="enc-cab"><b>${escapeHtml(c.data||'sem data')}</b> · ${escapeHtml(contatoTipoLabel(c))}${c.responsavel ? ' · '+escapeHtml(c.responsavel) : ''}</div>
+          ${c.resumo ? `<div class="ev-det">${escapeHtml(txtLimpo(c.resumo))}</div>` : ''}
+          ${ts.length ? `<div class="enc-sub">Tarefas definidas</div><ul>${ts.map(t=>`<li>${escapeHtml(txtLimpo(t.tarefa))} <span class="enc-meta">(${escapeHtml(t.responsavel)} · ${escapeHtml(t.prazo)} · ${escapeHtml(t.status)})</span></li>`).join('')}</ul>` : ''}
+          ${rs.length ? `<div class="enc-sub">Registros internos</div><ul>${rs.map(r=>`<li>${escapeHtml(r.texto)} <span class="enc-meta">(${escapeHtml(r.autorNome||'—')})</span></li>`).join('')}</ul>` : ''}
+          ${!ts.length && !rs.length ? '<div class="vazio">Nada vinculado a este encontro.</div>' : ''}
+        </div>`; }).join('') : '<p class="vazio">Nenhum encontro registrado.</p>'}
+      ${tarefasSemEnc.length || regsSemEnc.length ? `<div class="enc">
+          <div class="enc-cab"><b>Sem encontro vinculado</b></div>
+          ${tarefasSemEnc.length ? `<div class="enc-sub">Tarefas</div><ul>${tarefasSemEnc.map(t=>`<li>${escapeHtml(txtLimpo(t.tarefa))} <span class="enc-meta">(${escapeHtml(t.status)})</span></li>`).join('')}</ul>` : ''}
+          ${regsSemEnc.length ? `<div class="enc-sub">Registros internos</div><ul>${regsSemEnc.map(r=>`<li>${escapeHtml(r.data||'')} · ${escapeHtml(r.texto)} <span class="enc-meta">(${escapeHtml(r.autorNome||'—')})</span></li>`).join('')}</ul>` : ''}
+        </div>` : ''}
+
+      <h2>Registros internos da equipe</h2>
+      ${(s.registrosInternos||[]).length ? `<table class="grade">
+        <thead><tr><th style="width:12%">Data</th><th style="width:14%">Autor</th><th style="width:20%">Encontro</th><th>Registro</th></tr></thead>
+        <tbody>${(s.registrosInternos||[]).map(r=>`<tr><td>${escapeHtml(r.data||'—')}</td><td>${escapeHtml(r.autorNome||'—')}</td><td>${escapeHtml(encLabel(r.contatoId)||'—')}</td><td>${escapeHtml(r.texto).replace(/\n/g,'<br>')}</td></tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhum registro interno.</p>'}
+
+      <h2>Onboarding dos primeiros 30 dias</h2>
+      <table class="grade">
+        <thead><tr><th style="width:40%">Etapa</th><th>Responsável</th><th>Situação</th></tr></thead>
+        <tbody>${obRows.map(o=>`<tr><td>${escapeHtml(o.nome)}</td><td>${escapeHtml(o.resp||'—')}</td><td>${escapeHtml(o.st)}</td></tr>`).join('')}</tbody>
+      </table>
+
+      <h2>Competências por módulo</h2>
+      ${AE_ESTAGIOS.map(e=>{
+        const m = AE_COMPETENCIAS[e.mod];
+        const itens = m.itens.map(([c,ev],k)=>({ c, ev, dash: aeFeitoNoDashboard(s.id, e.mod, k), ok: !!aeComp[e.mod+'-'+k] }));
+        const feitos = itens.filter(x=>x.dash||x.ok).length;
+        return `<div class="comp-mod">
+          <div class="comp-cab"><b>${escapeHtml(e.label)}</b> <span>${feitos}/${itens.length}${e.label===aeSit.atual ? ' · estágio atual' : ''}</span></div>
+          <ul class="comp">${itens.map(x=>`<li class="${x.dash||x.ok?'ok':''}">${x.dash||x.ok?'✓':'○'} ${escapeHtml(x.c)} <span class="enc-meta">· ${escapeHtml(x.ev)}${x.dash?' (concluída pelo aluno no Dashboard)':''}</span></li>`).join('')}</ul>
+        </div>`; }).join('')}
 
       <h2>Progresso no Método</h2>
       ${modulos.map(m=>`
