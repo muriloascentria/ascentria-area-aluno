@@ -308,6 +308,18 @@
   .me-video{margin-top:12px;position:relative;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;background:#000;}
   .me-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
   .me-staff-tabela td{vertical-align:top;}
+  .me-bv-ov{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;animation:msgPop .25s ease-out;}
+  .me-bv-card{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid #c9973c;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.45);width:min(560px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;padding:20px 20px 16px;}
+  .me-bv-card .me-logo{margin:0 0 14px;} .me-bv-card .me-logo img{max-width:300px;}
+  .me-bv-hd{margin-bottom:10px;}
+  .me-bv-corpo{overflow-y:auto;padding-right:6px;font-size:13.5px;line-height:1.55;color:var(--text);}
+  .me-bv-corpo p{margin:0 0 9px;}
+  .me-bv-tit{font-size:16px;margin:0 0 10px;letter-spacing:.02em;}
+  .me-bv-dica{background:rgba(184,134,47,.14);border:1px solid rgba(184,134,47,.4);border-radius:10px;padding:8px 10px;font-weight:600;display:flex;gap:6px;align-items:flex-start;}
+  .me-bv-ass{color:var(--text-dim);font-style:italic;margin-bottom:2px !important;}
+  .me-bv-acoes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+  .me-bv-btn{font-size:14.5px;padding:12px 22px;background:linear-gradient(135deg,#b8862f,#d9a95a) !important;color:#1a1408 !important;border:0 !important;font-weight:800;letter-spacing:.02em;}
+  .me-bv-acoes .btn-accent,.me-bv-acoes .btn-outline{display:inline-flex;align-items:center;gap:6px;}
   .me-sub{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);margin:16px 0 8px;}
   .add-form.me-form-ses{grid-template-columns:repeat(4,minmax(0,1fr));}
   .add-form.me-form-meta{grid-template-columns:minmax(0,1.5fr) minmax(0,1.3fr);}
@@ -4883,6 +4895,8 @@ function mapProfileRow(p){
     /* Aluno do curso com TODAS as aulas liberadas de uma vez (sem o bloqueio sequencial) — a equipe liga na Visão Geral. */
     aulasLiberadas: !!p.aulas_liberadas,
     mentorEssencia: !!p.mentor_essencia,
+    meBoasVindasEm: p.me_boas_vindas_em || null,
+    genero: p.genero || null,
     /* Início real (para o NPS de 4, 8 e 12 meses): a data de matrícula; sem ela, o dia em que a conta foi criada. */
     contaTeste: !!p.conta_teste,
     inicioReal: sc.data_matricula || String(p.created_at||'').slice(0,10) || null,
@@ -10213,6 +10227,50 @@ function meAtualizarMenu(){
   const lbl = document.getElementById('nav-group-mentores'); if(lbl) lbl.style.display = ok ? 'flex' : 'none';
   document.querySelectorAll('.nav-item.mentores').forEach(b=>{ b.style.display = ok ? 'flex' : 'none'; });
   if(!ok && ['me_aulas','me_sessoes','me_metas'].includes(currentView) && currentRole==='aluno') setTimeout(()=>goTo('inicio'), 0);
+  if(ok) setTimeout(meBoasVindasTalvez, 600);
+}
+/* Boas-vindas do Mentores Essência: aparece uma vez para o aluno liberado (a própria conta, não a equipe
+   vendo como aluno). Fica guardado em profiles.me_boas_vindas_em quando ele fecha. */
+const ME_BOAS_VINDAS_TXT_F = "🚀 BEM-VINDA AO MENTORES ESSÊNCIA!\nUma nova era começa agora. E você faz parte dela!\nVocê não chegou até aqui por acaso. Chegou porque decidiu que sua profissão pode proporcionar muito mais do que uma carreira. Ela pode proporcionar liberdade, prosperidade, reconhecimento e uma vida extraordinária.\nO MENTORES ESSÊNCIA nasce para formar uma nova geração de enfermeiras empresárias. Mulheres que não apenas atendem, mas lideram, ensinam, transformam vidas e constroem negócios capazes de faturar R$ 100 MIL POR MÊS OU MAIS!\nEssa é a nossa meta. E vamos trabalhar com estratégia, método, posicionamento e execução para que você desenvolva um negócio capaz de alcançá-la.\nMas quero que compreenda algo: não estamos falando apenas de dinheiro. Estamos falando de quem você precisará se tornar para conquistar essa nova realidade.\nVocê será desafiada a pensar diferente, abandonar limitações, assumir seu protagonismo e compreender que ser enfermeira e empresária não são caminhos opostos. São possibilidades que podem caminhar juntas.\nA Enfermagem está entrando em uma nova era. E nós não queremos apenas acompanhar essa transformação. Queremos ser protagonistas dela!\nA partir de agora, você não caminha sozinha. Existe um time, uma metodologia e uma comunidade comprometidos com o seu crescimento.\nTudo do Mentores Essência (aulas, sessões 1:1 e metas) você acessa pelo menu lateral, em MENTORES ESSÊNCIA.\nSeja bem-vinda ao MENTORES ESSÊNCIA.\nQue este seja o início de uma transformação profunda na sua vida, na sua família e na história que você está construindo.\nVocê já é enfermeira. Agora é hora de pensar, agir e prosperar como empresária! 💚\nCom admiração e compromisso com o seu crescimento,\nMurilo Pedroso e Time Ascentria";
+const ME_BOAS_VINDAS_TXT_M = "🚀 BEM-VINDO AO MENTORES ESSÊNCIA!\nUma nova era começa agora. E você faz parte dela!\nVocê não chegou até aqui por acaso. Chegou porque decidiu que sua profissão pode proporcionar muito mais do que uma carreira. Ela pode proporcionar liberdade, prosperidade, reconhecimento e uma vida extraordinária.\nO MENTORES ESSÊNCIA nasce para formar uma nova geração de enfermeiros empresários. Profissionais que não apenas atendem, mas lideram, ensinam, transformam vidas e constroem negócios capazes de faturar R$ 100 MIL POR MÊS OU MAIS!\nEssa é a nossa meta. E vamos trabalhar com estratégia, método, posicionamento e execução para que você desenvolva um negócio capaz de alcançá-la.\nMas quero que compreenda algo: não estamos falando apenas de dinheiro. Estamos falando de quem você precisará se tornar para conquistar essa nova realidade.\nVocê será desafiado a pensar diferente, abandonar limitações, assumir seu protagonismo e compreender que ser enfermeiro e empresário não são caminhos opostos. São possibilidades que podem caminhar juntas.\nA Enfermagem está entrando em uma nova era. E nós não queremos apenas acompanhar essa transformação. Queremos ser protagonistas dela!\nA partir de agora, você não caminha sozinho. Existe um time, uma metodologia e uma comunidade comprometidos com o seu crescimento.\nTudo do Mentores Essência (aulas, sessões 1:1 e metas) você acessa pelo menu lateral, em MENTORES ESSÊNCIA.\nSeja bem-vindo ao MENTORES ESSÊNCIA.\nQue este seja o início de uma transformação profunda na sua vida, na sua família e na história que você está construindo.\nVocê já é enfermeiro. Agora é hora de pensar, agir e prosperar como empresário! 💚\nCom admiração e compromisso com o seu crescimento,\nMurilo Pedroso e Time Ascentria";
+const ME_MURILO_ID = '8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3';
+/* Feminino ou masculino: o que a equipe marcou em Editar Dados do Aluno; sem marcação, pelo primeiro nome. */
+function alunoGenero(st){
+  if(st && (st.genero==='F' || st.genero==='M')) return st.genero;
+  const n = String((st && ((st.cadastro && st.cadastro.nomeCompleto) || st.name)) || '').trim().split(/\s+/)[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const fem = ['beatriz','raquel','isabel','ester','esther','ruth','rute','carmem','carmen','miriam','mirian','iris','lais','thais','tais','ines','alice','denise','elaine','gisele','cristiane','simone','aline','eliane','jaqueline','jacqueline','michele','michelle','daniele','danielle','gabriele','gabrielle','ivone','solange','rosangela','rosilene','marlene','arlene','irene','helene','luciane','viviane','mariane','tatiane','rosane','joyce','nicole','yasmin','jasmin','evelyn','kelly','shirley','sueli','suely','neide','veroneide','geane','jane','liliane','franciele','adrielle','karen','ingrid','lilian','vivian','glaucia','glaucy','luz','graziele','rafaele','raphaele','anatalle','anne','ane','sabrine','katlen','kathleen','edilene','claudete','elisabete','elizabete','bete','rose','marli','nely','nelly','ariel'];
+  const masc = ['luca','lucca','joshua','nicola','andrea','elias','jonas','tomas','matias','isaias','josias','zacarias','messias','jeremias','tobias','dias'];
+  if(fem.includes(n)) return 'F';
+  if(masc.includes(n)) return 'M';
+  return /a$/.test(n) ? 'F' : 'M';
+}
+let ME_BV_MOSTRADA = false;
+function meBoasVindasTalvez(){
+  if(ME_BV_MOSTRADA || currentUserRole!=='aluno' || !currentUser) return;
+  const st = getStudent(currentUser.id);
+  if(!st || !st.mentorEssencia || st.meBoasVindasEm) return;
+  ME_BV_MOSTRADA = true;
+  const m = getPerson(ME_MURILO_ID) || { name:'Murilo Pedroso', initials:'MP', color:'#8d916f' };
+  const linhas = (alunoGenero(st)==='M' ? ME_BOAS_VINDAS_TXT_M : ME_BOAS_VINDAS_TXT_F).split('\n');
+  const corpo = linhas.map((l,i)=> i===0 ? `<h3 class="me-bv-tit">${escapeHtml(l)}</h3>`
+    : /menu lateral/.test(l) ? `<p class="me-bv-dica">${icon('compass','tiny')} ${escapeHtml(l)}</p>`
+    : i>=linhas.length-2 ? `<p class="me-bv-ass">${escapeHtml(l)}</p>` : `<p>${escapeHtml(l)}</p>`).join('');
+  const el = document.createElement('div');
+  el.className = 'me-bv-ov'; el.id = 'me-bv';
+  el.innerHTML = `<div class="me-bv-card" role="dialog" aria-label="Boas-vindas ao Mentores Essência">
+      ${meLogoHtml()}
+      <div class="msg-popup-hd me-bv-hd">${initialsAvatar(m.initials, m.color, 36, m.avatarUrl)}<div class="msg-popup-nome"><strong>${escapeHtml(m.name)}</strong><small>Mentores Essência · agora</small></div></div>
+      <div class="me-bv-corpo">${corpo}</div>
+      <div class="me-bv-acoes"><button type="button" class="btn-accent me-bv-btn" id="me-bv-ir">Começar minha nova era ✨</button></div>
+    </div>`;
+  document.body.appendChild(el);
+  const fechar = async (ir)=>{
+    el.remove();
+    st.meBoasVindasEm = new Date().toISOString();
+    try{ await sb.from('profiles').update({ me_boas_vindas_em: st.meBoasVindasEm }).eq('id', st.id); }catch(e){ console.error(e); }
+    if(ir) goTo('me_aulas');
+  };
+  el.querySelector('#me-bv-ir').addEventListener('click', ()=>fechar(true));
 }
 function meVideoEmbed(url){
   const yt = youtubeId(url); if(yt) return `https://www.youtube.com/embed/${yt}?rel=0`;
@@ -10556,6 +10614,8 @@ function openEditAlunoModal(s){
         <label class="ps-label">Progresso do mentor (%)</label>
         <input class="ps-input" type="number" min="0" max="100" id="ea-progmentor" value="${escapeAttr(s.progressoMentor)}">
         <label class="ps-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:14px"><input type="checkbox" id="ea-mentor" ${s.mentorEssencia?'checked':''}> Mentores Essência <small style="font-weight:400;color:var(--text-mute)">(libera a área Mentores Essência no menu deste aluno)</small></label>
+        <label class="ps-label">Tratamento nas mensagens</label>
+        <select class="ps-input" id="ea-genero"><option value="F" ${alunoGenero(s)==='F'?'selected':''}>Feminino (bem-vinda, enfermeira)</option><option value="M" ${alunoGenero(s)==='M'?'selected':''}>Masculino (bem-vindo, enfermeiro)</option></select>
       </div>
       <div class="modal-actions">
         <button class="btn-accent" id="ea-save">Salvar dados do aluno</button>
@@ -10582,10 +10642,11 @@ function openEditAlunoModal(s){
       progressoMentorado: Math.max(0,Math.min(100, +document.getElementById('ea-progmentorado').value || 0)),
       progressoMentor: Math.max(0,Math.min(100, +document.getElementById('ea-progmentor').value || 0)),
       mentorEssencia: document.getElementById('ea-mentor').checked,
+      genero: document.getElementById('ea-genero').value,
     };
     try{
       const [r1,r2,r3] = await Promise.all([
-        sb.from('profiles').update({turma: vals.turma, mentor_essencia: vals.mentorEssencia}).eq('id', s.id),
+        sb.from('profiles').update({turma: vals.turma, mentor_essencia: vals.mentorEssencia, genero: vals.genero}).eq('id', s.id),
         sb.from('student_cadastro').update({
           nome_completo: vals.nomeCompleto, email: vals.email, telefone: vals.telefone, cpf: vals.cpf,
           cidade: vals.cidade, data_matricula: vals.dataMatricula || null, data_nascimento: vals.dataNascimento || null,
@@ -10604,7 +10665,7 @@ function openEditAlunoModal(s){
       s.cadastro.dataNascimento = vals.dataNascimento || '';
       s.cadastro.duracaoMeses = vals.duracaoMeses; s.cadastro.plano = vals.plano || '—';
       s.diagnostico.nicho = vals.nicho || '—'; s.diagnostico.subnicho = vals.subnicho || '—';
-      s.progressoMentorado = vals.progressoMentorado; s.progressoMentor = vals.progressoMentor; s.mentorEssencia = vals.mentorEssencia;
+      s.progressoMentorado = vals.progressoMentorado; s.progressoMentor = vals.progressoMentor; s.mentorEssencia = vals.mentorEssencia; s.genero = vals.genero;
       closeModal();
       renderCurrentView();
     }catch(e){ console.error(e); btn.disabled = false; }
