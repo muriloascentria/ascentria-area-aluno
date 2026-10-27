@@ -4427,7 +4427,7 @@ async function carregarAlertasAcomp(){
 async function alertaResolver(id){
   if(!(await showAppConfirm('Marcar como resolvido? Use quando alguém da equipe já tiver feito o contato por fora (ligação, WhatsApp, encontro). O aviso some da lista.', {title:'Resolver alerta', confirmLabel:'Marcar como resolvido'}))) return;
   const { error } = await sb.rpc('alerta_resolver', {p_id: id});
-  if(error){ alert('Não foi possível resolver: '+(error.message||'')); return; }
+  if(error){ showAppAviso('Não foi possível resolver: '+(error.message||'')); return; }
   ACOMP_ALERTAS = ACOMP_ALERTAS.filter(a=>a.id!==id);
   updateNotifBadge();
   if(currentView==='equipe') renderEquipe(); else navSincronizarEquipe();
@@ -4525,7 +4525,7 @@ function recadoPainelHtml(){
     : (vistos ? `${vistos} pessoa${vistos===1?'':'s'} já ${vistos===1?'viu':'viram'}: ${escapeHtml(RECADO_VISTOS.map(v=>(v.nome||'').split(' ')[0]).join(', '))}` : 'Publicado — ninguém abriu o sistema ainda hoje.');
   return `
     <div class="recado-bloco">
-      <div class="recado-hd">${icon('comment','tiny')} <strong>Recado do dia para a equipe</strong></div>
+      <div class="recado-hd">${icon('comment','tiny')} <strong>RECADO DO DIA PARA A EQUIPE</strong></div>
       <p class="recado-sub">Aparece numa janela para todo mundo da equipe interna na primeira vez que abrirem o sistema hoje. Se você reescrever, a janela volta a aparecer para todos.</p>
       <textarea id="recado-texto" rows="3" maxlength="600" placeholder="Bom dia, time! Hoje o foco é...">${escapeHtml(texto)}</textarea>
       <div class="recado-rodape">
@@ -4542,7 +4542,7 @@ function bindRecadoPainel(){
   const ta = document.getElementById('recado-texto');
   const salvar = async (texto)=>{
     const { error } = await sb.rpc('recado_salvar', {p_texto: texto});
-    if(error){ alert('Não foi possível publicar: '+(error.message||'')); return false; }
+    if(error){ showAppAviso('Não foi possível publicar: '+(error.message||'')); return false; }
     await carregarRecadoDia();
     await carregarRecadoVistos();
     if(RECADO_DIA) RECADO_DIA.ja_vi = true; // quem escreveu não precisa ver a própria janela
@@ -4552,10 +4552,10 @@ function bindRecadoPainel(){
   const b = document.getElementById('recado-salvar');
   if(b) b.addEventListener('click', async ()=>{
     const t = (ta && ta.value || '').trim();
-    if(!t){ alert('Escreva o recado antes de publicar.'); return; }
+    if(!t){ showAppAviso('Escreva o recado antes de publicar.'); return; }
     b.disabled = true;
     const ok = await salvar(t);
-    if(ok) alert('Recado publicado. A equipe vai ver a janela ao abrir o sistema.');
+    if(ok) showAppAviso('Recado publicado. A equipe vai ver a janela ao abrir o sistema.');
     else b.disabled = false;
   });
   const d = document.getElementById('recado-apagar');
@@ -4567,7 +4567,7 @@ function bindRecadoPainel(){
   const v = document.getElementById('recado-ver');
   if(v) v.addEventListener('click', ()=>{
     const t = (ta && ta.value || '').trim();
-    if(!t){ alert('Escreva o recado para pré-visualizar.'); return; }
+    if(!t){ showAppAviso('Escreva o recado para pré-visualizar.'); return; }
     const guardado = RECADO_DIA;
     RECADO_DIA = { dia: new Date().toISOString().slice(0,10), texto: t, ja_vi: false,
       autor_nome: (currentUserProfile||{}).name || '', autor_iniciais: (currentUserProfile||{}).initials || '',
@@ -4593,7 +4593,7 @@ function checkpointHtml(){
   return `
     <div class="chk-bloco">
       <div class="chk-txt">
-        <strong>${icon('comment','tiny')} Checkpoint quinzenal dos mentorados</strong>
+        <strong>${icon('comment','tiny')} CHECKPOINT QUINZENAL DOS MENTORADOS</strong>
         <small>${c.ativo ? 'Ligado' : 'Pausado'} · a cada duas semanas, na segunda-feira às 7h, como ${escapeHtml((c.remetente_nome||'').split(' ')[0])}, citando a Viviane · recebem ${c.mentorados} mentorado${c.mentorados===1?'':'s'}${aguard} · último envio: ${ultima}${proximo}</small>
       </div>
       <div class="chk-acoes">
@@ -4609,7 +4609,7 @@ function bindCheckpoint(){
     if(!ligar && !(await showAppConfirm('Pausar o checkpoint quinzenal? Os mentorados deixam de receber a mensagem até você retomar.', {title:'Pausar checkpoint', confirmLabel:'Pausar'}))) return;
     t.disabled = true;
     const { error } = await sb.rpc('checkpoint_ativar', {p_ativo: ligar});
-    if(error){ alert('Não foi possível alterar: '+(error.message||'')); t.disabled = false; return; }
+    if(error){ showAppAviso('Não foi possível alterar: '+(error.message||'')); t.disabled = false; return; }
     await carregarCheckpoint(); if(currentView==='comunicacao') renderComunicacao();
   });
   const a = document.getElementById('chk-agora');
@@ -4617,8 +4617,8 @@ function bindCheckpoint(){
     if(!(await showAppConfirm('Enviar o checkpoint agora, fora da quinzena, para os mentorados que já podem receber e ainda não receberam nesta semana?', {title:'Enviar checkpoint', confirmLabel:'Enviar'}))) return;
     a.disabled = true;
     const { data, error } = await sb.rpc('enviar_checkpoint_semanal', {p_forcar: true});
-    if(error){ alert('Não foi possível enviar: '+(error.message||'')); a.disabled = false; return; }
-    alert(data ? `Checkpoint enviado para ${data} mentorado${data===1?'':'s'}.` : 'Todos os mentorados que podem receber já tinham recebido o checkpoint nesta semana.');
+    if(error){ showAppAviso('Não foi possível enviar: '+(error.message||'')); a.disabled = false; return; }
+    showAppAviso(data ? `Checkpoint enviado para ${data} mentorado${data===1?'':'s'}.` : 'Todos os mentorados que podem receber já tinham recebido o checkpoint nesta semana.');
     await carregarCheckpoint(); if(currentView==='comunicacao') renderComunicacao();
   });
 }
@@ -7902,6 +7902,22 @@ async function confirmarDuvidaRepetida(tipo, seletorTags){
     }
   }
   return ok;
+}
+/* Aviso dentro do aplicativo (no lugar do alert do navegador). */
+function showAppAviso(message, title){
+  const wrap = document.createElement('div');
+  wrap.className = 'app-confirm-backdrop';
+  wrap.innerHTML = `
+    <div class="app-confirm-card">
+      <h4>${escapeHtml(title || 'Aviso')}</h4>
+      <p>${escapeHtml(message)}</p>
+      <div class="app-confirm-actions"><button type="button" class="btn-accent" id="app-aviso-ok">Ok</button></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = ()=>wrap.remove();
+  wrap.querySelector('#app-aviso-ok').addEventListener('click', fechar);
+  wrap.addEventListener('click', (e)=>{ if(e.target===wrap) fechar(); });
+  wrap.querySelector('#app-aviso-ok').focus();
 }
 function showAppConfirm(message, opts){
   const o = opts || {};
@@ -15798,7 +15814,7 @@ function envioBlocoHtml(){
     </div>` : '';
   return `
     <div class="envio-bloco">
-      <div class="envio-hd">${icon('send','tiny')} <strong>Envio coletivo para os mentorados</strong></div>
+      <div class="envio-hd">${icon('send','tiny')} <strong>ENVIO COLETIVO PARA OS MENTORADOS</strong></div>
       <p class="envio-sub">Mesma mensagem para todos os mentorados de uma vez. Cada um recebe na conversa privada com a pessoa escolhida, ou só como notificação no celular.</p>
 
       <div class="envio-campo">
@@ -15873,7 +15889,7 @@ function bindEnvioBloco(){
     if(!(await showAppConfirm('Cancelar este envio agendado?', {title:'Cancelar envio', confirmLabel:'Cancelar envio'}))) return;
     b.disabled = true;
     const { error } = await sb.rpc('envio_coletivo_cancelar', { p_id: b.dataset.envioCancelar });
-    if(error){ alert('Não foi possível cancelar: '+(error.message||'')); b.disabled = false; return; }
+    if(error){ showAppAviso('Não foi possível cancelar: '+(error.message||'')); b.disabled = false; return; }
     await carregarEnvios(); envioRedesenhar();
   }));
 
@@ -15881,15 +15897,15 @@ function bindEnvioBloco(){
   if(enviar) enviar.addEventListener('click', async ()=>{
     const texto = (ta && ta.value || '').trim();
     envioUI.texto = texto;
-    if(!texto){ alert('Escreva a mensagem antes de enviar.'); return; }
+    if(!texto){ showAppAviso('Escreva a mensagem antes de enviar.'); return; }
     let quando = null;
     if(envioUI.modo === 'agendar'){
       const d = document.getElementById('envio-data'), h = document.getElementById('envio-hora');
       const dia = d && d.value, hora = h && h.value;
-      if(!dia || !hora){ alert('Escolha o dia e a hora do envio.'); return; }
+      if(!dia || !hora){ showAppAviso('Escolha o dia e a hora do envio.'); return; }
       const alvo = new Date(dia + 'T' + hora + ':00');
-      if(isNaN(alvo.getTime())){ alert('Data ou hora inválida.'); return; }
-      if(alvo.getTime() <= Date.now()){ alert('Escolha um horário no futuro.'); return; }
+      if(isNaN(alvo.getTime())){ showAppAviso('Data ou hora inválida.'); return; }
+      if(alvo.getTime() <= Date.now()){ showAppAviso('Escolha um horário no futuro.'); return; }
       quando = alvo.toISOString();
     }
     const quem = envioNomeRemetente(envioUI.remetente);
@@ -15901,11 +15917,11 @@ function bindEnvioBloco(){
     enviar.disabled = true;
     const { error } = await sb.rpc('envio_coletivo_criar', {
       p_remetente: envioUI.remetente, p_texto: texto, p_canal: envioUI.canal, p_quando: quando });
-    if(error){ alert('Não foi possível enviar: '+(error.message||'')); enviar.disabled = false; return; }
+    if(error){ showAppAviso('Não foi possível enviar: '+(error.message||'')); enviar.disabled = false; return; }
     envioUI.texto = ''; envioUI.modo = 'agora';
     await carregarEnvios();
     envioRedesenhar();
-    alert(quando ? 'Envio agendado.' : 'Mensagem enviada para todos os mentorados.');
+    showAppAviso(quando ? 'Envio agendado.' : 'Mensagem enviada para todos os mentorados.');
   });
 }
 
