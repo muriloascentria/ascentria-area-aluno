@@ -3958,7 +3958,7 @@ let internoDiagTab = 'wispform';
    A escolha de cada pessoa é lembrada no próprio navegador dela. */
 /* Seções recolhíveis do Acompanhamento Interno (mesmo padrão da Visão Geral). O estado fica salvo
    no navegador, então cada pessoa da equipe mantém as seções do jeito que deixou. */
-const INTERNO_SECOES_PADRAO = { competencias:true,diag:false, checklist:true, encontros:true, contatos:true, futuros:true, internos:true};
+const INTERNO_SECOES_PADRAO = { competencias:true,diag:false, checklist:true, checklistReg:true, encontros:true, contatos:true, futuros:true, internos:true};
 function getInternoAberto(){
   let salvo = {};
   try{ salvo = JSON.parse(localStorage.getItem('ascentria-interno-aberto')||'{}') || {}; }catch(e){ salvo = {}; }
@@ -11163,6 +11163,11 @@ function renderInterno(){
         </tbody>
       </table>
     </div>
+    </div>
+
+    ${intHead('checklistReg', 'plus', 'Registro de Checklist de Acompanhamento', null)}
+    ${intBody('checklistReg')}
+    <p class="section-sub" style="margin-top:0">Crie aqui as novas tarefas do mentorado. Cada tarefa precisa estar vinculada ao encontro em que foi definida; depois de adicionada, ela aparece no Checklist de Acompanhamento acima.</p>
     <div class="add-form form-tarefa">
       ${intEncontroCampo(s, 'new-task-encontro', 'Encontro em que a tarefa foi definida *')}
       <div class="field full"><label>Nova tarefa</label><textarea class="ps-input" id="new-task-tarefa" rows="1" placeholder="Descreva a tarefa..."></textarea></div>
