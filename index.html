@@ -2833,6 +2833,7 @@
   @media (max-width:880px), (pointer:coarse){
     /* No celular: Criação/Conclusão e as duas datas dividem a mesma linha, sem nada sair da tela. */
   }
+.int-hab-auto{padding:10px 12px;border:1px solid var(--line, rgba(255,255,255,.08));border-radius:8px;background:rgba(255,255,255,.03);line-height:1.5;white-space:pre-line}
 </style>
 </head>
 <body>
@@ -10509,7 +10510,7 @@ function exportAcompanhamentoPDF(s){
 
       <h2>Habilidades a desenvolver</h2>
       ${aeOk ? `<table class="dados">
-        ${linha('Habilidades a desenvolver agora', aeSalvo.habilidades || AE_HABILIDADES[aeSit.atual] || '')}
+        ${linha('Habilidades a desenvolver agora', AE_HABILIDADES[aeSit.atual] || '')}
         ${linha('Próxima ação (do checklist)', aeSalvo.proxima_acao ? aeSalvo.proxima_acao + (aeSalvo.prazo ? ' · até '+dataBonita(aeSalvo.prazo) : '') : '')}
       </table>` : '<p class="vazio">Os dados do acompanhamento ainda estavam carregando. Abra o Acompanhamento Interno deste mentorado, espere carregar e gere o PDF de novo.</p>'}
 
@@ -10959,20 +10960,13 @@ function intSituacaoHtml(s, d){
 }
 function intAnaliseHtml(s){
   if(AE_UI.carregando || AE_UI.sid!==s.id) return '';
-  const salvo = AE_UI.dados || {};
-  const sit = aeSituacao(s, salvo);
-  const est = intAeVal('estagio_atual', sit.atual);
-  const habPadrao = AE_HABILIDADES[est] || '';
-  const hab = intAeVal('habilidades', salvo.habilidades || habPadrao);
-  const quem = salvo.updated_by && (PEOPLE[salvo.updated_by] || {}).name;
+  const sit = aeSituacao(s, AE_UI.dados || {});
+  const hab = AE_HABILIDADES[sit.atual] || '';
   return `${AE_UI.erro ? '<div class="ae-erro">Não foi possível carregar o que já foi salvo. Recarregue a página.</div>' : ''}
     <div class="ae-form int-analise">
-      <div class="field full"><label>Habilidades a desenvolver agora</label><textarea class="ps-input" data-ae-f="habilidades" rows="2">${escapeHtml(hab)}</textarea>
-        ${hab && hab!==habPadrao ? `<button type="button" class="link-btn ae-restaurar" id="ae-hab-padrao">Voltar ao texto padrão do estágio</button>` : ''}</div>
-    </div>
-    <div class="ae-rodape int-analise-rod">
-      <span class="ae-atualizado">${salvo.updated_at ? `Última atualização: ${escapeHtml(tzDataHora(salvo.updated_at, true))}${quem? ' por '+escapeHtml(quem.split(' ')[0]) : ''}` : 'Habilidades ainda não registradas.'}</span>
-      <button type="button" class="btn-accent" id="ae-salvar">${icon('check','tiny')} Salvar habilidades</button>
+      <div class="field full"><label>Habilidades a desenvolver agora · ${escapeHtml(sit.atual)}</label>
+        <div class="int-hab-auto">${escapeHtml(hab) || '<span style="color:var(--text-mute)">Sem habilidades definidas para este estágio.</span>'}</div>
+        <small style="color:var(--text-mute)">Preenchido automaticamente pelo estágio atual, só para conferência.</small></div>
     </div>`;
 }
 function intCompetenciasHtml(s){
