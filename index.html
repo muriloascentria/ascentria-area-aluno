@@ -2434,16 +2434,16 @@
   .reu-enc td{vertical-align:top;}
   .reu-enc-tcol{min-width:190px;}
   .reu-enc-bts{display:flex;gap:6px;flex-wrap:wrap;}
-  .reu-enc-st{font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);cursor:pointer;}
+  .reu-enc-st{font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.5px;padding:5px 8px;display:inline-flex;align-items:center;justify-content:center;width:118px;box-sizing:border-box;text-align:center;line-height:1.2;vertical-align:middle;white-space:nowrap;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);cursor:pointer;}
   .reu-enc-st.nao{cursor:default;background:rgba(200,60,60,.08);border-color:rgba(200,60,60,.35);color:var(--danger);}
-  .reu-enc-st.pauta{cursor:default;display:inline-flex;align-items:center;gap:4px;background:var(--shared-soft);border-color:var(--shared);color:var(--text);}
+  .reu-enc-st.pauta{cursor:default;background:var(--shared-soft);border-color:var(--shared);color:var(--text);}
   .reu-enc-st.ok{background:rgba(60,140,80,.14);border-color:rgba(60,140,80,.5);color:#3c8c50;}
   .reu-enc-tf{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-size:12.5px;padding:6px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:inherit;cursor:pointer;max-width:240px;}
   .reu-enc-tf span{font-weight:600;}
   .reu-enc-tf small{color:var(--text-mute);font-size:11px;}
   .reu-enc-tf.ok{border-color:rgba(60,140,80,.45);}
   .reu-enc-tf.off{opacity:.6;text-decoration:line-through;}
-  .reu-enc-x{border:0;background:none;color:var(--text-mute);cursor:pointer;padding:4px;vertical-align:top;}
+  .reu-enc-x{border:0;background:none;color:var(--text-mute);cursor:pointer;padding:4px;vertical-align:middle;}
   .reu-enc-del{width:40px;}
   .reu-enc-vbox{padding:6px 0;}
   .reu-enc-vlista{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
@@ -16912,7 +16912,7 @@ function reuEncHtml(r){
   };
   const linhas = lista.map(e=>`<tr>
     <td>${escapeHtml(reuEncAcaoTxt(e))}</td><td>${escapeHtml(reuEncRespTxt(e))}</td><td>${escapeHtml(reuEncPrazoTxt(e))}</td>
-    <td class="reu-enc-tcol">${!e.tarefa_id && e.pauta_id ? `<span class="reu-enc-st pauta" title="Foi para as Pautas da próxima reunião">${icon('file','tiny')} VIROU PAUTA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-despautar="${e.id}" title="Desfazer: tira das pautas">${icon('x','tiny')}</button>`:''}`
+    <td class="reu-enc-tcol">${!e.tarefa_id && e.pauta_id ? `<span class="reu-enc-st pauta" title="Foi para as Pautas da próxima reunião">VIROU PAUTA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-despautar="${e.id}" title="Desfazer: tira das pautas">${icon('x','tiny')}</button>`:''}`
       : !e.tarefa_id && e.nao_criar ? `<span class="reu-enc-st nao" title="Decidido não criar tarefa">NÃO CRIADA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desfazer="${e.id}" title="Desfazer">${icon('x','tiny')}</button>`:''}`
       : e.tarefa_id ? `${reuEncTfHtml(e)}${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desv="${e.id}" title="Desvincular a tarefa">${icon('x','tiny')}</button>`:''}`
       : (socio && membro ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-criar="${e.id}">${icon('plus','tiny')} Criar tarefa</button><button type="button" class="btn-mini" data-reu-enc-vinc="${e.id}">${icon('paperclip','tiny')} Vincular</button><button type="button" class="btn-mini" data-reu-enc-pauta="${e.id}" title="Levar este assunto para a próxima reunião geral">${icon('file','tiny')} Virar pauta</button><button type="button" class="btn-mini" data-reu-enc-naocriar="${e.id}">${icon('x','tiny')} Não criar</button></div>` : socio ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-pauta="${e.id}" title="Levar este assunto para a próxima reunião geral">${icon('file','tiny')} Virar pauta</button></div>` : '<span class="muted">—</span>')}</td>
