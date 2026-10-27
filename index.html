@@ -3092,21 +3092,21 @@
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-radar" data-view="radar" style="display:none"></button>
     <button class="nav-item restrict" id="nav-evento" data-view="evento" style="display:none"></button>
-    <button class="nav-item restrict" id="nav-desempenho" data-view="desempenho" style="display:none"></button>
-    <button class="nav-item restrict" id="nav-dre" data-view="dre" style="display:none"></button>
     <button class="nav-item restrict" id="nav-reunioes" data-view="reunioes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-politicas" data-view="politicas" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
     <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
     <button class="nav-item restrict" id="nav-analise" data-view="analise" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-desempenho" data-view="desempenho" style="display:none"></button>
     <button class="nav-item restrict" id="nav-clientes" data-view="clientes" style="display:none"></button>
-    <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
-    <button class="nav-item restrict" id="nav-treinamento" data-view="treinamento" style="display:none"></button>
-    <button class="nav-item restrict" id="nav-gestaotime" data-view="gestaotime" style="display:none"></button>
     <a class="nav-item restrict" id="nav-ecrm" href="https://www.ecrm.digital" target="_blank" rel="noopener" style="display:none">
       <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h3M8 17h6"/><circle cx="16.5" cy="15" r="1.5"/></svg>
       <span>eCRM</span>
     </a>
+    <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-dre" data-view="dre" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-treinamento" data-view="treinamento" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-gestaotime" data-view="gestaotime" style="display:none"></button>
 
     <div class="sidebar-footer">
       <button class="nav-item" id="logout-btn"></button>
@@ -6408,7 +6408,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','radar','evento','desempenho','dre','reunioes','politicas','conteudo','vendas','analise','clientes','financeiro','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','radar','evento','reunioes','politicas','conteudo','vendas','analise','desempenho','clientes','financeiro','dre','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -15683,18 +15683,18 @@ const EQUIPE_ATALHOS = [
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
   {view:'evento',     desc:'Prêmio Essência Experience e as inscrições do evento, com os links para quem não tem acesso ao PLAT.'},
-  {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
-  {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
   {view:'politicas',  desc:'Políticas internas da Ascentria, com os POPs de cada área, os links e a revisão dos sócios nos documentos em revisão.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
   {view:'vendas',     desc:'Sessões 1:1 de venda, indicadores e objeções dos leads.'},
   {view:'analise',    desc:'Vídeos das vendas e a análise de cada pessoa do time comercial.'},
+  {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
   {view:'clientes',   desc:'Cadastro de clientes e pacientes, com TAGs e vínculo com alunos.'},
+  {view:'ecrm',       desc:'CRM de vendas da mentoria, com o funil dos leads e as conversas. Abre em outra aba.', link:'https://www.ecrm.digital'},
   {view:'financeiro', desc:'Extrato, contas a receber e a pagar, faturamento e anexos.'},
+  {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
   {view:'treinamento',desc:'Aulas REC do time e o registro de aprendizados de cada pessoa.'},
   {view:'gestaotime', desc:'Funções de cada pessoa e a rotina diária, semanal e mensal, com a evolução de cada um.'},
-  {view:'ecrm',       desc:'CRM de vendas da mentoria, com o funil dos leads e as conversas. Abre em outra aba.', link:'https://www.ecrm.digital'},
 ];
 /* Quem pode ver cada área da equipe (vale para o menu lateral e para o Início). */
 function equipeViewPode(v){
