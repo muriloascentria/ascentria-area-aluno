@@ -1307,7 +1307,9 @@
   .goal-aula.locked{opacity:.55;}
   .aula-pick{display:flex;flex-direction:column;gap:8px;}
   .prazo-atalhos{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
-  .prazo-linha{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+  .prazo-linha{display:flex;align-items:stretch;gap:8px;flex-wrap:nowrap;}
+  .prazo-linha .prazo-atalhos{align-items:stretch;}
+  .prazo-linha .prazo-atalho{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);min-height:0;}
   .prazo-linha > input{flex:1 1 auto;min-width:128px;width:auto;margin:0;}
   .prazo-linha .prazo-atalhos{margin-top:0;flex-wrap:nowrap;flex:0 0 auto;gap:5px;}
   .prazo-linha .prazo-atalho{white-space:nowrap;padding:5px 9px;font-size:11.5px;}
@@ -10690,7 +10692,7 @@ function prazoCampoHtml(inputHtml, alvoId, comAtalhos){
   return `<div class="prazo-linha">${inputHtml}${comAtalhos===false ? '' : prazoAtalhosHtml(alvoId)}</div>`;
 }
 function prazoAtalhosHtml(alvoId){
-  return `<div class="prazo-atalhos">${[10,15,20].map(n=>`<button type="button" class="prazo-atalho" data-prazo-mais="${n}" data-prazo-alvo="${alvoId}" title="+${n} dias">+${n}<span class="pz-d"> dias</span></button>`).join('')}</div>`;
+  return `<div class="prazo-atalhos">${[10,15,20].map(n=>`<button type="button" class="prazo-atalho" data-prazo-mais="${n}" data-prazo-alvo="${alvoId}" title="+${n} dias">+${n}<span class="pz-d">&nbsp;dias</span></button>`).join('')}</div>`;
 }
 document.addEventListener('click', e=>{
   const b = e.target.closest && e.target.closest('[data-prazo-mais]');
@@ -11797,11 +11799,24 @@ function openEditCourseModal(courseId){
   renderModal();
   document.getElementById('modal-backdrop').classList.add('open');
 }
+/* Gerenciar Conteúdo: seções com título em caixa alta, cada uma pode ser recolhida (lembrado no navegador). */
+const CONT_SECOES_PADRAO = { aulas:true, aulasReg:true, materiais:true, materiaisReg:true, eventos:true, eventosReg:true };
+function getContAberto(){ let salvo = {}; try{ salvo = JSON.parse(localStorage.getItem('eplat_cont_secoes')||'{}') || {}; }catch(e){} return Object.assign({}, CONT_SECOES_PADRAO, salvo); }
+function setContAberto(k, v){ try{ const a = getContAberto(); a[k] = v; localStorage.setItem('eplat_cont_secoes', JSON.stringify(a)); }catch(e){} }
 function renderConteudo(){
+  const aberto = getContAberto();
+  const cHead = (chave, ic, titulo, qtd)=> `
+    <div class="vg-sec-head" data-cont-toggle="${chave}">
+      <h2 class="section-title com-titulo">${ic? icon(ic)+' ' : ''}${titulo}</h2>
+      ${qtd===null||qtd===undefined ? '' : `<span class="qtd">${qtd}</span>`}
+      <button type="button" class="vg-sec-toggle ${aberto[chave]?'':'fechado'}" title="${aberto[chave]?'Recolher':'Expandir'}">${icon('down')} ${aberto[chave]?'Recolher':'Expandir'}</button>
+    </div>`;
+  const cBody = (chave)=> `<div class="int-sec-corpo" id="cont-sec-${chave}" ${aberto[chave]? '' : 'hidden'}>`;
   document.getElementById('view-conteudo').innerHTML = `
 
-    <h2 class="section-title">${icon('film')} Aulas</h2>
-    <p class="section-sub" style="margin-top:-6px">Arraste pelo ícone ⠿ ou use as setas para reordenar as aulas dentro de cada módulo.</p>
+    ${cHead('aulas', 'film', 'Aulas', COURSES.length)}
+    ${cBody('aulas')}
+    <p class="section-sub" style="margin-top:0">Arraste pelo ícone ⠿ ou use as setas para reordenar as aulas dentro de cada módulo.</p>
     ${MODULES.map(mod=>{
       const modCourses = COURSES.filter(c=>c.modId===mod.id);
       if(!modCourses.length) return '';
@@ -11810,6 +11825,10 @@ function renderConteudo(){
         ${modCourses.map((c,i)=>courseRowHtml(c, i===0, i===modCourses.length-1)).join('')}
       </div>`;
     }).join('')}
+    </div>
+
+    ${cHead('aulasReg', 'plus', 'Registro de Aulas', null)}
+    ${cBody('aulasReg')}
     <div class="add-form">
       <div class="field full"><label>Título da aula</label><input class="ps-input" type="text" id="new-course-title" placeholder="Ex.: Como precificar protocolos"></div>
       <div class="field"><label>Módulo</label>
@@ -11824,8 +11843,10 @@ function renderConteudo(){
       </div>
       <div class="actions"><button class="btn-accent" id="add-course-btn">${icon('upload')} Publicar aula</button></div>
     </div>
+    </div>
 
-    <h2 class="section-title">${icon('folder')} Materiais</h2>
+    ${cHead('materiais', 'folder', 'Materiais', MATERIALS.length)}
+    ${cBody('materiais')}
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Título</th><th>Tipo</th><th>Link</th><th></th></tr></thead>
@@ -11837,10 +11858,14 @@ function renderConteudo(){
               <td>${m.link? `<a class="btn-mini" href="${m.link}" target="_blank" rel="noopener">${icon('download')} Abrir</a>` : (m.size||'—')}</td>
               <td><button class="btn-mini danger" data-del-material="${m.id}">${icon('trash')} Remover</button></td>
             </tr>
-          `).join('')}
+          `).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum material cadastrado ainda.</td></tr>`}
         </tbody>
       </table>
     </div>
+    </div>
+
+    ${cHead('materiaisReg', 'plus', 'Registro de Materiais', null)}
+    ${cBody('materiaisReg')}
     <div class="add-form">
       <div class="field full"><label>Título do material</label><input class="ps-input" type="text" id="new-material-title" placeholder="Ex.: Guia de Precificação"></div>
       <div class="field"><label>Tipo</label>
@@ -11851,9 +11876,11 @@ function renderConteudo(){
       <div class="field full"><label>Link (PDF, planilha, página, etc.)</label><input class="ps-input" type="text" id="new-material-link" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-material-btn">${icon('upload')} Publicar material</button></div>
     </div>
+    </div>
 
-    <h2 class="section-title">${icon('calendar')} Eventos / Aulas ao Vivo</h2>
-    <p class="section-sub" style="margin-top:-6px">Agende aqui qualquer encontro ao vivo — coletivo (Mastermind, Plantão de Dúvidas, Consultório Simulado, visível na Agenda ao Vivo de todos) ou 1:1 com um mentorado específico (visível só pra ele). 1h depois do horário marcado, o encontro sai de "Próximos encontros" automaticamente: os coletivos vão para as gravações da Agenda ao Vivo, separadas por tipo; os 1:1 vão para Minhas Sessões 1:1 do mentorado. Reuniões 1:1 também podem ser agendadas direto do Acompanhamento Interno do aluno, na aba "Registro de Contatos Futuros".</p>
+    ${cHead('eventos', 'calendar', 'Eventos e Aulas ao Vivo', LIVE_SESSIONS.length)}
+    ${cBody('eventos')}
+    <p class="section-sub" style="margin-top:0">Agende aqui qualquer encontro ao vivo — coletivo (Mastermind, Plantão de Dúvidas, Consultório Simulado, visível na Agenda ao Vivo de todos) ou 1:1 com um mentorado específico (visível só pra ele). 1h depois do horário marcado, o encontro sai de "Próximos encontros" automaticamente: os coletivos vão para as gravações da Agenda ao Vivo, separadas por tipo; os 1:1 vão para Minhas Sessões 1:1 do mentorado. Reuniões 1:1 também podem ser agendadas direto do Acompanhamento Interno do aluno, na aba "Registro de Contatos Futuros".</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Título</th><th>Tipo</th><th>Público</th><th>Para</th><th>Data</th><th>Horário</th><th>Situação</th><th>Link da gravação</th><th></th></tr></thead>
@@ -11877,6 +11904,10 @@ function renderConteudo(){
         </tbody>
       </table>
     </div>
+    </div>
+
+    ${cHead('eventosReg', 'plus', 'Registro de Eventos e Aulas ao Vivo', null)}
+    ${cBody('eventosReg')}
     <div class="add-form">
       <div class="field full"><label>Título do evento</label><input class="ps-input" type="text" id="new-live-title" placeholder="Ex.: Encontro em grupo — Planejamento de Q4"></div>
       <div class="field"><label>Tipo de encontro</label>
@@ -11907,7 +11938,19 @@ function renderConteudo(){
       <div class="field full"><label>Link da gravação (pode deixar em branco e adicionar depois)</label><input class="ps-input" type="text" id="new-live-link" placeholder="https://..."></div>
       <div class="actions"><button class="btn-accent" id="add-live-btn">${icon('upload')} Publicar evento</button></div>
     </div>
+    </div>
   `;
+  document.querySelectorAll('#view-conteudo [data-cont-toggle]').forEach(head=>head.addEventListener('click', ()=>{
+    const k = head.dataset.contToggle;
+    const corpo = document.getElementById('cont-sec-'+k);
+    const abrindo = corpo.hidden;
+    corpo.hidden = !abrindo;
+    const btn = head.querySelector('.vg-sec-toggle');
+    btn.classList.toggle('fechado', !abrindo);
+    btn.title = abrindo? 'Recolher' : 'Expandir';
+    btn.innerHTML = `${icon('down')} ${abrindo? 'Recolher' : 'Expandir'}`;
+    setContAberto(k, abrindo);
+  }));
   bindConteudoCourseEvents();
   document.getElementById('add-course-btn').addEventListener('click',()=>{
     const title = document.getElementById('new-course-title').value.trim();
