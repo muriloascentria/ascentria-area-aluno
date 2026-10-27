@@ -1864,8 +1864,8 @@
   .tf-card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--text-dim);}
   .tf-pessoa{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .tf-pessoas{display:inline-flex;flex-wrap:wrap;gap:4px 10px;}
-  .tf-coresp{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
-  .tf-coresp-item{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 10px;border:1px solid var(--border);border-radius:999px;cursor:pointer;user-select:none;}
+  .tf-coresp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-bottom:6px;width:100%;}
+  .tf-coresp-item{display:flex;justify-content:center;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;align-items:center;gap:6px;font-size:12.5px;padding:5px 10px;border:1px solid var(--border);border-radius:999px;cursor:pointer;user-select:none;}
   .tf-coresp-item.on{border-color:var(--accent);background:var(--accent-soft);}
   .tf-coresp-item.principal{display:none;}
   .tf-coresp-item input{margin:0;}
@@ -1904,7 +1904,7 @@
   /* modal */
   .modal:has(.tf-modal){max-width:760px;}
   .tf-titulo{font-size:17px;font-weight:700;margin:8px 0 4px;}
-  .tf-m-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px;margin:10px 0 6px;}
+  .tf-m-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:10px 0 6px;}
   .tf-m-grid .ps-label{margin-top:0;}
   .tf-h{display:flex;align-items:center;gap:8px;font-size:13px;margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--border);}
   .tf-h .icon{width:14px;height:14px;}
@@ -13088,9 +13088,6 @@ async function openTarefaModal(id, defaults){
         <div><label class="ps-label">Prioridade</label>
           <select class="ps-input" id="tf-m-prio" ${ro(dono)}>${Object.entries(TAREFAS_PRIO).map(([k,v])=>`<option value="${k}" ${t.prioridade===k?'selected':''}>${v}</option>`).join('')}</select></div>
         <div><label class="ps-label">Prazo</label>${prazoCampoHtml(`<input class="ps-input" type="date" id="tf-m-data" value="${escapeAttr(t.prazoData)}" ${ro(dono)}>`, 'tf-m-data', !!dono)}</div>
-        <div><label class="ps-label">Horário (opcional)</label><input class="ps-input" type="time" id="tf-m-hora" value="${escapeAttr(t.prazoHora)}" ${ro(dono)}></div>
-        <div><label class="ps-label">Situação</label>
-          <select class="ps-input" id="tf-m-status" ${ro(podeEditar)}>${Object.entries(TAREFAS_STATUS).filter(([k])=>(k!=='cancelada' || dono || t.status==='cancelada') && (k!=='concluida' || t.status==='concluida')).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''} ${k==='concluida'?'disabled':''}>${v}</option>`).join('')}</select></div>
         ${t.concluidaEm ? `<div><label class="ps-label">Concluída</label><div style="font-size:13px;padding-top:8px">${tzDataHora(t.concluidaEm, true)} por ${escapeHtml((tarefasMembro(t.concluidaPor)||getPerson(t.concluidaPor)||{name:'—'}).name.split(' ')[0])}</div></div>` : ''}
       </div>
       <label class="ps-label">Outros responsáveis <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
@@ -13151,7 +13148,7 @@ async function openTarefaModal(id, defaults){
   const lerForm = ()=>({
     titulo: $('#tf-m-titulo').value.trim(), descricao: $('#tf-m-desc').value.trim(), responsavel_id: $('#tf-m-resp').value,
     coresponsaveis: [...modal.querySelectorAll('#tf-m-coresp input:checked')].map(i=>i.value).filter(u=>u!==$('#tf-m-resp').value),
-    prioridade: $('#tf-m-prio').value, prazo_data: $('#tf-m-data').value || null, prazo_hora: $('#tf-m-hora').value || null, status: $('#tf-m-status').value,
+    prioridade: $('#tf-m-prio').value, prazo_data: $('#tf-m-data').value || null, prazo_hora: $('#tf-m-data').value ? (t.prazoHora||null) : null, status: t.status || 'pendente',
   });
   const validar = (v)=>{
     if(!v.titulo){ alert('Informe o título da tarefa.'); $('#tf-m-titulo').focus(); return false; }
@@ -13159,7 +13156,6 @@ async function openTarefaModal(id, defaults){
     if(!v.responsavel_id || !tarefasMembroAtivo(v.responsavel_id)){ alert('Escolha um responsável ativo.'); return false; }
     if(v.responsavel_id!==eu && !podeDelegarAgora && (nova || v.responsavel_id!==t.responsavelId)){ alert('Sua conta não tem permissão para delegar tarefas a outras pessoas.'); return false; }
     if(!podeDelegarAgora && v.coresponsaveis.some(u=>u!==eu && !(t.coresponsaveis||[]).includes(u))){ alert('Sua conta não tem permissão para delegar tarefas a outras pessoas.'); return false; }
-    if(v.prazo_hora && !v.prazo_data){ alert('Para informar um horário, informe também a data do prazo.'); return false; }
     return true;
   };
   modal.querySelectorAll('#tf-m-coresp input').forEach(i=>i.addEventListener('change', ()=>i.parentElement.classList.toggle('on', i.checked)));
