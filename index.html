@@ -880,7 +880,11 @@
   .vg-sec-toggle.fechado .icon{transform:rotate(-90deg);}
   /* Busca do Financeiro */
   .fin-busca{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 4px;}
-  #fin-pdf-btn, .cf-month-btn[data-fintab]{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;box-sizing:border-box;font-size:12px;font-weight:600;padding:0 14px;line-height:1;border-radius:var(--radius-sm);}
+  .fin-tabs-row{display:flex;gap:8px;align-items:stretch;flex-wrap:nowrap;margin-top:10px;}
+  .fin-tabs{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .fin-busca .ps-input{height:38px;box-sizing:border-box;}
+  @media (max-width:640px){ .fin-tabs-row{flex-wrap:wrap;} .fin-tabs{flex-basis:100%;} #fin-pdf-btn{flex:1;} }
+  #fin-pdf-btn, .cf-month-btn[data-fintab]{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;box-sizing:border-box;font-size:12px;font-weight:600;padding:0 14px;line-height:1;border-radius:var(--radius-sm);}
   #fin-pdf-btn .icon{width:13px;height:13px;}
   .fin-busca .ps-input{margin:0;}
   .fin-busca input.ps-input{flex:1;min-width:220px;}
@@ -20799,8 +20803,8 @@ function renderFinLancamentos(container){
       ${finBuscaAtiva()? `<button type="button" class="btn-outline" id="fin-busca-limpar">${icon('x','tiny')} Limpar</button>` : ''}
     </div>
     ${buscando? '' : `
-    <div class="community-filters" style="justify-content:space-between;align-items:center">
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="community-filters fin-tabs-row">
+      <div class="fin-tabs">
         <button type="button" class="cf-month-btn ${finTab==='receber'?'active':''}" data-fintab="receber">Contas a Receber</button>
         <button type="button" class="cf-month-btn ${finTab==='pagar'?'active':''}" data-fintab="pagar">Contas a Pagar</button>
         <button type="button" class="cf-month-btn ${finTab==='extrato'?'active':''}" data-fintab="extrato">Extrato</button>
