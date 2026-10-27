@@ -308,6 +308,7 @@
   .me-video{margin-top:12px;position:relative;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;background:#000;}
   .me-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
   .me-staff-tabela td{vertical-align:top;}
+  .ps-input.ev-auto{border-color:var(--success);}
   .me-bv-ov{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;animation:msgPop .25s ease-out;}
   .me-bv-card{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid #c9973c;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.45);width:min(560px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;padding:20px 20px 16px;}
   .me-bv-card .me-logo{margin:0 0 14px;} .me-bv-card .me-logo img{max-width:300px;}
@@ -16393,11 +16394,22 @@ function openEditVendaModal(id){
     </div>`;
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('modal-close-2').addEventListener('click', closeModal);
+  /* Ao vincular o aluno, completa o que estiver vazio na sessão com o cadastro dele (o banco faz o mesmo ao salvar). */
+  const evPreencher = ()=>{
+    const sel = document.getElementById('ev-aluno'); const st = sel && sel.value ? getStudent(sel.value) : null; if(!st) return;
+    const w = document.getElementById('ev-whatsapp'), l = document.getElementById('ev-lead');
+    const tel = (st.cadastro && st.cadastro.telefone) || '';
+    if(w && !w.value.trim() && tel){ w.value = tel; w.classList.add('ev-auto'); }
+    const nome = (st.cadastro && st.cadastro.nomeCompleto) || st.name || '';
+    if(l && !l.value.trim() && nome){ l.value = nome; l.classList.add('ev-auto'); }
+  };
+  { const sel = document.getElementById('ev-aluno'); if(sel) sel.addEventListener('change', evPreencher); }
   document.querySelectorAll('[data-ev-sugestao]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const sel = document.getElementById('ev-aluno');
       sel.value = sel.value===btn.dataset.evSugestao ? '' : btn.dataset.evSugestao;
       document.querySelectorAll('[data-ev-sugestao]').forEach(b=>b.classList.toggle('active', b.dataset.evSugestao===sel.value));
+      evPreencher();
     });
   });
   document.getElementById('ev-save').addEventListener('click', ()=>{
