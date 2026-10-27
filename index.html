@@ -2436,6 +2436,7 @@
   .reu-enc-bts{display:flex;gap:6px;flex-wrap:wrap;}
   .reu-enc-st{font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-dim);cursor:pointer;}
   .reu-enc-st.nao{cursor:default;background:rgba(200,60,60,.08);border-color:rgba(200,60,60,.35);color:var(--danger);}
+  .reu-enc-st.pauta{cursor:default;display:inline-flex;align-items:center;gap:4px;background:var(--shared-soft);border-color:var(--shared);color:var(--text);}
   .reu-enc-st.ok{background:rgba(60,140,80,.14);border-color:rgba(60,140,80,.5);color:#3c8c50;}
   .reu-enc-tf{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-size:12.5px;padding:6px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:inherit;cursor:pointer;max-width:240px;}
   .reu-enc-tf span{font-weight:600;}
@@ -16635,7 +16636,7 @@ async function reuCarregar(){
       sb.from('reuniao_assinaturas').select('*'),
     ]);
     if(r.error) throw r.error;
-    REU_UI.lista = r.data || []; REU_UI.envios = (e && e.data) || []; REU_UI.assin = (a && a.data) || [];
+    REU_UI.lista = (r.data || []).map(x=>Object.assign(x, { titulo: String(x.titulo||'').toLocaleUpperCase('pt-BR') })); REU_UI.envios = (e && e.data) || []; REU_UI.assin = (a && a.data) || [];
   }catch(err){ console.error('reunioes', err); REU_UI.erro = true; if(REU_UI.lista===null) REU_UI.lista = []; }
   REU_UI.carregando = false;
   if(currentView==='reunioes') renderReunioes();
@@ -16911,9 +16912,10 @@ function reuEncHtml(r){
   };
   const linhas = lista.map(e=>`<tr>
     <td>${escapeHtml(reuEncAcaoTxt(e))}</td><td>${escapeHtml(reuEncRespTxt(e))}</td><td>${escapeHtml(reuEncPrazoTxt(e))}</td>
-    <td class="reu-enc-tcol">${!e.tarefa_id && e.nao_criar ? `<span class="reu-enc-st nao" title="Decidido não criar tarefa">NÃO CRIADA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desfazer="${e.id}" title="Desfazer">${icon('x','tiny')}</button>`:''}`
+    <td class="reu-enc-tcol">${!e.tarefa_id && e.pauta_id ? `<span class="reu-enc-st pauta" title="Foi para as Pautas da próxima reunião">${icon('file','tiny')} VIROU PAUTA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-despautar="${e.id}" title="Desfazer: tira das pautas">${icon('x','tiny')}</button>`:''}`
+      : !e.tarefa_id && e.nao_criar ? `<span class="reu-enc-st nao" title="Decidido não criar tarefa">NÃO CRIADA</span>${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desfazer="${e.id}" title="Desfazer">${icon('x','tiny')}</button>`:''}`
       : e.tarefa_id ? `${reuEncTfHtml(e)}${socio?`<button type="button" class="reu-enc-x" data-reu-enc-desv="${e.id}" title="Desvincular a tarefa">${icon('x','tiny')}</button>`:''}`
-      : (socio && membro ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-criar="${e.id}">${icon('plus','tiny')} Criar tarefa</button><button type="button" class="btn-mini" data-reu-enc-vinc="${e.id}">${icon('paperclip','tiny')} Vincular</button><button type="button" class="btn-mini" data-reu-enc-naocriar="${e.id}">${icon('x','tiny')} Não criar</button></div>` : '<span class="muted">—</span>')}</td>
+      : (socio && membro ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-criar="${e.id}">${icon('plus','tiny')} Criar tarefa</button><button type="button" class="btn-mini" data-reu-enc-vinc="${e.id}">${icon('paperclip','tiny')} Vincular</button><button type="button" class="btn-mini" data-reu-enc-pauta="${e.id}" title="Levar este assunto para a próxima reunião geral">${icon('file','tiny')} Virar pauta</button><button type="button" class="btn-mini" data-reu-enc-naocriar="${e.id}">${icon('x','tiny')} Não criar</button></div>` : socio ? `<div class="reu-enc-bts"><button type="button" class="btn-mini" data-reu-enc-pauta="${e.id}" title="Levar este assunto para a próxima reunião geral">${icon('file','tiny')} Virar pauta</button></div>` : '<span class="muted">—</span>')}</td>
     ${socio ? `<td class="reu-enc-del"><button type="button" class="btn-mini icon-only danger" data-reu-enc-del="${e.id}" title="Excluir encaminhamento">${icon('trash','tiny')}</button></td>` : ''}
   </tr>${vinc(e.id)}`).join('');
   const novo = socio && REU_UI.encNovo ? `<div class="reu-enc-novo">
@@ -16922,7 +16924,7 @@ function reuEncHtml(r){
       ${prazoCampoHtml(`<input type="date" class="reu-busca" id="reu-enc-n-prazo" title="Prazo" aria-label="Prazo">`, 'reu-enc-n-prazo')}
       <div class="reu-acoes"><button type="button" class="btn-primary" id="reu-enc-n-ok">Adicionar</button><button type="button" class="btn-outline" id="reu-enc-n-cancel">Cancelar</button></div></div>`
     : (socio ? `<button type="button" class="btn-outline reu-mini-add" id="reu-enc-n-abrir">${icon('plus','tiny')} Adicionar encaminhamento</button>` : '');
-  return `${lista.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th><th>Tarefa</th>${socio?'<th></th>':''}</tr></thead><tbody>${linhas}</tbody></table></div>` : '<p class="muted">Nenhum encaminhamento.</p>'}${novo}`;
+  return `${lista.length ? `<div class="table-wrap"><table class="check-table reu-enc"><thead><tr><th>O que fazer</th><th>Responsável</th><th>Prazo</th><th>Tarefa ou pauta</th>${socio?'<th></th>':''}</tr></thead><tbody>${linhas}</tbody></table></div>` : '<p class="muted">Nenhum encaminhamento.</p>'}${novo}`;
 }
 /* Com tarefa vinculada, o prazo mostrado é o da tarefa (acompanha qualquer mudança feita nela). */
 /* Idem para os responsáveis: com tarefa vinculada, mostra quem está na tarefa (principal e demais). */
@@ -16975,6 +16977,25 @@ function reuEncBind(el, r){
   el.querySelectorAll('[data-reu-enc-desv]').forEach(b=>b.addEventListener('click', async ()=>{
     const e = achar(b.dataset.reuEncDesv); if(!e || !confirm('Desvincular a tarefa deste encaminhamento? A tarefa continua existindo.')) return;
     if(await salvar(e, {tarefa_id:null})) renderReunioes();
+  }));
+  el.querySelectorAll('[data-reu-enc-pauta]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = achar(b.dataset.reuEncPauta); if(!e) return;
+    const origem = `${r.titulo} de ${reuDataTxt(r.data).replace(/^\S+,\s*/, '').split(' ')[0]}`;
+    const texto = `${String(e.acao||'').trim()} (vem da ${origem}${e.responsavel ? ', responsável: '+e.responsavel : ''})`;
+    if(!confirm(`Levar para as Pautas da próxima reunião?\n\n"${texto}"`)) return;
+    b.disabled = true;
+    const { data, error } = await sb.from('reuniao_pautas').insert({ texto, criado_por: currentUser.id }).select().maybeSingle();
+    if(error || !data){ alert('Não foi possível criar a pauta: '+((error&&error.message)||'')); b.disabled = false; return; }
+    if(Array.isArray(REU_UI.pautas)) REU_UI.pautas.push(data);
+    if(await salvar(e, { pauta_id: data.id, nao_criar:false })) renderReunioes();
+  }));
+  el.querySelectorAll('[data-reu-enc-despautar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const e = achar(b.dataset.reuEncDespautar); if(!e || !confirm('Tirar este assunto das Pautas da próxima reunião?')) return;
+    const pid = e.pauta_id;
+    const { error } = await sb.from('reuniao_pautas').update({ ativo:false }).eq('id', pid).eq('concluida', false);
+    if(error){ alert('Não foi possível tirar a pauta: '+(error.message||'')); return; }
+    if(Array.isArray(REU_UI.pautas)) REU_UI.pautas = REU_UI.pautas.filter(x=>x.id!==pid || x.concluida);
+    if(await salvar(e, { pauta_id: null })) renderReunioes();
   }));
   el.querySelectorAll('[data-reu-enc-naocriar]').forEach(b=>b.addEventListener('click', async ()=>{
     const e = achar(b.dataset.reuEncNaocriar); if(e && await salvar(e, {nao_criar:true})) renderReunioes();
