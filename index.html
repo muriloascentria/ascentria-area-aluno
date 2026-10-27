@@ -1227,6 +1227,10 @@
   .an-links a{display:block;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .an-links a + a{margin-top:4px;}
   .an-wpp{white-space:nowrap;}
+  .an-lead-link{all:unset;cursor:pointer;font-weight:700;color:inherit;border-bottom:1px dashed currentColor;}
+  .an-lead-link:hover{color:var(--accent);}
+  .an-lead-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  #view-vendas tr.venda-destaque td{background:color-mix(in srgb, var(--accent) 22%, transparent) !important;transition:background .4s;}
   .an-wpp a{display:inline-block;line-height:1.45;vertical-align:top;}
   .an-table .vendas-actions-cell{white-space:nowrap;}
   .an-ap-list{margin-top:5px;font-size:11.5px;color:var(--text-dim);line-height:1.5;}
@@ -16154,6 +16158,21 @@ function vendasMetaHtml(){
     <div class="vm-rodape">${escapeHtml(ritmo)}${!batida && faltaQtd ? ` · ${uteis} dia${uteis===1?'':'s'} út${uteis===1?'il':'eis'} até o fim do mês: cerca de <b>${porSemana} venda${porSemana===1?'':'s'} por semana</b>.` : ''}</div>
   </div>`;
 }
+/* Da Análise Sessões 1:1: abre o Registro de Sessões 1:1 já filtrado no lead e destaca a linha dele. */
+function anIrParaVenda(vendaId, nome){
+  const v = vendaId ? VENDA_SESSOES.find(x=>String(x.id)===String(vendaId)) : null;
+  vendasFiltroVendedor = 'todos'; vendasFiltroResultado = 'todos'; vendasFiltroMes = 'todos';
+  vendasBusca = (v ? v.lead : nome) || '';
+  goTo('vendas');
+  renderVendas();
+  setTimeout(()=>{
+    const tr = v ? document.querySelector(`#view-vendas tr[data-venda-row="${v.id}"]`) : document.querySelector('#view-vendas tr[data-venda-row]');
+    if(!tr) return;
+    tr.scrollIntoView({behavior:'smooth', block:'center'});
+    tr.classList.add('venda-destaque');
+    setTimeout(()=>tr.classList.remove('venda-destaque'), 2600);
+  }, 80);
+}
 function renderVendas(){
   /* O filtro mostra todos os vendedores da equipe, mesmo quem ainda não tem sessão registrada (como
      uma vendedora que acabou de entrar), e também qualquer nome antigo que já esteja nos registros. */
@@ -16240,7 +16259,7 @@ function renderVendas(){
         </tr></thead>
         <tbody>
           ${filtradas.map(v=>`
-            <tr class="${v.resultado==='Vendido'?'venda-vendido':''}">
+            <tr class="${v.resultado==='Vendido'?'venda-vendido':''}" data-venda-row="${v.id}">
               <td class="vendas-num-cell">${v.numero ?? ''}</td>
               <td>${escapeHtml(shortDateBR(v.dataTexto))}</td>
               <td style="font-weight:600">${escapeHtml(v.lead)}${v.studentId && nomeAlunoTag(v.studentId)? `<br><span class="aluno-tag" title="Aluno vinculado">${icon('check','tiny')} ${escapeHtml(nomeAlunoTag(v.studentId))}</span>` : ''}${vendaLinksReuniao(v)}</td>
@@ -16743,19 +16762,18 @@ function renderAnalise(){
 
     <div class="table-wrap"><table class="check-table an-table">
       <colgroup>
-        <col style="width:24%"><col style="width:13%"><col style="width:19%">
+        <col style="width:34%"><col style="width:30%">
         ${ANALISE_VENDEDORAS.map(()=>'<col style="width:8%">').join('')}
         <col style="width:12%">
       </colgroup>
       <thead><tr>
-        <th>Lead</th><th>WhatsApp</th><th>Links</th>
+        <th>Lead</th><th>Links</th>
         ${ANALISE_VENDEDORAS.map(v=>`<th class="an-col-mark">${escapeHtml(v.nome)}</th>`).join('')}
         <th></th>
       </tr></thead>
       <tbody>
         ${lista.map(a=>`<tr>
-          <td><span class="an-lead">${escapeHtml(a.leadNome||'—')}${avPode() && AVALIACOES[a.id] ? ` <span class="av-pill" title="Avaliação de ${escapeAttr(AVALIACOES[a.id].consultora)}">${avPillTxt(AVALIACOES[a.id])}</span>` : ''}</span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
-          <td class="an-wpp">${whatsappCell(a.whatsapp)}</td>
+          <td><span class="an-lead"><button type="button" class="an-lead-link" data-an-ir-venda="${escapeAttr(a.vendaSessaoId||'')}" data-an-ir-nome="${escapeAttr(a.leadNome||'')}" title="Abrir no Registro de Sessões 1:1">${escapeHtml(a.leadNome||'—')}</button>${avPode() && AVALIACOES[a.id] ? ` <span class="av-pill" title="Avaliação de ${escapeAttr(AVALIACOES[a.id].consultora)}">${avPillTxt(AVALIACOES[a.id])}</span>` : ''}</span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
           <td><div class="an-links">
             ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo') : ''}
             ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : ''}
@@ -16766,7 +16784,7 @@ function renderAnalise(){
             <button class="btn-accent btn-abrir" data-an-edit="${a.id}">Abrir</button>
             ${staffPleno()? `<button class="btn-mini icon-only danger" data-an-del="${a.id}" title="Remover da planilha" style="margin-left:6px">${icon('trash','tiny')}</button>` : ''}
           </td>
-        </tr>`).join('') || `<tr><td colspan="${4+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse termo.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
+        </tr>`).join('') || `<tr><td colspan="${3+ANALISE_VENDEDORAS.length}" style="color:var(--text-mute)">${busca? 'Nenhum lead encontrado com esse termo.' : 'Nenhuma sessão registrada ainda.'}</td></tr>`}
       </tbody>
     </table></div>
     </div>
@@ -16778,6 +16796,9 @@ function renderAnalise(){
   buscaEl.addEventListener('change', ()=>renderAnalise());
   buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter') renderAnalise(); });
 
+  document.querySelectorAll('#view-analise [data-an-ir-venda]').forEach(btn=>{
+    btn.addEventListener('click',()=>anIrParaVenda(btn.dataset.anIrVenda, btn.dataset.anIrNome));
+  });
   document.querySelectorAll('#view-analise [data-an-edit]').forEach(btn=>{
     btn.addEventListener('click',()=>openAnaliseModal(btn.dataset.anEdit));
   });
