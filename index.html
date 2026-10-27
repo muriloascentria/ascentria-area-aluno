@@ -4897,6 +4897,7 @@ function mapProfileRow(p){
     mentorEssencia: !!p.mentor_essencia,
     meBoasVindasEm: p.me_boas_vindas_em || null,
     genero: p.genero || null,
+    profissao: p.profissao || 'enfermagem',
     /* Início real (para o NPS de 4, 8 e 12 meses): a data de matrícula; sem ela, o dia em que a conta foi criada. */
     contaTeste: !!p.conta_teste,
     inicioReal: sc.data_matricula || String(p.created_at||'').slice(0,10) || null,
@@ -10245,13 +10246,24 @@ function alunoGenero(st){
   return /a$/.test(n) ? 'F' : 'M';
 }
 let ME_BV_MOSTRADA = false;
+/* Texto conforme o tratamento (F/M) e a profissão (enfermagem ou terapia), marcados em Editar Dados do Aluno. */
+function meBoasVindasTexto(g, prof){
+  let t = g==='M' ? ME_BOAS_VINDAS_TXT_M : ME_BOAS_VINDAS_TXT_F;
+  if(prof==='terapia'){
+    [['enfermeiras empresárias','terapeutas empresárias'],['enfermeiros empresários','terapeutas empresários'],
+     ['ser enfermeira e empresária','ser terapeuta e empresária'],['ser enfermeiro e empresário','ser terapeuta e empresário'],
+     ['A Enfermagem está entrando em uma nova era.','A Terapia Integrativa está entrando em uma nova era.'],
+     ['Você já é enfermeira.','Você já é terapeuta.'],['Você já é enfermeiro.','Você já é terapeuta.']].forEach(([a,b])=>{ t = t.split(a).join(b); });
+  }
+  return t;
+}
 function meBoasVindasTalvez(){
   if(ME_BV_MOSTRADA || currentUserRole!=='aluno' || !currentUser) return;
   const st = getStudent(currentUser.id);
   if(!st || !st.mentorEssencia || st.meBoasVindasEm) return;
   ME_BV_MOSTRADA = true;
   const m = getPerson(ME_MURILO_ID) || { name:'Murilo Pedroso', initials:'MP', color:'#8d916f' };
-  const linhas = (alunoGenero(st)==='M' ? ME_BOAS_VINDAS_TXT_M : ME_BOAS_VINDAS_TXT_F).split('\n');
+  const linhas = meBoasVindasTexto(alunoGenero(st), st.profissao).split('\n');
   const corpo = linhas.map((l,i)=> i===0 ? `<h3 class="me-bv-tit">${escapeHtml(l)}</h3>`
     : /menu lateral/.test(l) ? `<p class="me-bv-dica">${icon('compass','tiny')} ${escapeHtml(l)}</p>`
     : i>=linhas.length-2 ? `<p class="me-bv-ass">${escapeHtml(l)}</p>` : `<p>${escapeHtml(l)}</p>`).join('');
@@ -10615,7 +10627,9 @@ function openEditAlunoModal(s){
         <input class="ps-input" type="number" min="0" max="100" id="ea-progmentor" value="${escapeAttr(s.progressoMentor)}">
         <label class="ps-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:14px"><input type="checkbox" id="ea-mentor" ${s.mentorEssencia?'checked':''}> Mentores Essência <small style="font-weight:400;color:var(--text-mute)">(libera a área Mentores Essência no menu deste aluno)</small></label>
         <label class="ps-label">Tratamento nas mensagens</label>
-        <select class="ps-input" id="ea-genero"><option value="F" ${alunoGenero(s)==='F'?'selected':''}>Feminino (bem-vinda, enfermeira)</option><option value="M" ${alunoGenero(s)==='M'?'selected':''}>Masculino (bem-vindo, enfermeiro)</option></select>
+        <select class="ps-input" id="ea-genero"><option value="F" ${alunoGenero(s)==='F'?'selected':''}>Feminino (bem-vinda)</option><option value="M" ${alunoGenero(s)==='M'?'selected':''}>Masculino (bem-vindo)</option></select>
+        <label class="ps-label">Profissão</label>
+        <select class="ps-input" id="ea-profissao"><option value="enfermagem" ${s.profissao!=='terapia'?'selected':''}>Enfermagem (enfermeira / enfermeiro)</option><option value="terapia" ${s.profissao==='terapia'?'selected':''}>Terapia (terapeuta)</option></select>
       </div>
       <div class="modal-actions">
         <button class="btn-accent" id="ea-save">Salvar dados do aluno</button>
@@ -10643,10 +10657,11 @@ function openEditAlunoModal(s){
       progressoMentor: Math.max(0,Math.min(100, +document.getElementById('ea-progmentor').value || 0)),
       mentorEssencia: document.getElementById('ea-mentor').checked,
       genero: document.getElementById('ea-genero').value,
+      profissao: document.getElementById('ea-profissao').value,
     };
     try{
       const [r1,r2,r3] = await Promise.all([
-        sb.from('profiles').update({turma: vals.turma, mentor_essencia: vals.mentorEssencia, genero: vals.genero}).eq('id', s.id),
+        sb.from('profiles').update({turma: vals.turma, mentor_essencia: vals.mentorEssencia, genero: vals.genero, profissao: vals.profissao}).eq('id', s.id),
         sb.from('student_cadastro').update({
           nome_completo: vals.nomeCompleto, email: vals.email, telefone: vals.telefone, cpf: vals.cpf,
           cidade: vals.cidade, data_matricula: vals.dataMatricula || null, data_nascimento: vals.dataNascimento || null,
@@ -10665,7 +10680,7 @@ function openEditAlunoModal(s){
       s.cadastro.dataNascimento = vals.dataNascimento || '';
       s.cadastro.duracaoMeses = vals.duracaoMeses; s.cadastro.plano = vals.plano || '—';
       s.diagnostico.nicho = vals.nicho || '—'; s.diagnostico.subnicho = vals.subnicho || '—';
-      s.progressoMentorado = vals.progressoMentorado; s.progressoMentor = vals.progressoMentor; s.mentorEssencia = vals.mentorEssencia; s.genero = vals.genero;
+      s.progressoMentorado = vals.progressoMentorado; s.progressoMentor = vals.progressoMentor; s.mentorEssencia = vals.mentorEssencia; s.genero = vals.genero; s.profissao = vals.profissao;
       closeModal();
       renderCurrentView();
     }catch(e){ console.error(e); btn.disabled = false; }
