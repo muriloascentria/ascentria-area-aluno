@@ -1102,6 +1102,9 @@
   .ps-remove .icon{width:14px;height:14px;}
   .ps-add{margin-top:2px;}
   .ps-plus{width:13px;height:13px;}
+  .vg-av-wrap{position:relative;display:inline-flex;flex:0 0 auto;}
+  .me-selo{position:absolute;top:-6px;right:-7px;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#f3d27a,#c9962f 60%,#a8781f);box-shadow:0 0 0 2px var(--bg-card),0 1px 3px rgba(0,0,0,.4);display:inline-flex;align-items:center;justify-content:center;}
+  .me-selo .icon{width:9px;height:9px;stroke:#3a2a08;stroke-width:2.6;}
   .backup-btn{display:inline-flex !important;flex-direction:row !important;align-items:center;gap:8px;white-space:nowrap;}
   .backup-btn .icon{flex:0 0 auto;margin:0;}
   .ps-swatches{display:flex;gap:10px;flex-wrap:wrap;}
@@ -4013,8 +4016,8 @@ let ANALISE_SESSOES = []; // Análise Sessões 1:1 — uma linha por sessão reg
 let analiseBusca = '';
 let analiseNovoId = null; // lead recém-adicionado à mão: aparece mesmo antes de ter análise
 let aulasBusca = '';                       // busca na aba Aulas (título da aula ou nome de material anexado)
-let vgBusca = { mentorados:'', curso:'' }; // busca por nome nas listas da Visão Geral
-let vgAberto = { mentorados:true, curso:true, codigos:true, backup:true }; // listas da Visão Geral recolhidas/expandidas
+let vgBusca = { mentorados:'', curso:'', pos:'' }; // busca por nome nas listas da Visão Geral
+let vgAberto = { mentorados:true, curso:true, pos:true, codigos:true, backup:true }; // listas da Visão Geral recolhidas/expandidas
 let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
 let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/visível pra equipe interna, ver bootstrapData
 /* Financeiro interno da Ascentria (equipe interna) — controle de Contas a Receber/Pagar da empresa,
@@ -19615,16 +19618,52 @@ function abrirAcompanhamento(sid){
 
 function renderVisaoGeral(){
   const mentoradosTodos = STUDENTS.filter(s=>s.tier!=='curso');
-  const cursoTodos = STUDENTS.filter(s=>s.tier==='curso');
+  const cursoTodos = STUDENTS.filter(s=>s.tier==='curso' && !s.pos);
+  const posTodos = STUDENTS.filter(s=>s.tier==='curso' && s.pos);
   const porNome = (lista, q)=>{ const n = normTxt(q).trim(); return n? lista.filter(s=>normTxt(s.name).includes(n) || normTxt((s.cadastro||{}).nomeCompleto).includes(n)) : lista; };
   const mentorados = porNome(mentoradosTodos, vgBusca.mentorados);
   const cursoAlunos = porNome(cursoTodos, vgBusca.curso);
+  const posAlunos = porNome(posTodos, vgBusca.pos);
   const secHead = (chave, ic, titulo, total, mostrando)=> `
     <div class="vg-sec-head" data-vg-toggle="${chave}">
       <h2 class="section-title com-titulo">${icon(ic)} ${titulo}</h2>
       ${total==null ? '' : `<span class="qtd">${mostrando!==total? `${mostrando} de ${total}` : total}</span>`}
       <button type="button" class="vg-sec-toggle ${vgAberto[chave]?'':'fechado'}" title="${vgAberto[chave]?'Recolher':'Expandir'}">${icon('down')} ${vgAberto[chave]?'Recolher':'Expandir'}</button>
     </div>`;
+  const cursoSec = (chave, ic, titulo, todos, lista, placeholder, sub, vazio)=> `
+    ${secHead(chave, ic, titulo, todos.length, lista.length)}
+    <div id="vg-sec-${chave}" style="${vgAberto[chave]?'':'display:none'}">
+    <p class="section-sub" style="margin-top:4px">${sub}</p>
+    <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-${chave}" value="${escapeAttr(vgBusca[chave])}" placeholder="${placeholder}">${vgBusca[chave].trim()? `<button type="button" class="btn-outline" data-vg-limpar="${chave}">${icon('x','tiny')} Limpar</button>` : ''}</div>
+    <div class="table-wrap">
+      <table class="check-table vg-table">
+        <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th title="Ligado: todas as aulas abertas de uma vez, sem a liberação sequencial">Todas as aulas</th></tr></thead>
+        <tbody>
+          ${lista.map(s=>{
+            const pct = courseCompletionPct(s);
+            const next = nextCourseLessonFor(s);
+            return `
+              <tr>
+                <td style="white-space:nowrap">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
+                    <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
+                  </div>
+                </td>
+                <td style="min-width:140px">
+                  <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
+                  <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
+                </td>
+                <td>${next? escapeHtml(next.title) : '<span style="color:var(--text-mute)">Curso concluído</span>'}</td>
+                <td style="min-width:140px">${tierSelectHtml(s)}</td>
+                <td><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" data-aulas-liberadas="${s.id}" ${s.aulasLiberadas?'checked':''}> ${s.aulasLiberadas? 'Liberadas' : 'Sequencial'}</label></td>
+              </tr>`;
+          }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">${vgBusca[chave].trim()? 'Nenhum aluno com esse nome.' : vazio}</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    </div>
+  `;
   const totalMentorados = mentoradosTodos.length;
   const avgProgress = totalMentorados ? Math.round(mentoradosTodos.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
   const atrasadasTotal = mentoradosTodos.reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
@@ -19660,7 +19699,7 @@ function renderVisaoGeral(){
               <tr>
                 <td class="vg-nome-cel">
                   <div style="display:flex;align-items:center;gap:8px">
-                    ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
+                    <span class="vg-av-wrap">${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}${s.mentorEssencia? `<span class="me-selo" title="Participa do Mentores Essência">${icon('award')}</span>` : ''}</span>
                     <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
                   </div>
                 </td>
@@ -19680,38 +19719,9 @@ function renderVisaoGeral(){
     </div>
     </div>
 
-    ${secHead('curso','film','Alunos do Curso Gravado', cursoTodos.length, cursoAlunos.length)}
-    <div id="vg-sec-curso" style="${vgAberto.curso?'':'display:none'}">
-    <p class="section-sub" style="margin-top:4px">Sem mentoria individual — só acesso às Aulas (liberadas uma a uma, conforme vai assistindo) e a uma comunidade própria, separada da dos mentorados.</p>
-    <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-curso" value="${escapeAttr(vgBusca.curso)}" placeholder="Buscar aluno do Método pelo nome…">${vgBusca.curso.trim()? `<button type="button" class="btn-outline" data-vg-limpar="curso">${icon('x','tiny')} Limpar</button>` : ''}</div>
-    <div class="table-wrap">
-      <table class="check-table vg-table">
-        <thead><tr><th>Aluno</th><th>Progresso nas aulas</th><th>Próxima aula</th><th>Acesso</th><th title="Ligado: todas as aulas abertas de uma vez, sem a liberação sequencial">Todas as aulas</th></tr></thead>
-        <tbody>
-          ${cursoAlunos.map(s=>{
-            const pct = courseCompletionPct(s);
-            const next = nextCourseLessonFor(s);
-            return `
-              <tr>
-                <td style="white-space:nowrap">
-                  <div style="display:flex;align-items:center;gap:8px">
-                    ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
-                    <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
-                  </div>
-                </td>
-                <td style="min-width:140px">
-                  <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
-                  <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
-                </td>
-                <td>${next? escapeHtml(next.title) : '<span style="color:var(--text-mute)">Curso concluído</span>'}</td>
-                <td style="min-width:140px">${tierSelectHtml(s)}</td>
-                <td><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" data-aulas-liberadas="${s.id}" ${s.aulasLiberadas?'checked':''}> ${s.aulasLiberadas? 'Liberadas' : 'Sequencial'}</label></td>
-              </tr>`;
-          }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">${vgBusca.curso.trim()? 'Nenhum aluno com esse nome.' : 'Nenhum aluno do curso ainda.'}</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-    </div>
+    ${cursoSec('curso','film','Alunos do Curso Gravado', cursoTodos, cursoAlunos, 'Buscar aluno do Método pelo nome…', 'Sem mentoria individual — só acesso às Aulas (liberadas uma a uma, conforme vai assistindo) e a uma comunidade própria, separada da dos mentorados.', 'Nenhum aluno do curso ainda.')}
+
+    ${cursoSec('pos','award','Alunos da Pós-graduação', posTodos, posAlunos, 'Buscar aluno da Pós-graduação pelo nome…', 'Alunos da Pós-graduação, com acesso às aulas gravadas da pós. O campo "Acesso" muda o perfil da pessoa.', 'Nenhum aluno da Pós-graduação ainda.')}
 
     ${secHead('codigos','idcard','Códigos de Acesso', ACCESS_CODES.filter(c=>!c.usedBy).length, ACCESS_CODES.filter(c=>!c.usedBy).length)}
     <div id="vg-sec-codigos" style="${vgAberto.codigos?'':'display:none'}">
@@ -19796,6 +19806,7 @@ function renderVisaoGeral(){
   /* Busca por nome e recolher/expandir das listas da Visão Geral */
   bindBuscaInput('vg-busca-mentorados', v=>{ vgBusca.mentorados = v; }, renderVisaoGeral);
   bindBuscaInput('vg-busca-curso', v=>{ vgBusca.curso = v; }, renderVisaoGeral);
+  bindBuscaInput('vg-busca-pos', v=>{ vgBusca.pos = v; }, renderVisaoGeral);
   document.querySelectorAll('[data-vg-limpar]').forEach(b=>b.addEventListener('click', ()=>{ vgBusca[b.dataset.vgLimpar] = ''; renderVisaoGeral(); }));
   document.querySelectorAll('[data-vg-toggle]').forEach(h=>h.addEventListener('click', ()=>{ const k = h.dataset.vgToggle; vgAberto[k] = !vgAberto[k]; renderVisaoGeral(); }));
   document.querySelectorAll('[data-open-staff]').forEach(btn=>{
