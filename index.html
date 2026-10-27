@@ -6477,7 +6477,7 @@ function setRole(role){
     if(STAFF_BLOQUEIOS.size) document.getElementById('role-consultora').style.display = 'none';
   }
   /* Desempenho, DRE, Reuniões e Políticas (e as demais áreas) seguem as mesmas regras do Início. */
-  if(staffNav) navSincronizarEquipe();
+  navSincronizarEquipe();
   /* Enquanto a equipe interna estiver no modo "Equipe Interna", a barra lateral mostra só o que é dela —
      os itens que são a experiência do próprio aluno (Início, Aulas, Comunidade, Ranking, Dashboard,
      Painel do Método, Sessões, Metas, Prontuários) ficam escondidos. Eles voltam a aparecer só quando
@@ -15578,7 +15578,8 @@ function equipeViewPode(v){
 /* Acerta o menu lateral da equipe com as mesmas regras do Início (chamado ao trocar de modo e ao abrir o
    Início, porque algumas permissões, como Reuniões, só ficam conhecidas depois de carregar os dados). */
 function navSincronizarEquipe(){
-  if(currentUserRole!=='staff' || currentRole==='aluno') return;
+  /* Fora do modo Equipe Interna (aluno de verdade, ou a equipe vendo como aluno), nenhuma área da equipe aparece. */
+  if(currentUserRole!=='staff' || currentRole==='aluno'){ VIEWS_EQUIPE.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'none'; }); return; }
   VIEWS_EQUIPE.forEach(v=>{ if(v==='equipe') return; const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = equipeViewPode(v) ? 'flex' : 'none'; });
 }
 /* O que cada papel interno pode abrir (a barra lateral e a trava do goTo seguem a mesma lista). */
