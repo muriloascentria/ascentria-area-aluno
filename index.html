@@ -1436,6 +1436,7 @@
   .add-form .int-enc-campo{grid-column:span 2;min-width:0;}
   @media (max-width:560px){ .add-form .int-enc-campo{grid-column:1 / -1;} }
   .add-form.form-tarefa .int-enc-campo{grid-column:1 / -1;}
+  .int-enc-pill.ag{border-style:dashed;}
   .add-form.form-registro{grid-template-columns:3fr 1fr;}
   .add-form.cli-link-form{grid-template-columns:minmax(0,1fr) auto;align-items:end;}
   .add-form.cli-busca-form{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;align-items:end;}
@@ -4870,7 +4871,7 @@ function mapProfileRow(p){
       objetivo12meses: diag.objetivo_12meses || '—', horasSemana: diag.horas_semana || '—',
       wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
-    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null})),
+    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null})),
     sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||'',responsavel:x.responsavel||''})),
     contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,tipo:c.tipo||'',responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
     registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
@@ -5088,7 +5089,7 @@ async function bootstrapData(){
       sb.from('internal_records').select('*').order('created_at',{ascending:false}).then(({data:irRows})=>{
         (irRows||[]).forEach(r=>{
           const st = getStudent(r.student_id);
-          if(st) st.registrosInternos.push({id:r.id, data:r.data||'', autorNome:(PEOPLE[r.autor_id]&&PEOPLE[r.autor_id].name)||'—', texto:r.texto, contatoId:r.contato_id||null, criadoEm:r.created_at||''});
+          if(st) st.registrosInternos.push({id:r.id, data:r.data||'', autorNome:(PEOPLE[r.autor_id]&&PEOPLE[r.autor_id].name)||'—', texto:r.texto, contatoId:r.contato_id||null, agendamentoId:r.agendamento_id||null, criadoEm:r.created_at||''});
         });
       }),
       // Registro de Sessões 1:1 (vendas).
@@ -5398,7 +5399,7 @@ function syncChecklistItemStatus(id, status){
   syncNow(sb.from('checklist_items').update({status}).eq('id', id));
 }
 async function syncChecklistItemInsert(sid, item){
-  const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[], contato_id:item.contatoId||null}).select().single();
+  const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[], contato_id:item.contatoId||null, agendamento_id:item.agendamentoId||null}).select().single();
   if(error) throw error;
   return data.id;
 }
@@ -5416,7 +5417,7 @@ function syncInternalDiagAnswer(sid, diagType, idx, answer){
   syncNow(sb.from('internal_diag_answers').upsert({student_id:sid, diag_type:diagType, idx, answer}));
 }
 async function syncInternalRecordInsert(sid, r){
-  const { data, error } = await sb.from('internal_records').insert({student_id:sid, autor_id:actingAuthorId(), data:r.data, texto:r.texto, contato_id:r.contatoId||null}).select().single();
+  const { data, error } = await sb.from('internal_records').insert({student_id:sid, autor_id:actingAuthorId(), data:r.data, texto:r.texto, contato_id:r.contatoId||null, agendamento_id:r.agendamentoId||null}).select().single();
   if(error) throw error;
   return data.id;
 }
@@ -10459,8 +10460,8 @@ function exportAcompanhamentoPDF(s){
   const aeComp = aeSalvo.competencias || {};
   const encLabel = (id)=> id ? intEncontroLabel(s, id) : '';
   const encontrosAsc = intEncontros(s).slice().reverse();
-  const tarefasSemEnc = tarefas.filter(t=>!t.contatoId || !encLabel(t.contatoId));
-  const regsSemEnc = (s.registrosInternos||[]).filter(r=>!r.contatoId || !encLabel(r.contatoId));
+  const tarefasSemEnc = tarefas.filter(t=>!intVk(t) || !encLabel(intVk(t)));
+  const regsSemEnc = (s.registrosInternos||[]).filter(r=>!intVk(r) || !encLabel(intVk(r)));
   const txtLimpo = (t)=> String(t||'').replace(/<[^>]+>/g,'');
   const obRows = (()=>{ const o = aeOk ? AE_UI.ob : null; const prev = obPrevistas(s, o); return OB_ETAPAS.map(e=>({ nome:e.nome, resp:e.resp, st: obStatus(e, o, prev[e.k]).txt })); })();
   const linha = (rotulo, valor)=> `<tr><th>${escapeHtml(rotulo)}</th><td>${escapeHtml(valor==null||valor===''? '—' : String(valor))}</td></tr>`;
@@ -10636,7 +10637,7 @@ function exportAcompanhamentoPDF(s){
         <thead><tr><th style="width:34%">Tarefa</th><th style="width:16%">Encontro</th><th>Responsável</th><th>Prazo</th><th>Status</th><th style="width:20%">Observações</th></tr></thead>
         <tbody>${tarefas.map(t=>`<tr>
           <td>${escapeHtml(t.tarefa)}${(t.aulas||[]).length? `<div style="color:#666;font-size:9.5px;margin-top:2px">Aulas de apoio: ${escapeHtml((t.aulas||[]).map(id=>(getCourse(id)||{}).title).filter(Boolean).join(' · '))}</div>` : ''}</td>
-          <td>${escapeHtml(encLabel(t.contatoId) || '—')}</td>
+          <td>${escapeHtml(encLabel(intVk(t)) || '—')}</td>
           <td>${escapeHtml(t.responsavel)}</td>
           <td>${escapeHtml(t.prazo)}</td>
           <td>${escapeHtml(t.status)}</td>
@@ -10644,10 +10645,10 @@ function exportAcompanhamentoPDF(s){
         </tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhuma tarefa registrada.</p>'}
 
       <h2>Encontros e o que foi definido em cada um</h2>
-      <p class="sub">Cada encontro do Registro de Contatos, com as tarefas do checklist e os registros internos vinculados a ele.</p>
+      <p class="sub">Cada encontro do Registro de Contatos e cada agendamento 1:1, com as tarefas do checklist e os registros internos vinculados a ele.</p>
       ${encontrosAsc.length ? encontrosAsc.map(c=>{
-        const ts = tarefas.filter(t=>String(t.contatoId)===String(c.id));
-        const rs = (s.registrosInternos||[]).filter(r=>String(r.contatoId)===String(c.id));
+        const ts = tarefas.filter(t=>intVk(t)===String(c.id));
+        const rs = (s.registrosInternos||[]).filter(r=>intVk(r)===String(c.id));
         return `<div class="enc">
           <div class="enc-cab"><b>${escapeHtml(c.data||'sem data')}</b> · ${escapeHtml(contatoTipoLabel(c))}${c.responsavel ? ' · '+escapeHtml(c.responsavel) : ''}</div>
           ${c.resumo ? `<div class="ev-det">${escapeHtml(txtLimpo(c.resumo))}</div>` : ''}
@@ -10655,6 +10656,15 @@ function exportAcompanhamentoPDF(s){
           ${rs.length ? `<div class="enc-sub">Registros internos</div><ul>${rs.map(r=>`<li>${escapeHtml(r.texto)} <span class="enc-meta">(${escapeHtml(r.autorNome||'—')})</span></li>`).join('')}</ul>` : ''}
           ${!ts.length && !rs.length ? '<div class="vazio">Nada vinculado a este encontro.</div>' : ''}
         </div>`; }).join('') : '<p class="vazio">Nenhum encontro registrado.</p>'}
+      ${intAgendamentos(s).slice().reverse().map(l=>{
+        const k = 'a:'+l.id;
+        const ts = tarefas.filter(t=>intVk(t)===k), rs = (s.registrosInternos||[]).filter(r=>intVk(r)===k);
+        if(!ts.length && !rs.length) return '';
+        return `<div class="enc">
+          <div class="enc-cab"><b>${escapeHtml(intAgDataTxt(l))}</b> · Agendamento 1:1${l.title ? ' · '+escapeHtml(l.title) : ''}${l.type==='upcoming' ? ' (agendado)' : ''}</div>
+          ${ts.length ? `<div class="enc-sub">Tarefas definidas</div><ul>${ts.map(t=>`<li>${escapeHtml(txtLimpo(t.tarefa))} <span class="enc-meta">(${escapeHtml(t.responsavel)} · ${escapeHtml(t.prazo)} · ${escapeHtml(t.status)})</span></li>`).join('')}</ul>` : ''}
+          ${rs.length ? `<div class="enc-sub">Registros internos</div><ul>${rs.map(r=>`<li>${escapeHtml(r.texto)} <span class="enc-meta">(${escapeHtml(r.autorNome||'—')})</span></li>`).join('')}</ul>` : ''}
+        </div>`; }).join('')}
       ${tarefasSemEnc.length || regsSemEnc.length ? `<div class="enc">
           <div class="enc-cab"><b>Sem encontro vinculado</b></div>
           ${tarefasSemEnc.length ? `<div class="enc-sub">Tarefas</div><ul>${tarefasSemEnc.map(t=>`<li>${escapeHtml(txtLimpo(t.tarefa))} <span class="enc-meta">(${escapeHtml(t.status)})</span></li>`).join('')}</ul>` : ''}
@@ -10664,7 +10674,7 @@ function exportAcompanhamentoPDF(s){
       <h2>Registros internos da equipe</h2>
       ${(s.registrosInternos||[]).length ? `<table class="grade">
         <thead><tr><th style="width:12%">Data</th><th style="width:14%">Autor</th><th style="width:20%">Encontro</th><th>Registro</th></tr></thead>
-        <tbody>${(s.registrosInternos||[]).map(r=>`<tr><td>${escapeHtml(r.data||'—')}</td><td>${escapeHtml(r.autorNome||'—')}</td><td>${escapeHtml(encLabel(r.contatoId)||'—')}</td><td>${escapeHtml(r.texto).replace(/\n/g,'<br>')}</td></tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhum registro interno.</p>'}
+        <tbody>${(s.registrosInternos||[]).map(r=>`<tr><td>${escapeHtml(r.data||'—')}</td><td>${escapeHtml(r.autorNome||'—')}</td><td>${escapeHtml(encLabel(intVk(r))||'—')}</td><td>${escapeHtml(r.texto).replace(/\n/g,'<br>')}</td></tr>`).join('')}</tbody></table>` : '<p class="vazio">Nenhum registro interno.</p>'}
 
       <h2>Onboarding dos primeiros 30 dias</h2>
       <table class="grade">
@@ -10896,7 +10906,7 @@ function openTarefaEditModal(s, t){
         </div>
       </div>
       <div class="field full"><label>Observações</label><textarea class="ps-input" id="te-obs" rows="2">${escapeHtml(t.obs||'')}</textarea></div>
-      <div class="field full"><label>Encontro em que a tarefa foi definida</label>${intEncontroSelect(s, 'te-encontro', t.contatoId, true)}${(s.contatos||[]).length ? '' : '<small class="ae-dica">Nenhum encontro registrado ainda com este mentorado.</small>'}</div>
+      <div class="field full"><label>Encontro em que a tarefa foi definida</label>${intEncontroSelect(s, 'te-encontro', intVk(t), true)}${(s.contatos||[]).length ? '' : '<small class="ae-dica">Nenhum encontro registrado ainda com este mentorado.</small>'}</div>
       <div class="field full"><label>Aulas e atividades de apoio (<span id="te-count">${apoioContagem(sel)}</span>)</label>
         ${aulaPickHtml(t.aulas, 'te')}
       </div>
@@ -10920,13 +10930,13 @@ function openTarefaEditModal(s, t){
       prazo: prazoIsoParaTexto(document.getElementById('te-prazo').value) || ((t.prazo && !prazoTextoParaIso(t.prazo)) ? t.prazo : '—'),
       status: document.getElementById('te-status').value,
       obs: document.getElementById('te-obs').value.trim(),
-      contato_id: document.getElementById('te-encontro').value ? Number(document.getElementById('te-encontro').value) : null,
+      ...intVincParse(document.getElementById('te-encontro').value),
       aulas: apoioOrdenar(sel),
     };
     const btn = document.getElementById('te-save'); btn.disabled = true;
     try{ await syncChecklistItemUpdate(t.id, campos); }
     catch(e){ console.error(e); alert('Não foi possível salvar: '+(e.message||'')); btn.disabled = false; return; }
-    Object.assign(t, campos); t.contatoId = campos.contato_id; delete t.contato_id;
+    Object.assign(t, campos); t.contatoId = campos.contato_id; t.agendamentoId = campos.agendamento_id; delete t.contato_id; delete t.agendamento_id;
     closeModal();
     aeSincronizarProximaAcao(s);
     renderInterno();
@@ -10979,17 +10989,33 @@ function contatoTipoLabel(c){
 function intDataIso(txt){ const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(String(txt||'').trim()); if(!m) return ''; const y = m[3].length===2 ? '20'+m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
 function intHojeTxt(){ return prazoIsoParaTexto(tzHojeISO()); }
 function intEncontros(s){ return (s.contatos||[]).slice().sort((a,b)=> (intDataIso(b.data)||'').localeCompare(intDataIso(a.data)||'') || (Number(b.id)-Number(a.id))); }
-function intEncontroLabel(s, id){ const c = (s.contatos||[]).find(x=>String(x.id)===String(id)); if(!c) return ''; return `${c.data||'sem data'} · ${contatoTipoLabel(c)}${c.responsavel ? ' · '+c.responsavel : ''}`; }
-function intEncontroSelect(s, idSel, sel, opcional){
-  const lista = intEncontros(s);
-  return `<select class="ps-input" id="${idSel}"><option value="">${opcional ? 'Sem encontro vinculado' : 'Escolha o encontro…'}</option>${lista.map(c=>`<option value="${c.id}" ${String(c.id)===String(sel)?'selected':''}>${escapeHtml(intEncontroLabel(s, c.id))}</option>`).join('')}</select>`;
+/* Vínculo de tarefa/registro: um encontro já registrado (Registro de Contatos, chave = id numérico)
+   ou um encontro 1:1 agendado (Agendamento de Encontros, chave = 'a:' + id do agendamento). */
+function intAgendamentos(s){ return LIVE_SESSIONS.filter(l=>l.studentId===s.id).slice().sort((a,b)=> String(b._eventDate||'').localeCompare(String(a._eventDate||'')) || String(b._eventHour||'').localeCompare(String(a._eventHour||''))); }
+function intAgDataTxt(l){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(l._eventDate||'')); return m ? `${m[3]}/${m[2]}/${m[1]}` : (l.date||'sem data'); }
+function intVk(item){ return !item ? '' : item.agendamentoId ? 'a:'+item.agendamentoId : (item.contatoId ? String(item.contatoId) : ''); }
+function intVincParse(val){ val = String(val||''); return val.startsWith('a:') ? { contato_id:null, agendamento_id:Number(val.slice(2)) } : { contato_id: val ? Number(val) : null, agendamento_id:null }; }
+function intVincAplicar(item, val){ const v = intVincParse(val); item.contatoId = v.contato_id; item.agendamentoId = v.agendamento_id; return v; }
+function intAgAchar(s, key){ const id = String(key||'').startsWith('a:') ? String(key).slice(2) : null; return id ? LIVE_SESSIONS.find(l=>String(l.id)===id && l.studentId===s.id) : null; }
+function intEncontroLabel(s, id){
+  if(String(id||'').startsWith('a:')){ const l = intAgAchar(s, id); return l ? `${intAgDataTxt(l)}${l._eventHour ? ' '+l._eventHour : ''} · Agendamento 1:1${l.title ? ' · '+l.title : ''}${l.type==='upcoming' ? ' (agendado)' : ''}` : ''; }
+  const c = (s.contatos||[]).find(x=>String(x.id)===String(id)); if(!c) return ''; return `${c.data||'sem data'} · ${contatoTipoLabel(c)}${c.responsavel ? ' · '+c.responsavel : ''}`;
 }
+function intEncontroSelect(s, idSel, sel, opcional){
+  const ags = intAgendamentos(s), lista = intEncontros(s);
+  const op = (v, txt)=>`<option value="${escapeAttr(v)}" ${String(v)===String(sel)?'selected':''}>${escapeHtml(txt)}</option>`;
+  return `<select class="ps-input" id="${idSel}"><option value="">${opcional ? 'Sem encontro vinculado' : 'Escolha o encontro…'}</option>${ags.length ? `<optgroup label="Agendamentos de encontro 1:1">${ags.map(l=>op('a:'+l.id, intEncontroLabel(s, 'a:'+l.id))).join('')}</optgroup>` : ''}${lista.length ? `<optgroup label="Encontros registrados">${lista.map(c=>op(c.id, intEncontroLabel(s, c.id))).join('')}</optgroup>` : ''}</select>`;
+}
+function intTemVinculos(s){ return (s.contatos||[]).length > 0 || intAgendamentos(s).length > 0; }
 function intEncontroCampo(s, idSel, rotulo){
-  if(!(s.contatos||[]).length) return `<div class="field full int-enc-vazio"><label>${rotulo}</label><p>Nenhum encontro registrado com este mentorado. Registre o encontro em <button type="button" class="link-btn" data-int-ir="contatos">Registro de Contatos</button> e depois volte aqui.</p></div>`;
+  if(!intTemVinculos(s)) return `<div class="field full int-enc-vazio"><label>${rotulo}</label><p>Nenhum encontro registrado ou agendado com este mentorado. Agende em <button type="button" class="link-btn" data-int-ir="futuros">Agendamento de Encontros</button> ou registre em <button type="button" class="link-btn" data-int-ir="contatos">Registro de Contatos</button> e depois volte aqui.</p></div>`;
   return `<div class="field int-enc-campo"><label>${rotulo}</label>${intEncontroSelect(s, idSel, '', false)}</div>`;
 }
 const intAulasAbertas = new Set(); // itens do checklist com as aulas de apoio expandidas ("Ver mais")
-function intEncontroData(s, id){ const c = id && (s.contatos||[]).find(x=>String(x.id)===String(id)); return c ? `<span class="int-enc-pill" title="${escapeAttr(intEncontroLabel(s, id))}">${icon('calendar','tiny')} ${escapeHtml(c.data||'sem data')}</span>` : ''; }
+function intEncontroData(s, id){
+  if(String(id||'').startsWith('a:')){ const l = intAgAchar(s, id); return l ? `<span class="int-enc-pill ag" title="${escapeAttr(intEncontroLabel(s, id))}">${icon('calendar','tiny')} ${escapeHtml(intAgDataTxt(l))}</span>` : ''; }
+  const c = id && (s.contatos||[]).find(x=>String(x.id)===String(id)); return c ? `<span class="int-enc-pill" title="${escapeAttr(intEncontroLabel(s, id))}">${icon('calendar','tiny')} ${escapeHtml(c.data||'sem data')}</span>` : '';
+}
 function intEncontroPill(s, id){ const l = id && intEncontroLabel(s, id); return l ? `<span class="int-enc-pill" title="Encontro vinculado">${icon('calendar','tiny')} ${escapeHtml(l)}</span>` : ''; }
 function intVinculosHtml(s, cid){
   const nt = (s.checklist||[]).filter(t=>String(t.contatoId)===String(cid)).length;
@@ -11136,7 +11162,7 @@ function intVincularRegistro(s, r){
       <div class="cat">Registros Internos da Equipe</div>
       <h3>Vincular a um encontro</h3>
       <p class="desc">${escapeHtml(String(r.texto||'').slice(0,220))}${String(r.texto||'').length>220?'…':''}</p>
-      <div class="field full"><label>Encontro</label>${intEncontroSelect(s, 'rv-encontro', r.contatoId, true)}</div>
+      <div class="field full"><label>Encontro</label>${intEncontroSelect(s, 'rv-encontro', intVk(r), true)}</div>
       <div class="modal-actions an-dest-form-acoes">
         <button type="button" class="btn-accent" id="rv-salvar">${icon('check','tiny')} Salvar</button>
         <button type="button" class="btn-outline" id="rv-cancelar">Cancelar</button>
@@ -11146,11 +11172,11 @@ function intVincularRegistro(s, r){
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('rv-cancelar').addEventListener('click', closeModal);
   document.getElementById('rv-salvar').addEventListener('click', async (e)=>{
-    const val = document.getElementById('rv-encontro').value || null;
+    const val = document.getElementById('rv-encontro').value || '';
     e.currentTarget.disabled = true;
-    const { error } = await sb.from('internal_records').update({ contato_id: val }).eq('id', r.id);
+    const { error } = await sb.from('internal_records').update(intVincParse(val)).eq('id', r.id);
     if(error){ alert('Não foi possível salvar: '+(error.message||'')); e.currentTarget.disabled = false; return; }
-    r.contatoId = val ? Number(val) : null;
+    intVincAplicar(r, val);
     reallyCloseModal(); renderInterno();
   });
 }
@@ -11217,7 +11243,7 @@ function renderInterno(){
           ${s.checklist.map(t=>`
             <tr>
               <td style="min-width:220px">${t.tarefa}</td>
-              <td style="white-space:nowrap">${intEncontroData(s, t.contatoId) || `<button class="btn-mini" data-edit-task="${t.id}" title="Vincular esta tarefa a um encontro">${icon('calendar','tiny')} Vincular encontro</button>`}</td>
+              <td style="white-space:nowrap">${intEncontroData(s, intVk(t)) || `<button class="btn-mini" data-edit-task="${t.id}" title="Vincular esta tarefa a um encontro">${icon('calendar','tiny')} Vincular encontro</button>`}</td>
               <td style="min-width:140px">${(t.aulas||[]).length
                 ? (intAulasAbertas.has(String(t.id))
                     ? `${aulasChipsHtml(t.aulas)}<div class="int-aulas-acoes"><button class="btn-mini" data-task-aulas="${t.id}" title="Escolher aulas de apoio">${icon('edit','tiny')} Editar</button> <button class="btn-mini" data-aulas-ver="${t.id}">${icon('up','tiny')} Ver menos</button></div>`
@@ -11369,9 +11395,9 @@ function renderInterno(){
             <tr>
               <td style="white-space:nowrap">${escapeHtml(r.data||'—')}</td>
               <td><span class="resp-pill">${escapeHtml(r.autorNome||'—')}</span></td>
-              <td style="white-space:nowrap">${intEncontroData(s, r.contatoId) || '<span style="color:var(--text-mute)">—</span>'}</td>
+              <td style="white-space:nowrap">${intEncontroData(s, intVk(r)) || '<span style="color:var(--text-mute)">—</span>'}</td>
               <td style="min-width:280px">${linkify(r.texto).replace(/\n/g,'<br>')}</td>
-              <td style="white-space:nowrap"><button class="btn-mini" data-rec-encontro="${r.id}" title="${r.contatoId?'Trocar o encontro vinculado':'Vincular a um encontro'}">${icon('calendar','tiny')} ${r.contatoId?'Trocar':'Vincular'}</button> <button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
+              <td style="white-space:nowrap"><button class="btn-mini" data-rec-encontro="${r.id}" title="${intVk(r)?'Trocar o encontro vinculado':'Vincular a um encontro'}">${icon('calendar','tiny')} ${r.contatoId?'Trocar':'Vincular'}</button> <button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
             </tr>
           `).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum registro interno ainda.</td></tr>`}
         </tbody>
@@ -11400,7 +11426,7 @@ function renderInterno(){
     const t = s.checklist.find(x=>String(x.id)===b.dataset.taskEquipe); if(!t) return;
     openTarefaModal(null, {
       titulo: (s.name ? s.name.split(' ')[0]+': ' : '') + String(t.tarefa).replace(/<[^>]+>/g,'').slice(0,180),
-      descricao: `Item do Checklist de Acompanhamento de ${s.name}${t.contatoId ? ' (encontro de '+intEncontroLabel(s, t.contatoId)+')' : ''}.\n\n${String(t.tarefa).replace(/<[^>]+>/g,'')}`,
+      descricao: `Item do Checklist de Acompanhamento de ${s.name}${intVk(t) ? ' (encontro de '+intEncontroLabel(s, intVk(t))+')' : ''}.\n\n${String(t.tarefa).replace(/<[^>]+>/g,'')}`,
       prazoData: prazoTextoParaIso(t.prazo) || undefined,
     });
   }));
@@ -11488,13 +11514,13 @@ function renderInterno(){
     const tarefa = document.getElementById('new-task-tarefa').value.trim();
     if(!tarefa) return;
     const encSel = document.getElementById('new-task-encontro');
-    if(!encSel){ alert('Antes de criar a tarefa, registre o encontro com o mentorado em Registro de Contatos.'); intAbrirSecao('contatos'); return; }
+    if(!encSel){ alert('Antes de criar a tarefa, agende o encontro em Agendamento de Encontros ou registre em Registro de Contatos.'); intAbrirSecao('futuros'); return; }
     if(!encSel.value){ alert('Escolha o encontro em que esta tarefa foi definida.'); encSel.focus(); return; }
     const responsavel = document.getElementById('new-task-resp').value;
     const prazo = prazoIsoParaTexto(document.getElementById('new-task-prazo').value) || '—';
     const btn = document.getElementById('add-task-btn');
     btn.disabled = true;
-    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: apoioOrdenar(novaTarefaAulas), contatoId: Number(encSel.value)};
+    const item = {tarefa, responsavel, prazo, status:'Pendente', obs:'', aulas: apoioOrdenar(novaTarefaAulas)}; intVincAplicar(item, encSel.value);
     try{
       item.id = await syncChecklistItemInsert(s.id, item);
       s.checklist.push(item);
@@ -11663,11 +11689,11 @@ function renderInterno(){
     const texto = document.getElementById('new-record-texto').value.trim();
     if(!texto) return;
     const encR = document.getElementById('new-record-encontro');
-    if(!encR){ alert('Antes do registro, cadastre o encontro com o mentorado em Registro de Contatos.'); intAbrirSecao('contatos'); return; }
+    if(!encR){ alert('Antes do registro, agende o encontro em Agendamento de Encontros ou registre em Registro de Contatos.'); intAbrirSecao('futuros'); return; }
     if(!encR.value){ alert('Escolha o encontro a que este registro se refere.'); encR.focus(); return; }
     const btn = document.getElementById('add-record-btn');
     btn.disabled = true;
-    const r = {data, texto, autorNome:(currentUserProfile&&currentUserProfile.name)||'—', contatoId: Number(encR.value), criadoEm: new Date().toISOString()};
+    const r = {data, texto, autorNome:(currentUserProfile&&currentUserProfile.name)||'—', criadoEm: new Date().toISOString()}; intVincAplicar(r, encR.value);
     try{
       r.id = await syncInternalRecordInsert(s.id, r);
       s.registrosInternos.unshift(r);
@@ -18804,7 +18830,7 @@ function rdResolverMomento(s, m){
     });
   };
   const passo2 = ()=>{
-    const temEnc = (s.contatos||[]).length > 0;
+    const temEnc = intTemVinculos(s);
     document.querySelector('#modal .modal-body').innerHTML = `
       <div class="cat">Radar dos Mentorados · ${escapeHtml(s.name)}</div>
       <h3>Registre no Acompanhamento Interno</h3>
@@ -18823,7 +18849,7 @@ function rdResolverMomento(s, m){
       if(!analise){ alert('Escreva o que você analisou antes de marcar como resolvido.'); document.getElementById('rdm-texto').focus(); return; }
       const encSel = document.getElementById('rdm-encontro');
       const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Salvando…';
-      const r = { data:intHojeTxt(), texto:`Momento-chave (Radar): ${m.txt}\n\n${analise}`, autorNome:(currentUserProfile&&currentUserProfile.name)||'—', contatoId: encSel && encSel.value ? Number(encSel.value) : null, criadoEm:new Date().toISOString() };
+      const r = { data:intHojeTxt(), texto:`Momento-chave (Radar): ${m.txt}\n\n${analise}`, autorNome:(currentUserProfile&&currentUserProfile.name)||'—', criadoEm:new Date().toISOString() }; intVincAplicar(r, encSel && encSel.value);
       try{
         r.id = await syncInternalRecordInsert(s.id, r);
         (s.registrosInternos = s.registrosInternos || []).unshift(r);
