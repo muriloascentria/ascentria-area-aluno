@@ -1437,6 +1437,12 @@
   @media (max-width:560px){ .add-form .int-enc-campo{grid-column:1 / -1;} }
   .add-form.form-tarefa .int-enc-campo{grid-column:1 / -1;}
   .add-form.form-registro{grid-template-columns:3fr 1fr;}
+  .add-form.form-aula{grid-template-columns:3fr 1.2fr 1.2fr;}
+  .add-form.form-material{grid-template-columns:3fr 1fr;}
+  .add-form.form-evento{grid-template-columns:repeat(5, minmax(0,1fr));align-items:start;}
+  .add-form.form-evento .ps-input{height:38px;box-sizing:border-box;}
+  .add-form.form-evento textarea.ps-input{height:auto;}
+  .add-form.form-aula .ps-input, .add-form.form-material .ps-input, .add-form.form-evento .ps-input{width:100%;max-width:none;}
   .add-form.form-registro .int-enc-campo{grid-column:auto;}
   .add-form.form-registro .ps-input{width:100%;max-width:none;}
   .add-form.form-tarefa .int-enc-campo select.ps-input{width:100%;max-width:none;}
@@ -11844,8 +11850,8 @@ function renderConteudo(){
 
     ${cHead('aulasReg', 'plus', 'Registro de Aulas', null)}
     ${cBody('aulasReg')}
-    <div class="add-form">
-      <div class="field full"><label>Título da aula</label><input class="ps-input" type="text" id="new-course-title" placeholder="Ex.: Como precificar protocolos"></div>
+    <div class="add-form form-aula">
+      <div class="field"><label>Título da aula</label><input class="ps-input" type="text" id="new-course-title" placeholder="Ex.: Como precificar protocolos"></div>
       <div class="field"><label>Módulo</label>
         <select class="ps-input" id="new-course-mod">${MODULES.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select>
       </div>
@@ -11881,8 +11887,8 @@ function renderConteudo(){
 
     ${cHead('materiaisReg', 'plus', 'Registro de Materiais', null)}
     ${cBody('materiaisReg')}
-    <div class="add-form">
-      <div class="field full"><label>Título do material</label><input class="ps-input" type="text" id="new-material-title" placeholder="Ex.: Guia de Precificação"></div>
+    <div class="add-form form-material">
+      <div class="field"><label>Título do material</label><input class="ps-input" type="text" id="new-material-title" placeholder="Ex.: Guia de Precificação"></div>
       <div class="field"><label>Tipo</label>
         <select class="ps-input" id="new-material-type">
           <option value="PDF">PDF</option><option value="XLSX">XLSX</option><option value="DOCX">DOCX</option><option value="Link">Link</option>
@@ -11923,7 +11929,7 @@ function renderConteudo(){
 
     ${cHead('eventosReg', 'plus', 'Registro de Eventos e Aulas ao Vivo', null)}
     ${cBody('eventosReg')}
-    <div class="add-form">
+    <div class="add-form form-evento">
       <div class="field full"><label>Título do evento</label><input class="ps-input" type="text" id="new-live-title" placeholder="Ex.: Encontro em grupo — Planejamento de Q4"></div>
       <div class="field"><label>Tipo de encontro</label>
         <select class="ps-input" id="new-live-tipo">
