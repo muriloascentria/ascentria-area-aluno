@@ -3751,12 +3751,12 @@ const QUADRANTS = [
        cycleColumn:'__label', cycleValues:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
        /* Quando o Status vira "Publicado" e há um link preenchido, o link sobe sozinho para a lista de
           Avaliação de Conteúdo (só o link — o resto continua para preencher manualmente como já era). */
-       autoPublish:{statusKey:'status', publishedValue:'Publicado', linkKey:'link', targetTopicId:'avaliacao', targetKey:'avaliacao', flagKey:'__avaliacaoLinked'}},
+       autoPublish:{statusKey:'status', publishedValue:'Publicado', linkKey:'link', targetTopicId:'avaliacao', targetKey:'avaliacao', flagKey:'__avaliacaoLinked', dataKey:'dataFunil'}},
      ]},
     {id:'avaliacao',title:'Avaliação de Conteúdo',desc:'Indicadores de performance dos conteúdos publicados.',
      sections:[
        {type:'table',key:'avaliacao',label:'Avaliação de Conteúdo',columns:[
-         {key:'link',label:'Link',type:'link'},{key:'views',label:'Views'},{key:'shared',label:'Shared'},{key:'saved',label:'Saved'},{key:'likes',label:'Likes'},
+         {key:'link',label:'Link',type:'link'},{key:'dataFunil',label:'Data no Funil'},{key:'views',label:'Views'},{key:'shared',label:'Shared'},{key:'saved',label:'Saved'},{key:'likes',label:'Likes'},
          {key:'viewsSeg',label:'Views Seguidores'},{key:'viewsNaoSeg',label:'Views Não Seguidores'},{key:'insights',label:'Insights'},
        ]},
      ]},
@@ -8901,10 +8901,14 @@ function autoPublicarLinha(ap, row, sid){
   const targetData = getTopicData(sid, ap.targetTopicId);
   if(!Array.isArray(targetData[ap.targetKey])) targetData[ap.targetKey] = [];
   const lista = targetData[ap.targetKey];
-  if(!lista.some(r=>String((r||{})[ap.linkKey]||'').trim()===link)){
+  /* Data em que o link entrou pela publicação no Funil, para a pessoa se orientar na Avaliação. */
+  const hoje = (()=>{ const d = new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); })();
+  const existente = lista.find(r=>String((r||{})[ap.linkKey]||'').trim()===link);
+  if(!existente){
     const vazia = lista.find(r=>r && !Object.keys(r).some(k=>String(r[k]||'').trim()!==''));
-    if(vazia) vazia[ap.linkKey] = link; else lista.push({[ap.linkKey]: link});
-  }
+    if(vazia){ vazia[ap.linkKey] = link; if(ap.dataKey) vazia[ap.dataKey] = hoje; }
+    else lista.push(ap.dataKey ? {[ap.linkKey]: link, [ap.dataKey]: hoje} : {[ap.linkKey]: link});
+  } else if(ap.dataKey && !String(existente[ap.dataKey]||'').trim()){ existente[ap.dataKey] = hoje; }
   row[ap.flagKey] = true;
   syncPanelData(sid, ap.targetTopicId, targetData);
   return true;
