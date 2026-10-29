@@ -1204,6 +1204,10 @@
   .player-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
   .player-dica{margin:0;padding:10px 16px 14px;font-size:12px;color:var(--text-mute);line-height:1.5;}
   .player-dica a{color:var(--accent);margin-left:4px;white-space:nowrap;}
+  .player-alt{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:0 16px 14px;font-size:12px;color:var(--text-dim);}
+  .player-alt-bts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;}
+  .player-alt-bts > *{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;white-space:nowrap;text-decoration:none;}
+  @media (max-width:560px){ .player-alt-bts{width:100%;} }
   body.player-aberto{overflow:hidden;}
   @media (max-width:560px){ .player-ov{padding:0;align-items:center;} .player-box{border-radius:0;border-left:0;border-right:0;} }
   /* Planilha de Análise Sessões 1:1 */
@@ -16881,13 +16885,24 @@ function playerAbrir(url, titulo){
     <div class="player-box" role="dialog" aria-label="${escapeAttr(titulo||'Gravação')}">
       <div class="player-hd"><strong>${escapeHtml(titulo||'Gravação')}</strong><button type="button" class="player-x" id="player-x" title="Fechar">${icon('x','tiny')}</button></div>
       <div class="player-video"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe></div>
-      <p class="player-dica">Toque no play para assistir aqui mesmo, sem baixar. Vídeos longos podem levar alguns segundos para começar. Para tela cheia, use o botão do canto do vídeo ou gire o celular.
-        <a href="${escapeAttr(url)}" target="_blank" rel="noopener">Abrir no Google Drive</a></p>
+      <p class="player-dica">Toque no play para assistir aqui mesmo, sem baixar. Vídeos longos podem levar alguns segundos para começar. Para tela cheia, use o botão do canto do vídeo ou gire o celular.</p>
+      <div class="player-alt">
+        <span>Apareceu "An unexpected error occurred" ou o vídeo não carregou?</span>
+        <div class="player-alt-bts">
+          <button type="button" class="btn-outline" id="player-recarregar">${icon('play','tiny')} Tentar de novo</button>
+          <a class="btn-accent" href="${escapeAttr(url)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Assistir no Google Drive</a>
+        </div>
+      </div>
     </div>`;
   document.body.appendChild(el);
   document.body.classList.add('player-aberto');
   el.addEventListener('click', e=>{ if(e.target===el) playerFechar(); });
   el.querySelector('#player-x').addEventListener('click', playerFechar);
+  /* O player do Drive dentro do site às vezes falha no Safari do iPhone (bloqueio de cookies de outro
+     site) e mostra "An unexpected error occurred". Recarregar ou abrir direto no Drive resolve. */
+  el.querySelector('#player-recarregar').addEventListener('click', ()=>{
+    const f = el.querySelector('iframe'); const src = f.src; f.src = 'about:blank'; setTimeout(()=>{ f.src = src; }, 120);
+  });
   return true;
 }
 function playerFechar(){ const el = document.getElementById('player-ov'); if(el) el.remove(); document.body.classList.remove('player-aberto'); }
