@@ -8632,7 +8632,7 @@ function renderAgenda(){
         ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a></div>`
         : `<div class="agenda-actions">
             ${l.linkGravacao
-              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>`
+              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>${playerDriveId(l.linkGravacao) ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Se o vídeo der erro aqui dentro, abra direto no Google Drive">${icon('externallink','tiny')} Abrir no Drive</a>` : ''}`
               : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
             <button type="button" class="btn-outline watched-btn ${watched?'active':''}" data-watched="${l.id}">${watched? icon('check','tiny') : ''} Assistido</button>
           </div>`}
