@@ -16231,7 +16231,12 @@ function renderVendas(){
      uma oportunidade de venda perdida por conta do discurso, então não deve puxar a taxa pra baixo. */
   const showSessoes = base.filter(v=>v.presenca==='Show');
   const fechadasShow = showSessoes.filter(v=>v.resultado==='Vendido');
-  const taxaFechamento = showSessoes.length ? Math.round(fechadasShow.length/showSessoes.length*100) : 0;
+  /* Taxa de fechamento (eficiência da consultora): só as oportunidades reais, Vendido + Não vendido.
+     Desqualificado, Incompleto e sem resultado ficam de fora. Conversão geral (eficiência do funil):
+     vendidos sobre todas as sessões realizadas, inclusive desqualificados. */
+  const decididasShow = showSessoes.filter(v=>v.resultado==='Vendido' || v.resultado==='Não vendido');
+  const taxaFechamento = decididasShow.length ? Math.round(fechadasShow.length/decididasShow.length*100) : 0;
+  const conversaoGeral = showSessoes.length ? Math.round(fechadasShow.length/showSessoes.length*100) : 0;
   const noShowSessoes = base.filter(v=>v.presenca==='No-show');
   const taxaNoShow = base.length ? Math.round(noShowSessoes.length/base.length*100) : 0;
   const indicadores = vendasIndicadores(base);
@@ -16247,7 +16252,8 @@ function renderVendas(){
     <div class="kpi-row">
       <div class="kpi-tile" title="Sessões em que o lead compareceu (Presença = Show). No-shows não entram aqui."><div class="label">Sessões realizadas</div><div class="value">${showSessoes.length}</div></div>
       <div class="kpi-tile"><div class="label">Vendas fechadas</div><div class="value">${fechadas.length}</div></div>
-      <div class="kpi-tile" title="Vendas fechadas ÷ sessões realizadas. No-shows não entram na conta."><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
+      <div class="kpi-tile" title="Vendidos ÷ (Vendidos + Não vendidos), entre as sessões realizadas. Desqualificados, incompletos e sem resultado não entram. Mede a eficiência da consultora."><div class="label">Taxa de fechamento</div><div class="value">${taxaFechamento}%</div></div>
+      <div class="kpi-tile" title="Vendidos ÷ todas as sessões realizadas (inclui desqualificados, incompletos e sem resultado). Mede a eficiência do funil e serve para projeção."><div class="label">Conversão geral</div><div class="value">${conversaoGeral}%</div></div>
       <div class="kpi-tile" title="No-shows ÷ todas as sessões registradas (${base.length})."><div class="label">Taxa de no-show</div><div class="value">${taxaNoShow}%</div></div>
       <div class="kpi-tile"><div class="label">Faturamento (vendas fechadas)</div><div class="value" style="font-size:16px">${formatBRL(faturamento)}</div></div>
     </div>
