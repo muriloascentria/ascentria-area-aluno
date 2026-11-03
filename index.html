@@ -1136,6 +1136,11 @@
   .emb-card-nome small,.emb-card-pe{font-size:11px;color:var(--text-mute);}
   .emb-card-pe{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;}
   .emb-card-pe .icon{width:11px;height:11px;vertical-align:-1px;}
+  .emb-tag-lead{display:inline-block;align-self:flex-start;font-size:10px;font-weight:800;letter-spacing:.4px;padding:2px 8px;border-radius:999px;background:rgba(184,134,59,.16);color:#c9962f;border:1px solid rgba(184,134,59,.4);}
+  .emb-lead-info{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:10px;font-size:12px;color:var(--text-dim);}
+  .emb-lead-info small{flex-basis:100%;color:var(--text-mute);font-size:11.5px;}
+  .emb-vinc{flex-basis:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;max-width:520px;}
+  .emb-vinc select,.emb-vinc button{height:40px;}
   .emb-vazio{color:var(--text-mute);font-size:12px;text-align:center;padding:8px;}
   .emb-topo{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:8px 0 18px;}
   .emb-topo-txt{flex:1;min-width:220px;}
@@ -1146,6 +1151,7 @@
   .emb-topo-prog span{font-size:12px;color:var(--text-dim);font-weight:700;}
   .emb-topo-acoes{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:220px;}
   .emb-topo-acoes select{height:40px;}
+  .emb-topo-acoes .btn-outline{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;}
   .emb-salvo{font-size:11px;color:var(--text-mute);}
   .emb-fluxo{position:relative;display:flex;flex-direction:column;gap:14px;}
   .emb-fluxo::before{content:'';position:absolute;left:17px;top:10px;bottom:10px;width:2px;background:var(--border);}
@@ -19770,7 +19776,8 @@ const EMB_ETAPAS = [
 const EMB_DEV = {titulo:'Mentoria de Desenvolvimento', ic:'target', agenda:true,
   checks:[['agendado','Agendado'],['concluido','Concluído'],['tarefas','Tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Novo agendamento (Onboarding Expert ou eSIS) realizado']]};
 const EMB_CAMPOS_AGENDA = [['data','Data agendada','date'],['com','Com quem','pessoa'],['por','Quem agendou','pessoa']];
-let EMB = {};             // aluno_id -> etapas
+let EMB = {};
+let EMB_LEADS = [];       // pseudo-mentorados vindos do CRM, ainda sem conta             // aluno_id -> etapas
 let embCarregado = false;
 let embAluno = null;      // mentorado aberto no detalhe (null = quadro)
 let embFiltro = 'embarque';
@@ -19785,9 +19792,19 @@ async function embCarregar(forcar){
     const { data, error } = await sb.from('embarque').select('aluno_id, etapas');
     if(error) throw error;
     EMB = {}; (data||[]).forEach(r=>{ EMB[r.aluno_id] = r.etapas || {}; });
+    /* Leads vendidos no CRM ("Fechou mentoria") que ainda não têm conta no ePLAT. */
+    const lr = await sb.from('embarque_leads').select('*').eq('status','ativo').is('aluno_id', null);
+    EMB_LEADS = ((lr && lr.data) || []).map(l=>{
+      const nome = l.nome || 'Lead do CRM';
+      const ini = nome.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0].toUpperCase()).join('');
+      EMB['lead:'+l.id] = l.etapas || {};
+      return { id:'lead:'+l.id, leadId:l.id, name:nome, initials:ini, color:'#8a7a4a', avatarUrl:null, tier:'mentorado', lead:l,
+               cadastro:{ dataMatricula: l.data_venda || String(l.criado_em||'').slice(0,10) } };
+    });
     embCarregado = true;
   }catch(e){ console.error('embarque', e); }
 }
+function embAlunoOuLead(id){ return getStudent(id) || EMB_LEADS.find(l=>l.id===id) || null; }
 function embDados(sid){ if(!EMB[sid]) EMB[sid] = {}; return EMB[sid]; }
 /* Sequência de etapas do mentorado: as fixas e, logo depois de quem pediu, a Mentoria de Desenvolvimento. */
 function embFluxo(sid){
@@ -19827,12 +19844,15 @@ function embPessoas(){
   const nomes = (TAREFAS_EQUIPE||[]).filter(m=>m.ativo!==false).map(m=>String(m.nome||m.name||'').split(' ')[0]).filter(Boolean);
   return Array.from(new Set(nomes.length ? nomes : ['Murilo','Mariane','Viviane','Sandra','Diego','Carmem','Adriana']));
 }
+function fmtWhatsLead(t){ const d = String(t||'').replace(/\D/g,''); const n = d.length>11 ? d.slice(-11) : d; return n.length===11 ? `+55 (${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}` : t; }
 function embDataBR(iso){ if(!iso) return ''; const [y,m,d] = String(iso).split('-'); return d&&m ? `${d}/${m}` : iso; }
 function embSalvar(sid){
   clearTimeout(embSalvarTimers[sid]);
   const st = document.getElementById('emb-salvo'); if(st) st.textContent = 'Salvando…';
   embSalvarTimers[sid] = setTimeout(async ()=>{
-    const { error } = await sb.from('embarque').upsert({ aluno_id:sid, etapas:EMB[sid]||{}, atualizado_em:new Date().toISOString(), atualizado_por:currentUser && currentUser.id }, { onConflict:'aluno_id' });
+    const { error } = String(sid).startsWith('lead:')
+      ? await sb.from('embarque_leads').update({ etapas:EMB[sid]||{}, atualizado_em:new Date().toISOString() }).eq('id', sid.slice(5))
+      : await sb.from('embarque').upsert({ aluno_id:sid, etapas:EMB[sid]||{}, atualizado_em:new Date().toISOString(), atualizado_por:currentUser && currentUser.id }, { onConflict:'aluno_id' });
     const el = document.getElementById('emb-salvo');
     if(error){ console.error('embarque salvar', error); if(el) el.textContent = 'Não foi possível salvar'; showAppAviso('Não foi possível salvar: '+(error.message||'')); }
     else if(el) el.textContent = 'Salvo';
@@ -19841,7 +19861,7 @@ function embSalvar(sid){
 function embMentorados(){
   /* Todos os mentorados ficam no quadro: quem está entrando, na etapa em que está; quem já passou do
      embarque (aluno antigo ou movido pela equipe), na coluna Embarque concluído. */
-  return STUDENTS.filter(s=>s.tier!=='curso').sort((a,b)=>String((b.cadastro||{}).dataMatricula||'').localeCompare(String((a.cadastro||{}).dataMatricula||'')));
+  return EMB_LEADS.concat(STUDENTS.filter(s=>s.tier!=='curso')).sort((a,b)=>String((b.cadastro||{}).dataMatricula||'').localeCompare(String((a.cadastro||{}).dataMatricula||'')));
 }
 /* Embarque concluído marcado pela equipe (aluno antigo ou que já passou dos 30 dias): vai direto para
    a última coluna. As etapas já preenchidas ficam guardadas, e dá para devolver ao funil. */
@@ -19859,7 +19879,7 @@ function embAbrir(sid){ embAluno = sid || null; if(currentView!=='embarque') goT
 async function renderEmbarque(){
   const el = document.getElementById('view-embarque');
   if(!embCarregado){ el.innerHTML = '<p class="section-sub">Carregando…</p>'; await embCarregar(); if(currentView!=='embarque') return; }
-  if(embAluno && getStudent(embAluno)) return embRenderDetalhe(el, getStudent(embAluno));
+  if(embAluno && embAlunoOuLead(embAluno)) return embRenderDetalhe(el, embAlunoOuLead(embAluno));
   embAluno = null;
   const lista = embMentorados();
   const colunas = [
@@ -19885,6 +19905,7 @@ async function renderEmbarque(){
               return `<div class="emb-card ${embFora(s.id)?'fora':''}" role="button" tabindex="0" data-emb-abrir="${s.id}">
                 ${r.concluido && !embFora(s.id) ? '' : `<button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="${embFora(s.id)?'0':'1'}" title="${embFora(s.id)?'Voltar ao funil':'Mover para Embarque concluído'}">${embFora(s.id)? icon('back','tiny') : icon('check','tiny')}</button>`}
                 <div class="emb-card-top">${initialsAvatar(s.initials,s.color,30,s.avatarUrl)}<div class="emb-card-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30` : `Dia ${dia}`) : 'Sem data de matrícula'}</small></div></div>
+                ${s.lead ? `<span class="emb-tag-lead" title="Vendido no CRM. Ainda sem conta no ePLAT">AGUARDANDO CONTA${s.lead.vendedor? ' · '+escapeHtml(String(s.lead.vendedor).split(' ')[0].toUpperCase()) : ''}</span>` : ''}
                 <div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div>
                 <div class="emb-card-pe"><span>${r.feitas}/${r.total} etapas</span>${v.data ? `<span>${icon('calendar','tiny')} ${embDataBR(v.data)}${v.com? ' · '+escapeHtml(v.com) : ''}</span>` : ''}</div>
                 
@@ -19925,7 +19946,8 @@ async function renderEmbarque(){
 function embRenderDetalhe(el, s){
   const sid = s.id; const r = embResumo(sid); const dia = embDia(s);
   const pessoas = embPessoas();
-  const mentorados = STUDENTS.filter(x=>x.tier!=='curso').slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  const mentorados = EMB_LEADS.concat(STUDENTS.filter(x=>x.tier!=='curso').slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')));
+  const alunosVinc = STUDENTS.filter(x=>x.tier!=='curso').slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
   const campoHtml = (et, [ck, label, tipo])=>{
     const v = ((EMB[sid]||{})[et.chave]||{})[ck] || '';
     if(tipo==='date') return `<label class="emb-campo"><span>${label}</span><input class="ps-input" type="date" value="${escapeAttr(v)}" data-emb-campo="${et.chave}:${ck}"></label>`;
@@ -19940,9 +19962,16 @@ function embRenderDetalhe(el, s){
         <h2>${escapeHtml(s.name)}</h2>
         <small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30 da mentoria` : `Dia ${dia} da mentoria`) : 'Sem data de matrícula'} · ${r.concluido ? 'Embarque concluído' : 'Etapa atual: '+escapeHtml(r.atual.titulo)}</small>
         <div class="emb-topo-prog"><div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div><span>${r.feitas}/${r.total}</span></div>
+        ${s.lead ? `<div class="emb-lead-info">
+          <span class="emb-tag-lead">AGUARDANDO CONTA NO ePLAT</span>
+          <span>Vendido no CRM${s.lead.vendedor? ' por '+escapeHtml(s.lead.vendedor) : ''}${s.lead.data_venda? ' em '+escapeHtml(embDataBR(s.lead.data_venda)) : ''}</span>
+          ${s.lead.whatsapp? `<span>${escapeHtml(fmtWhatsLead(s.lead.whatsapp))}</span>` : ''}${s.lead.email? `<span>${escapeHtml(s.lead.email)}</span>` : ''}
+          <div class="emb-vinc"><select class="ps-input" id="emb-vinc-sel"><option value="">Vincular a um aluno do ePLAT…</option>${alunosVinc.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select><button type="button" class="btn-accent" id="emb-vinc-btn">Vincular aluno</button></div>
+          <small>Assim que a pessoa criar a conta, o ePLAT liga sozinho pelo e-mail, WhatsApp ou CPF. Use o botão só se não ligar.</small>
+        </div>` : ''}
       </div>
       <div class="emb-topo-acoes">
-        <select class="ps-input" id="emb-trocar">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select>
+        <select class="ps-input" id="emb-trocar">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}${m.lead?' (aguardando conta)':''}</option>`).join('')}</select>
         <button type="button" class="btn-outline" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('check','tiny')+' Mover para Embarque concluído'}</button>
         <span class="emb-salvo" id="emb-salvo">Salvo</span>
       </div>
@@ -19968,6 +19997,19 @@ function embRenderDetalhe(el, s){
   el.querySelector('#emb-voltar').addEventListener('click', ()=>{ embAluno = null; renderEmbarque(); });
   el.querySelector('#emb-trocar').addEventListener('change', e=>embAbrir(e.target.value));
   el.querySelector('#emb-fora-btn').addEventListener('click', ()=>{ embMarcarFora(sid, !embFora(sid)); embRenderDetalhe(el, s); });
+  const vb = el.querySelector('#emb-vinc-btn');
+  if(vb) vb.addEventListener('click', async ()=>{
+    const aluno = el.querySelector('#emb-vinc-sel').value;
+    if(!aluno){ showAppAviso('Escolha o aluno do ePLAT para vincular.'); return; }
+    const st = getStudent(aluno);
+    if(!(await showAppConfirm(`Vincular ${s.name} a ${st ? st.name : 'este aluno'}? As etapas já marcadas passam para o embarque do aluno.`, {title:'Vincular aluno', confirmLabel:'Vincular'}))) return;
+    vb.disabled = true;
+    clearTimeout(embSalvarTimers[sid]);
+    await sb.from('embarque_leads').update({ etapas:EMB[sid]||{} }).eq('id', s.leadId);
+    const { error } = await sb.rpc('embarque_vincular_manual', { p_lead:s.leadId, p_aluno:aluno });
+    if(error){ vb.disabled = false; showAppAviso('Não foi possível vincular: '+(error.message||'')); return; }
+    await embCarregar(true); embAbrir(aluno);
+  });
   el.querySelectorAll('[data-emb-campo]').forEach(inp=>inp.addEventListener('change', ()=>{
     const [chave, ck] = inp.dataset.embCampo.split(':'); const d = embDados(sid); d[chave] = d[chave] || {};
     d[chave][ck] = inp.value.trim();
