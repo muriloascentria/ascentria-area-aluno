@@ -2044,7 +2044,10 @@
   .tf-hist-item small{color:var(--text-mute);margin-right:6px;}
   .tf-m-acoes{flex-wrap:wrap;gap:8px;margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
   .tf-m-acoes .danger-text{color:var(--danger);}
-  .tf-m-acoes > button{min-width:140px;justify-content:center;box-sizing:border-box;}
+  .tf-m-acoes{display:grid !important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;}
+  .tf-m-acoes > button{display:inline-flex !important;flex-direction:row !important;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 10px;min-width:0;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;}
+  .tf-m-acoes > button .icon{flex:0 0 auto;margin:0;width:13px;height:13px;}
+  @media (max-width:560px){ .tf-m-acoes{grid-auto-flow:row;grid-template-columns:1fr 1fr;} }
   @media (max-width:720px){ .tf-board{grid-template-columns:1fr;} .tf-membro-rodape{padding-left:0;} }
   /* ---- Emojis ---- */
   .emoji-btn{width:38px;height:38px;font-size:19px;line-height:1;padding:0;border-radius:10px;background:none;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
