@@ -22,7 +22,7 @@ function igual(a: string, b: string) {
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i)
   return r === 0
 }
-const semAcento = (s: string) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+const semAcento = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 /* Sem produto cadastrado em eduzz_produtos, o nome decide: "Método" libera o Método (curso gravado). */
 function acessoPorNome(nome: string): string | null {
   const n = semAcento(nome)
@@ -38,13 +38,21 @@ Deno.serve(async (req) => {
   try { ev = JSON.parse(raw) } catch { return json({ error: 'json inválido' }, 400) }
   if (ev?.event === 'ping') return json({ ok: true })
 
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
   const secret = Deno.env.get('EDUZZ_WEBHOOK_SECRET') ?? ''
   const assinatura = (req.headers.get('x-signature') ?? '').trim()
-  if (!secret) return json({ error: 'segredo não configurado' }, 401)
-  const { hex, b64 } = await hmac(secret, raw)
-  if (!assinatura || !(igual(assinatura.toLowerCase(), hex) || igual(assinatura, b64))) return json({ error: 'assinatura inválida' }, 401)
-
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+  let valida = false
+  if (secret && assinatura) {
+    const { hex, b64 } = await hmac(secret, raw)
+    valida = igual(assinatura.toLowerCase(), hex) || igual(assinatura, b64)
+  }
+  if (!valida) {
+    // Sem assinatura válida nada é liberado. Responde 200 assim mesmo (a Eduzz testa a URL na ativação)
+    // e guarda o aviso para conferência.
+    const motivo = !secret ? 'recusado: chave secreta ainda não configurada no ePLAT' : 'recusado: assinatura inválida'
+    await admin.from('eduzz_eventos').upsert({ id: 'recusado:' + String(ev.id ?? crypto.randomUUID()), evento: String(ev.event ?? '?'), fatura_id: String(ev.data?.id ?? ''), email: null, payload: ev, resultado: motivo })
+    return json({ ok: true, ignorado: motivo })
+  }
   const d = ev.data ?? {}
   const pessoa = d.student?.email ? d.student : (d.buyer ?? {})
   const email = String(pessoa.email ?? '').trim().toLowerCase()
@@ -74,6 +82,8 @@ Deno.serve(async (req) => {
       }
       if (!acesso) return await fim('ignorado: produto não libera acesso no ePLAT')
       if (!email) return await fim('erro: compra sem e-mail')
+      // Evento de exemplo que a Eduzz manda ao ativar/testar a URL: não cria conta.
+      if (/@eduzz\.com$/i.test(email) || ev.test === true || d.test === true) return await fim('ignorado: evento de teste da Eduzz')
 
       let alunoId: string | null = (await admin.rpc('eduzz_usuario_por_email', { p_email: email })).data ?? null
       let criada = false
