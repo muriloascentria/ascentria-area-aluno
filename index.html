@@ -901,19 +901,20 @@
   .fin-busca .btn-outline{height:40px;border-radius:12px;display:inline-flex;align-items:center;gap:6px;}
   .fin-tabs-row{display:flex;gap:10px;align-items:stretch;margin:0 0 12px;}
   .fin-tabs{flex:1;}
-  #fin-pdf-btn{height:40px;border-radius:12px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:600;box-sizing:border-box;flex:0 0 auto;}
-  #fin-pdf-btn .icon{width:13px;height:13px;}
+  #fin-pdf-btn,#fin-pdf-anexos-btn{height:40px;border-radius:12px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:600;box-sizing:border-box;flex:0 0 auto;}
+  #fin-pdf-btn .icon,#fin-pdf-anexos-btn .icon{width:13px;height:13px;}
+  .fin-pdf-sm{display:none;}
   .fin-contas-abas{margin:0 0 14px;}
   .fin-acoes-row{display:flex;gap:10px;align-items:center;margin:0 0 14px;}
   .fin-acoes-row .fin-contas-abas{flex:1;margin:0;}
   .fin-novo{width:230px;flex:0 0 230px;justify-content:center;}
-  .seg > .cf-month-btn, #fin-pdf-btn, [data-flnew]{text-transform:uppercase;letter-spacing:.05em;}
+  .seg > .cf-month-btn, #fin-pdf-btn, #fin-pdf-anexos-btn, [data-flnew]{text-transform:uppercase;letter-spacing:.05em;}
   @media (max-width:760px){ .fin-acoes-row{flex-wrap:wrap;} .fin-novo{flex:1 1 100%;width:auto;} .fin-acoes-row .fin-contas-abas{flex-basis:100%;} }
   [data-flnew]{display:inline-flex !important;align-items:center;gap:6px;height:40px;border-radius:12px !important;padding:0 18px !important;}
   @media (max-width:760px){
     .fin-nav{flex-wrap:wrap;} .fin-nav .cf-months{flex-basis:100%;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));}
     .fin-busca{flex-wrap:wrap;} .fin-busca input.ps-input{flex-basis:100%;} .fin-busca select.ps-input{flex:1 1 140px;width:auto;}
-    .fin-tabs-row{flex-wrap:wrap;} .fin-tabs{flex-basis:100%;} #fin-pdf-btn{flex:1;}
+    .fin-tabs-row{flex-wrap:wrap;} .fin-tabs{flex-basis:100%;} #fin-pdf-btn,#fin-pdf-anexos-btn{flex:1;} .fin-pdf-lg{display:none;} .fin-pdf-sm{display:inline !important;}
     .seg-prim{flex-wrap:wrap;} .seg-prim > .cf-month-btn{flex:1 1 40%;}
   }
   .fin-busca-info{font-size:12px;color:var(--text-mute);margin:6px 0 10px;}
@@ -21331,6 +21332,7 @@ function renderFinLancamentos(container){
         <button type="button" class="cf-month-btn ${finTab==='extrato'?'active':''}" data-fintab="extrato">Extrato</button>
       </div>
       <button type="button" class="btn-outline" id="fin-pdf-btn">${icon('download','ps-plus')} Gerar PDF</button>
+      <button type="button" class="btn-outline" id="fin-pdf-anexos-btn">${icon('paperclip','ps-plus')} <span class="fin-pdf-lg">Gerar PDF com anexos</span><span class="fin-pdf-sm">PDF + anexos</span></button>
     </div>
     ${subAbasExtrato}`}
     ${buscando? finBuscaHtml() : bodyHtml}
@@ -21372,11 +21374,14 @@ function renderFinLancamentos(container){
   });
   bindFinAnexos(container, ()=>renderFinanceiro());
   const pdfBtn = document.getElementById('fin-pdf-btn');
-  if(pdfBtn) pdfBtn.addEventListener('click', exportFinanceiroPDF);
+  if(pdfBtn) pdfBtn.addEventListener('click', ()=>exportFinanceiroPDF(false));
+  const pdfAnxBtn = document.getElementById('fin-pdf-anexos-btn');
+  if(pdfAnxBtn) pdfAnxBtn.addEventListener('click', ()=>exportFinanceiroPDF(true));
 }
 /* PDF do mês/aba selecionados em Lançamentos (Contas a Receber, Contas a Pagar ou Extrato) — com a
    logo da Ascentria (empresa), não a do Método Essência usada nos PDFs do Painel do Método. */
-async function exportFinanceiroPDF(){
+/* comAnexos: só inclui as páginas dos anexos quando pedido no botão "Gerar PDF com anexos". */
+async function exportFinanceiroPDF(comAnexos){
   const byVencAsc = (a,b)=> a.dataVencimento<b.dataVencimento? -1 : (a.dataVencimento>b.dataVencimento? 1 : finOrdemLancamento(a,b));
   const byEfetivaAsc = (a,b)=>{ const da=finDataEfetiva(a), db=finDataEfetiva(b); return da<db? -1 : (da>db? 1 : finOrdemLancamento(a,b)); };
   const win = window.open('', '_blank');
@@ -21439,10 +21444,10 @@ async function exportFinanceiroPDF(){
 
   /* Anexos (boletos, notas, comprovantes) viram páginas no fim do PDF. Enquanto baixa/renderiza, a aba
      mostra o andamento — a janela já foi aberta no clique pra não cair no bloqueio de pop-up. */
-  win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Gerando PDF…</title></head><body style="font-family:Arial,sans-serif;padding:40px;color:#444"><h2 style="margin:0 0 8px">Gerando PDF…</h2><p id="prog">Preparando anexos.</p></body></html>');
+  win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Gerando PDF…</title></head><body style="font-family:Arial,sans-serif;padding:40px;color:#444"><h2 style="margin:0 0 8px">Gerando PDF…</h2><p id="prog">'+(comAnexos ? 'Preparando anexos.' : 'Montando o relatório.')+'</p></body></html>');
   win.document.close();
   let anexosHtml = '';
-  try{
+  if(comAnexos) try{
     anexosHtml = await finAnexosParaImpressao(anexosLista, anexosTipos, (i,n,nome)=>{ try{ const el = win.document.getElementById('prog'); if(el) el.textContent = `Incluindo anexo ${i} de ${n}: ${nome}`; }catch(e){} });
   }catch(e){ console.warn('anexos na impressão', e); }
   win.document.open();
