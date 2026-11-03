@@ -1102,6 +1102,66 @@
   .ps-remove .icon{width:14px;height:14px;}
   .ps-add{margin-top:2px;}
   .ps-plus{width:13px;height:13px;}
+  /* Rota de Embarque */
+  .emb-filtro{margin:12px 0 16px;max-width:420px;}
+  .emb-quadro{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:12px;overflow-x:auto;padding-bottom:10px;}
+  .emb-col{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:10px;display:flex;flex-direction:column;min-height:180px;}
+  .emb-col-hd{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:2px 4px 10px;}
+  .emb-col-hd span:first-of-type{flex:1;min-width:0;}
+  .emb-col-hd .qtd{font-size:11px;font-weight:700;padding:1px 8px;border-radius:12px;background:var(--bg-card);color:var(--text-dim);}
+  .emb-col-body{display:flex;flex-direction:column;gap:8px;}
+  .emb-card{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;}
+  .emb-card:hover{border-color:var(--accent);}
+  .emb-card-top{display:flex;align-items:center;gap:9px;min-width:0;}
+  .emb-card-nome{display:flex;flex-direction:column;min-width:0;}
+  .emb-card-nome strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .emb-card-nome small,.emb-card-pe{font-size:11px;color:var(--text-mute);}
+  .emb-card-pe{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;}
+  .emb-card-pe .icon{width:11px;height:11px;vertical-align:-1px;}
+  .emb-vazio{color:var(--text-mute);font-size:12px;text-align:center;padding:8px;}
+  .emb-topo{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:8px 0 18px;}
+  .emb-topo-txt{flex:1;min-width:220px;}
+  .emb-topo-txt h2{margin:0;font-size:18px;}
+  .emb-topo-txt small{color:var(--text-mute);font-size:12.5px;}
+  .emb-topo-prog{display:flex;align-items:center;gap:10px;margin-top:8px;max-width:360px;}
+  .emb-topo-prog .module-bar{flex:1;margin:0;}
+  .emb-topo-prog span{font-size:12px;color:var(--text-dim);font-weight:700;}
+  .emb-topo-acoes{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:220px;}
+  .emb-topo-acoes select{height:40px;}
+  .emb-salvo{font-size:11px;color:var(--text-mute);}
+  .emb-fluxo{position:relative;display:flex;flex-direction:column;gap:14px;}
+  .emb-fluxo::before{content:'';position:absolute;left:17px;top:10px;bottom:10px;width:2px;background:var(--border);}
+  .emb-etapa{position:relative;display:flex;gap:14px;align-items:flex-start;}
+  .emb-etapa.dev{margin-left:26px;}
+  .emb-num{position:relative;z-index:1;flex:0 0 36px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:var(--bg-card);border:2px solid var(--border);color:var(--text-dim);}
+  .emb-etapa.feita .emb-num{background:var(--success,#3c9a5f);border-color:var(--success,#3c9a5f);color:#fff;}
+  .emb-etapa.atual .emb-num{border-color:var(--accent);color:var(--text);box-shadow:0 0 0 4px var(--accent-soft);}
+  .emb-etapa.andamento .emb-num{border-color:var(--accent);}
+  .emb-etapa-box{flex:1;min-width:0;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+  .emb-etapa.atual .emb-etapa-box{border-color:var(--accent);}
+  .emb-etapa.dev .emb-etapa-box{border-style:dashed;}
+  .emb-etapa-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .emb-etapa-hd strong{font-size:13px;text-transform:uppercase;letter-spacing:.4px;}
+  .emb-etapa-hd small{font-size:11.5px;color:var(--text-mute);}
+  .emb-pill{margin-left:auto;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 10px;border-radius:999px;background:var(--bg-card);color:var(--text-mute);}
+  .emb-pill.feita{background:rgba(60,154,95,.16);color:var(--success,#3c9a5f);}
+  .emb-pill.atual{background:var(--accent-soft);color:var(--text);}
+  .emb-pill.andamento{background:var(--accent-soft);color:var(--text-dim);}
+  .emb-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px;}
+  .emb-campo{display:flex;flex-direction:column;gap:4px;}
+  .emb-campo span{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
+  .emb-campo .ps-input{height:40px;box-sizing:border-box;}
+  .emb-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px;margin-top:12px;}
+  .emb-check{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;user-select:none;}
+  .emb-check.on{border-color:var(--accent);background:var(--accent-soft);}
+  .emb-check.dev{border-style:dashed;}
+  .emb-check input{margin:0;flex:0 0 auto;}
+  .emb-vg-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;}
+  .emb-vg-btn:hover{border-color:var(--accent);}
+  .emb-vg-btn small{font-size:11px;color:var(--text-mute);font-weight:700;}
+  .emb-vg-btn.ok{border-color:rgba(60,154,95,.5);color:var(--success,#3c9a5f);}
+  @media (max-width:560px){ .emb-topo-acoes{align-items:stretch;width:100%;} .emb-etapa.dev{margin-left:12px;} }
+
   .vg-av-wrap{position:relative;display:inline-flex;flex:0 0 auto;}
   .me-selo{position:absolute;top:-6px;right:-7px;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#f3d27a,#c9962f 60%,#a8781f);box-shadow:0 0 0 2px var(--bg-card),0 1px 3px rgba(0,0,0,.4);display:inline-flex;align-items:center;justify-content:center;}
   .me-selo .icon{width:9px;height:9px;stroke:#3a2a08;stroke-width:2.6;}
@@ -3104,6 +3164,7 @@
     <button class="nav-item restrict" id="nav-mensagens" data-view="mensagens" style="display:none"></button>
     <button class="nav-item restrict" id="nav-visaogeral" data-view="visaogeral" style="display:none"></button>
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-embarque" data-view="embarque" style="display:none"></button>
     <button class="nav-item restrict" id="nav-radar" data-view="radar" style="display:none"></button>
     <button class="nav-item restrict" id="nav-evento" data-view="evento" style="display:none"></button>
     <button class="nav-item restrict" id="nav-reunioes" data-view="reunioes" style="display:none"></button>
@@ -3205,6 +3266,7 @@
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
+      <div class="view" id="view-embarque"></div>
       <div class="view" id="view-mensagens"></div>
       <div class="view" id="view-acompanhamento"></div>
     </div>
@@ -3299,11 +3361,12 @@ const NAV_LABELS = {
   equipe:['home','Início'],
   tarefas:['check','Tarefas'],
   comunicacao:['mic','Comunicação'],
+  embarque:['compass','Rota de Embarque'],
   mensagens:['comment','Mensagens'],
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', interno:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', reunioes:'restrict', politicas:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', interno:'restrict', embarque:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', reunioes:'restrict', politicas:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito', mentores:'Mentores Essência' };
 
@@ -6422,7 +6485,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','radar','evento','reunioes','politicas','conteudo','vendas','analise','desempenho','clientes','financeiro','dre','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','vendas','analise','desempenho','clientes','financeiro','dre','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -6537,6 +6600,7 @@ function setRole(role){
   document.getElementById('nav-comunicacao').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-visaogeral').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-interno').style.display = staffNav ? 'flex' : 'none';
+  document.getElementById('nav-embarque').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-conteudo').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-vendas').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-clientes').style.display = staffNav ? 'flex' : 'none';
@@ -6660,6 +6724,7 @@ function goTo(view){
   if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
   if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
+  if(view==='embarque' && currentUserRole!=='staff') view = 'equipe';
   currentView = view;
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
   if(view==='painel') panelQuadrantId = null;
@@ -6681,7 +6746,7 @@ function renderCurrentView(){
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
                vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
-               comunicacao:renderComunicacao, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens,
+               comunicacao:renderComunicacao, embarque:renderEmbarque, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens,
                me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno','me_aulas','me_sessoes','me_metas'];
   meAtualizarMenu();
@@ -15699,6 +15764,7 @@ const EQUIPE_ATALHOS = [
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
+  {view:'embarque',   desc:'Os 30 primeiros dias de cada mentorado: grupo, mensagens iniciais, onboardings e mentorias de desenvolvimento.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
   {view:'evento',     desc:'Prêmio Essência Experience e as inscrições do evento, com os links para quem não tem acesso ao PLAT.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
@@ -19641,6 +19707,201 @@ function abrirAcompanhamento(sid){
   window.scrollTo(0,0);
 }
 
+/* ================= ROTA DE EMBARQUE (os 30 primeiros dias do mentorado) =================
+   CRM interno de entrada na mentoria: cada mentorado passa por etapas fixas (grupo, mensagens,
+   onboardings) e, quando algum onboarding pede, ganha uma Mentoria de Desenvolvimento logo depois
+   dele. Tudo fica numa linha por mentorado na tabela embarque (etapas em jsonb). Só a equipe vê. */
+const EMB_ETAPAS = [
+  {k:'grupo', titulo:'Grupo criado', ic:'users', campos:[['data','Quando?','date'],['por','Quem criou?','pessoa']],
+   checks:[['todos','Todos inclusos']]},
+  {k:'mensagens', titulo:'Mensagens iniciais', ic:'comment', campos:[],
+   checks:[['murilo','Murilo: boas-vindas e apresentação da equipe'],['mariane','Mariane: orientações iniciais e formulários'],['viviane','Viviane: boas-vindas e acesso inicial']]},
+  {k:'eplat', titulo:'Onboarding ePLAT', ic:'home', agenda:true,
+   checks:[['agendado','Agendado'],['concluido','Concluído'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Tarefas iniciais postadas no ePLAT'],['proximo','Agendamento do onboarding com Murilo feito'],['analise','Análise postada']]},
+  {k:'expert', titulo:'Onboarding Expert', ic:'award', agenda:true,
+   checks:[['agendado','Agendado'],['concluido','Concluído'],['anteriores','Tarefas anteriores realizadas'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Novas tarefas postadas no ePLAT'],['proximo','Agendamento do onboarding eSIS'],['analise','Análise postada']]},
+  {k:'esis', titulo:'Onboarding eSIS', ic:'file', agenda:true,
+   checks:[['agendado','Agendado'],['concluido','Concluído'],['anteriores','Tarefas anteriores realizadas'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Novas tarefas postadas no ePLAT'],['analise','Análise postada']]},
+];
+const EMB_DEV = {titulo:'Mentoria de Desenvolvimento', ic:'target', agenda:true,
+  checks:[['agendado','Agendado'],['concluido','Concluído'],['tarefas','Tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Novo agendamento (Onboarding Expert, Onboarding eSIS) postado']]};
+const EMB_CAMPOS_AGENDA = [['data','Data agendada','date'],['com','Com quem','pessoa'],['por','Quem agendou','pessoa']];
+let EMB = {};             // aluno_id -> etapas
+let embCarregado = false;
+let embAluno = null;      // mentorado aberto no detalhe (null = quadro)
+let embFiltro = 'embarque';
+const embSalvarTimers = {};
+
+async function embCarregar(forcar){
+  if(embCarregado && !forcar) return;
+  try{
+    const { data, error } = await sb.from('embarque').select('aluno_id, etapas');
+    if(error) throw error;
+    EMB = {}; (data||[]).forEach(r=>{ EMB[r.aluno_id] = r.etapas || {}; });
+    embCarregado = true;
+  }catch(e){ console.error('embarque', e); }
+}
+function embDados(sid){ if(!EMB[sid]) EMB[sid] = {}; return EMB[sid]; }
+/* Sequência de etapas do mentorado: as fixas e, logo depois de quem pediu, a Mentoria de Desenvolvimento. */
+function embFluxo(sid){
+  const d = EMB[sid] || {};
+  const out = [];
+  EMB_ETAPAS.forEach(e=>{
+    out.push({...e, chave:e.k});
+    if(e.checks.some(c=>c[0]==='dev') && ((d[e.k]||{}).checks||{}).dev){
+      out.push({...EMB_DEV, k:'dev', chave:'dev_'+e.k, origem:e.titulo});
+    }
+  });
+  return out;
+}
+function embEtapaFeita(sid, et){
+  const v = (EMB[sid]||{})[et.chave] || {};
+  const ch = v.checks || {};
+  return et.checks.filter(c=>c[0]!=='dev').every(c=>ch[c[0]]);
+}
+function embEtapaIniciada(sid, et){
+  const v = (EMB[sid]||{})[et.chave] || {};
+  return Object.values(v.checks||{}).some(Boolean) || ['data','com','por'].some(k=>String(v[k]||'').trim());
+}
+function embResumo(sid){
+  const fluxo = embFluxo(sid);
+  const feitas = fluxo.filter(et=>embEtapaFeita(sid, et)).length;
+  const atual = fluxo.find(et=>!embEtapaFeita(sid, et)) || null;
+  return {fluxo, feitas, total:fluxo.length, atual, concluido:!atual};
+}
+function embDia(s){
+  const iso = s && s.cadastro && s.cadastro.dataMatricula; if(!iso) return null;
+  const [y,m,d] = iso.split('-').map(Number); const ini = new Date(y,m-1,d); const hoje = new Date(); hoje.setHours(0,0,0,0);
+  return Math.floor((hoje-ini)/86400000)+1;
+}
+function embPessoas(){
+  const nomes = (TAREFAS_EQUIPE||[]).filter(m=>m.ativo!==false).map(m=>String(m.nome||m.name||'').split(' ')[0]).filter(Boolean);
+  return Array.from(new Set(nomes.length ? nomes : ['Murilo','Mariane','Viviane','Sandra','Diego','Carmem','Adriana']));
+}
+function embDataBR(iso){ if(!iso) return ''; const [y,m,d] = String(iso).split('-'); return d&&m ? `${d}/${m}` : iso; }
+function embSalvar(sid){
+  clearTimeout(embSalvarTimers[sid]);
+  const st = document.getElementById('emb-salvo'); if(st) st.textContent = 'Salvando…';
+  embSalvarTimers[sid] = setTimeout(async ()=>{
+    const { error } = await sb.from('embarque').upsert({ aluno_id:sid, etapas:EMB[sid]||{}, atualizado_em:new Date().toISOString(), atualizado_por:currentUser && currentUser.id }, { onConflict:'aluno_id' });
+    const el = document.getElementById('emb-salvo');
+    if(error){ console.error('embarque salvar', error); if(el) el.textContent = 'Não foi possível salvar'; showAppAviso('Não foi possível salvar: '+(error.message||'')); }
+    else if(el) el.textContent = 'Salvo';
+  }, 500);
+}
+function embMentorados(){
+  return STUDENTS.filter(s=>s.tier!=='curso').filter(s=>{
+    if(embFiltro==='todos') return true;
+    const r = embResumo(s.id); const dia = embDia(s);
+    return !r.concluido && ((dia!=null && dia<=45) || !!EMB[s.id]);
+  }).sort((a,b)=>String((b.cadastro||{}).dataMatricula||'').localeCompare(String((a.cadastro||{}).dataMatricula||'')));
+}
+function embAbrir(sid){ embAluno = sid || null; if(currentView!=='embarque') goTo('embarque'); else renderEmbarque(); window.scrollTo(0,0); }
+
+async function renderEmbarque(){
+  const el = document.getElementById('view-embarque');
+  if(!embCarregado){ el.innerHTML = '<p class="section-sub">Carregando…</p>'; await embCarregar(); if(currentView!=='embarque') return; }
+  if(embAluno && getStudent(embAluno)) return embRenderDetalhe(el, getStudent(embAluno));
+  embAluno = null;
+  const lista = embMentorados();
+  const colunas = [
+    ...EMB_ETAPAS.slice(0,3).map(e=>({id:e.k, titulo:e.titulo, ic:e.ic})),
+    {id:'dev', titulo:'Mentoria de Desenvolvimento', ic:'target'},
+    ...EMB_ETAPAS.slice(3).map(e=>({id:e.k, titulo:e.titulo, ic:e.ic})),
+    {id:'fim', titulo:'Embarque concluído', ic:'check'},
+  ];
+  const porCol = {}; colunas.forEach(c=>porCol[c.id]=[]);
+  lista.forEach(s=>{ const r = embResumo(s.id); porCol[r.concluido ? 'fim' : r.atual.k].push({s, r}); });
+  el.innerHTML = `
+    <div class="vg-sec-head"><h2 class="section-title com-titulo">${icon('compass')} ROTA DE EMBARQUE</h2><span class="qtd">${lista.length}</span></div>
+    <p class="section-sub" style="margin-top:4px">Os 30 primeiros dias de cada mentorado, etapa por etapa: do grupo criado aos onboardings. Cada card fica na etapa em que o mentorado está agora. Clique para abrir o passo a passo dele.</p>
+    <div class="seg emb-filtro">
+      <button type="button" class="cf-month-btn ${embFiltro==='embarque'?'active':''}" data-emb-filtro="embarque">Em embarque</button>
+      <button type="button" class="cf-month-btn ${embFiltro==='todos'?'active':''}" data-emb-filtro="todos">Todos os mentorados</button>
+    </div>
+    <div class="emb-quadro">
+      ${colunas.map(c=>`
+        <div class="emb-col">
+          <div class="emb-col-hd">${icon(c.ic,'tiny')} <span>${c.titulo}</span><span class="qtd">${porCol[c.id].length}</span></div>
+          <div class="emb-col-body">
+            ${porCol[c.id].map(({s,r})=>{ const dia = embDia(s); const v = r.atual ? ((EMB[s.id]||{})[r.atual.chave]||{}) : {};
+              return `<button type="button" class="emb-card" data-emb-abrir="${s.id}">
+                <div class="emb-card-top">${initialsAvatar(s.initials,s.color,30,s.avatarUrl)}<div class="emb-card-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30` : `Dia ${dia}`) : 'Sem data de matrícula'}</small></div></div>
+                <div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div>
+                <div class="emb-card-pe"><span>${r.feitas}/${r.total} etapas</span>${v.data ? `<span>${icon('calendar','tiny')} ${embDataBR(v.data)}${v.com? ' · '+escapeHtml(v.com) : ''}</span>` : ''}</div>
+              </button>`; }).join('') || '<div class="emb-vazio">—</div>'}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  el.querySelectorAll('[data-emb-filtro]').forEach(b=>b.addEventListener('click', ()=>{ embFiltro = b.dataset.embFiltro; renderEmbarque(); }));
+  el.querySelectorAll('[data-emb-abrir]').forEach(b=>b.addEventListener('click', ()=>embAbrir(b.dataset.embAbrir)));
+}
+
+function embRenderDetalhe(el, s){
+  const sid = s.id; const r = embResumo(sid); const dia = embDia(s);
+  const pessoas = embPessoas();
+  const mentorados = STUDENTS.filter(x=>x.tier!=='curso').slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  const campoHtml = (et, [ck, label, tipo])=>{
+    const v = ((EMB[sid]||{})[et.chave]||{})[ck] || '';
+    if(tipo==='date') return `<label class="emb-campo"><span>${label}</span><input class="ps-input" type="date" value="${escapeAttr(v)}" data-emb-campo="${et.chave}:${ck}"></label>`;
+    return `<label class="emb-campo"><span>${label}</span><input class="ps-input" type="text" list="emb-pessoas" value="${escapeAttr(v)}" placeholder="Em aberto" data-emb-campo="${et.chave}:${ck}"></label>`;
+  };
+  el.innerHTML = `
+    <datalist id="emb-pessoas">${pessoas.map(p=>`<option value="${escapeAttr(p)}">`).join('')}</datalist>
+    <div class="back-row"><button class="back-btn" id="emb-voltar">${icon('back')} Voltar ao quadro</button></div>
+    <div class="emb-topo">
+      ${initialsAvatar(s.initials,s.color,52,s.avatarUrl)}
+      <div class="emb-topo-txt">
+        <h2>${escapeHtml(s.name)}</h2>
+        <small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30 da mentoria` : `Dia ${dia} da mentoria`) : 'Sem data de matrícula'} · ${r.concluido ? 'Embarque concluído' : 'Etapa atual: '+escapeHtml(r.atual.titulo)}</small>
+        <div class="emb-topo-prog"><div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div><span>${r.feitas}/${r.total}</span></div>
+      </div>
+      <div class="emb-topo-acoes">
+        <select class="ps-input" id="emb-trocar">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select>
+        <span class="emb-salvo" id="emb-salvo">Salvo</span>
+      </div>
+    </div>
+    <div class="emb-fluxo">
+      ${r.fluxo.map((et,i)=>{
+        const feita = embEtapaFeita(sid, et); const atual = r.atual && r.atual.chave===et.chave; const iniciada = embEtapaIniciada(sid, et);
+        const ch = (((EMB[sid]||{})[et.chave])||{}).checks || {};
+        const estado = feita ? 'feita' : atual ? 'atual' : iniciada ? 'andamento' : 'pendente';
+        const pill = feita ? 'Concluída' : atual ? 'Etapa atual' : iniciada ? 'Em andamento' : 'Pendente';
+        const campos = et.agenda ? EMB_CAMPOS_AGENDA : (et.campos||[]);
+        return `<div class="emb-etapa ${estado} ${et.k==='dev'?'dev':''}">
+          <div class="emb-num">${feita ? icon('check','tiny') : i+1}</div>
+          <div class="emb-etapa-box">
+            <div class="emb-etapa-hd">${icon(et.ic,'tiny')} <strong>${et.titulo}</strong>${et.origem ? `<small>pedida no ${escapeHtml(et.origem)}</small>` : ''}<span class="emb-pill ${estado}">${pill}</span></div>
+            ${campos.length ? `<div class="emb-campos">${campos.map(c=>campoHtml(et,c)).join('')}</div>` : ''}
+            <div class="emb-checks">
+              ${et.checks.map(([ck,label])=>`<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''}"><input type="checkbox" ${ch[ck]?'checked':''} data-emb-check="${et.chave}:${ck}"> ${escapeHtml(label)}</label>`).join('')}
+            </div>
+          </div>
+        </div>`; }).join('')}
+    </div>`;
+  el.querySelector('#emb-voltar').addEventListener('click', ()=>{ embAluno = null; renderEmbarque(); });
+  el.querySelector('#emb-trocar').addEventListener('change', e=>embAbrir(e.target.value));
+  el.querySelectorAll('[data-emb-campo]').forEach(inp=>inp.addEventListener('change', ()=>{
+    const [chave, ck] = inp.dataset.embCampo.split(':'); const d = embDados(sid); d[chave] = d[chave] || {};
+    d[chave][ck] = inp.value.trim();
+    /* Data agendada preenchida já marca "Agendado". */
+    if(ck==='data' && inp.value && (chave==='eplat'||chave==='expert'||chave==='esis'||chave.startsWith('dev_'))){ d[chave].checks = d[chave].checks || {}; d[chave].checks.agendado = true; }
+    embSalvar(sid); embRenderDetalhe(el, s);
+  }));
+  el.querySelectorAll('[data-emb-check]').forEach(inp=>inp.addEventListener('change', ()=>{
+    const [chave, ck] = inp.dataset.embCheck.split(':'); const d = embDados(sid); d[chave] = d[chave] || {}; d[chave].checks = d[chave].checks || {};
+    d[chave].checks[ck] = inp.checked;
+    embSalvar(sid); embRenderDetalhe(el, s);
+  }));
+}
+/* Célula da Visão Geral: em que etapa do embarque o mentorado está. */
+function embCelulaVG(s){
+  if(!embCarregado) return '<span style="color:var(--text-mute)">…</span>';
+  const r = embResumo(s.id);
+  return `<button type="button" class="emb-vg-btn ${r.concluido?'ok':''}" data-emb-abrir="${s.id}" title="Abrir a Rota de Embarque">
+    <span>${r.concluido ? 'Concluído' : escapeHtml(r.atual.titulo)}</span><small>${r.feitas}/${r.total}</small></button>`;
+}
+
 function renderVisaoGeral(){
   const mentoradosTodos = STUDENTS.filter(s=>s.tier!=='curso');
   const cursoTodos = STUDENTS.filter(s=>s.tier==='curso' && !s.pos);
@@ -19713,7 +19974,7 @@ function renderVisaoGeral(){
     <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-mentorados" value="${escapeAttr(vgBusca.mentorados)}" placeholder="Buscar mentorado pelo nome…">${vgBusca.mentorados.trim()? `<button type="button" class="btn-outline" data-vg-limpar="mentorados">${icon('x','tiny')} Limpar</button>` : ''}</div>
     <div class="table-wrap">
       <table class="check-table vg-table">
-        <thead><tr><th>Aluno</th><th>Progresso</th><th>Meta pendente</th><th>Dias restantes</th><th>Estágio</th><th>Acesso</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Progresso</th><th>Meta pendente</th><th>Dias restantes</th><th>Estágio</th><th>Rota de Embarque</th><th>Acesso</th><th></th></tr></thead>
         <tbody>
           ${mentorados.map(s=>{
             const pct = overallProgress(s);
@@ -19735,10 +19996,11 @@ function renderVisaoGeral(){
                 <td style="min-width:96px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}">Meta pendente</button>` : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
+                <td style="min-width:150px">${embCelulaVG(s)}</td>
                 <td style="min-width:128px">${tierSelectHtml(s)}</td>
                 <td><button class="btn-mini btn-acomp" data-open-acomp="${s.id}">${icon('chart')} Abrir acompanhamento</button></td>
               </tr>`;
-          }).join('') || `<tr><td colspan="7" style="color:var(--text-mute)">${vgBusca.mentorados.trim()? 'Nenhum mentorado com esse nome.' : 'Nenhum mentorado ainda.'}</td></tr>`}
+          }).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${vgBusca.mentorados.trim()? 'Nenhum mentorado com esse nome.' : 'Nenhum mentorado ainda.'}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -19846,6 +20108,8 @@ function renderVisaoGeral(){
     });
   });
   document.querySelectorAll('[data-open-acomp]').forEach(btn=>btn.addEventListener('click', ()=>abrirAcompanhamento(btn.dataset.openAcomp)));
+  document.querySelectorAll('#view-visaogeral [data-emb-abrir]').forEach(btn=>btn.addEventListener('click', ()=>embAbrir(btn.dataset.embAbrir)));
+  if(!embCarregado) embCarregar().then(()=>{ if(currentView==='visaogeral' && embCarregado) renderVisaoGeral(); });
   document.querySelectorAll('[data-open-meta]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       currentStudentId = btn.dataset.openMeta;
