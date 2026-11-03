@@ -1175,12 +1175,16 @@
   .emb-campo{display:flex;flex-direction:column;gap:4px;}
   .emb-campo span{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
   .emb-campo .ps-input{height:40px;box-sizing:border-box;}
-  .emb-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px;margin-top:12px;}
+  .emb-checks{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+  .emb-linha{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px;}
+  .emb-check{min-height:40px;box-sizing:border-box;}
+  @media (max-width:760px){ .emb-linha{grid-template-columns:repeat(min(var(--n),2),minmax(0,1fr));} }
+  @media (max-width:420px){ .emb-linha{grid-template-columns:1fr;} }
   .emb-check{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;user-select:none;}
   .emb-check.on{border-color:var(--accent);background:var(--accent-soft);}
   .emb-check.dev{border-style:dashed;}
   .emb-check input{margin:0;flex:0 0 auto;}
-  .emb-check.passagem{grid-column:1/-1;border-color:var(--accent);font-weight:700;}
+  .emb-check.passagem{border-color:var(--accent);font-weight:700;}
   .emb-check.passagem .icon{width:13px;height:13px;transform:rotate(90deg);color:var(--accent);flex:0 0 auto;}
   .emb-check.passagem small{margin-left:auto;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);}
   .emb-check.passagem.on{background:rgba(60,154,95,.14);border-color:var(--success,#3c9a5f);}
@@ -19775,6 +19779,15 @@ const EMB_ETAPAS = [
 ];
 const EMB_DEV = {titulo:'Mentoria de Desenvolvimento', ic:'target', agenda:true,
   checks:[['agendado','Agendado'],['concluido','Concluído'],['tarefas','Tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Novo agendamento (Onboarding Expert ou eSIS) realizado']]};
+/* Como as caixas de cada etapa se arrumam em linhas (cada linha vai de ponta a ponta, caixas iguais). */
+const EMB_LINHAS = {
+  grupo:[['todos'],['proximo']],
+  mensagens:[['murilo','mariane','viviane'],['proximo']],
+  eplat:[['agendado','concluido','tarefas','analise'],['dev'],['proximo']],
+  expert:[['agendado','concluido','anteriores','tarefas'],['analise','dev'],['proximo']],
+  esis:[['agendado','concluido','anteriores','tarefas'],['analise','dev'],['proximo']],
+  dev:[['agendado','concluido','tarefas','analise'],['proximo']],
+};
 const EMB_CAMPOS_AGENDA = [['data','Data agendada','date'],['com','Com quem','pessoa'],['por','Quem agendou','pessoa']];
 let EMB = {};
 let EMB_LEADS = [];       // pseudo-mentorados vindos do CRM, ainda sem conta             // aluno_id -> etapas
@@ -19988,9 +20001,11 @@ function embRenderDetalhe(el, s){
           <div class="emb-etapa-box">
             <div class="emb-etapa-hd">${icon(et.ic,'tiny')} <strong>${et.titulo}</strong>${et.origem ? `<small>pedida no ${escapeHtml(et.origem)}</small>` : ''}<span class="emb-pill ${estado}">${pill}</span></div>
             ${campos.length ? `<div class="emb-campos">${campos.map(c=>campoHtml(et,c)).join('')}</div>` : ''}
-            <div class="emb-checks">
-              ${et.checks.map(([ck,label])=>`<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}${escapeHtml(label)}${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}</label>`).join('')}
-            </div>
+            ${(()=>{ const rotulo = Object.fromEntries(et.checks); const linhas = EMB_LINHAS[et.k] || [et.checks.map(c=>c[0])];
+              const usados = new Set(linhas.flat()); const resto = et.checks.map(c=>c[0]).filter(k=>!usados.has(k));
+              const todas = resto.length ? [...linhas.slice(0,-1), resto, linhas[linhas.length-1]] : linhas;
+              return `<div class="emb-checks">${todas.map(lin=>`<div class="emb-linha" style="--n:${lin.length}">${lin.filter(ck=>rotulo[ck]).map(ck=>{ const label = rotulo[ck];
+                return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
           </div>
         </div>`; }).join('')}
     </div>`;
