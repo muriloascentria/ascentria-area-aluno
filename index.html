@@ -1112,6 +1112,17 @@
   .emb-col-body{display:flex;flex-direction:column;gap:8px;}
   .emb-card{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;}
   .emb-card:hover{border-color:var(--accent);}
+  .emb-card{position:relative;}
+  .emb-card.fora{opacity:.7;}
+  .emb-card-x{all:unset;position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-mute);cursor:pointer;}
+  .emb-card-x:hover{background:var(--bg-elev);color:var(--text);}
+  .emb-card-x .icon{width:12px;height:12px;}
+  .emb-card-top{padding-right:18px;}
+  .emb-card-fora{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);}
+  .emb-aviso{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin:-4px 0 16px;font-size:12.5px;color:var(--text-dim);}
+  .emb-aviso span{flex:1;min-width:200px;}
+  .emb-aviso .btn-outline{height:36px;}
+  .emb-filtro{max-width:560px !important;}
   .emb-card-top{display:flex;align-items:center;gap:9px;min-width:0;}
   .emb-card-nome{display:flex;flex-direction:column;min-width:0;}
   .emb-card-nome strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -19792,9 +19803,20 @@ function embSalvar(sid){
 function embMentorados(){
   return STUDENTS.filter(s=>s.tier!=='curso').filter(s=>{
     if(embFiltro==='todos') return true;
+    if(embFora(s.id)) return embFiltro==='fora';
+    if(embFiltro==='fora') return false;
     const r = embResumo(s.id); const dia = embDia(s);
     return !r.concluido && ((dia!=null && dia<=45) || !!EMB[s.id]);
   }).sort((a,b)=>String((b.cadastro||{}).dataMatricula||'').localeCompare(String((a.cadastro||{}).dataMatricula||'')));
+}
+function embFora(sid){ return !!((EMB[sid]||{}).__fora); }
+/* Tira (ou devolve) o mentorado do funil: aluno antigo, que já passou dos 30 dias, não precisa
+   aparecer no quadro. Os dados das etapas ficam guardados. */
+function embMarcarFora(sid, fora){
+  const d = embDados(sid);
+  if(fora){ d.__fora = { em:new Date().toISOString(), por:(currentUserProfile&&currentUserProfile.name||'').split(' ')[0] }; }
+  else delete d.__fora;
+  embSalvar(sid);
 }
 function embAbrir(sid){ embAluno = sid || null; if(currentView!=='embarque') goTo('embarque'); else renderEmbarque(); window.scrollTo(0,0); }
 
@@ -19817,24 +19839,40 @@ async function renderEmbarque(){
     <p class="section-sub" style="margin-top:4px">Os 30 primeiros dias de cada mentorado, etapa por etapa: do grupo criado aos onboardings. Cada card fica na etapa em que o mentorado está agora. Clique para abrir o passo a passo dele.</p>
     <div class="seg emb-filtro">
       <button type="button" class="cf-month-btn ${embFiltro==='embarque'?'active':''}" data-emb-filtro="embarque">Em embarque</button>
+      <button type="button" class="cf-month-btn ${embFiltro==='fora'?'active':''}" data-emb-filtro="fora">Fora do funil</button>
       <button type="button" class="cf-month-btn ${embFiltro==='todos'?'active':''}" data-emb-filtro="todos">Todos os mentorados</button>
     </div>
+    ${embFiltro==='embarque' && (()=>{ const velhos = embMentorados().filter(s=>{ const d = embDia(s); return d!=null && d>30; }); return velhos.length ? `<div class="emb-aviso">${icon('calendar','tiny')} <span>${velhos.length} mentorado${velhos.length===1?' já passou':'s já passaram'} dos 30 dias e ainda ${velhos.length===1?'está':'estão'} no funil.</span><button type="button" class="btn-outline" id="emb-tirar-velhos">Tirar do funil quem passou dos 30 dias</button></div>` : ''; })() || ''}
     <div class="emb-quadro">
       ${colunas.map(c=>`
         <div class="emb-col">
           <div class="emb-col-hd">${icon(c.ic,'tiny')} <span>${c.titulo}</span><span class="qtd">${porCol[c.id].length}</span></div>
           <div class="emb-col-body">
             ${porCol[c.id].map(({s,r})=>{ const dia = embDia(s); const v = r.atual ? ((EMB[s.id]||{})[r.atual.chave]||{}) : {};
-              return `<button type="button" class="emb-card" data-emb-abrir="${s.id}">
+              return `<div class="emb-card ${embFora(s.id)?'fora':''}" role="button" tabindex="0" data-emb-abrir="${s.id}">
+                <button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="${embFora(s.id)?'0':'1'}" title="${embFora(s.id)?'Voltar ao funil':'Tirar do funil'}">${embFora(s.id)? icon('back','tiny') : icon('x','tiny')}</button>
                 <div class="emb-card-top">${initialsAvatar(s.initials,s.color,30,s.avatarUrl)}<div class="emb-card-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30` : `Dia ${dia}`) : 'Sem data de matrícula'}</small></div></div>
                 <div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div>
                 <div class="emb-card-pe"><span>${r.feitas}/${r.total} etapas</span>${v.data ? `<span>${icon('calendar','tiny')} ${embDataBR(v.data)}${v.com? ' · '+escapeHtml(v.com) : ''}</span>` : ''}</div>
-              </button>`; }).join('') || '<div class="emb-vazio">—</div>'}
+                ${embFora(s.id) ? `<div class="emb-card-fora">Fora do funil${(EMB[s.id].__fora||{}).por ? ' · por '+escapeHtml(EMB[s.id].__fora.por) : ''}</div>` : ''}
+              </div>`; }).join('') || '<div class="emb-vazio">—</div>'}
           </div>
         </div>`).join('')}
     </div>`;
   el.querySelectorAll('[data-emb-filtro]').forEach(b=>b.addEventListener('click', ()=>{ embFiltro = b.dataset.embFiltro; renderEmbarque(); }));
-  el.querySelectorAll('[data-emb-abrir]').forEach(b=>b.addEventListener('click', ()=>embAbrir(b.dataset.embAbrir)));
+  el.querySelectorAll('[data-emb-abrir]').forEach(b=>{
+    b.addEventListener('click', ()=>embAbrir(b.dataset.embAbrir));
+    b.addEventListener('keydown', e=>{ if(e.key==='Enter') embAbrir(b.dataset.embAbrir); });
+  });
+  el.querySelectorAll('[data-emb-fora]').forEach(b=>b.addEventListener('click', e=>{
+    e.stopPropagation(); embMarcarFora(b.dataset.embFora, b.dataset.embForaV==='1'); renderEmbarque();
+  }));
+  const tv = el.querySelector('#emb-tirar-velhos');
+  if(tv) tv.addEventListener('click', async ()=>{
+    const velhos = embMentorados().filter(s=>{ const d = embDia(s); return d!=null && d>30; });
+    if(!(await showAppConfirm(`Tirar do funil ${velhos.length} mentorado${velhos.length===1?'':'s'} que já ${velhos.length===1?'passou':'passaram'} dos 30 dias? Dá para devolver depois em "Fora do funil".`, {title:'Tirar do funil', confirmLabel:'Tirar do funil'}))) return;
+    velhos.forEach(s=>embMarcarFora(s.id, true)); renderEmbarque();
+  });
 }
 
 function embRenderDetalhe(el, s){
@@ -19858,7 +19896,8 @@ function embRenderDetalhe(el, s){
       </div>
       <div class="emb-topo-acoes">
         <select class="ps-input" id="emb-trocar">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select>
-        <span class="emb-salvo" id="emb-salvo">Salvo</span>
+        <button type="button" class="btn-outline" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('x','tiny')+' Tirar do funil'}</button>
+        <span class="emb-salvo" id="emb-salvo">${embFora(sid) ? 'Fora do funil · ' : ''}Salvo</span>
       </div>
     </div>
     <div class="emb-fluxo">
@@ -19881,6 +19920,7 @@ function embRenderDetalhe(el, s){
     </div>`;
   el.querySelector('#emb-voltar').addEventListener('click', ()=>{ embAluno = null; renderEmbarque(); });
   el.querySelector('#emb-trocar').addEventListener('change', e=>embAbrir(e.target.value));
+  el.querySelector('#emb-fora-btn').addEventListener('click', ()=>{ embMarcarFora(sid, !embFora(sid)); embRenderDetalhe(el, s); });
   el.querySelectorAll('[data-emb-campo]').forEach(inp=>inp.addEventListener('change', ()=>{
     const [chave, ck] = inp.dataset.embCampo.split(':'); const d = embDados(sid); d[chave] = d[chave] || {};
     d[chave][ck] = inp.value.trim();
@@ -19899,7 +19939,7 @@ function embCelulaVG(s){
   if(!embCarregado) return '<span style="color:var(--text-mute)">…</span>';
   const r = embResumo(s.id);
   return `<button type="button" class="emb-vg-btn ${r.concluido?'ok':''}" data-emb-abrir="${s.id}" title="Abrir a Rota de Embarque">
-    <span>${r.concluido ? 'Concluído' : escapeHtml(r.atual.titulo)}</span><small>${r.feitas}/${r.total}</small></button>`;
+    <span>${embFora(s.id) ? 'Fora do funil' : r.concluido ? 'Concluído' : escapeHtml(r.atual.titulo)}</span><small>${r.feitas}/${r.total}</small></button>`;
 }
 
 function renderVisaoGeral(){
