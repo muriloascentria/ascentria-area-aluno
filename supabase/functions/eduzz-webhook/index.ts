@@ -39,6 +39,20 @@ Deno.serve(async (req) => {
   if (ev?.event === 'ping') return json({ ok: true })
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+
+  // Reprocessar (só a equipe, com o login dela): roda de novo a compra paga de uma fatura já recebida,
+  // por exemplo para reenviar o convite depois de a conta ter sido apagada.
+  let reprocesso = false
+  if (ev?.reprocessar) {
+    const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+    const { data: u } = await admin.auth.getUser(jwt)
+    const { data: perfil } = u?.user ? await admin.from('profiles').select('role').eq('id', u.user.id).maybeSingle() : { data: null }
+    if (!perfil || perfil.role !== 'staff') return json({ error: 'não autorizado' }, 401)
+    const { data: orig } = await admin.from('eduzz_eventos').select('payload').eq('fatura_id', String(ev.reprocessar)).eq('evento', 'myeduzz.invoice_paid').not('id', 'like', 'recusado:%').order('recebido_em', { ascending: false }).limit(1).maybeSingle()
+    if (!orig) return json({ error: 'fatura não encontrada' }, 404)
+    ev = orig.payload
+    reprocesso = true
+  }
   const secret = Deno.env.get('EDUZZ_WEBHOOK_SECRET') ?? ''
   const assinatura = (req.headers.get('x-signature') ?? '').trim()
   let valida = false
@@ -46,6 +60,7 @@ Deno.serve(async (req) => {
     const { hex, b64 } = await hmac(secret, raw)
     valida = igual(assinatura.toLowerCase(), hex) || igual(assinatura, b64)
   }
+  if (reprocesso) valida = true
   if (!valida) {
     // Sem assinatura válida nada é liberado. Responde 200 assim mesmo (a Eduzz testa a URL na ativação)
     // e guarda o aviso para conferência.
@@ -62,7 +77,11 @@ Deno.serve(async (req) => {
 
   // Evento repetido (a Eduzz reenvia em caso de falha): não processa duas vezes.
   const { data: ja } = await admin.from('eduzz_eventos').select('id, resultado').eq('id', evId).maybeSingle()
-  if (ja?.resultado && !ja.resultado.startsWith('erro')) return json({ ok: true, repetido: true })
+  if (!reprocesso && ja?.resultado && !ja.resultado.startsWith('erro')) {
+    // Reenvio do mesmo aviso: só processa de novo se a conta liberada por ele não existe mais.
+    const { data: ac } = await admin.from('eduzz_acessos').select('aluno_id').eq('fatura_id', fatura).maybeSingle()
+    if (!(ev.event === 'myeduzz.invoice_paid' && ac && !ac.aluno_id)) return json({ ok: true, repetido: true })
+  }
   await admin.from('eduzz_eventos').upsert({ id: evId, evento: ev.event, fatura_id: fatura, email, payload: ev })
   const fim = async (resultado: string, extra: Record<string, unknown> = {}) => {
     await admin.from('eduzz_eventos').update({ resultado }).eq('id', evId)
