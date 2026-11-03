@@ -7649,14 +7649,16 @@ document.getElementById('modal-backdrop').addEventListener('click',(e)=>{ if(e.t
 /* Troca de senha — usada tanto pelo link "Esqueci minha senha" (mode='recovery', chamada a partir do
    evento PASSWORD_RECOVERY do Supabase, com a sessão de recuperação já ativa) quanto pela opção "Trocar
    senha" do menu de perfil (mode='change', usuário já autenticado normalmente). */
+const CONVITE_URL = /type=invite/.test(location.hash||'') || /type=invite/.test(location.search||'');
+let conviteSenhaAberta = false;
 function openSetNewPasswordModal(mode){
   modalReturnTo = null;
   modalCloseGuard = mode==='recovery' ? (()=>false) : null;
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
       <div class="cat">Método Essência</div>
-      <h3>${mode==='recovery' ? 'Defina sua nova senha' : 'Trocar senha'}</h3>
-      ${mode==='recovery' ? '<p class="sub">Escolha uma nova senha para acessar sua conta.</p>' : ''}
+      <h3>${mode==='recovery' ? (CONVITE_URL ? 'Bem-vindo(a)! Crie sua senha' : 'Defina sua nova senha') : 'Trocar senha'}</h3>
+      ${mode==='recovery' ? `<p class="sub">${CONVITE_URL ? 'Seu acesso ao Método Essência está liberado. Escolha uma senha para entrar na plataforma sempre que quiser.' : 'Escolha uma nova senha para acessar sua conta.'}</p>` : ''}
       <div class="ps-section">
         <label class="ps-label">Nova senha</label>
         <input class="ps-input" type="password" id="np-senha" placeholder="Mín. 6 caracteres">
@@ -22022,6 +22024,11 @@ function openFinLancamentoModal(tipo, existingId){
 sb.auth.onAuthStateChange((event, session)=>{
   if(event === 'PASSWORD_RECOVERY'){
     openSetNewPasswordModal('recovery');
+  }
+  /* Convite por e-mail (compra pela Eduzz): no primeiro acesso, a pessoa já define a senha dela. */
+  if(event === 'SIGNED_IN' && CONVITE_URL && !conviteSenhaAberta){
+    conviteSenhaAberta = true;
+    setTimeout(()=>openSetNewPasswordModal('recovery'), 600);
   }
 });
 
