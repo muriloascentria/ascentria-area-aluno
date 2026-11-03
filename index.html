@@ -1167,6 +1167,11 @@
   .emb-check.on{border-color:var(--accent);background:var(--accent-soft);}
   .emb-check.dev{border-style:dashed;}
   .emb-check input{margin:0;flex:0 0 auto;}
+  .emb-check.passagem{grid-column:1/-1;border-color:var(--accent);font-weight:700;}
+  .emb-check.passagem .icon{width:13px;height:13px;transform:rotate(90deg);color:var(--accent);flex:0 0 auto;}
+  .emb-check.passagem small{margin-left:auto;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);}
+  .emb-check.passagem.on{background:rgba(60,154,95,.14);border-color:var(--success,#3c9a5f);}
+  .emb-check.passagem.on small{color:var(--success,#3c9a5f);}
   .emb-vg-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;}
   .emb-vg-btn:hover{border-color:var(--accent);}
   .emb-vg-btn small{font-size:11px;color:var(--text-mute);font-weight:700;}
@@ -19724,18 +19729,18 @@ function abrirAcompanhamento(sid){
    dele. Tudo fica numa linha por mentorado na tabela embarque (etapas em jsonb). Só a equipe vê. */
 const EMB_ETAPAS = [
   {k:'grupo', titulo:'Grupo criado', ic:'users', campos:[['data','Quando?','date'],['por','Quem criou?','pessoa']],
-   checks:[['todos','Todos inclusos']]},
+   checks:[['todos','Todos inclusos'],['proximo','Grupo pronto: seguir para as Mensagens iniciais']]},
   {k:'mensagens', titulo:'Mensagens iniciais', ic:'comment', campos:[],
-   checks:[['murilo','Murilo: boas-vindas e apresentação da equipe'],['mariane','Mariane: orientações iniciais e formulários'],['viviane','Viviane: boas-vindas e acesso inicial']]},
+   checks:[['murilo','Murilo: boas-vindas e apresentação da equipe'],['mariane','Mariane: orientações iniciais e formulários'],['viviane','Viviane: boas-vindas e acesso inicial'],['proximo','Agendamento do Onboarding ePLAT realizado']]},
   {k:'eplat', titulo:'Onboarding ePLAT', ic:'home', agenda:true,
-   checks:[['agendado','Agendado'],['concluido','Concluído'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Tarefas iniciais postadas no ePLAT'],['proximo','Agendamento do onboarding com Murilo feito'],['analise','Análise postada']]},
+   checks:[['agendado','Agendado'],['concluido','Concluído'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Tarefas iniciais postadas no ePLAT'],['analise','Análise postada'],['proximo','Agendamento do Onboarding Expert (com Murilo) realizado']]},
   {k:'expert', titulo:'Onboarding Expert', ic:'award', agenda:true,
-   checks:[['agendado','Agendado'],['concluido','Concluído'],['anteriores','Tarefas anteriores realizadas'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Novas tarefas postadas no ePLAT'],['proximo','Agendamento do onboarding eSIS'],['analise','Análise postada']]},
+   checks:[['agendado','Agendado'],['concluido','Concluído'],['anteriores','Tarefas anteriores realizadas'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Novas tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Agendamento do Onboarding eSIS realizado']]},
   {k:'esis', titulo:'Onboarding eSIS', ic:'file', agenda:true,
-   checks:[['agendado','Agendado'],['concluido','Concluído'],['anteriores','Tarefas anteriores realizadas'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Novas tarefas postadas no ePLAT'],['analise','Análise postada']]},
+   checks:[['agendado','Agendado'],['concluido','Concluído'],['anteriores','Tarefas anteriores realizadas'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Novas tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Embarque concluído']]},
 ];
 const EMB_DEV = {titulo:'Mentoria de Desenvolvimento', ic:'target', agenda:true,
-  checks:[['agendado','Agendado'],['concluido','Concluído'],['tarefas','Tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Novo agendamento (Onboarding Expert, Onboarding eSIS) postado']]};
+  checks:[['agendado','Agendado'],['concluido','Concluído'],['tarefas','Tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Novo agendamento (Onboarding Expert ou eSIS) realizado']]};
 const EMB_CAMPOS_AGENDA = [['data','Data agendada','date'],['com','Com quem','pessoa'],['por','Quem agendou','pessoa']];
 let EMB = {};             // aluno_id -> etapas
 let embCarregado = false;
@@ -19765,10 +19770,11 @@ function embFluxo(sid){
   });
   return out;
 }
+/* A etapa só avança para a coluna seguinte quando o check de passagem ("proximo", o último de cada
+   etapa) está marcado. Os outros checks mostram o andamento, mas não seguram o mentorado. */
 function embEtapaFeita(sid, et){
   const v = (EMB[sid]||{})[et.chave] || {};
-  const ch = v.checks || {};
-  return et.checks.filter(c=>c[0]!=='dev').every(c=>ch[c[0]]);
+  return !!(v.checks||{}).proximo;
 }
 function embEtapaIniciada(sid, et){
   const v = (EMB[sid]||{})[et.chave] || {};
@@ -19913,7 +19919,7 @@ function embRenderDetalhe(el, s){
             <div class="emb-etapa-hd">${icon(et.ic,'tiny')} <strong>${et.titulo}</strong>${et.origem ? `<small>pedida no ${escapeHtml(et.origem)}</small>` : ''}<span class="emb-pill ${estado}">${pill}</span></div>
             ${campos.length ? `<div class="emb-campos">${campos.map(c=>campoHtml(et,c)).join('')}</div>` : ''}
             <div class="emb-checks">
-              ${et.checks.map(([ck,label])=>`<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''}"><input type="checkbox" ${ch[ck]?'checked':''} data-emb-check="${et.chave}:${ck}"> ${escapeHtml(label)}</label>`).join('')}
+              ${et.checks.map(([ck,label])=>`<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}${escapeHtml(label)}${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}</label>`).join('')}
             </div>
           </div>
         </div>`; }).join('')}
