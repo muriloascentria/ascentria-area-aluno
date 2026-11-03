@@ -1110,6 +1110,13 @@
   .emb-col-hd span:first-of-type{flex:1;min-width:0;}
   .emb-col-hd .qtd{font-size:11px;font-weight:700;padding:1px 8px;border-radius:12px;background:var(--bg-card);color:var(--text-dim);}
   .emb-col-body{display:flex;flex-direction:column;gap:8px;}
+  .emb-col-body[hidden]{display:none;}
+  .emb-col-toggle{all:unset;box-sizing:border-box;cursor:pointer;width:calc(100% - 8px);display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:2px 4px 10px;}
+  .emb-col-fim.recolhida .emb-col-toggle{margin-bottom:2px;}
+  .emb-col-toggle:hover{color:var(--text);}
+  .emb-col-toggle .emb-seta{width:12px;height:12px;transition:transform .2s;}
+  .emb-col-fim:not(.recolhida) .emb-seta{transform:rotate(180deg);}
+  .emb-col-fim.recolhida{min-height:0;align-self:start;}
   .emb-card{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;}
   .emb-card:hover{border-color:var(--accent);}
   .emb-card{position:relative;}
@@ -19768,6 +19775,8 @@ let embCarregado = false;
 let embAluno = null;      // mentorado aberto no detalhe (null = quadro)
 let embFiltro = 'embarque';
 let embScrollX = 0;
+/* A coluna Embarque concluído junta os alunos antigos e fica longa: começa recolhida. */
+let embFimAberto = (()=>{ try{ return localStorage.getItem('eplat_emb_fim')==='1'; }catch(e){ return false; } })();
 const embSalvarTimers = {};
 
 async function embCarregar(forcar){
@@ -19867,9 +19876,11 @@ async function renderEmbarque(){
     ${(()=>{ const velhos = embVelhos(); return velhos.length ? `<div class="emb-aviso">${icon('calendar','tiny')} <span>${velhos.length} mentorado${velhos.length===1?' já passou':'s já passaram'} dos 30 dias e ainda ${velhos.length===1?'está':'estão'} no funil.</span><button type="button" class="btn-outline" id="emb-tirar-velhos">Mover para Embarque concluído</button></div>` : ''; })()}
     <div class="emb-quadro">
       ${colunas.map(c=>`
-        <div class="emb-col">
-          <div class="emb-col-hd">${icon(c.ic,'tiny')} <span>${c.titulo}</span><span class="qtd">${porCol[c.id].length}</span></div>
-          <div class="emb-col-body">
+        <div class="emb-col ${c.id==='fim'?'emb-col-fim':''} ${c.id==='fim' && !embFimAberto?'recolhida':''}">
+          ${c.id==='fim'
+            ? `<button type="button" class="emb-col-hd emb-col-toggle" id="emb-fim-toggle" title="${embFimAberto?'Recolher':'Expandir'}">${icon(c.ic,'tiny')} <span>${c.titulo}</span><span class="qtd">${porCol[c.id].length}</span>${icon('down','tiny emb-seta')}</button>`
+            : `<div class="emb-col-hd">${icon(c.ic,'tiny')} <span>${c.titulo}</span><span class="qtd">${porCol[c.id].length}</span></div>`}
+          <div class="emb-col-body" ${c.id==='fim' && !embFimAberto?'hidden':''}>
             ${porCol[c.id].map(({s,r})=>{ const dia = embDia(s); const v = r.atual ? ((EMB[s.id]||{})[r.atual.chave]||{}) : {};
               return `<div class="emb-card ${embFora(s.id)?'fora':''}" role="button" tabindex="0" data-emb-abrir="${s.id}">
                 ${r.concluido && !embFora(s.id) ? '' : `<button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="${embFora(s.id)?'0':'1'}" title="${embFora(s.id)?'Voltar ao funil':'Mover para Embarque concluído'}">${embFora(s.id)? icon('back','tiny') : icon('check','tiny')}</button>`}
@@ -19901,6 +19912,8 @@ async function renderEmbarque(){
   el.querySelectorAll('[data-emb-fora]').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation(); embMarcarFora(b.dataset.embFora, b.dataset.embForaV==='1'); renderEmbarque();
   }));
+  const ft = el.querySelector('#emb-fim-toggle');
+  if(ft) ft.addEventListener('click', ()=>{ embFimAberto = !embFimAberto; try{ localStorage.setItem('eplat_emb_fim', embFimAberto?'1':'0'); }catch(e){} renderEmbarque(); });
   const tv = el.querySelector('#emb-tirar-velhos');
   if(tv) tv.addEventListener('click', async ()=>{
     const velhos = embVelhos();
