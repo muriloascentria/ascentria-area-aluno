@@ -1104,7 +1104,7 @@
   .ps-plus{width:13px;height:13px;}
   /* Rota de Embarque */
   .emb-filtro{margin:12px 0 16px;max-width:420px;}
-  .emb-quadro{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:12px;overflow-x:auto;padding-bottom:10px;}
+  .emb-quadro{margin-top:14px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:12px;overflow-x:auto;padding-bottom:10px;}
   .emb-col{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:10px;display:flex;flex-direction:column;min-height:180px;}
   .emb-col-hd{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:2px 4px 10px;}
   .emb-col-hd span:first-of-type{flex:1;min-width:0;}
@@ -1113,7 +1113,7 @@
   .emb-card{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;}
   .emb-card:hover{border-color:var(--accent);}
   .emb-card{position:relative;}
-  .emb-card.fora{opacity:.7;}
+
   .emb-card-x{all:unset;position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-mute);cursor:pointer;}
   .emb-card-x:hover{background:var(--bg-elev);color:var(--text);}
   .emb-card-x .icon{width:12px;height:12px;}
@@ -2277,6 +2277,7 @@
   .rd-mom-lista li{font-size:12px;line-height:1.3;color:var(--text-dim);}
   .rd-mom-lista li > span:first-child{margin-right:10px;}
   .rd-mom-lista li.ok > span:first-child{text-decoration:line-through;opacity:.7;}
+  .rd-mom-pend{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--danger);background:var(--danger-soft);border-radius:6px;padding:1px 6px;margin-left:4px;}
   .rd-mom-btn{font-size:11px;font-weight:700;letter-spacing:.05em;vertical-align:middle;color:var(--danger) !important;border:1px solid var(--danger) !important;background:rgba(244,63,94,.12) !important;border-radius:12px !important;padding:3px 10px !important;display:inline-flex;align-items:center;gap:4px;}
   .rd-mom-btn:hover{background:rgba(244,63,94,.22) !important;}
   .rd-mom-btn .icon{stroke:var(--danger);}
@@ -19362,6 +19363,26 @@ function rdMomentos(s){
     const rest = diasRestantes(s);
     if(rest>=0 && rest<=30) out.push({chave:'fim', em:rest, txt: rest===0 ? 'Mentoria termina hoje' : `Mentoria termina em ${rest} dia${rest>1?'s':''} (hora de falar de renovação e depoimento)`});
   }catch(e){}
+  /* Momentos que já passaram só saem da lista depois de RESOLVIDOS. Os que passaram sem ninguém
+     resolver continuam aqui, marcados como pendentes (contando a partir de 27/10/2026, quando o
+     RESOLVER passou a existir, para não trazer de volta todo o histórico dos alunos antigos). */
+  const CORTE = '2026-10-27';
+  const res = RADAR_UI.resolvidos || {};
+  const pend = chave=> !res[s.id+'|'+chave] && !out.some(o=>o.chave===chave);
+  const dataEm = em=>{ const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+em); return d.toISOString().slice(0,10); };
+  const ha = n=> `há ${n} dia${n>1?'s':''}`;
+  if(dias!==null){
+    if(dias>30 && dataEm(30-dias)>=CORTE && pend('30d')) out.push({chave:'30d', em:30-dias, atrasado:true, txt:`Completou 30 dias de mentoria ${ha(dias-30)}`});
+    const f = rdFator(s);
+    RADAR_REGUA.forEach((lim, i)=>{
+      const diaTroca = Math.ceil(lim/f) + 1; const falta = diaTroca - dias; const prox = RADAR_ESTAGIOS[i+1];
+      if(prox && falta<0 && dataEm(falta)>=CORTE && pend('mod:'+prox)) out.push({chave:'mod:'+prox, em:falta, atrasado:true, txt:`Entrou em ${prox} pelo cronograma ${ha(-falta)}`});
+    });
+  }
+  try{
+    const rest = diasRestantes(s);
+    if(rest<0 && dataEm(rest)>=CORTE && pend('fim')) out.push({chave:'fim', em:rest, atrasado:true, txt:`Mentoria terminou ${ha(-rest)} (renovação e depoimento)`});
+  }catch(e){}
   return out;
 }
 function rdMomentosAgrupados(momentos){
@@ -19520,7 +19541,7 @@ function renderRadar(){
         <button type="button" class="vg-nome-btn rd-mom-nome" data-rd-acomp="${g.s.id}">${escapeHtml(g.s.name)}</button>
         <ul class="rd-mom-lista">${g.itens.map(m=>{ const res = RADAR_UI.resolvidos[g.s.id+'|'+m.chave];
           const quem = res && res.resolvido_por && PEOPLE[res.resolvido_por] ? PEOPLE[res.resolvido_por].name.split(' ')[0] : '';
-          return `<li class="${res?'ok':''}"><span>${escapeHtml(m.txt)}</span>${res
+          return `<li class="${res?'ok':''} ${m.atrasado && !res?'atrasado':''}"><span>${escapeHtml(m.txt)}${m.atrasado && !res ? ' <em class="rd-mom-pend">PENDENTE</em>' : ''}</span>${res
             ? `<span class="rd-mom-res" title="${escapeAttr(res.resolvido_em ? tzDataHora(res.resolvido_em, true) : '')}">${icon('check','tiny')} RESOLVIDO${quem? ' POR '+escapeHtml(quem.toUpperCase()) : ''}</span>`
             : `<button type="button" class="btn-mini rd-mom-btn" data-rd-resolver="${g.s.id}" data-rd-chave="${escapeAttr(m.chave)}">${icon('check','tiny')} RESOLVER</button>`}</li>`; }).join('')}</ul>
       </div>`).join('')}
@@ -19746,6 +19767,7 @@ let EMB = {};             // aluno_id -> etapas
 let embCarregado = false;
 let embAluno = null;      // mentorado aberto no detalhe (null = quadro)
 let embFiltro = 'embarque';
+let embScrollX = 0;
 const embSalvarTimers = {};
 
 async function embCarregar(forcar){
@@ -19784,6 +19806,7 @@ function embResumo(sid){
   const fluxo = embFluxo(sid);
   const feitas = fluxo.filter(et=>embEtapaFeita(sid, et)).length;
   const atual = fluxo.find(et=>!embEtapaFeita(sid, et)) || null;
+  if(embFora(sid)) return {fluxo, feitas, total:fluxo.length, atual:null, concluido:true, manual:true};
   return {fluxo, feitas, total:fluxo.length, atual, concluido:!atual};
 }
 function embDia(s){
@@ -19807,23 +19830,21 @@ function embSalvar(sid){
   }, 500);
 }
 function embMentorados(){
-  return STUDENTS.filter(s=>s.tier!=='curso').filter(s=>{
-    if(embFiltro==='todos') return true;
-    if(embFora(s.id)) return embFiltro==='fora';
-    if(embFiltro==='fora') return false;
-    const r = embResumo(s.id); const dia = embDia(s);
-    return !r.concluido && ((dia!=null && dia<=45) || !!EMB[s.id]);
-  }).sort((a,b)=>String((b.cadastro||{}).dataMatricula||'').localeCompare(String((a.cadastro||{}).dataMatricula||'')));
+  /* Todos os mentorados ficam no quadro: quem está entrando, na etapa em que está; quem já passou do
+     embarque (aluno antigo ou movido pela equipe), na coluna Embarque concluído. */
+  return STUDENTS.filter(s=>s.tier!=='curso').sort((a,b)=>String((b.cadastro||{}).dataMatricula||'').localeCompare(String((a.cadastro||{}).dataMatricula||'')));
 }
-function embFora(sid){ return !!((EMB[sid]||{}).__fora); }
-/* Tira (ou devolve) o mentorado do funil: aluno antigo, que já passou dos 30 dias, não precisa
-   aparecer no quadro. Os dados das etapas ficam guardados. */
+/* Embarque concluído marcado pela equipe (aluno antigo ou que já passou dos 30 dias): vai direto para
+   a última coluna. As etapas já preenchidas ficam guardadas, e dá para devolver ao funil. */
+function embFora(sid){ const d = EMB[sid]||{}; return !!(d.__concluido || d.__fora); }
 function embMarcarFora(sid, fora){
   const d = embDados(sid);
-  if(fora){ d.__fora = { em:new Date().toISOString(), por:(currentUserProfile&&currentUserProfile.name||'').split(' ')[0] }; }
-  else delete d.__fora;
+  delete d.__fora;
+  if(fora){ d.__concluido = { em:new Date().toISOString(), por:(currentUserProfile&&currentUserProfile.name||'').split(' ')[0] }; }
+  else delete d.__concluido;
   embSalvar(sid);
 }
+function embVelhos(){ return embMentorados().filter(s=>{ const d = embDia(s); return d!=null && d>30 && !embResumo(s.id).concluido; }); }
 function embAbrir(sid){ embAluno = sid || null; if(currentView!=='embarque') goTo('embarque'); else renderEmbarque(); window.scrollTo(0,0); }
 
 async function renderEmbarque(){
@@ -19842,13 +19863,8 @@ async function renderEmbarque(){
   lista.forEach(s=>{ const r = embResumo(s.id); porCol[r.concluido ? 'fim' : r.atual.k].push({s, r}); });
   el.innerHTML = `
     <div class="vg-sec-head"><h2 class="section-title com-titulo">${icon('compass')} ROTA DE EMBARQUE</h2><span class="qtd">${lista.length}</span></div>
-    <p class="section-sub" style="margin-top:4px">Os 30 primeiros dias de cada mentorado, etapa por etapa: do grupo criado aos onboardings. Cada card fica na etapa em que o mentorado está agora. Clique para abrir o passo a passo dele.</p>
-    <div class="seg emb-filtro">
-      <button type="button" class="cf-month-btn ${embFiltro==='embarque'?'active':''}" data-emb-filtro="embarque">Em embarque</button>
-      <button type="button" class="cf-month-btn ${embFiltro==='fora'?'active':''}" data-emb-filtro="fora">Fora do funil</button>
-      <button type="button" class="cf-month-btn ${embFiltro==='todos'?'active':''}" data-emb-filtro="todos">Todos os mentorados</button>
-    </div>
-    ${embFiltro==='embarque' && (()=>{ const velhos = embMentorados().filter(s=>{ const d = embDia(s); return d!=null && d>30; }); return velhos.length ? `<div class="emb-aviso">${icon('calendar','tiny')} <span>${velhos.length} mentorado${velhos.length===1?' já passou':'s já passaram'} dos 30 dias e ainda ${velhos.length===1?'está':'estão'} no funil.</span><button type="button" class="btn-outline" id="emb-tirar-velhos">Tirar do funil quem passou dos 30 dias</button></div>` : ''; })() || ''}
+    <p class="section-sub" style="margin-top:4px">Os 30 primeiros dias de cada mentorado, etapa por etapa: do grupo criado aos onboardings. Cada card fica na etapa em que o mentorado está agora e só passa para a coluna seguinte quando o check de passagem da etapa é marcado. Quem já passou do embarque fica em Embarque concluído. Clique no card para abrir o passo a passo.</p>
+    ${(()=>{ const velhos = embVelhos(); return velhos.length ? `<div class="emb-aviso">${icon('calendar','tiny')} <span>${velhos.length} mentorado${velhos.length===1?' já passou':'s já passaram'} dos 30 dias e ainda ${velhos.length===1?'está':'estão'} no funil.</span><button type="button" class="btn-outline" id="emb-tirar-velhos">Mover para Embarque concluído</button></div>` : ''; })()}
     <div class="emb-quadro">
       ${colunas.map(c=>`
         <div class="emb-col">
@@ -19856,16 +19872,28 @@ async function renderEmbarque(){
           <div class="emb-col-body">
             ${porCol[c.id].map(({s,r})=>{ const dia = embDia(s); const v = r.atual ? ((EMB[s.id]||{})[r.atual.chave]||{}) : {};
               return `<div class="emb-card ${embFora(s.id)?'fora':''}" role="button" tabindex="0" data-emb-abrir="${s.id}">
-                <button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="${embFora(s.id)?'0':'1'}" title="${embFora(s.id)?'Voltar ao funil':'Tirar do funil'}">${embFora(s.id)? icon('back','tiny') : icon('x','tiny')}</button>
+                ${r.concluido && !embFora(s.id) ? '' : `<button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="${embFora(s.id)?'0':'1'}" title="${embFora(s.id)?'Voltar ao funil':'Mover para Embarque concluído'}">${embFora(s.id)? icon('back','tiny') : icon('check','tiny')}</button>`}
                 <div class="emb-card-top">${initialsAvatar(s.initials,s.color,30,s.avatarUrl)}<div class="emb-card-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30` : `Dia ${dia}`) : 'Sem data de matrícula'}</small></div></div>
                 <div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div>
                 <div class="emb-card-pe"><span>${r.feitas}/${r.total} etapas</span>${v.data ? `<span>${icon('calendar','tiny')} ${embDataBR(v.data)}${v.com? ' · '+escapeHtml(v.com) : ''}</span>` : ''}</div>
-                ${embFora(s.id) ? `<div class="emb-card-fora">Fora do funil${(EMB[s.id].__fora||{}).por ? ' · por '+escapeHtml(EMB[s.id].__fora.por) : ''}</div>` : ''}
+                
               </div>`; }).join('') || '<div class="emb-vazio">—</div>'}
           </div>
         </div>`).join('')}
     </div>`;
-  el.querySelectorAll('[data-emb-filtro]').forEach(b=>b.addEventListener('click', ()=>{ embFiltro = b.dataset.embFiltro; renderEmbarque(); }));
+  /* Roda do mouse em cima das colunas move o quadro para os lados. Nas pontas, a página volta a rolar. */
+  const quadro = el.querySelector('.emb-quadro');
+  if(quadro){
+    if(embScrollX) quadro.scrollLeft = embScrollX;
+    quadro.addEventListener('scroll', ()=>{ embScrollX = quadro.scrollLeft; });
+    quadro.addEventListener('wheel', e=>{
+      if(Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const max = quadro.scrollWidth - quadro.clientWidth; if(max<=0) return;
+      const ir = quadro.scrollLeft + e.deltaY;
+      if((e.deltaY<0 && quadro.scrollLeft<=0) || (e.deltaY>0 && quadro.scrollLeft>=max-1)) return;
+      e.preventDefault(); quadro.scrollLeft = Math.max(0, Math.min(max, ir));
+    }, {passive:false});
+  }
   el.querySelectorAll('[data-emb-abrir]').forEach(b=>{
     b.addEventListener('click', ()=>embAbrir(b.dataset.embAbrir));
     b.addEventListener('keydown', e=>{ if(e.key==='Enter') embAbrir(b.dataset.embAbrir); });
@@ -19875,8 +19903,8 @@ async function renderEmbarque(){
   }));
   const tv = el.querySelector('#emb-tirar-velhos');
   if(tv) tv.addEventListener('click', async ()=>{
-    const velhos = embMentorados().filter(s=>{ const d = embDia(s); return d!=null && d>30; });
-    if(!(await showAppConfirm(`Tirar do funil ${velhos.length} mentorado${velhos.length===1?'':'s'} que já ${velhos.length===1?'passou':'passaram'} dos 30 dias? Dá para devolver depois em "Fora do funil".`, {title:'Tirar do funil', confirmLabel:'Tirar do funil'}))) return;
+    const velhos = embVelhos();
+    if(!(await showAppConfirm(`Mover para Embarque concluído ${velhos.length} mentorado${velhos.length===1?'':'s'} que já ${velhos.length===1?'passou':'passaram'} dos 30 dias? Dá para devolver ao funil depois, pelo card.`, {title:'Embarque concluído', confirmLabel:'Mover'}))) return;
     velhos.forEach(s=>embMarcarFora(s.id, true)); renderEmbarque();
   });
 }
@@ -19902,8 +19930,8 @@ function embRenderDetalhe(el, s){
       </div>
       <div class="emb-topo-acoes">
         <select class="ps-input" id="emb-trocar">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}</select>
-        <button type="button" class="btn-outline" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('x','tiny')+' Tirar do funil'}</button>
-        <span class="emb-salvo" id="emb-salvo">${embFora(sid) ? 'Fora do funil · ' : ''}Salvo</span>
+        <button type="button" class="btn-outline" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('check','tiny')+' Mover para Embarque concluído'}</button>
+        <span class="emb-salvo" id="emb-salvo">Salvo</span>
       </div>
     </div>
     <div class="emb-fluxo">
@@ -19945,7 +19973,7 @@ function embCelulaVG(s){
   if(!embCarregado) return '<span style="color:var(--text-mute)">…</span>';
   const r = embResumo(s.id);
   return `<button type="button" class="emb-vg-btn ${r.concluido?'ok':''}" data-emb-abrir="${s.id}" title="Abrir a Rota de Embarque">
-    <span>${embFora(s.id) ? 'Fora do funil' : r.concluido ? 'Concluído' : escapeHtml(r.atual.titulo)}</span><small>${r.feitas}/${r.total}</small></button>`;
+    <span>${r.concluido ? 'Concluído' : escapeHtml(r.atual.titulo)}</span><small>${r.feitas}/${r.total}</small></button>`;
 }
 
 function renderVisaoGeral(){
