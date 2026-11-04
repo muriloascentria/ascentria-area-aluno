@@ -1,0 +1,3 @@
+-- Cancelar / reativar acesso (só os sócios): tabela acesso_cancelado + RPCs acesso_cancelar(p_aluno, p_motivo)
+-- e acesso_reativar(p_aluno). Bloqueia o login (auth.users.banned_until), derruba sessões e registra o motivo.
+-- (aplicada no Supabase em 04/11/2026)

@@ -658,6 +658,13 @@
   .push-linha-txt strong{font-size:13px;}
   .push-linha-txt small{font-size:11px;color:var(--text-mute);line-height:1.4;}
   @media(max-width:560px){ .pwa-barra{flex-wrap:wrap;} .pwa-barra-txt{flex-basis:100%;} }
+  .acesso-acao{display:block;margin-top:5px;font-size:11.5px;text-decoration:none;text-align:left;}
+  .acesso-cancelar{color:var(--text-mute);}
+  .acesso-cancelar:hover{color:var(--danger);}
+  .acesso-canc-tag{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:2px 8px;border-radius:20px;background:rgba(220,80,80,.14);color:var(--danger);font-size:11px;font-weight:700;}
+  .acesso-btn-perigo{background:var(--danger)!important;border-color:var(--danger)!important;color:#fff!important;}
+  tr.vg-cancelado td{opacity:.55;}
+  tr.vg-cancelado td:has(.acesso-canc-tag), tr.vg-cancelado td:last-child{opacity:1;}
   .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
   .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
   .app-confirm-card h4{font-size:15.5px;margin:0 0 8px;}
@@ -5460,7 +5467,7 @@ async function bootstrapData(){
     }),
   ];
   if(currentUserRole!=='aluno') onda.push(carregarRecadoDia());
-  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios());
+  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios(), acessoCarregar());
   else if(msgSouMentorado()) onda.push(msgBootstrap(), e27Carregar());
 
   /* Listas que só a equipe interna carrega — o aluno nunca faz estas consultas, então esse conteúdo
@@ -18425,6 +18432,63 @@ function nextCourseLessonFor(s){
   const nextId = order.find(id=>(s.courseProgress[id]||0)!==100);
   return nextId ? getCourse(nextId) : null;
 }
+/* ================= CANCELAR / REATIVAR ACESSO (só os sócios) =================
+   O banco (acesso_cancelar / acesso_reativar) bloqueia o login, derruba as sessões abertas e guarda
+   quem cancelou, quando e por quê. Nada do aluno é apagado. Na Visão Geral o aluno cancelado fica
+   apagado, no fim da lista, com a etiqueta "Acesso cancelado". */
+let ACESSO_CANC = {};
+async function acessoCarregar(){
+  try{
+    const { data, error } = await sb.from('acesso_cancelado').select('*').eq('ativo', true);
+    if(error) throw error;
+    ACESSO_CANC = {}; (data||[]).forEach(r=>{ ACESSO_CANC[r.aluno_id] = r; });
+  }catch(e){ console.error('acesso_cancelado', e); }
+  if(currentView==='visaogeral') renderVisaoGeral();
+}
+function acessoCancelado(id){ return ACESSO_CANC[id] || null; }
+function acessoCelulaHtml(s){
+  const c = acessoCancelado(s.id);
+  if(c){
+    const quem = c.cancelado_por && PEOPLE[c.cancelado_por] ? PEOPLE[c.cancelado_por].name.split(' ')[0] : '';
+    return `<div class="acesso-canc-tag" title="${escapeAttr((quem ? 'Cancelado por '+quem+'. ' : '')+(c.motivo ? 'Motivo: '+c.motivo : ''))}">${icon('lock','tiny')} Cancelado em ${tzDataCurta(c.cancelado_em)}</div>${reuSocio() ? `<button type="button" class="link-btn acesso-acao" data-acesso-reativar="${s.id}">Reativar acesso</button>` : ''}`;
+  }
+  return reuSocio() ? `<button type="button" class="link-btn acesso-acao acesso-cancelar" data-acesso-cancelar="${s.id}">Cancelar acesso</button>` : '';
+}
+function acessoCancelarModal(s){
+  const wrap = document.createElement('div');
+  wrap.className = 'app-confirm-backdrop';
+  wrap.innerHTML = `
+    <div class="app-confirm-card">
+      <h4>Cancelar o acesso de ${escapeHtml(s.name)}?</h4>
+      <p>O login dela é bloqueado na hora e as sessões abertas no celular e no computador caem. Nada é apagado: cadastro, histórico, sessões e financeiro continuam guardados, e dá para reativar depois.</p>
+      <label class="ps-label" for="acesso-motivo" style="display:block;margin:10px 0 4px">Motivo</label>
+      <textarea class="ps-input" id="acesso-motivo" rows="3" placeholder="Ex.: pediu cancelamento, inadimplência…" style="width:100%;resize:vertical"></textarea>
+      <div class="app-confirm-actions"><button type="button" class="btn-outline" id="acesso-voltar">Voltar</button><button type="button" class="btn-accent acesso-btn-perigo" id="acesso-ok">Cancelar acesso</button></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = ()=>wrap.remove();
+  wrap.querySelector('#acesso-voltar').addEventListener('click', fechar);
+  wrap.addEventListener('click', e=>{ if(e.target===wrap) fechar(); });
+  const ta = wrap.querySelector('#acesso-motivo'); ta.focus();
+  wrap.querySelector('#acesso-ok').addEventListener('click', async ()=>{
+    const motivo = ta.value.trim();
+    if(!motivo){ ta.focus(); ta.style.borderColor = 'var(--danger)'; return; }
+    const b = wrap.querySelector('#acesso-ok'); b.disabled = true; b.textContent = 'Cancelando…';
+    const { error } = await sb.rpc('acesso_cancelar', { p_aluno: s.id, p_motivo: motivo });
+    if(error){ b.disabled = false; b.textContent = 'Cancelar acesso'; showAppAviso('Não foi possível cancelar: '+(error.message||'')); return; }
+    fechar();
+    await acessoCarregar();
+    if(typeof EMB!=='undefined' && EMB[s.id]) EMB[s.id] = Object.assign({}, EMB[s.id], { __concluido:{ em:new Date().toISOString(), por:'Acesso cancelado' } });
+    showAppAviso(`O acesso de ${s.name} foi cancelado. Para desfazer, use "Reativar acesso" na Visão Geral.`, 'Acesso cancelado');
+  });
+}
+async function acessoReativar(s){
+  if(!(await showAppConfirm(`${s.name} volta a conseguir entrar no ePLAT com o mesmo e-mail e senha, e tudo o que ela tinha continua lá.`, { title:'Reativar acesso?', confirmLabel:'Reativar acesso', cancelLabel:'Voltar' }))) return;
+  const { error } = await sb.rpc('acesso_reativar', { p_aluno: s.id });
+  if(error){ showAppAviso('Não foi possível reativar: '+(error.message||'')); return; }
+  await acessoCarregar();
+  showAppAviso(`O acesso de ${s.name} foi reativado.`, 'Acesso reativado');
+}
 function tierSelectHtml(s){
   const atual = s.tier==='curso' ? (s.pos ? 'curso_pos' : (s.bonus ? 'curso_bonus' : 'curso')) : (s.pos ? 'mentorado_pos' : 'mentorado');
   return `<select class="ps-input" style="padding:6px 8px;font-size:12px" data-tier-select="${s.id}">
@@ -18433,9 +18497,11 @@ function tierSelectHtml(s){
     <option value="curso" ${atual==='curso'?'selected':''}>Método (curso)</option>
     <option value="curso_bonus" ${atual==='curso_bonus'?'selected':''}>Método + Bônus</option>
     <option value="curso_pos" ${atual==='curso_pos'?'selected':''}>Pós-graduação</option>
-  </select>`;
+  </select>${acessoCelulaHtml(s)}`;
 }
 function bindTierSelects(root, afterChange){
+  root.querySelectorAll('[data-acesso-cancelar]').forEach(b=>b.addEventListener('click', ()=>{ const s = getStudent(b.dataset.acessoCancelar); if(s) acessoCancelarModal(s); }));
+  root.querySelectorAll('[data-acesso-reativar]').forEach(b=>b.addEventListener('click', ()=>{ const s = getStudent(b.dataset.acessoReativar); if(s) acessoReativar(s); }));
   root.querySelectorAll('[data-tier-select]').forEach(sel=>{
     sel.addEventListener('change',()=>{
       const s = getStudent(sel.dataset.tierSelect);
@@ -20241,9 +20307,10 @@ function renderVisaoGeral(){
   const cursoTodos = STUDENTS.filter(s=>s.tier==='curso' && !s.pos);
   const posTodos = STUDENTS.filter(s=>s.tier==='curso' && s.pos);
   const porNome = (lista, q)=>{ const n = normTxt(q).trim(); return n? lista.filter(s=>normTxt(s.name).includes(n) || normTxt((s.cadastro||{}).nomeCompleto).includes(n)) : lista; };
-  const mentorados = porNome(mentoradosTodos, vgBusca.mentorados);
-  const cursoAlunos = porNome(cursoTodos, vgBusca.curso);
-  const posAlunos = porNome(posTodos, vgBusca.pos);
+  const canceladosNoFim = l=>l.slice().sort((a,b)=>(acessoCancelado(a.id)?1:0)-(acessoCancelado(b.id)?1:0));
+  const mentorados = canceladosNoFim(porNome(mentoradosTodos, vgBusca.mentorados));
+  const cursoAlunos = canceladosNoFim(porNome(cursoTodos, vgBusca.curso));
+  const posAlunos = canceladosNoFim(porNome(posTodos, vgBusca.pos));
   const secHead = (chave, ic, titulo, total, mostrando)=> `
     <div class="vg-sec-head" data-vg-toggle="${chave}">
       <h2 class="section-title com-titulo">${icon(ic)} ${titulo}</h2>
@@ -20263,7 +20330,7 @@ function renderVisaoGeral(){
             const pct = courseCompletionPct(s);
             const next = nextCourseLessonFor(s);
             return `
-              <tr>
+              <tr class="${acessoCancelado(s.id)?'vg-cancelado':''}">
                 <td style="white-space:nowrap">
                   <div style="display:flex;align-items:center;gap:8px">
                     ${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}
@@ -20275,7 +20342,7 @@ function renderVisaoGeral(){
                   <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
                 </td>
                 <td>${next? escapeHtml(next.title) : '<span style="color:var(--text-mute)">Curso concluído</span>'}</td>
-                <td style="min-width:140px">${tierSelectHtml(s)}</td>
+                <td style="min-width:150px">${tierSelectHtml(s)}</td>
                 <td><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" data-aulas-liberadas="${s.id}" ${s.aulasLiberadas?'checked':''}> ${s.aulasLiberadas? 'Liberadas' : 'Sequencial'}</label></td>
               </tr>`;
           }).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">${vgBusca[chave].trim()? 'Nenhum aluno com esse nome.' : vazio}</td></tr>`}
@@ -20284,7 +20351,7 @@ function renderVisaoGeral(){
     </div>
     </div>
   `;
-  const totalMentorados = mentoradosTodos.length;
+  const totalMentorados = mentoradosTodos.filter(s=>!acessoCancelado(s.id)).length;
   const avgProgress = totalMentorados ? Math.round(mentoradosTodos.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
   const atrasadasTotal = mentoradosTodos.reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
   // Mesma fonte do sininho (comunidade_pendencias no banco): a comunidade não é mais carregada
@@ -20316,7 +20383,7 @@ function renderVisaoGeral(){
             const dias = diasRestantes(s);
             const estagio = estagioMentoria(mesPrograma(s));
             return `
-              <tr>
+              <tr class="${acessoCancelado(s.id)?'vg-cancelado':''}">
                 <td class="vg-nome-cel">
                   <div style="display:flex;align-items:center;gap:8px">
                     <span class="vg-av-wrap">${initialsAvatar(s.initials,s.color,26,s.avatarUrl)}${s.mentorEssencia? `<span class="me-selo" title="Participa do Mentores Essência">${icon('award')}</span>` : ''}</span>
@@ -20331,7 +20398,7 @@ function renderVisaoGeral(){
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
                 <td style="min-width:150px">${embCelulaVG(s)}</td>
-                <td style="min-width:128px">${tierSelectHtml(s)}</td>
+                <td style="min-width:150px">${tierSelectHtml(s)}</td>
                 <td><button class="btn-mini btn-acomp" data-open-acomp="${s.id}">${icon('chart')} Abrir acompanhamento</button></td>
               </tr>`;
           }).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${vgBusca.mentorados.trim()? 'Nenhum mentorado com esse nome.' : 'Nenhum mentorado ainda.'}</td></tr>`}
