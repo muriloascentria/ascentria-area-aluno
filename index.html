@@ -17427,7 +17427,9 @@ const REU_SOCIOS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','3ac4f0c3-4db3-4f98-b
 const REU_UI = { aba:'reunioes', lista:null, envios:[], assin:[], carregando:false, erro:false, aberta:null, transc:{}, verVideo:false, pautas:null, pautasCarregando:false, editando:false, enviando:false, busca:'', enc:{}, encTf:{}, encVinc:null, encVincBusca:'', encNovo:false, ataAberta:false, area:'todas' };
 function reuSocio(){ return (currentUserRole==='staff' || currentUserRole==='vendas' || currentUserRole==='editor') && !!currentUser && REU_SOCIOS.includes(idEfetivo()); }
 function reuSouMurilo(){ return !!currentUser && (currentUser.id===REU_SOCIOS[0] || (!!(currentUserProfile&&currentUserProfile.contaTeste) && (!currentUserProfile.espelhoDe || currentUserProfile.espelhoDe===REU_SOCIOS[0]))); }
-function reuPodeAbrir(){ if(!currentUser || currentUserRole==='aluno') return false; if(reuSocio()) return true; return (REU_UI.envios||[]).some(e=>e.user_id===currentUser.id && e.ativo); }
+/* Todo o time interno abre a aba; o banco (reuniao_pode_ver) só devolve as reuniões em que a pessoa
+   participou (ou que o Murilo enviou para ela). Os sócios veem todas. */
+function reuPodeAbrir(){ return !!currentUser && ['staff','vendas','editor'].includes(currentUserRole); }
 async function reuCarregar(){
   if(REU_UI.carregando) return; REU_UI.carregando = true; REU_UI.erro = false;
   try{
@@ -17504,7 +17506,7 @@ function renderReunioes(){
     ${filtroArea}
     ${REU_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="reu-tentar">Tentar de novo</button></div>' : ''}
     ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela"><thead><tr><th>Data</th><th>Reunião</th><th>Link</th><th>Vídeo</th><th>Transcrição</th><th>Ata</th><th>Concordância</th></tr></thead><tbody>${linhas}</tbody></table></div>`
-      : '<div class="empty-state">Nenhuma reunião ainda. A primeira aparece aqui assim que terminar e o Google Meet salvar as anotações.</div>'}`;
+      : (reuSocio() ? '<div class="empty-state">Nenhuma reunião ainda. A primeira aparece aqui assim que terminar e o Google Meet salvar as anotações.</div>' : '<div class="empty-state">Nenhuma reunião sua por aqui ainda. Aparecem nesta aba as reuniões gravadas em que você participou, com vídeo, transcrição e ata.</div>')}`;
   reuBindAbas(el);
   const t = el.querySelector('#reu-tentar'); if(t) t.addEventListener('click', ()=>{ REU_UI.lista = null; renderReunioes(); });
   el.querySelectorAll('[data-reu-area]').forEach(b=>b.addEventListener('click', ()=>{ REU_UI.area = b.dataset.reuArea; renderReunioes(); }));
