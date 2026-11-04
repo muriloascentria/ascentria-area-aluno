@@ -1,0 +1,3 @@
+-- Reuniões e atas para todo o time: cada pessoa vê as reuniões em que participou (user_id ou e-mail),
+-- além das enviadas pelo Murilo; os sócios veem todas. Gatilho completa o user_id dos participantes pelo e-mail.
+-- (aplicada no Supabase em 04/11/2026: funções reuniao_participou, reuniao_pode_ver, reunioes_participantes_uid)
