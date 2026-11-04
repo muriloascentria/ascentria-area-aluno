@@ -718,6 +718,10 @@
   .aniv-sub{font-size:11.5px;color:var(--text-dim);line-height:1.35;}
   .aniv-rodape{font-size:11.5px;color:var(--text-mute);margin-top:11px;line-height:1.45;}
   .aniv-btn{width:100%;margin-top:10px;font-size:12.5px;padding:8px 10px;}
+  #aniv-enviados{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  .aniv-ok{display:flex;align-items:center;gap:4px;margin-top:2px;font-size:11px;font-weight:600;color:var(--success);}
+  .aniv-ok .icon,.aniv-rodape-ok .icon{width:11px;height:11px;flex:0 0 auto;}
+  .aniv-rodape-ok{display:flex;align-items:center;gap:6px;color:var(--success);font-weight:600;}
   @media (max-width:640px){ .aniv-canto{right:10px;bottom:10px;width:auto;left:10px;} }
   /* Faixa de aniversariantes na Visão Geral (equipe interna) */
   .aniv-banner{
@@ -4844,6 +4848,16 @@ function anivMarcarParabenizados(mencoes){
   ANIV_COMUNIDADE.forEach(a=>{ if(!a.jaParabenizei && ids.includes(a.id)){ a.jaParabenizei = true; mudou = true; } });
   if(mudou){ renderAniversarioCanto(); anivAlunoAtualizarInicio(); }
 }
+/* Parabéns já enviados pela equipe (um registro por aniversariante por ano, visto por toda a equipe). */
+let ANIV_ENVIADOS = null; // { aluno_id: {por, em} } do ano atual
+async function anivCarregarEnviados(){
+  try{
+    const { data, error } = await sb.from('aniversario_parabens').select('aluno_id, por, em').eq('ano', new Date().getFullYear());
+    if(error) throw error;
+    ANIV_ENVIADOS = {}; (data||[]).forEach(r=>{ ANIV_ENVIADOS[r.aluno_id] = r; });
+  }catch(e){ console.error('aniversario_parabens', e); ANIV_ENVIADOS = {}; }
+}
+function anivQuem(id){ const p = id && PEOPLE[id]; return p && p.name ? p.name.split(' ')[0] : ''; }
 function renderAniversarioCanto(){
   const antigo = document.getElementById('aniv-canto');
   if(antigo) antigo.remove();
@@ -4872,19 +4886,33 @@ function renderAniversarioCanto(){
           <div class="aniv-info">
             <div class="aniv-nome">${escapeHtml(a.nome)}</div>
             <div class="aniv-sub">${a.idade? 'Fazendo '+a.idade+' anos' : 'Faz aniversário hoje'}${equipe? ' · '+tierLabel(a) : ''}</div>
+            ${equipe && ANIV_ENVIADOS && ANIV_ENVIADOS[a.id] ? `<div class="aniv-ok">${icon('check','tiny')} Parabéns enviados${anivQuem(ANIV_ENVIADOS[a.id].por)? ' por '+escapeHtml(anivQuem(ANIV_ENVIADOS[a.id].por)) : ''}</div>` : ''}
           </div>
         </div>`).join('')}
     </div>
-    <div class="aniv-rodape">${equipe
-      ? 'Vale uma mensagem do time hoje.'
-      : 'Que tal deixar uma mensagem na Comunidade?'}</div>
-    ${equipe? '' : `<button class="btn-accent aniv-btn" id="aniv-parabenizar">Parabenizar na Comunidade</button>`}`;
+    ${(()=>{ if(!equipe) return `<div class="aniv-rodape">Que tal deixar uma mensagem na Comunidade?</div><button class="btn-accent aniv-btn" id="aniv-parabenizar">Parabenizar na Comunidade</button>`;
+      const faltam = lista.filter(a=>!(ANIV_ENVIADOS && ANIV_ENVIADOS[a.id]));
+      return faltam.length
+        ? `<div class="aniv-rodape">Vale uma mensagem do time hoje.</div><button class="btn-accent aniv-btn" id="aniv-enviados">${icon('check','tiny')} ${lista.length>1 && faltam.length<lista.length ? 'Marcar os outros como enviados' : 'Marcar parabéns como enviados'}</button>`
+        : `<div class="aniv-rodape aniv-rodape-ok">${icon('check','tiny')} Tudo certo: o time já mandou os parabéns hoje.</div>`; })()}`;
   document.body.appendChild(el);
 
   document.getElementById('aniv-fechar').addEventListener('click', ()=>{
     try{ localStorage.setItem(chaveAniversarioHoje(),'1'); }catch(e){}
     el.remove();
   });
+  const env = document.getElementById('aniv-enviados');
+  if(env) env.addEventListener('click', async ()=>{
+    env.disabled = true;
+    const ano = new Date().getFullYear();
+    const faltam = lista.filter(a=>!(ANIV_ENVIADOS && ANIV_ENVIADOS[a.id]));
+    const { error } = await sb.from('aniversario_parabens').upsert(faltam.map(a=>({ aluno_id:a.id, ano, por:currentUser && currentUser.id })), { onConflict:'aluno_id,ano', ignoreDuplicates:true });
+    if(error){ env.disabled = false; showAppAviso('Não foi possível registrar: '+(error.message||'')); return; }
+    await anivCarregarEnviados();
+    renderAniversarioCanto();
+  });
+  // Equipe: busca quem já recebeu os parabéns e redesenha com o status.
+  if(equipe && ANIV_ENVIADOS===null){ anivCarregarEnviados().then(()=>{ if(document.getElementById('aniv-canto')) renderAniversarioCanto(); }); }
   const btn = document.getElementById('aniv-parabenizar');
   if(btn) btn.addEventListener('click', ()=>{
     goTo('comunidade');
