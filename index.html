@@ -2162,6 +2162,25 @@
   .notif-bv-pts{display:inline-block;margin-top:3px;padding:1px 8px;border-radius:20px;background:linear-gradient(135deg,#f6dc7d,#c9971c);color:#3a2a00;font-size:10.5px;font-weight:800;align-self:flex-start;}
   #notif-btn.bv-brilho{color:#e8c25a;animation:bvSino 1.8s ease-in-out infinite;}
   #notif-btn.bv-brilho .notif-badge{background:linear-gradient(135deg,#f6dc7d,#c9971c);color:#3a2a00;box-shadow:0 0 10px rgba(246,220,125,.9);}
+  .notif-item.notif-e27{background:linear-gradient(120deg,rgba(37,211,102,.18),rgba(212,175,55,.12) 60%,rgba(37,211,102,.14));border-left-color:#25d366;}
+  .notif-item.notif-e27 .notif-txt strong{color:#5fe08f;}
+  .notif-item.notif-e27 .notif-txt small{white-space:normal;}
+  .e27-ic{background:linear-gradient(135deg,#25d366,#128c4a)!important;color:#fff!important;box-shadow:0 0 12px rgba(37,211,102,.6);}
+  .e27-pill{background:linear-gradient(135deg,#5fe08f,#1fa855)!important;color:#05290f!important;}
+  .e27-card{max-width:440px;text-align:center;border-color:rgba(37,211,102,.45);box-shadow:0 0 0 1px rgba(37,211,102,.15),0 18px 50px rgba(0,0,0,.5),0 0 40px rgba(37,211,102,.12);}
+  .e27-card h4{font-size:19px;margin:10px 0 8px;}
+  .e27-card p{font-size:14px;line-height:1.55;color:var(--text-dim);margin:0 0 12px;}
+  .e27-card p strong{color:var(--text);}
+  .e27-selo{width:58px;height:58px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#25d366,#128c4a);color:#fff;box-shadow:0 0 22px rgba(37,211,102,.55);}
+  .e27-selo .icon{width:28px;height:28px;}
+  .e27-lista{list-style:none;padding:0;margin:0 0 16px;text-align:left;display:flex;flex-direction:column;gap:7px;font-size:13.5px;}
+  .e27-lista li{display:flex;gap:8px;align-items:flex-start;}
+  .e27-lista .icon{color:#25d366;flex-shrink:0;margin-top:2px;}
+  .e27-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 14px;border-radius:12px;background:linear-gradient(135deg,#25d366,#1aa152);color:#fff;font-weight:800;font-size:14.5px;text-decoration:none;box-shadow:0 6px 18px rgba(37,211,102,.35);}
+  .e27-btn:hover{filter:brightness(1.07);}
+  .e27-btn .icon{flex-shrink:0;width:18px;height:18px;}
+  .e27-btn span{text-align:left;line-height:1.3;}
+  .e27-depois{margin-top:10px;background:none;border:none;color:var(--text-mute);font:inherit;font-size:13px;cursor:pointer;}
   #notif-btn.bv-brilho .dot-alert{background:#e8c25a;box-shadow:0 0 8px rgba(246,220,125,.95);}
   @keyframes bvBrilho{0%{left:-60%}60%,100%{left:130%}}
   @keyframes bvSino{0%,100%{filter:drop-shadow(0 0 0 rgba(232,194,90,0))}50%{filter:drop-shadow(0 0 7px rgba(232,194,90,.95))}}
@@ -4131,7 +4150,53 @@ async function refreshPendencias(){
 }
 function pendenciasDoSino(){
   if(currentRole==='staff') return PENDENCIAS.filter(x=>x.motivo==='duvida' || x.motivo==='mencao');
-  return PENDENCIAS.filter(x=>x.motivo==='resposta' || x.motivo==='mencao' || x.motivo==='boasvindas');
+  const l = PENDENCIAS.filter(x=>x.motivo==='resposta' || x.motivo==='mencao' || x.motivo==='boasvindas');
+  if(E27 && currentUserRole==='aluno') l.unshift({ motivo:'e27', quando:E27.liberado_em });
+  return l;
+}
+/* ================= COMUNIDADE E27 (WhatsApp) =================
+   No 8º dia depois que o card do mentorado entrou na Rota de Embarque vindo do eCRM, ele recebe o
+   convite para a comunidade E27 da Mentoria Essência: um aviso no sino e uma janela na tela. A janela
+   aparece até a pessoa responder ("Agora não" guarda visto_em); o aviso do sino fica até ela entrar.
+   Quem decide se já está liberado é o banco (comunidade_e27_pendente). */
+let E27 = null;
+async function e27Carregar(){
+  try{
+    const { data, error } = await sb.rpc('comunidade_e27_pendente');
+    if(error) throw error;
+    E27 = (data && data[0]) || null;
+  }catch(e){ console.error('comunidade E27', e); E27 = null; }
+  updateNotifBadge();
+  if(E27 && !E27.visto_em) setTimeout(()=>e27Abrir(), 900);
+}
+async function e27Marcar(campo){
+  if(!currentUser) return;
+  const agora = new Date().toISOString();
+  try{ await sb.from('comunidade_e27_convite').upsert({ aluno_id: currentUser.id, [campo]: agora }, { onConflict:'aluno_id' }); }catch(e){ console.error('comunidade E27', e); }
+  if(E27){ if(campo==='entrou_em') E27 = null; else E27.visto_em = agora; }
+  updateNotifBadge();
+}
+function e27Abrir(){
+  if(!E27 || document.getElementById('e27-modal')) return;
+  const nome = primeiroNome((currentUserProfile||{}).name||'');
+  const wrap = document.createElement('div');
+  wrap.className = 'app-confirm-backdrop'; wrap.id = 'e27-modal';
+  wrap.innerHTML = `
+    <div class="app-confirm-card e27-card" role="dialog" aria-labelledby="e27-tit">
+      <div class="e27-selo">${icon('users')}</div>
+      <h4 id="e27-tit">Boas-vindas à comunidade${nome ? ', '+escapeHtml(nome) : ''}!</h4>
+      <p>Que alegria ter você com a gente na Mentoria Essência. A partir de agora você está <strong>autorizado(a) a entrar na comunidade E27</strong>, o nosso grupo no WhatsApp.</p>
+      <ul class="e27-lista">
+        <li>${icon('check','tiny')} Networking com enfermeiros e enfermeiras da mentoria</li>
+        <li>${icon('check','tiny')} Todos os avisos principais da Mentoria Essência direto no seu WhatsApp</li>
+      </ul>
+      <a class="e27-btn" id="e27-entrar" href="${escapeAttr(E27.link)}" target="_blank" rel="noopener">${icon('comment','tiny')}<span>Entrar na comunidade E27 da Mentoria Essência</span></a>
+      <button type="button" class="e27-depois" id="e27-depois">Agora não</button>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = ()=>wrap.remove();
+  wrap.querySelector('#e27-entrar').addEventListener('click', ()=>{ e27Marcar('entrou_em'); setTimeout(fechar, 200); });
+  wrap.querySelector('#e27-depois').addEventListener('click', ()=>{ e27Marcar('visto_em'); fechar(); });
 }
 function fuiMencionadoEm(postId){
   return PENDENCIAS.some(x=>x.motivo==='mencao' && String(x.post_id)===String(postId));
@@ -5396,7 +5461,7 @@ async function bootstrapData(){
   ];
   if(currentUserRole!=='aluno') onda.push(carregarRecadoDia());
   if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios());
-  else if(msgSouMentorado()) onda.push(msgBootstrap());
+  else if(msgSouMentorado()) onda.push(msgBootstrap(), e27Carregar());
 
   /* Listas que só a equipe interna carrega — o aluno nunca faz estas consultas, então esse conteúdo
      jamais chega ao navegador dele (nem via RLS, nem por não pedir). */
@@ -6434,7 +6499,7 @@ function updateNotifBadge(){
   const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
   if(typeof appBadge==='function') appBadge(pend.length + tf);
   const sinoBtn = document.getElementById('notif-btn');
-  if(sinoBtn) sinoBtn.classList.toggle('bv-brilho', pend.some(x=>x.motivo==='boasvindas'));
+  if(sinoBtn) sinoBtn.classList.toggle('bv-brilho', pend.some(x=>x.motivo==='boasvindas' || x.motivo==='e27'));
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
@@ -6504,6 +6569,10 @@ function notifItens(){
     const c = x.course_id && typeof getCourse==='function' ? getCourse(x.course_id) : null;
     const onde = c ? `na aula "${c.title}"` : 'na Comunidade';
     const nome = x.quem_nome ? x.quem_nome.split(' ')[0] : 'Alguém';
+    if(x.motivo==='e27'){
+      itens.push({ tipo:'e27', quando:x.quando, titulo:'Você foi liberado(a) para a comunidade E27 da Mentoria Essência!', sub:'Entre no grupo do WhatsApp para fazer networking e receber os avisos principais da mentoria.', acao: ()=>e27Abrir() });
+      return;
+    }
     if(x.motivo==='boasvindas'){
       itens.push({ tipo:'boasvindas', avatarDe:x.quem_id, quando:x.quando, titulo:`${nome} acabou de chegar na Mentoria! Dê as boas-vindas`, sub:(x.texto||'').replace(/\s+/g,' '), acao: ()=>notifAbrirComunidade(x) });
       return;
@@ -6566,7 +6635,7 @@ function notifPainelHtml(){
   const itens = notifItens();
   const av = (it)=> it.grupo ? msgGrupoAvatar(34, it.grupo) : it.avatarDe ? msgAvatarDe(it.avatarDe, 34) : `<span class="notif-ic">${icon(it.icone||'bell','tiny')}</span>`;
   return `<div class="notif-hd"><strong>Notificações</strong>${itens.length ? `<span class="msg-badge">${itens.length}</span>` : ''}</div>
-    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
+    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">Entrar na comunidade E27</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
 }
 function notifPainelEl(){
   let p = document.getElementById('notif-painel');
