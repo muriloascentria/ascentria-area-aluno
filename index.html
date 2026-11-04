@@ -2813,6 +2813,8 @@
   .aniv-bloco-lista{display:flex;flex-direction:column;gap:8px;}
   .aniv-bloco-item{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--bg-elev);}
   .aniv-bloco-txt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+  .aniv-env-todos{margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .aniv-env-btn{white-space:nowrap;}
   .aniv-bloco-txt strong{font-size:13.5px;}
   .aniv-bloco-txt small{font-size:11.5px;color:var(--text-mute);}
   .aniv-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;}
@@ -4529,7 +4531,7 @@ function aniversariantesClientes(hoje){
       tags: (c.tags||[]).filter(t=>t && t.indexOf('Duplicado')!==0),
       whatsapp: c.whatsapp || '', cidade: c.cidade || '',
       initials: st ? st.initials : iniciaisDe(c.nome), color: st ? st.color : '#8d916f',
-      avatarUrl: st ? st.avatarUrl : null, aluno: st ? st.name : '',
+      avatarUrl: st ? st.avatarUrl : null, aluno: st ? st.name : '', alunoId: st ? st.id : null,
     });
   });
   /* Aluno cujo aniversário está no cadastro dele mas que ainda não tem ficha no Registro de Clientes. */
@@ -4538,7 +4540,7 @@ function aniversariantesClientes(hoje){
     if(!(st.cadastro && fazAniversarioEm(st.cadastro.dataNascimento, hj))) return;
     lista.push({ id:'a'+st.id, nome: st.name, idade: idadeQueFaz(st.cadastro.dataNascimento, hj),
       tags:[produtoAluno(st).replace('graduação','Graduação')], whatsapp:(st.cadastro.telefone||''),
-      cidade:(st.cadastro.cidade||''), initials:st.initials, color:st.color, avatarUrl:st.avatarUrl, aluno:st.name });
+      cidade:(st.cadastro.cidade||''), initials:st.initials, color:st.color, avatarUrl:st.avatarUrl, aluno:st.name, alunoId:st.id });
   });
   return lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
 }
@@ -4758,9 +4760,58 @@ function bindCheckpoint(){
   });
 }
 /* Bloco "Aniversariantes de hoje" da equipe interna. Devolve '' nos dias sem ninguem. */
+/* Parabéns já enviados (equipe): alunos ficam em aniversario_parabens (o mesmo do cartãozinho do canto);
+   quem é só cliente fica em aniversario_parabens_clientes. Os dois valem para toda a equipe. */
+let ANIV_CLI_ENVIADOS = null; // { cliente_id: {por, em} } do ano atual
+async function anivCarregarEnviadosClientes(){
+  try{
+    const { data, error } = await sb.from('aniversario_parabens_clientes').select('cliente_id, por, em').eq('ano', new Date().getFullYear());
+    if(error) throw error;
+    ANIV_CLI_ENVIADOS = {}; (data||[]).forEach(r=>{ ANIV_CLI_ENVIADOS[r.cliente_id] = r; });
+  }catch(e){ console.error('aniversario_parabens_clientes', e); ANIV_CLI_ENVIADOS = {}; }
+}
+function anivEnvioDe(a){
+  if(a.alunoId) return ANIV_ENVIADOS && ANIV_ENVIADOS[a.alunoId];
+  return ANIV_CLI_ENVIADOS && ANIV_CLI_ENVIADOS[a.id];
+}
+let ANIV_EQ_CARREGANDO = false;
+function anivEquipeGarantirCarga(){
+  if(ANIV_EQ_CARREGANDO || (ANIV_ENVIADOS!==null && ANIV_CLI_ENVIADOS!==null)) return;
+  ANIV_EQ_CARREGANDO = true;
+  Promise.all([ANIV_ENVIADOS===null ? anivCarregarEnviados() : null, ANIV_CLI_ENVIADOS===null ? anivCarregarEnviadosClientes() : null]).then(()=>{
+    ANIV_EQ_CARREGANDO = false;
+    anivEquipeRedesenhar();
+  });
+}
+function anivEquipeRedesenhar(){
+  const antigo = document.querySelector('#view-equipe .aniv-bloco'); if(!antigo) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = aniversariantesEquipeHtml().trim();
+  const novo = tmp.firstElementChild;
+  if(novo){ antigo.replaceWith(novo); anivEquipeLigar(novo); } else antigo.remove();
+}
+function anivEquipeLigar(root){
+  (root||document).querySelectorAll('[data-aniv-env]').forEach(b=>b.addEventListener('click', async ()=>{
+    const lista = aniversariantesClientes();
+    const alvo = b.dataset.anivEnv==='todos' ? lista.filter(a=>!anivEnvioDe(a)) : lista.filter(a=>a.id===b.dataset.anivEnv);
+    if(!alvo.length) return;
+    b.disabled = true;
+    const ano = new Date().getFullYear(); const por = currentUser && currentUser.id;
+    const alunos = alvo.filter(a=>a.alunoId), clientes = alvo.filter(a=>!a.alunoId);
+    const erros = [];
+    if(alunos.length){ const { error } = await sb.from('aniversario_parabens').upsert(alunos.map(a=>({ aluno_id:a.alunoId, ano, por })), { onConflict:'aluno_id,ano', ignoreDuplicates:true }); if(error) erros.push(error.message); }
+    if(clientes.length){ const { error } = await sb.from('aniversario_parabens_clientes').upsert(clientes.map(a=>({ cliente_id:a.id, ano, por })), { onConflict:'cliente_id,ano', ignoreDuplicates:true }); if(error) erros.push(error.message); }
+    if(erros.length){ b.disabled = false; showAppAviso('Não foi possível registrar: '+erros.join(' · ')); return; }
+    await Promise.all([anivCarregarEnviados(), anivCarregarEnviadosClientes()]);
+    anivEquipeRedesenhar();
+    if(document.getElementById('aniv-canto')) renderAniversarioCanto();
+  }));
+}
 function aniversariantesEquipeHtml(){
   const lista = aniversariantesClientes();
   if(!lista.length) return '';
+  anivEquipeGarantirCarga();
+  const carregado = ANIV_ENVIADOS!==null && ANIV_CLI_ENVIADOS!==null;
+  const faltam = lista.filter(a=>!anivEnvioDe(a));
   return `
     <div class="aniv-bloco">
       <div class="aniv-bloco-hd">${icon('gift')} <strong>Aniversariantes de hoje</strong> <span class="aniv-qtd">${lista.length}</span></div>
@@ -4772,10 +4823,13 @@ function aniversariantesEquipeHtml(){
               <strong>${escapeHtml(a.nome)}</strong>
               <small>${a.idade? a.idade+' anos' : 'Parabéns!'}${a.cidade? ' · '+escapeHtml(a.cidade) : ''}</small>
               <div class="aniv-tags">${a.tags.length ? a.tags.map(t=>`<span class="aniv-tag">${escapeHtml(t)}</span>`).join('') : '<span class="aniv-tag vazia">Sem TAG</span>'}</div>
+              ${(()=>{ const e = anivEnvioDe(a); return e ? `<div class="aniv-ok">${icon('check','tiny')} Parabéns enviados${anivQuem(e.por)? ' por '+escapeHtml(anivQuem(e.por)) : ''}</div>` : ''; })()}
             </div>
+            ${carregado && !anivEnvioDe(a) ? `<button type="button" class="btn-mini aniv-env-btn" data-aniv-env="${escapeAttr(a.id)}" title="Marcar que a equipe já mandou os parabéns">${icon('check','tiny')}<span> Marcar enviado</span></button>` : ''}
             ${a.whatsapp ? `<a class="btn-mini" href="https://wa.me/55${escapeAttr(String(a.whatsapp).replace(/\D/g,''))}" target="_blank" rel="noopener" title="Mandar mensagem no WhatsApp">${icon('comment','tiny')}<span> WhatsApp</span></a>` : ''}
           </div>`).join('')}
       </div>
+      ${carregado ? (faltam.length ? (lista.length>1 ? `<button type="button" class="btn-accent aniv-btn aniv-env-todos" data-aniv-env="todos">${icon('check','tiny')} ${faltam.length<lista.length ? 'Marcar os outros como enviados' : 'Marcar parabéns como enviados'}</button>` : '') : `<div class="aniv-rodape aniv-rodape-ok">${icon('check','tiny')} Tudo certo: o time já mandou os parabéns hoje.</div>`) : ''}
       <small class="aniv-bloco-pe">Vem do Registro de Clientes — todo mundo com data de nascimento cadastrada entra aqui, com a TAG de origem.</small>
     </div>`;
 }
@@ -15922,6 +15976,7 @@ function renderEquipe(){
     </div>`;
   reuPreparar();
   polPreparar();
+  anivEquipeLigar(document.getElementById('view-equipe'));
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>{
     const v = b.dataset.equipeGo;
     if(v==='ecrm'){ window.open('https://www.ecrm.digital', '_blank', 'noopener'); return; }
