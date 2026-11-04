@@ -19985,6 +19985,9 @@ function embSalvar(sid){
     const el = document.getElementById('emb-salvo');
     if(error){ console.error('embarque salvar', error); if(el) el.textContent = 'Não foi possível salvar'; showAppAviso('Não foi possível salvar: '+(error.message||'')); }
     else if(el) el.textContent = 'Salvo';
+    /* O banco copia agendamentos e conclusões dos onboardings para o Acompanhamento Interno
+       (gatilho tg_embarque_onboarding): força reler na próxima vez que ele abrir. */
+    if(!error && typeof AE_UI!=='undefined'){ AE_UI.sid = null; AE_UI.ob = null; }
   }, 500);
 }
 function embMentorados(){
