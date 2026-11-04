@@ -3,8 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Seu acesso ao Método Essência</title>
+<title>{{ if eq .Data.tipo "me_convidado" }}Convite para o Mentores Essência{{ else }}Seu acesso ao Método Essência{{ end }}</title>
 </head>
+{{ if eq .Data.tipo "me_convidado" }}
+<body style="margin:0;padding:0;background:#f4f2ec;font-family:Helvetica,Arial,sans-serif;color:#2b2f3a;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ec;padding:32px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e2d6;">
+      <tr><td align="center" style="padding:36px 32px 8px;">
+        <img src="https://ascentria-area-do-aluno.onrender.com/email-logo-plat.png" width="240" alt="Essência PLAT" style="display:block;width:240px;max-width:70%;height:auto;border:0;">
+      </td></tr>
+      <tr><td style="padding:24px 36px 0;">
+        <p style="margin:0 0 6px;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#b8902f;font-weight:bold;">Convite · Mentores Essência</p>
+        <h1 style="margin:0 0 18px;font-size:24px;line-height:1.3;color:#1f2c5c;font-weight:bold;">Olá, {{ .Data.name }}! Você foi convidado(a) para o Mentores Essência.</h1>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Você agora faz parte da equipe {{ .Data.titular_desc }} no <strong>Mentores Essência</strong>, dentro do <strong>Essência PLAT</strong>.</p>
+        <p style="margin:0 0 10px;font-size:15px;line-height:1.65;">Com o seu acesso você acompanha junto com {{ .Data.titular_nome }}:</p>
+        <ul style="margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.75;">
+          <li>as sessões 1:1 gravadas;</li>
+          <li>as metas e o andamento de cada uma;</li>
+          <li>a agenda dos encontros;</li>
+          <li>as aulas gravadas do Mentores Essência.</li>
+        </ul>
+        <p style="margin:0 0 26px;font-size:15px;line-height:1.65;">Para aceitar o convite, é só criar a sua senha no botão abaixo. Leva menos de um minuto.</p>
+      </td></tr>
+      <tr><td align="center" style="padding:0 36px 8px;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#b8902f" style="border-radius:12px;">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 34px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:12px;">Aceitar convite e entrar</a>
+        </td></tr></table>
+      </td></tr>
+      <tr><td style="padding:22px 36px 0;">
+        <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#6b6f7a;">O seu acesso é pessoal: entre sempre com este e-mail e a sua própria senha. As metas que você marcar como concluídas aparecem com o seu nome.</p>
+        <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#6b6f7a;">Depois, para voltar, é só acessar <a href="https://ascentria-area-do-aluno.onrender.com" style="color:#1f2c5c;">o Essência PLAT</a>.</p>
+        <p style="margin:0 0 26px;font-size:13px;line-height:1.6;color:#6b6f7a;">O botão vale por tempo limitado. Se ele expirar ou se tiver qualquer dúvida, é só responder este e-mail.</p>
+      </td></tr>
+      <tr><td style="padding:0 36px;"><div style="border-top:1px solid #ece8dc;"></div></td></tr>
+      <tr><td align="center" style="padding:26px 36px 34px;">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#9a9ca3;">Com carinho, Murilo Pedroso e equipe Ascentria</p>
+      </td></tr>
+    </table>
+    <p style="margin:18px 0 0;font-size:11px;color:#a5a6aa;font-family:Helvetica,Arial,sans-serif;">Você recebeu este e-mail porque a equipe Ascentria liberou o seu acesso ao Mentores Essência.</p>
+  </td></tr>
+</table>
+</body>
+{{ else }}
 <body style="margin:0;padding:0;background:#f4f2ec;font-family:Helvetica,Arial,sans-serif;color:#2b2f3a;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ec;padding:32px 12px;">
   <tr><td align="center">
@@ -37,4 +78,5 @@
   </td></tr>
 </table>
 </body>
+{{ end }}
 </html>

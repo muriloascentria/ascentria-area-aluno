@@ -665,6 +665,8 @@
   .acesso-btn-perigo{background:var(--danger)!important;border-color:var(--danger)!important;color:#fff!important;}
   tr.vg-cancelado td{opacity:.55;}
   tr.vg-cancelado td:has(.acesso-canc-tag), tr.vg-cancelado td:last-child{opacity:1;}
+  .me-meta-quem{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:11.5px;color:var(--success);font-weight:600;}
+  .me-conv-faixa{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px auto 14px;padding:7px 14px;max-width:560px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:12.5px;font-weight:600;text-align:center;}
   .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
   .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
   .app-confirm-card h4{font-size:15.5px;margin:0 0 8px;}
@@ -5295,6 +5297,25 @@ async function bootstrapData(){
      dentro de uma conta de teste, ela enxerga só a si mesma. */
   profiles = profiles.filter(p=>!p.conta_teste || p.id===currentUser.id);
   currentUserRole = me ? me.role : 'aluno';
+  /* Convidado do Mentores Essência: pessoa da equipe de um mentor, com login próprio, que vê SÓ a área
+     Mentores Essência desse mentor (o titular). O banco só entrega o titular, os outros convidados dele
+     e as sessões, metas e aulas do Mentores (me_titular_de / me_liberado). */
+  if(currentUserRole==='me_convidado'){
+    const { data: tit } = await sb.rpc('me_meu_titular');
+    const t = (tit && tit[0]) || null;
+    PEOPLE = {};
+    (profiles||[]).forEach(p=>{ PEOPLE[p.id] = {id:p.id, name:p.name, initials:p.initials, color:p.color, avatarUrl:p.avatar_url||null, role:p.role}; });
+    currentUserProfile = me ? {id:me.id, name:me.name, initials:me.initials, color:me.color, avatarUrl:me.avatar_url||null, tier:'mentorado', bonus:false, pos:false, aulasLiberadas:false} : null;
+    STUDENTS.length = 0;
+    if(t){
+      const st = mapProfileRow({ id:t.id, name:t.name, initials:t.initials, color:t.color, avatar_url:t.avatar_url, role:'aluno', tier:'mentorado', mentor_essencia:true, genero:t.genero, profissao:t.profissao, checklist_items:[], contatos:[] });
+      st.meBoasVindasEm = new Date().toISOString();
+      STUDENTS.push(st);
+    }
+    ME_TITULAR = t;
+    currentStudentId = t ? t.id : null;
+    return;
+  }
   /* Equipe interna com áreas bloqueadas (ex.: Suporte dos Mentorados sem Financeiro, Sessões 1:1 e eCRM).
      O banco já não entrega esses dados; aqui é só para o menu e as telas não mostrarem a área. */
   STAFF_BLOQUEIOS = new Set();
@@ -5534,6 +5555,7 @@ async function enterApp(){
     if(PUSH_LIGADO && pushEstado()==='ligado') pushInscrever(false);
     renderProfile();
   });
+  if(currentUserRole==='me_convidado'){ setRoleConvidado(); goTo('me_aulas'); return; }
   if(currentUserRole==='vendas' || currentUserRole==='editor'){
     setRoleVendas();
     goTo('equipe');
@@ -6774,6 +6796,7 @@ async function ptTrocar(perfil){
   }
 }
 function setRole(role){
+  if(currentUserRole==='me_convidado'){ setRoleConvidado(); return; }
   if(currentUserRole==='vendas' || currentUserRole==='editor'){ setRoleVendas(); return; }
   /* "CS" é a Equipe Interna com as áreas que o Customer Success não abre escondidas. */
   PREVIEW_CS = role==='cs' && currentUserRole==='staff';
@@ -6933,7 +6956,7 @@ function goTo(view){
   /* Trava final: a vendedora só abre o Registro de Sessões 1:1. Os outros itens já estão escondidos
      do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
-  { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = 'equipe'; }
+  { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = currentUserRole==='me_convidado' ? 'me_aulas' : 'equipe'; }
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo()) view = 'equipe';
@@ -10584,6 +10607,76 @@ function renderSessoes(){
   `;
 }
 
+/* ================= CONVIDADOS DO MENTORES ESSÊNCIA =================
+   A equipe interna (só ela) cadastra pessoas da equipe de um mentor; cada uma recebe um convite por
+   e-mail (função me-convidar), cria a própria senha e entra vendo só o Mentores Essência do titular.
+   As metas marcadas por qualquer um ficam com o nome de quem marcou. */
+let ME_TITULAR = null;
+const ME_CONV = {}; // titular_id -> lista de convidados (equipe)
+function setRoleConvidado(){
+  currentRole = 'aluno';
+  const rt = document.getElementById('role-toggle'); if(rt) rt.style.display = 'none';
+  document.querySelectorAll('.nav-item').forEach(el=>{ if(el.id!=='logout-btn') el.style.display = 'none'; });
+  document.querySelectorAll('.nav-group-label').forEach(el=>{ el.style.display = 'none'; });
+  const lbl = document.getElementById('nav-group-mentores'); if(lbl) lbl.style.display = 'flex';
+  document.querySelectorAll('.nav-item.mentores').forEach(b=>{ b.style.display = 'flex'; });
+  document.body.classList.add('me-convidado-modo');
+}
+function meConvidadoFaixaHtml(){
+  if(currentUserRole!=='me_convidado' || !ME_TITULAR) return '';
+  return `<div class="me-conv-faixa">${icon('users','tiny')} Você está no Mentores Essência ${escapeHtml(meTitularDesc(ME_TITULAR))}, como parte da equipe.</div>`;
+}
+function meTitularDesc(t){
+  const nome = (t && t.name) || '';
+  const prof = t && t.profissao==='terapia' ? (t.genero==='M' ? 'do terapeuta' : 'da terapeuta') : (t && t.genero==='M' ? 'do enfermeiro' : 'da enfermeira');
+  return prof+' '+nome;
+}
+async function meConvCarregar(sid){
+  const { data, error } = await sb.from('me_convidados').select('*').eq('titular_id', sid).order('criado_em');
+  ME_CONV[sid] = error ? [] : (data||[]);
+  if(currentView==='interno') renderInterno();
+}
+function meConvHtml(s){
+  const sid = s.id;
+  if(!ME_CONV[sid]){ meConvCarregar(sid); return '<h3 class="me-sub">Equipe do mentor com acesso</h3><div class="empty-state">Carregando…</div>'; }
+  const ativos = ME_CONV[sid].filter(c=>c.ativo);
+  return `<h3 class="me-sub">Equipe do mentor com acesso</h3>
+    <p class="section-sub" style="margin-top:0">Pessoas da equipe ${escapeHtml(meTitularDesc(s))} que entram com login próprio e veem só o Mentores Essência dela (aulas, sessões 1:1 e metas). Só a equipe interna adiciona ou remove.</p>
+    <div class="table-wrap"><table class="check-table me-staff-tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Convidado em</th><th></th></tr></thead><tbody>
+      ${ativos.map(c=>`<tr><td><b>${escapeHtml(c.nome)}</b></td><td>${escapeHtml(c.email)}</td><td style="white-space:nowrap">${escapeHtml(tzDataCurta(c.criado_em))}</td>
+        <td><button class="btn-mini danger" data-me-conv-del="${c.id}" title="Remover o acesso">${icon('trash','tiny')} Remover</button></td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--text-mute)">Ninguém da equipe dela tem acesso ainda.</td></tr>'}
+    </tbody></table></div>
+    <div class="add-form me-form-meta">
+      <div class="field"><label>Nome</label><input class="ps-input" type="text" id="me-conv-nome" placeholder="Ex.: Cláudio Souza"></div>
+      <div class="field"><label>E-mail</label><input class="ps-input" type="email" id="me-conv-email" placeholder="email@empresa.com"></div>
+      <div class="actions"><button class="btn-accent" id="me-conv-add">${icon('plus')} Enviar convite</button></div>
+    </div>`;
+}
+function meConvBind(s, v){
+  const sid = s.id;
+  const add = v.querySelector('#me-conv-add');
+  if(add) add.addEventListener('click', async ()=>{
+    const nome = v.querySelector('#me-conv-nome').value.trim(), email = v.querySelector('#me-conv-email').value.trim().toLowerCase();
+    if(!nome || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ showAppAviso('Preencha o nome e um e-mail válido.'); return; }
+    if(!(await showAppConfirm(`${nome} (${email}) vai receber um convite por e-mail para entrar no Mentores Essência ${meTitularDesc(s)}.`, { title:'Enviar convite?', confirmLabel:'Enviar convite', cancelLabel:'Voltar' }))) return;
+    add.disabled = true; add.textContent = 'Enviando…';
+    const { data, error } = await sb.functions.invoke('me-convidar', { body:{ titular_id: sid, nome, email } });
+    const msg = error ? ((data && data.error) || error.message) : (data && data.error);
+    if(msg){
+      let txt = msg; try{ if(error && error.context && typeof error.context.json==='function'){ const j = await error.context.json(); if(j && j.error) txt = j.error; } }catch(e){}
+      showAppAviso('Não foi possível convidar: '+txt); add.disabled = false; add.innerHTML = `${icon('plus')} Enviar convite`; return;
+    }
+    await meConvCarregar(sid);
+    showAppAviso(`Convite enviado para ${email}.`, 'Convite enviado');
+  });
+  v.querySelectorAll('[data-me-conv-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const c = (ME_CONV[sid]||[]).find(x=>String(x.id)===b.dataset.meConvDel); if(!c) return;
+    if(!(await showAppConfirm(`${c.nome} perde o acesso ao Mentores Essência na hora. As metas que ele(a) marcou continuam registradas.`, { title:'Remover o acesso?', confirmLabel:'Remover', cancelLabel:'Voltar' }))) return;
+    const { error } = await sb.rpc('me_convidado_remover', { p_id: c.id });
+    if(error){ showAppAviso('Não foi possível remover: '+(error.message||'')); return; }
+    await meConvCarregar(sid);
+  }));
+}
 /* ================= MENTORES ESSÊNCIA =================
    Programa à parte, só para os alunos marcados pela equipe (profiles.mentor_essencia). Tem aulas próprias
    (me_aulas, cadastradas em Gerenciar Conteúdo), sessões 1:1 próprias (me_sessoes) e metas próprias
@@ -10686,7 +10779,7 @@ function meDataTxt(iso){ return iso ? prazoIsoParaTexto(String(iso).slice(0,10))
 function renderMeAulas(){
   const el = document.getElementById('view-me_aulas'); if(!el) return;
   if(ME.aulas===null){ meCarregarAulas(); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando as aulas…</div>'; return; }
-  el.innerHTML = `${meLogoHtml()}
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
     <p class="section-sub" style="text-align:center">Aulas exclusivas do Mentores Essência.</p>
     ${ME.aulas.length ? ME.aulas.map((a,i)=>{ const emb = meVideoEmbed(a.video_url); const aberta = ME.aberta===a.id; return `
       <div class="me-aula">
@@ -10704,8 +10797,8 @@ function renderMeSessoes(){
   const sid = currentStudentId;
   if(!ME.sessoes[sid]){ meCarregarAluno(sid); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando as sessões…</div>'; return; }
   const lista = ME.sessoes[sid];
-  el.innerHTML = `${meLogoHtml()}
-    <p class="section-sub" style="text-align:center">Suas sessões individuais do Mentores Essência, visíveis só para você e para a equipe.</p>
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+    <p class="section-sub" style="text-align:center">${currentUserRole==='me_convidado' ? 'Sessões individuais do Mentores Essência, com as gravações e os materiais.' : 'Suas sessões individuais do Mentores Essência, visíveis só para você e para a equipe.'}</p>
     ${lista.length ? lista.map(x=>`
       <div class="session-card">
         <div class="top"><div class="title">${escapeHtml(x.titulo)}</div><div class="date">${escapeHtml(meDataTxt(x.data))}</div></div>
@@ -10723,7 +10816,7 @@ function renderMeMetas(){
   const lista = ME.metas[sid];
   const feitas = lista.filter(m=>m.status==='Concluída').length;
   const hoje = tzHojeISO();
-  el.innerHTML = `${meLogoHtml()}
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
     <p class="section-sub" style="text-align:center">Metas definidas com a equipe no Mentores Essência: ${feitas}/${lista.length} concluídas.</p>
     ${lista.length ? lista.map(m=>{ const ok = m.status==='Concluída'; const atras = !ok && m.prazo && m.prazo < hoje; return `
       <div class="goal-card">
@@ -10731,6 +10824,7 @@ function renderMeMetas(){
         <div class="goal-body">
           <div class="title ${ok?'done':''}">${escapeHtml(m.texto)}</div>
           ${m.prazo ? `<div class="due">Prazo: ${escapeHtml(meDataTxt(m.prazo))} ${atras?'<span class="status-pill status-Atrasada" style="margin-left:6px">Atrasada</span>':''}</div>` : ''}
+          ${ok && m.concluida_em ? `<div class="me-meta-quem">${icon('check','tiny')} Concluída${m.concluida_por_nome ? ' por '+escapeHtml(primeiroNome(m.concluida_por_nome)) : ''} em ${escapeHtml(tzDataCurta(m.concluida_em))}</div>` : ''}
         </div>
       </div>`; }).join('') : '<div class="empty-state">Nenhuma meta do Mentores Essência ainda.</div>'}`;
   el.querySelectorAll('[data-me-meta]').forEach(b=>b.addEventListener('click', async ()=>{
@@ -10740,6 +10834,7 @@ function renderMeMetas(){
     const { error } = await sb.rpc('me_meta_marcar', { p_id:m.id, p_feita:feita });
     if(error){ alert('Não foi possível salvar: '+(error.message||'')); b.disabled = false; return; }
     m.status = feita ? 'Concluída' : 'Pendente'; m.concluida_em = feita ? new Date().toISOString() : null;
+    m.concluida_por_nome = feita ? ((currentUserProfile||{}).name || null) : null;
     renderMeMetas();
   }));
 }
@@ -10766,18 +10861,20 @@ function meInternoHtml(s){
     <h3 class="me-sub">Metas do Mentores Essência</h3>
     <div class="table-wrap"><table class="check-table me-staff-tabela"><thead><tr><th>Meta</th><th>Prazo</th><th>Situação</th><th></th></tr></thead><tbody>
       ${metas.map(m=>`<tr><td style="min-width:240px">${escapeHtml(m.texto)}</td><td style="white-space:nowrap">${escapeHtml(meDataTxt(m.prazo)||'—')}</td>
-        <td><button class="status-pill ${statusClass(m.status==='Concluída'?'Concluída':'Pendente')}" data-me-meta-st="${m.id}">${m.status==='Concluída'?'Concluída':'Pendente'}</button></td>
+        <td><button class="status-pill ${statusClass(m.status==='Concluída'?'Concluída':'Pendente')}" data-me-meta-st="${m.id}">${m.status==='Concluída'?'Concluída':'Pendente'}</button>${m.status==='Concluída' && m.concluida_por_nome ? `<div class="me-meta-quem">por ${escapeHtml(primeiroNome(m.concluida_por_nome))}${m.concluida_em ? ' em '+escapeHtml(tzDataCurta(m.concluida_em)) : ''}</div>` : ''}</td>
         <td><button class="btn-mini danger" data-me-meta-del="${m.id}" title="Excluir meta">${icon('trash','tiny')}</button></td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--text-mute)">Nenhuma meta registrada.</td></tr>'}
     </tbody></table></div>
     <div class="add-form me-form-meta">
       <div class="field"><label>Nova meta</label><input class="ps-input" type="text" id="me-meta-texto" placeholder="Ex.: Fechar o primeiro grupo de mentoria"></div>
       <div class="field"><label>Prazo</label>${prazoCampoHtml(`<input class="ps-input" type="date" id="me-meta-prazo" value="${prazoMaisDias(10)}">`, 'me-meta-prazo')}</div>
       <div class="actions"><button class="btn-accent" id="me-meta-add">${icon('plus')} Adicionar meta</button></div>
-    </div>`;
+    </div>
+    ${meConvHtml(s)}`;
 }
 function meInternoBind(s){
   const v = document.getElementById('view-interno'); if(!v || !s.mentorEssencia || !ME.sessoes[s.id]) return;
   const sid = s.id;
+  meConvBind(s, v);
   const on = (id, fn)=>{ const b = v.querySelector('#'+id); if(b) b.addEventListener('click', fn); };
   on('me-ses-add', async (e)=>{
     const titulo = v.querySelector('#me-ses-titulo').value.trim();
@@ -10808,7 +10905,7 @@ function meInternoBind(s){
     const feita = m.status!=='Concluída';
     const { error } = await sb.rpc('me_meta_marcar', { p_id:m.id, p_feita:feita });
     if(error){ alert('Não foi possível salvar: '+(error.message||'')); return; }
-    m.status = feita ? 'Concluída' : 'Pendente'; renderInterno();
+    m.status = feita ? 'Concluída' : 'Pendente'; m.concluida_em = feita ? new Date().toISOString() : null; m.concluida_por_nome = feita ? ((currentUserProfile||{}).name || null) : null; renderInterno();
   }));
   v.querySelectorAll('[data-me-meta-del]').forEach(b=>b.addEventListener('click', async ()=>{
     if(!confirmDelete('Excluir esta meta do Mentores Essência?')) return;
@@ -16031,6 +16128,7 @@ function viewsDoPapel(){
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
   if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
   if(papel==='editor') return ['equipe','mensagens','conteudo','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='me_convidado') return ['me_aulas','me_sessoes','me_metas'];
   return null; // equipe interna: tudo
 }
 function renderEquipe(){
