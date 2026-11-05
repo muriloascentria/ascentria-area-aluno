@@ -18332,19 +18332,21 @@ function rfCalcular(D){
   const minPl = o=> Math.min(...projetar(o).map(x=>x.salPl));
   // Soluções: quanto cada alavanca precisa mexer para o caixa com pró-labore não ficar negativo em 6 meses
   const baseVendas = Math.max(0, mediaReal);
-  const sol = { baseVendas };
+  const alvo = Math.max(0, rfN(P.caixa_meta));
+  const sol = { baseVendas, alvo };
   sol.minAtual = minPl({ vendas: baseVendas, pl });
   sol.mesAperto = projetar({ vendas: baseVendas, pl }).reduce((a,x)=> x.salPl < a.salPl ? x : a).k;
-  sol.vendasNec = null; for(let v=0; v<=80; v++){ if(minPl({ vendas:v, pl }) >= 0){ sol.vendasNec = v; break; } }
+  sol.vendasNec = null; for(let v=0; v<=80; v++){ if(minPl({ vendas:v, pl }) >= alvo){ sol.vendasNec = v; break; } }
   const projReal = projetar({ vendas: baseVendas, pl });
-  sol.deficit = Math.max(0, -sol.minAtual);
-  sol.temporario = sol.minAtual < 0 && projReal[5].salPl > 0;
+  sol.deficit = Math.max(0, alvo - sol.minAtual);
+  sol.plAperto = (projReal.find(x=>x.k===sol.mesAperto)||{}).plMes || 0;
+  sol.temporario = sol.minAtual < alvo && projReal[5].salPl > alvo;
   // A partir de quando o caixa volta a ficar positivo e se mantém (para devolver o que foi adiado)
-  sol.mesVolta = null; for(let i=0;i<6;i++){ if(projReal.slice(i).every(x=>x.salPl >= sol.deficit) ){ sol.mesVolta = projReal[i].k; break; } }
+  sol.mesVolta = null; for(let i=0;i<6;i++){ if(i>0 && projReal.slice(i).every(x=>x.salPl >= alvo) ){ sol.mesVolta = projReal[i].k; break; } }
   // Vendas para sair do vermelho a partir do 3º mês
-  sol.vendasNec2 = null; for(let v=0; v<=80; v++){ const pj = projetar({ vendas:v, pl }); if(pj.slice(2).every(x=>x.salPl>=0)){ sol.vendasNec2 = v; break; } }
-  sol.plSust = 0; for(let v=Math.ceil(pl/1000)*1000; v>=0; v-=1000){ if(minPl({ vendas: baseVendas, pl: v }) >= 0){ sol.plSust = v; break; } }
-  sol.corteNec = null; for(let c=0; c<=custo; c+=500){ if(minPl({ vendas: baseVendas, pl, corte:c }) >= 0){ sol.corteNec = c; break; } }
+  sol.vendasNec2 = null; for(let v=0; v<=80; v++){ const pj = projetar({ vendas:v, pl }); if(pj.slice(2).every(x=>x.salPl>=alvo)){ sol.vendasNec2 = v; break; } }
+  sol.plSust = 0; for(let v=Math.ceil(pl/1000)*1000; v>=0; v-=1000){ if(minPl({ vendas: baseVendas, pl: v }) >= alvo){ sol.plSust = v; break; } }
+  sol.corteNec = null; for(let c=0; c<=custo; c+=500){ if(minPl({ vendas: baseVendas, pl, corte:c }) >= alvo){ sol.corteNec = c; break; } }
   sol.ganho6x = projetar({ vendas: baseVendas, pl, parc: Math.min(6, parc) })[5].salPl - projetar({ vendas: baseVendas, pl })[5].salPl;
   sol.vendaMes1 = ticket/parc*(1-pctSaida);
   // Mês em que a reserva é formada (com pró-labore, cenário real)
@@ -18397,12 +18399,12 @@ function rfWaLink(tel, nome, itens){
 function rfSolucoesHtml(C){
   const S = C.sol; const br = v=>formatBRL(v); const n1 = v=>String(Math.round(v*10)/10).replace('.',',');
   const cards = [];
-  const ok = S.minAtual >= 0;
+  const ok = S.minAtual >= S.alvo; const alvoTxt = S.alvo>0 ? `abaixo da meta de caixa de ${br(S.alvo)}` : 'no vermelho'; const limTxt = S.alvo>0 ? `abaixo de ${br(S.alvo)}` : 'negativo';
   const head = ok
-    ? `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa não fica negativo nos próximos 6 meses. O menor saldo previsto é ${br(S.minAtual)}. As soluções abaixo servem para formar a reserva mais rápido.`
+    ? `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa não fica ${limTxt} nos próximos 6 meses. O menor saldo previsto é ${br(S.minAtual)}. As soluções abaixo servem para formar a reserva mais rápido.`
     : S.temporario
-      ? `O caixa fica ${br(S.deficit)} no vermelho em ${rfMesNome(S.mesAperto)}, e depois se recupera com as parcelas que já estão para entrar. É um aperto de curto prazo: o problema é o momento, não o tamanho do negócio.`
-      : `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa chega a ${br(S.minAtual)} em ${rfMesNome(S.mesAperto)} e não se recupera nos 6 meses. É preciso mudar algo estrutural: vendas, pró-labore ou custos.`;
+      ? `O caixa fica ${br(S.deficit)} ${alvoTxt} em ${rfMesNome(S.mesAperto)}, e depois se recupera com as parcelas que já estão para entrar. É um aperto de curto prazo: o problema é o momento, não o tamanho do negócio.`
+      : `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa chega a ${br(S.minAtual)} em ${rfMesNome(S.mesAperto)}${S.alvo>0?` (meta: ${br(S.alvo)})`:''} e não volta para a meta nos 6 meses. É preciso mudar algo estrutural: vendas, pró-labore ou custos.`;
   // 1. Cobrança
   if(S.cobranca.length){
     const cobre = S.deficit>0 ? Math.min(100, Math.round(C.atrasoTotal/S.deficit*100)) : null;
@@ -18412,9 +18414,10 @@ function rfSolucoesHtml(C){
   let nro = S.cobranca.length ? 2 : 1;
   // 2. Pró-labore
   if(S.temporario){
-    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Adiar parte do pró-labore</b><span class="rf-sol-num">${br(S.deficit)}</span></div><p>Em ${rfMesNome(S.mesAperto)}, retirem ${br(Math.max(0, C.pl - S.deficit))} em vez de ${br(C.pl)} e deixem ${br(S.deficit)} para depois.${S.mesVolta ? ` Em ${rfMesNome(S.mesVolta)} o caixa já comporta devolver essa diferença sem ficar negativo.` : ''} O que entrar da cobrança diminui esse valor.</p></div>`);
+    const ad = Math.min(S.deficit, S.plAperto), resto = S.deficit - ad;
+    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Adiar parte do pró-labore</b><span class="rf-sol-num">${br(ad)}</span></div><p>${ad>0 ? (ad>=S.plAperto ? `Em ${rfMesNome(S.mesAperto)}, segurem todo o pró-labore que ainda falta retirar (${br(ad)}) para depois.` : `Em ${rfMesNome(S.mesAperto)}, retirem ${br(S.plAperto - ad)} em vez de ${br(S.plAperto)} e deixem ${br(ad)} para depois.`) + `${S.mesVolta ? ` Em ${rfMesNome(S.mesVolta)} o caixa já comporta devolver essa diferença sem ficar ${limTxt}.` : ''}` : `O pró-labore de ${rfMesNome(S.mesAperto)} já foi retirado.`}${resto>0 ? ` Mesmo adiando, ainda faltam ${br(resto)}: combine com a cobrança e com uma entrada maior nas vendas do mês.` : ' O que entrar da cobrança diminui esse valor.'}</p></div>`);
   } else if(!ok){
-    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Ajustar o pró-labore</b><span class="rf-sol-num">${br(S.plSust)}/mês</span></div><p>No ritmo atual de vendas, o pró-labore que cabe sem o caixa ficar negativo é de ${br(S.plSust)} por mês, ${br(C.pl - S.plSust)} abaixo da meta. Uma saída é retirar esse valor fixo e completar o restante só nos meses em que a meta de vendas for batida.</p></div>`);
+    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Ajustar o pró-labore</b><span class="rf-sol-num">${br(S.plSust)}/mês</span></div><p>No ritmo atual de vendas, o pró-labore que cabe sem o caixa ficar ${limTxt} é de ${br(S.plSust)} por mês, ${br(C.pl - S.plSust)} abaixo da meta. Uma saída é retirar esse valor fixo e completar o restante só nos meses em que a meta de vendas for batida.</p></div>`);
   }
   // 3. Entrada / parcelamento
   if(C.parc>6 && S.ganho6x>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Encurtar o parcelamento</b><span class="rf-sol-num">+${br(S.ganho6x)}</span></div><p>Se as vendas novas forem em até 6x em vez de ${C.parc}x, entram ${br(S.ganho6x)} a mais no caixa nos próximos 6 meses (o total vendido é o mesmo, só entra mais cedo). Duas formas: dar uma condição melhor no Pix ou em menos parcelas no cartão, ou pedir uma entrada maior na assinatura.</p></div>`);
@@ -18424,8 +18427,8 @@ function rfSolucoesHtml(C){
     const sess = v!==null && C.taxa>0 ? Math.ceil(v / C.taxa) : null;
     let txt;
     if(v===null) txt = `Nem com 80 vendas por mês o caixa se ajusta nos 6 meses: o ajuste precisa vir de pró-labore ou custos.`;
-    else if(v<=S.baseVendas) txt = `O ritmo atual (${n1(S.baseVendas)}) já basta${S.vendasNec===null ? ` para o caixa ficar positivo a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}. Bater a meta de ${C.meta} acelera a reserva.`;
-    else txt = `${S.vendasNec===null ? `As vendas novas só começam a entrar no mês seguinte, então não resolvem ${rfMesNome(S.mesAperto)}. ` : ''}Para o caixa com pró-labore ficar positivo${S.vendasNec===null ? ` a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}, são ${v} vendas por mês, ${n1(v - S.baseVendas)} a mais que a média atual.`;
+    else if(v<=S.baseVendas) txt = `O ritmo atual (${n1(S.baseVendas)}) já basta${S.vendasNec===null ? ` para o caixa ficar ${S.alvo>0?`acima de ${br(S.alvo)}`:'positivo'} a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}. Bater a meta de ${C.meta} acelera a reserva.`;
+    else txt = `${S.vendasNec===null ? `As vendas novas só começam a entrar no mês seguinte, então não resolvem ${rfMesNome(S.mesAperto)}. ` : ''}Para o caixa com pró-labore ficar ${S.alvo>0?`acima de ${br(S.alvo)}`:'positivo'}${S.vendasNec===null ? ` a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}, são ${v} vendas por mês, ${n1(v - S.baseVendas)} a mais que a média atual.`;
     cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Vendas</b><span class="rf-sol-num">${v!==null ? v+' vendas/mês' : '—'}</span></div><p>${txt}${sess ? ` Com a taxa de fechamento de ${Math.round(C.taxa*100)}%, ${v} vendas pedem cerca de ${sess} sessões 1:1 realizadas por mês (${Math.ceil(sess/4.3)} por semana).` : ''} Cada venda nova soma ${br(S.vendaMes1)} por mês ao caixa, já sem impostos e comissão.</p></div>`);
   }
   // 5. Custos (só quando o problema é estrutural)
@@ -18434,7 +18437,7 @@ function rfSolucoesHtml(C){
   }
   // 6. Reserva
   cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Formar a reserva</b><span class="rf-sol-num">${S.mesReserva ? rfMesNome(S.mesReserva) : 'fora dos 6 meses'}</span></div><p>${S.mesReserva ? `No ritmo atual e pagando o pró-labore, a reserva de ${rfN(C.P.reserva_meses)} meses (${br(C.reservaAlvo)}) se forma em ${rfMesNome(S.mesReserva)}.` : `No ritmo atual e pagando o pró-labore, a reserva de ${br(C.reservaAlvo)} não se forma nos próximos 6 meses.`} Uma regra simples ajuda: separar 10% de toda entrada numa conta só para a reserva até chegar lá, e só então aumentar retiradas.</p></div>`);
-  return `<h2 class="section-title com-titulo">${icon('compass')} Soluções</h2><p class="rf-sol-intro ${ok?'rf-pos':'rf-neg'}">${escapeHtml(head)}</p><div class="rf-sols">${cards.join('')}</div><small class="rf-nota">As contas usam as Premissas e a média real de vendas dos últimos 3 meses fechados (${n1(S.baseVendas)}/mês). Cada número mostra quanto aquela saída precisa mexer, sozinha.</small>`;
+  return `<h2 class="section-title com-titulo">${icon('compass')} Soluções</h2><p class="rf-sol-intro ${ok?'rf-pos':'rf-neg'}">${escapeHtml(head)}</p><div class="rf-sols">${cards.join('')}</div><small class="rf-nota">As contas usam as Premissas e a média real de vendas dos últimos 3 meses fechados (${n1(S.baseVendas)}/mês). Cada número mostra quanto aquela saída precisa mexer, sozinha, para o caixa com pró-labore não ficar ${limTxt} em nenhum mês.</small>`;
 }
 function renderRadarFin(){
   const el = document.getElementById('view-radarfin'); if(!el) return;
@@ -18452,7 +18455,7 @@ function renderRadarFin(){
   let resto = C.recMes; const cobre = (v)=>{ const c = Math.max(0, Math.min(v, resto)); resto -= c; return c; };
   const cCusto = cobre(C.custo), cImp = cobre(C.impMes), cPl = cobre(C.pl), cGiro = cobre(C.giro);
   const P = C.P;
-  const campos = [['meta_vendas','Meta de vendas por mês',''],['ticket','Ticket médio (R$)',''],['parcelas_medias','Parcelas médias por venda',''],['imposto_pct','Impostos (% da receita)',''],['comissao_pct','Comissão comercial (%)',''],['custo_fixo','Custo fixo mensal (R$)',''],['prolabore_meta','Meta de pró-labore dos 4 sócios (R$)',''],['capital_giro','Meta de capital de giro (R$/mês)',''],['reserva_meses','Reserva alvo (meses de custo fixo)',''],['saldo_base','Saldo de caixa na data-base (R$)',''],['saldo_base_data','Data-base do saldo','date']];
+  const campos = [['meta_vendas','Meta de vendas por mês',''],['ticket','Ticket médio (R$)',''],['parcelas_medias','Parcelas médias por venda',''],['imposto_pct','Impostos (% da receita)',''],['comissao_pct','Comissão comercial (%)',''],['custo_fixo','Custo fixo mensal (R$)',''],['prolabore_meta','Meta de pró-labore dos 4 sócios (R$)',''],['capital_giro','Meta de capital de giro (R$/mês)',''],['reserva_meses','Reserva alvo (meses de custo fixo)',''],['caixa_meta','Caixa desejado no fim de cada mês (R$)',''],['saldo_base','Saldo de caixa na data-base (R$)',''],['saldo_base_data','Data-base do saldo','date']];
   el.innerHTML = `
     <p class="section-sub" style="margin-top:0">Atualizado com o Financeiro e o Registro de Sessões 1:1. Caixa estimado a partir do saldo de ${formatBRL(rfN(P.saldo_base))} em ${tzDataCurta(P.saldo_base_data)} (Inter + Infinity), somando o que entrou e saiu depois. <button type="button" class="link-btn" id="rf-atualizar">Atualizar</button></p>
     <div class="kpi-row rf-kpis">
@@ -18483,8 +18486,8 @@ function renderRadarFin(){
     <div class="rf-cen"><span>Vendas novas por mês:</span><div class="role-toggle"><button type="button" data-rf-cen="meta" class="${C.cenario==='meta'?'active':''}">Se bater a meta (${C.meta})</button><button type="button" data-rf-cen="real" class="${C.cenario==='real'?'active':''}">Se continuar como está (${String(C.mediaReal).replace('.',',')})</button></div></div>
     <small class="rf-nota" style="margin:0 0 14px">${C.cenario==='real' ? `Usando a média real de vendas de Mentoria Essência dos últimos 3 meses fechados (${C.ultMeses.map((v,i)=>rfMesNome(rfMesMais(C.mk, i-3))+': '+v).join(', ')}).` : `Usando a meta de ${C.meta} vendas por mês das Premissas.`}</small>
     <div class="table-wrap"><table class="check-table rf-tab">
-      <thead><tr><th>Mês</th><th>A receber agendado</th><th>Vendas novas (meta)</th><th>Saídas previstas</th><th>Resultado</th><th>Caixa projetado</th><th>Caixa com pró-labore</th></tr></thead>
-      <tbody>${C.proj.map(x=>`<tr><td><b>${rfMesNome(x.k)}</b>${x.k===C.mk?' <small>(resto do mês)</small>':''}</td><td>${formatBRL(x.agend)}</td><td>${x.novas? formatBRL(x.novas) : '—'}</td><td>${formatBRL(x.sai)}</td><td class="${x.res<0?'rf-neg':'rf-pos'}">${formatBRL(x.res)}</td><td class="${x.sal<0?'rf-neg':x.sal<C.reservaAlvo?'rf-alerta':'rf-pos'}"><b>${formatBRL(x.sal)}</b></td><td class="${x.salPl<0?'rf-neg':'rf-pos'}">${formatBRL(x.salPl)}</td></tr>`).join('')}</tbody>
+      <thead><tr><th>Mês</th><th>A receber agendado</th><th>Vendas novas (meta)</th><th>Saídas previstas</th><th>Resultado</th><th>Caixa projetado</th><th>Caixa com pró-labore${C.sol.alvo>0?`<br><small>meta ${formatBRL(C.sol.alvo)}</small>`:''}</th></tr></thead>
+      <tbody>${C.proj.map(x=>`<tr><td><b>${rfMesNome(x.k)}</b>${x.k===C.mk?' <small>(resto do mês)</small>':''}</td><td>${formatBRL(x.agend)}</td><td>${x.novas? formatBRL(x.novas) : '—'}</td><td>${formatBRL(x.sai)}</td><td class="${x.res<0?'rf-neg':'rf-pos'}">${formatBRL(x.res)}</td><td class="${x.sal<0?'rf-neg':x.sal<C.reservaAlvo?'rf-alerta':'rf-pos'}"><b>${formatBRL(x.sal)}</b></td><td class="${x.salPl<0?'rf-neg':x.salPl<C.sol.alvo?'rf-alerta':'rf-pos'}">${formatBRL(x.salPl)}${C.sol.alvo>0 ? `<br><small>${x.salPl>=C.sol.alvo ? '+'+formatBRL(x.salPl-C.sol.alvo)+' da meta' : 'faltam '+formatBRL(C.sol.alvo-x.salPl)}</small>` : ''}</td></tr>`).join('')}</tbody>
     </table></div>
     <small class="rf-nota">Saídas = o maior entre o que está lançado a pagar e o custo fixo (${formatBRL(C.custo)}), mais ${rfN(P.imposto_pct)}% de impostos e ${rfN(P.comissao_pct)}% de comissão sobre o que entra. Vendas novas = ${C.meta} vendas/mês de ${formatBRL(rfN(P.ticket))} recebidas em ${rfN(P.parcelas_medias)} parcelas a partir do mês seguinte. Caixa com pró-labore desconta a meta de ${formatBRL(C.pl)}/mês. Em amarelo: abaixo da reserva alvo.</small>
 
