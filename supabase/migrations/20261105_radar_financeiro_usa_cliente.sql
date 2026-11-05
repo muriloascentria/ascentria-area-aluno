@@ -1,0 +1,3 @@
+-- Radar Financeiro passa a reconhecer a aluna pelo campo Cliente (registro_clientes)
+-- quando a parcela nao tem student_id. Nome = profiles.name ou registro_clientes.nome.
+-- Funcao aplicada via apply_migration em 2026-11-05 (ver radar_financeiro() no banco).
