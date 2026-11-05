@@ -687,6 +687,29 @@
   .rf-fill.meio{background:var(--individual);} .rf-fill.ok{background:var(--success);}
   .rf-nota{display:block;margin:6px 0 18px;font-size:11.5px;color:var(--text-mute);line-height:1.5;}
   .rf-tab td,.rf-tab th{white-space:nowrap;}
+  .rf-sim{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:4px 0 16px;}
+  .rf-modo{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:14px;}
+  .rf-modo .role-toggle{display:inline-flex;}
+  .rf-modo .role-toggle button{font-size:13px;padding:8px 16px;}
+  .rf-modo small{font-size:12px;color:var(--text-mute);flex:1;min-width:220px;}
+  .rf-ctls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px 18px;}
+  .rf-ctl{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:10px;border:1px solid transparent;}
+  .rf-ctl.mexido{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 7%, transparent);}
+  .rf-ctl-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--text);}
+  .rf-ctl-num{width:110px;text-align:right;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;font-weight:700;}
+  .rf-ctl-range{width:100%;accent-color:var(--accent);}
+  .rf-ctl small{font-size:11px;color:var(--text-mute);}
+  .rf-fixos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);}
+  .rf-fixo{display:flex;flex-direction:column;gap:2px;}
+  .rf-fixo span{font-size:11.5px;color:var(--text-mute);}
+  .rf-fixo b{font-size:15px;}
+  .rf-fixo small{font-size:11px;color:var(--text-mute);}
+  .rf-ctl-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;}
+  .rf-ctl-acoes:empty{display:none;}
+  .rf-sim-aviso{font-size:11.5px;color:var(--text-mute);}
+  .rf-comp th.rf-sel{color:var(--accent);}
+  #rf-comp{margin-bottom:22px;}
+  .rf-comp td:first-child{color:var(--text-dim);}
   .rf-sol-intro{font-size:13.5px;font-weight:600;margin:0 0 10px;line-height:1.5;}
   .rf-sols{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
   .rf-sol{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
@@ -18271,7 +18294,7 @@ function dreIndicadoresHtml(d){
    reserva), editáveis aqui. O banco entrega tudo pronto em radar_financeiro(); aqui só se calcula a
    projeção e as recomendações. Transferências entre contas, empréstimos e "Recebido Sócios" não contam
    como faturamento. */
-const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoEm:0, cenario:'meta' };
+const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoEm:0, modo:'real', sim:{ real:{}, ideal:{} } };
 /* Quem abre: os 4 sócios e a Mariane (assistente administrativa). Premissas: só os sócios editam. */
 const RF_EXTRA_UIDS = ['b01a4425-1ba8-4703-9c40-3301a0de7249'];
 function rfPode(){ return reuSocio() || (currentUserRole==='staff' && !!currentUser && RF_EXTRA_UIDS.includes(idEfetivo())); }
@@ -18285,8 +18308,34 @@ async function rfCarregar(){
 const rfMesNome = k=>{ const [y,m] = k.split('-').map(Number); return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][m-1]+'/'+String(y).slice(2); };
 const rfMesMais = (k,n)=>{ const [y,m] = k.split('-').map(Number); const d = new Date(y, m-1+n, 1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
 const rfN = v=>Number(v)||0;
-function rfCalcular(D){
+/* Dados reais dos últimos 3 meses fechados (base do modo "Momento atual") */
+function rfBaseReal(D){
+  const P = D.premissas || {}; const mk = D.hoje.slice(0,7);
+  const mes = k=> (D.meses||[]).find(x=>x.mes===k) || {};
+  const vend = k=> (D.vendas||[]).find(x=>x.mes===k) || {};
+  const ks = [-3,-2,-1].map(i=>rfMesMais(mk, i));
+  const med = f=> ks.reduce((a,k)=>a+f(k),0)/3;
+  const R = D.real || {};
+  return {
+    meses: ks,
+    vendas: Math.round(med(k=>rfN(vend(k).vendidos))*10)/10,
+    ticket: Math.round(rfN(R.ticket)) || rfN(P.ticket),
+    parcelas: rfN(R.parcelas) || rfN(P.parcelas_medias) || 12,
+    contratos: rfN(R.contratos),
+    custo: Math.round(med(k=>rfN(mes(k).pag_pago))),
+    pl: Math.round(med(k=>rfN(mes(k).retiradas))),
+    inad: rfN(R.inad_pct)
+  };
+}
+/* Premissas efetivas do modo escolhido, com o que foi mexido na simulação */
+function rfEfetivas(D, modo){
   const P = D.premissas || {};
+  if(modo==='ideal') return Object.assign({ inad_pct:0 }, P, RF.sim.ideal);
+  const B = rfBaseReal(D);
+  return Object.assign({}, P, { meta_vendas:B.vendas, ticket:B.ticket, parcelas_medias:B.parcelas, custo_fixo:B.custo, imposto_pct:0, comissao_pct:0, prolabore_meta:B.pl, inad_pct:B.inad }, RF.sim.real);
+}
+function rfCalcular(D, P, modo){
+  P = P || D.premissas || {};
   const hoje = D.hoje; const mk = hoje.slice(0,7);
   const mes = k=> (D.meses||[]).find(x=>x.mes===k) || {};
   const vend = k=> (D.vendas||[]).find(x=>x.mes===k) || {};
@@ -18298,7 +18347,7 @@ function rfCalcular(D){
   const [ano, mm] = mk.split('-').map(Number);
   const ultimoDia = new Date(ano, mm, 0).getDate(); const diaHoje = Number(hoje.slice(8,10));
   const diasRest = ultimoDia - diaHoje;
-  const vendidos = rfN(vAtual.vendidos), faltamVendas = Math.max(0, meta - vendidos);
+  const vendidos = rfN(vAtual.vendidos), faltamVendas = Math.max(0, Math.ceil(meta) - vendidos);
   const taxa = rfN(D.taxa_90d);
   const sessoesNec = taxa>0 ? Math.ceil(faltamVendas / taxa) : null;
   const atrasoTotal = (D.atrasados||[]).reduce((a,x)=>a+rfN(x.valor),0);
@@ -18306,8 +18355,8 @@ function rfCalcular(D){
   // Média real de vendas: últimos 3 meses fechados
   const ultMeses = [-3,-2,-1].map(i=>rfN(vend(rfMesMais(mk, i)).vendidos));
   const mediaReal = Math.round(ultMeses.reduce((a,b)=>a+b,0)/3*10)/10;
-  const cenario = RF.cenario==='real' ? 'real' : 'meta';
-  const vendasProj = cenario==='real' ? mediaReal : meta;
+  const vendasProj = meta;
+  const fatorRec = 1 - Math.min(100, Math.max(0, rfN(P.inad_pct)))/100;
   // Projeção: mês atual (o que ainda falta entrar e sair) + 5 meses.
   const projetar = (o)=>{
     const out = []; let sal = saldo, salPl = saldo;
@@ -18316,7 +18365,7 @@ function rfCalcular(D){
       const k = rfMesMais(mk, i), m = mes(k);
       const agend = i===0 ? Math.max(0, rfN(m.rec_prev) - rfN(m.rec_pago)) : rfN(m.rec_prev);
       const novas = i===0 ? 0 : o.vendas * (ticket/pc) * Math.min(i, pc);
-      const entra = agend + novas;
+      const entra = (agend + novas) * fatorRec;
       const custoBase = Math.max(rfN(m.pag_prev), custo) - (o.corte||0);
       const custosMes = i===0 ? Math.max(0, custoBase - rfN(m.pag_pago)) : custoBase;
       const sai = custosMes + entra*pctSaida;
@@ -18331,7 +18380,7 @@ function rfCalcular(D){
   const proj = projetar({ vendas: vendasProj, pl });
   const minPl = o=> Math.min(...projetar(o).map(x=>x.salPl));
   // Soluções: quanto cada alavanca precisa mexer para o caixa com pró-labore não ficar negativo em 6 meses
-  const baseVendas = Math.max(0, mediaReal);
+  const baseVendas = Math.max(0, vendasProj);
   const alvo = Math.max(0, rfN(P.caixa_meta));
   const sol = { baseVendas, alvo };
   sol.minAtual = minPl({ vendas: baseVendas, pl });
@@ -18386,7 +18435,7 @@ function rfCalcular(D){
   if(rfN(D.sem_aluno)>0) rec.push({ nivel:1, txt:`${rfN(D.sem_aluno)} parcelas de Mentoria a receber estão sem aluna vinculada no Financeiro (só ${rfN(D.com_aluno)} estão). Vincule a aluna nessas parcelas para o risco por cliente ficar completo.`, acao:'Abrir Financeiro', view:'financeiro' });
   if(medRet>0) rec.push({ nivel:0, txt:`Retiradas dos sócios: média de ${formatBRL(medRet)}/mês nos últimos 4 meses, contra a meta de pró-labore de ${formatBRL(pl)}.`, acao:null, view:null });
   rec.sort((a,b)=>b.nivel-a.nivel);
-  return { P, mk, sol, ticket, parc, meta, mediaReal, ultMeses, cenario, vendasProj, vendidos, faltamVendas, taxa, sessoesNec, diasRest, atrasoTotal, saldo, reservaAlvo, proj, recMes, recPrevMes, necessidade, impMes, custo, pl, giro, hist, risco, rec };
+  return { P, modo, fatorRec, mk, sol, ticket, parc, meta, mediaReal, ultMeses, vendasProj, vendidos, faltamVendas, taxa, sessoesNec, diasRest, atrasoTotal, saldo, reservaAlvo, proj, recMes, recPrevMes, necessidade, impMes, custo, pl, giro, hist, risco, rec };
 }
 function rfWaLink(tel, nome, itens){
   let d = String(tel||'').replace(/\D/g,''); if(!d) return null;
@@ -18401,10 +18450,10 @@ function rfSolucoesHtml(C){
   const cards = [];
   const ok = S.minAtual >= S.alvo; const alvoTxt = S.alvo>0 ? `abaixo da meta de caixa de ${br(S.alvo)}` : 'no vermelho'; const limTxt = S.alvo>0 ? `abaixo de ${br(S.alvo)}` : 'negativo';
   const head = ok
-    ? `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa não fica ${limTxt} nos próximos 6 meses. O menor saldo previsto é ${br(S.minAtual)}. As soluções abaixo servem para formar a reserva mais rápido.`
+    ? `Com ${n1(S.baseVendas)} vendas/mês e pró-labore de ${br(C.pl)}, o caixa não fica ${limTxt} nos próximos 6 meses. O menor saldo previsto é ${br(S.minAtual)}. As soluções abaixo servem para formar a reserva mais rápido.`
     : S.temporario
       ? `O caixa fica ${br(S.deficit)} ${alvoTxt} em ${rfMesNome(S.mesAperto)}, e depois se recupera com as parcelas que já estão para entrar. É um aperto de curto prazo: o problema é o momento, não o tamanho do negócio.`
-      : `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa chega a ${br(S.minAtual)} em ${rfMesNome(S.mesAperto)}${S.alvo>0?` (meta: ${br(S.alvo)})`:''} e não volta para a meta nos 6 meses. É preciso mudar algo estrutural: vendas, pró-labore ou custos.`;
+      : `Com ${n1(S.baseVendas)} vendas/mês e pró-labore de ${br(C.pl)}, o caixa chega a ${br(S.minAtual)} em ${rfMesNome(S.mesAperto)}${S.alvo>0?` (meta: ${br(S.alvo)})`:''} e não volta para a meta nos 6 meses. É preciso mudar algo estrutural: vendas, pró-labore ou custos.`;
   // 1. Cobrança
   if(S.cobranca.length){
     const cobre = S.deficit>0 ? Math.min(100, Math.round(C.atrasoTotal/S.deficit*100)) : null;
@@ -18417,7 +18466,7 @@ function rfSolucoesHtml(C){
     const ad = Math.min(S.deficit, S.plAperto), resto = S.deficit - ad;
     cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Adiar parte do pró-labore</b><span class="rf-sol-num">${br(ad)}</span></div><p>${ad>0 ? (ad>=S.plAperto ? `Em ${rfMesNome(S.mesAperto)}, segurem todo o pró-labore que ainda falta retirar (${br(ad)}) para depois.` : `Em ${rfMesNome(S.mesAperto)}, retirem ${br(S.plAperto - ad)} em vez de ${br(S.plAperto)} e deixem ${br(ad)} para depois.`) + `${S.mesVolta ? ` Em ${rfMesNome(S.mesVolta)} o caixa já comporta devolver essa diferença sem ficar ${limTxt}.` : ''}` : `O pró-labore de ${rfMesNome(S.mesAperto)} já foi retirado.`}${resto>0 ? ` Mesmo adiando, ainda faltam ${br(resto)}: combine com a cobrança e com uma entrada maior nas vendas do mês.` : ' O que entrar da cobrança diminui esse valor.'}</p></div>`);
   } else if(!ok){
-    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Ajustar o pró-labore</b><span class="rf-sol-num">${br(S.plSust)}/mês</span></div><p>No ritmo atual de vendas, o pró-labore que cabe sem o caixa ficar ${limTxt} é de ${br(S.plSust)} por mês, ${br(C.pl - S.plSust)} abaixo da meta. Uma saída é retirar esse valor fixo e completar o restante só nos meses em que a meta de vendas for batida.</p></div>`);
+    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Ajustar o pró-labore</b><span class="rf-sol-num">${br(S.plSust)}/mês</span></div><p>Com esse ritmo de vendas, o pró-labore que cabe sem o caixa ficar ${limTxt} é de ${br(S.plSust)} por mês, ${br(C.pl - S.plSust)} abaixo da meta. Uma saída é retirar esse valor fixo e completar o restante só nos meses em que a meta de vendas for batida.</p></div>`);
   }
   // 3. Entrada / parcelamento
   if(C.parc>6 && S.ganho6x>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Encurtar o parcelamento</b><span class="rf-sol-num">+${br(S.ganho6x)}</span></div><p>Se as vendas novas forem em até 6x em vez de ${C.parc}x, entram ${br(S.ganho6x)} a mais no caixa nos próximos 6 meses (o total vendido é o mesmo, só entra mais cedo). Duas formas: dar uma condição melhor no Pix ou em menos parcelas no cartão, ou pedir uma entrada maior na assinatura.</p></div>`);
@@ -18427,17 +18476,59 @@ function rfSolucoesHtml(C){
     const sess = v!==null && C.taxa>0 ? Math.ceil(v / C.taxa) : null;
     let txt;
     if(v===null) txt = `Nem com 80 vendas por mês o caixa se ajusta nos 6 meses: o ajuste precisa vir de pró-labore ou custos.`;
-    else if(v<=S.baseVendas) txt = `O ritmo atual (${n1(S.baseVendas)}) já basta${S.vendasNec===null ? ` para o caixa ficar ${S.alvo>0?`acima de ${br(S.alvo)}`:'positivo'} a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}. Bater a meta de ${C.meta} acelera a reserva.`;
-    else txt = `${S.vendasNec===null ? `As vendas novas só começam a entrar no mês seguinte, então não resolvem ${rfMesNome(S.mesAperto)}. ` : ''}Para o caixa com pró-labore ficar ${S.alvo>0?`acima de ${br(S.alvo)}`:'positivo'}${S.vendasNec===null ? ` a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}, são ${v} vendas por mês, ${n1(v - S.baseVendas)} a mais que a média atual.`;
+    else if(v<=S.baseVendas) txt = `O ritmo do cenário (${n1(S.baseVendas)}) já basta${S.vendasNec===null ? ` para o caixa ficar ${S.alvo>0?`acima de ${br(S.alvo)}`:'positivo'} a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}. Bater a meta de ${C.meta} acelera a reserva.`;
+    else txt = `${S.vendasNec===null ? `As vendas novas só começam a entrar no mês seguinte, então não resolvem ${rfMesNome(S.mesAperto)}. ` : ''}Para o caixa com pró-labore ficar ${S.alvo>0?`acima de ${br(S.alvo)}`:'positivo'}${S.vendasNec===null ? ` a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}, são ${v} vendas por mês, ${n1(v - S.baseVendas)} a mais que as ${n1(S.baseVendas)} do cenário.`;
     cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Vendas</b><span class="rf-sol-num">${v!==null ? v+' vendas/mês' : '—'}</span></div><p>${txt}${sess ? ` Com a taxa de fechamento de ${Math.round(C.taxa*100)}%, ${v} vendas pedem cerca de ${sess} sessões 1:1 realizadas por mês (${Math.ceil(sess/4.3)} por semana).` : ''} Cada venda nova soma ${br(S.vendaMes1)} por mês ao caixa, já sem impostos e comissão.</p></div>`);
   }
   // 5. Custos (só quando o problema é estrutural)
   if(!ok && !S.temporario){
-    if(S.corteNec!==null && S.corteNec>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Cortar custos fixos</b><span class="rf-sol-num">−${br(S.corteNec)}/mês</span></div><p>Mantendo vendas e pró-labore como estão, seria preciso reduzir ${br(S.corteNec)} por mês dos custos (${Math.round(S.corteNec/C.custo*100)}% do custo fixo). Comece revisando assinaturas, ferramentas e serviços recorrentes no Financeiro.</p></div>`);
+    if(S.corteNec!==null && S.corteNec>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Cortar custos fixos</b><span class="rf-sol-num">−${br(S.corteNec)}/mês</span></div><p>Mantendo vendas e pró-labore do cenário, seria preciso reduzir ${br(S.corteNec)} por mês dos custos (${Math.round(S.corteNec/C.custo*100)}% do custo fixo). Comece revisando assinaturas, ferramentas e serviços recorrentes no Financeiro.</p></div>`);
   }
   // 6. Reserva
-  cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Formar a reserva</b><span class="rf-sol-num">${S.mesReserva ? rfMesNome(S.mesReserva) : 'fora dos 6 meses'}</span></div><p>${S.mesReserva ? `No ritmo atual e pagando o pró-labore, a reserva de ${rfN(C.P.reserva_meses)} meses (${br(C.reservaAlvo)}) se forma em ${rfMesNome(S.mesReserva)}.` : `No ritmo atual e pagando o pró-labore, a reserva de ${br(C.reservaAlvo)} não se forma nos próximos 6 meses.`} Uma regra simples ajuda: separar 10% de toda entrada numa conta só para a reserva até chegar lá, e só então aumentar retiradas.</p></div>`);
-  return `<h2 class="section-title com-titulo">${icon('compass')} Soluções</h2><p class="rf-sol-intro ${ok?'rf-pos':'rf-neg'}">${escapeHtml(head)}</p><div class="rf-sols">${cards.join('')}</div><small class="rf-nota">As contas usam as Premissas e a média real de vendas dos últimos 3 meses fechados (${n1(S.baseVendas)}/mês). Cada número mostra quanto aquela saída precisa mexer, sozinha, para o caixa com pró-labore não ficar ${limTxt} em nenhum mês.</small>`;
+  cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Formar a reserva</b><span class="rf-sol-num">${S.mesReserva ? rfMesNome(S.mesReserva) : 'fora dos 6 meses'}</span></div><p>${S.mesReserva ? `Nesse cenário, pagando o pró-labore, a reserva de ${rfN(C.P.reserva_meses)} meses (${br(C.reservaAlvo)}) se forma em ${rfMesNome(S.mesReserva)}.` : `Nesse cenário, pagando o pró-labore, a reserva de ${br(C.reservaAlvo)} não se forma nos próximos 6 meses.`} Uma regra simples ajuda: separar 10% de toda entrada numa conta só para a reserva até chegar lá, e só então aumentar retiradas.</p></div>`);
+  return `<h2 class="section-title com-titulo">${icon('compass')} Soluções</h2><p class="rf-sol-intro ${ok?'rf-pos':'rf-neg'}">${escapeHtml(head)}</p><div class="rf-sols">${cards.join('')}</div><small class="rf-nota">As contas usam os números do cenário escolhido no topo (${C.modo==='ideal'?'Cenário ideal':'Momento atual'}). Cada número mostra quanto aquela saída precisa mexer, sozinha, para o caixa com pró-labore não ficar ${limTxt} em nenhum mês.</small>`;
+}
+const RF_CAMPOS = {
+  meta_vendas:     { rot:'Vendas por mês',            min:0,   max:40,     step:1,    fmt:'n' },
+  ticket:          { rot:'Ticket médio (R$)',          min:2000,max:25000,  step:500,  fmt:'r' },
+  parcelas_medias: { rot:'Parcelas por venda',         min:1,   max:24,     step:1,    fmt:'n' },
+  custo_fixo:      { rot:'Custos do mês (R$)',         min:0,   max:120000, step:500,  fmt:'r' },
+  imposto_pct:     { rot:'Impostos (%)',               min:0,   max:30,     step:0.5,  fmt:'p' },
+  comissao_pct:    { rot:'Comissão (%)',               min:0,   max:30,     step:0.5,  fmt:'p' },
+  inad_pct:        { rot:'Inadimplência (%)',          min:0,   max:30,     step:0.5,  fmt:'p' },
+  prolabore_meta:  { rot:'Pró-labore total dos 4 (R$/mês)', min:0, max:160000, step:1000, fmt:'r' },
+  capital_giro:    { rot:'Capital de giro (R$/mês)',   min:0,   max:40000,  step:500,  fmt:'r' },
+  reserva_meses:   { rot:'Reserva (meses de custo)',   min:0,   max:12,     step:1,    fmt:'n' },
+  caixa_meta:      { rot:'Caixa desejado no fim do mês (R$)', min:0, max:300000, step:1000, fmt:'r' }
+};
+const RF_EDIT_REAL = ['meta_vendas','prolabore_meta','caixa_meta'];
+const RF_EDIT_IDEAL = ['meta_vendas','ticket','parcelas_medias','custo_fixo','imposto_pct','comissao_pct','inad_pct','prolabore_meta','capital_giro','reserva_meses','caixa_meta'];
+function rfFmtCampo(k, v){ const f = (RF_CAMPOS[k]||{}).fmt; const n = rfN(v); if(f==='r') return formatBRL(n); if(f==='p') return String(n).replace('.',',')+'%'; return String(Math.round(n*10)/10).replace('.',','); }
+function rfCtrlHtml(){
+  const D = RF.dados, modo = RF.modo, P = rfEfetivas(D, modo), B = rfBaseReal(D), O = D.premissas || {};
+  const base = k=> modo==='real' ? ({ meta_vendas:B.vendas, prolabore_meta:B.pl, caixa_meta:O.caixa_meta })[k] : O[k];
+  const mexido = k=> RF.sim[modo][k]!==undefined && rfN(RF.sim[modo][k])!==rfN(base(k));
+  const campo = k=>{ const c = RF_CAMPOS[k]; const v = rfN(P[k]); const mx = Math.max(c.max, Math.ceil(v)); return `<div class="rf-ctl ${mexido(k)?'mexido':''}"><div class="rf-ctl-hd"><span>${c.rot}</span><input type="number" class="rf-ctl-num" step="any" min="0" data-rf-num="${k}" value="${Math.round(v*100)/100}"></div><input type="range" class="rf-ctl-range" min="${c.min}" max="${mx}" step="${c.step}" data-rf-range="${k}" value="${v}"><small>${modo==='real' ? (k==='meta_vendas' ? `real: ${rfFmtCampo(k,B.vendas)} (média de ${B.meses.map(rfMesNome).join(', ')})` : k==='prolabore_meta' ? `real: ${formatBRL(B.pl)} (média das retiradas)` : `oficial: ${O.caixa_meta ? formatBRL(rfN(O.caixa_meta)) : 'não definido'}`) : `oficial: ${O[k]==null||O[k]==='' ? '—' : rfFmtCampo(k, O[k])}`}</small></div>`; };
+  const fixo = (rot, val, sub)=>`<div class="rf-fixo"><span>${rot}</span><b>${val}</b><small>${sub}</small></div>`;
+  const algumMexido = Object.keys(RF.sim[modo]).some(mexido);
+  return `<div class="rf-modo"><div class="role-toggle"><button type="button" data-rf-modo="real" class="${modo==='real'?'active':''}">Momento atual</button><button type="button" data-rf-modo="ideal" class="${modo==='ideal'?'active':''}">Cenário ideal</button></div>
+      <small>${modo==='real' ? 'Tudo calculado com os números reais da empresa. Ajuste vendas, pró-labore e caixa desejado para simular.' : 'As metas da empresa. Arraste os controles: o Radar inteiro se recalcula na hora, sem salvar.'}</small></div>
+    <div class="rf-ctls">${(modo==='real'?RF_EDIT_REAL:RF_EDIT_IDEAL).map(campo).join('')}</div>
+    ${modo==='real' ? `<div class="rf-fixos">${fixo('Ticket médio real', formatBRL(B.ticket), `${B.contratos||'—'} contratos de Mentoria dos últimos 3 meses`)}${fixo('Parcelas médias reais', String(B.parcelas).replace('.',','), 'por contrato')}${fixo('Saídas reais por mês', formatBRL(B.custo), 'média paga, já com impostos e comissões')}${fixo('Inadimplência real', String(B.inad).replace('.',',')+'%', 'do que venceu nos últimos 6 meses')}</div>` : ''}
+    <div class="rf-ctl-acoes">${algumMexido ? `<button type="button" class="btn-outline btn-mini" id="rf-sim-reset">${modo==='real'?'Voltar aos números reais':'Voltar às metas oficiais'}</button>` : ''}${modo==='ideal' && reuSocio() && algumMexido ? `<button type="button" class="btn-accent btn-mini" id="rf-sim-salvar">${icon('check','tiny')} Salvar como metas oficiais</button>` : ''}${algumMexido ? '<small class="rf-sim-aviso">Simulação: só você está vendo esses números.</small>' : ''}</div>`;
+}
+function rfCompHtml(Cr, Ci){
+  const lin = (rot, a, b)=>`<tr><td>${rot}</td><td>${a}</td><td>${b}</td></tr>`;
+  const ult = C=> C.proj[5];
+  const aperto = C=>{ const m = C.proj.reduce((a,x)=>x.salPl<a.salPl?x:a); return `${formatBRL(m.salPl)} <small>(${rfMesNome(m.k)})</small>`; };
+  const n1 = v=>String(Math.round(v*10)/10).replace('.',',');
+  return `<div class="table-wrap"><table class="check-table rf-tab rf-comp"><thead><tr><th>Real × Ideal</th><th class="${RF.modo==='real'?'rf-sel':''}">Momento atual</th><th class="${RF.modo==='ideal'?'rf-sel':''}">Cenário ideal</th></tr></thead><tbody>
+    ${lin('Vendas por mês', n1(Cr.meta), n1(Ci.meta))}
+    ${lin('Ticket médio', formatBRL(Cr.ticket), formatBRL(Ci.ticket))}
+    ${lin('Pró-labore total por mês', formatBRL(Cr.pl), formatBRL(Ci.pl))}
+    ${lin('Mês mais apertado (com pró-labore)', aperto(Cr), aperto(Ci))}
+    ${lin(`Caixa em ${rfMesNome(ult(Cr).k)} (com pró-labore)`, `<b class="${ult(Cr).salPl<0?'rf-neg':'rf-pos'}">${formatBRL(ult(Cr).salPl)}</b>`, `<b class="${ult(Ci).salPl<0?'rf-neg':'rf-pos'}">${formatBRL(ult(Ci).salPl)}</b>`)}
+  </tbody></table></div>`;
 }
 function renderRadarFin(){
   const el = document.getElementById('view-radarfin'); if(!el) return;
@@ -18446,70 +18537,18 @@ function renderRadarFin(){
   else if(RF.dados && !RF.carregando && Date.now()-RF.carregadoEm > 5*60*1000){ rfCarregar(); }
   if(!RF.dados){ el.innerHTML = RF.erro ? `<div class="empty-state">Não consegui carregar o Radar Financeiro.<br><small>${escapeHtml(RF.erro)}</small><br><br><button type="button" class="btn-outline" id="rf-tentar">Tentar de novo</button></div>` : '<div class="empty-state">Carregando o Radar Financeiro…</div>';
     const t = document.getElementById('rf-tentar'); if(t) t.addEventListener('click', ()=>{ RF.erro = null; renderRadarFin(); }); return; }
-  const C = rfCalcular(RF.dados);
-  const cor = n=> n===2 ? 'vermelho' : n===1 ? 'amarelo' : 'verde';
-  const pctBar = (v, alvo)=> alvo>0 ? Math.max(0, Math.min(100, Math.round(v/alvo*100))) : 0;
-  const tile = (rot, val, sub, nivel)=>`<div class="kpi-tile rf-kpi rf-${cor(nivel)}"><div class="label">${rot}</div><div class="value">${val}</div>${sub?`<small>${sub}</small>`:''}</div>`;
-  const barra = (rot, v, alvo, txt)=>{ const p = pctBar(v, alvo); return `<div class="rf-meta"><div class="rf-meta-hd"><span>${rot}</span><strong>${txt}</strong></div><div class="rf-bar"><div class="rf-fill ${p>=100?'ok':p>=60?'meio':'baixo'}" style="width:${p}%"></div></div></div>`; };
-  // cascata: a receita recebida no mês cobre, em ordem, custos fixos, impostos e comissões, pró-labore e capital de giro
-  let resto = C.recMes; const cobre = (v)=>{ const c = Math.max(0, Math.min(v, resto)); resto -= c; return c; };
-  const cCusto = cobre(C.custo), cImp = cobre(C.impMes), cPl = cobre(C.pl), cGiro = cobre(C.giro);
-  const P = C.P;
-  const campos = [['meta_vendas','Meta de vendas por mês',''],['ticket','Ticket médio (R$)',''],['parcelas_medias','Parcelas médias por venda',''],['imposto_pct','Impostos (% da receita)',''],['comissao_pct','Comissão comercial (%)',''],['custo_fixo','Custo fixo mensal (R$)',''],['prolabore_meta','Meta de pró-labore dos 4 sócios (R$)',''],['capital_giro','Meta de capital de giro (R$/mês)',''],['reserva_meses','Reserva alvo (meses de custo fixo)',''],['caixa_meta','Caixa desejado no fim de cada mês (R$)',''],['saldo_base','Saldo de caixa na data-base (R$)',''],['saldo_base_data','Data-base do saldo','date']];
+  const O = RF.dados.premissas || {};
   el.innerHTML = `
-    <p class="section-sub" style="margin-top:0">Atualizado com o Financeiro e o Registro de Sessões 1:1. Caixa estimado a partir do saldo de ${formatBRL(rfN(P.saldo_base))} em ${tzDataCurta(P.saldo_base_data)} (Inter + Infinity), somando o que entrou e saiu depois. <button type="button" class="link-btn" id="rf-atualizar">Atualizar</button></p>
-    <div class="kpi-row rf-kpis">
-      ${tile('Caixa estimado hoje', formatBRL(C.saldo), `cobre ${C.custo? (C.saldo/C.custo).toFixed(1).replace('.',','):'—'} mês de custo fixo`, C.saldo<C.custo?2:C.saldo<C.reservaAlvo?1:0)}
-      ${tile(`Vendas em ${rfMesNome(C.mk)}`, `${C.vendidos}/${C.meta}`, C.faltamVendas? `faltam ${C.faltamVendas}` : 'meta batida', C.faltamVendas===0?0:(C.diasRest<10?2:1))}
-      ${tile('Recebido no mês', formatBRL(C.recMes), `de ${formatBRL(C.recPrevMes)} previstos`, C.recPrevMes && C.recMes/C.recPrevMes<0.5 && C.diasRest<10 ? 1 : 0)}
-      ${tile('Em atraso', formatBRL(C.atrasoTotal), `${(RF.dados.atrasados||[]).length} parcela${(RF.dados.atrasados||[]).length===1?'':'s'}`, C.atrasoTotal>0?2:0)}
-      ${tile('A receber em 15 dias', formatBRL(rfN(RF.dados.prox15)), '', 0)}
-    </div>
-
-    <h2 class="section-title com-titulo">${icon('target')} O que fazer agora</h2>
-    <div class="rf-recs">${C.rec.map(r=>`<div class="rf-rec rf-${cor(r.nivel)}"><span class="rf-dot"></span><p>${escapeHtml(r.txt)}</p>${r.acao && r.view ? `<button type="button" class="btn-mini" data-rf-go="${r.view}">${escapeHtml(r.acao)}</button>` : ''}</div>`).join('')}</div>
-
-    ${rfSolucoesHtml(C)}
-
-    <h2 class="section-title com-titulo">${icon('chart')} Metas de ${rfMesNome(C.mk)}</h2>
-    <div class="rf-metas">
-      ${barra(`Vendas de Mentoria Essência`, C.vendidos, C.meta, `${C.vendidos} de ${C.meta}${C.sessoesNec!==null && C.faltamVendas ? ` · ~${C.sessoesNec} sessões para fechar` : ''}`)}
-      ${barra('Receita do mês cobre os custos fixos', cCusto, C.custo, `${formatBRL(cCusto)} de ${formatBRL(C.custo)}`)}
-      ${barra(`Impostos e comissões (${rfN(P.imposto_pct)+rfN(P.comissao_pct)}%)`, cImp, C.impMes, `${formatBRL(cImp)} de ${formatBRL(C.impMes)}`)}
-      ${barra('Pró-labore dos 4 sócios (meta)', cPl, C.pl, `${formatBRL(cPl)} de ${formatBRL(C.pl)}`)}
-      ${barra('Capital de giro', cGiro, C.giro, `${formatBRL(cGiro)} de ${formatBRL(C.giro)}`)}
-      ${barra(`Reserva de ${rfN(P.reserva_meses)} meses`, Math.max(0,C.saldo), C.reservaAlvo, `${formatBRL(Math.max(0,C.saldo))} de ${formatBRL(C.reservaAlvo)}`)}
-      <small class="rf-nota">A receita recebida no mês (${formatBRL(C.recMes)}) é distribuída nessa ordem: custos fixos, impostos e comissões, pró-labore e capital de giro. Necessidade total do mês: ${formatBRL(C.necessidade)}.</small>
-    </div>
-
-    <h2 class="section-title com-titulo">${icon('calendar')} Projeção dos próximos 6 meses</h2>
-    <div class="rf-cen"><span>Vendas novas por mês:</span><div class="role-toggle"><button type="button" data-rf-cen="meta" class="${C.cenario==='meta'?'active':''}">Se bater a meta (${C.meta})</button><button type="button" data-rf-cen="real" class="${C.cenario==='real'?'active':''}">Se continuar como está (${String(C.mediaReal).replace('.',',')})</button></div></div>
-    <small class="rf-nota" style="margin:0 0 14px">${C.cenario==='real' ? `Usando a média real de vendas de Mentoria Essência dos últimos 3 meses fechados (${C.ultMeses.map((v,i)=>rfMesNome(rfMesMais(C.mk, i-3))+': '+v).join(', ')}).` : `Usando a meta de ${C.meta} vendas por mês das Premissas.`}</small>
-    <div class="table-wrap"><table class="check-table rf-tab">
-      <thead><tr><th>Mês</th><th>A receber agendado</th><th>Vendas novas (meta)</th><th>Saídas previstas</th><th>Resultado</th><th>Caixa projetado</th><th>Caixa com pró-labore${C.sol.alvo>0?`<br><small>meta ${formatBRL(C.sol.alvo)}</small>`:''}</th></tr></thead>
-      <tbody>${C.proj.map(x=>`<tr><td><b>${rfMesNome(x.k)}</b>${x.k===C.mk?' <small>(resto do mês)</small>':''}</td><td>${formatBRL(x.agend)}</td><td>${x.novas? formatBRL(x.novas) : '—'}</td><td>${formatBRL(x.sai)}</td><td class="${x.res<0?'rf-neg':'rf-pos'}">${formatBRL(x.res)}</td><td class="${x.sal<0?'rf-neg':x.sal<C.reservaAlvo?'rf-alerta':'rf-pos'}"><b>${formatBRL(x.sal)}</b></td><td class="${x.salPl<0?'rf-neg':x.salPl<C.sol.alvo?'rf-alerta':'rf-pos'}">${formatBRL(x.salPl)}${C.sol.alvo>0 ? `<br><small>${x.salPl>=C.sol.alvo ? '+'+formatBRL(x.salPl-C.sol.alvo)+' da meta' : 'faltam '+formatBRL(C.sol.alvo-x.salPl)}</small>` : ''}</td></tr>`).join('')}</tbody>
-    </table></div>
-    <small class="rf-nota">Saídas = o maior entre o que está lançado a pagar e o custo fixo (${formatBRL(C.custo)}), mais ${rfN(P.imposto_pct)}% de impostos e ${rfN(P.comissao_pct)}% de comissão sobre o que entra. Vendas novas = ${C.meta} vendas/mês de ${formatBRL(rfN(P.ticket))} recebidas em ${rfN(P.parcelas_medias)} parcelas a partir do mês seguinte. Caixa com pró-labore desconta a meta de ${formatBRL(C.pl)}/mês. Em amarelo: abaixo da reserva alvo.</small>
-
-    <h2 class="section-title com-titulo">${icon('xcircle')} Clientes com risco de não pagamento</h2>
-    ${C.risco.length ? `<div class="rf-risco">${C.risco.map(h=>{ const s = getStudent(h.student_id); return `<div class="rf-cli rf-${cor(h.nivel)}"><div class="rf-cli-hd">${s ? `<button type="button" class="vg-nome-btn" data-rf-acomp="${h.student_id}">${escapeHtml(h.aluno)}</button>` : `<b>${escapeHtml(h.aluno||'—')}</b>`}<small>${rfN(h.pagas)} paga${rfN(h.pagas)===1?'':'s'} · a receber ${formatBRL(rfN(h.a_receber))}${h.prox_venc?` · próxima em ${tzDataCurta(h.prox_venc)}`:''}</small></div><p>${escapeHtml(h.motivo.join(' · '))}</p></div>`; }).join('')}</div>` : '<div class="empty-state">Nenhuma aluna com sinal de risco entre as parcelas vinculadas.</div>'}
-    ${(RF.dados.atrasados||[]).length ? `<h3 class="me-sub" style="margin-top:14px">Parcelas vencidas</h3><div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Vencimento</th><th>Aluna / descrição</th><th>Categoria</th><th>Parcela</th><th>Valor</th></tr></thead><tbody>${RF.dados.atrasados.map(a=>`<tr><td style="white-space:nowrap">${tzDataCurta(a.data_vencimento)} <small class="rf-neg">(${rdDiasDesde(a.data_vencimento+'T12:00:00-03:00')} dias)</small></td><td>${a.aluno ? `<b>${escapeHtml(a.aluno)}</b><br>` : ''}<small>${escapeHtml(a.descricao||'')}</small></td><td><small>${escapeHtml(a.cat||'')}</small></td><td>${a.parcela_num ? a.parcela_num+'/'+(a.parcela_total||'?') : '—'}</td><td><b>${formatBRL(rfN(a.valor))}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
-    <small class="rf-nota">O risco usa o histórico de cada aluna: parcelas vencidas agora, quantas pagou com mais de 2 dias de atraso e o atraso médio. ${rfN(RF.dados.sem_aluno)} parcelas de Mentoria a receber ainda não têm aluna vinculada no Financeiro e ficam de fora desta lista.</small>
-
-    <h2 class="section-title com-titulo">${icon('money')} Últimos meses</h2>
-    <div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Mês</th><th>Receita operacional recebida</th><th>Saídas operacionais pagas</th><th>Repasses de atendimentos</th><th>Retiradas dos sócios</th><th>Empréstimos recebidos</th><th>Vendas</th></tr></thead>
-      <tbody>${C.hist.map(h=>`<tr><td><b>${rfMesNome(h.k)}</b></td><td>${formatBRL(h.rec)}</td><td>${formatBRL(h.pag)}</td><td>${formatBRL(h.rep)}</td><td>${formatBRL(h.ret)}</td><td>${h.emp?formatBRL(h.emp):'—'}</td><td>${h.vend}</td></tr>`).join('')}</tbody></table></div>
-
-    ${reuSocio() ? '' : `<small class="rf-nota">Premissas atuais: meta de ${rfN(P.meta_vendas)} vendas/mês, ticket de ${formatBRL(rfN(P.ticket))}, impostos de ${rfN(P.imposto_pct)}%, comissão de ${rfN(P.comissao_pct)}%. Só os sócios alteram as premissas.</small>`}
+    <p class="section-sub" style="margin-top:0">Atualizado com o Financeiro e o Registro de Sessões 1:1. Caixa estimado a partir do saldo de ${formatBRL(rfN(O.saldo_base))} em ${tzDataCurta(O.saldo_base_data)} (Inter + Infinity), somando o que entrou e saiu depois. <button type="button" class="link-btn" id="rf-atualizar">Atualizar</button></p>
+    <div class="rf-sim" id="rf-ctrl"></div>
+    <div id="rf-comp"></div>
+    <div id="rf-corpo"></div>
     <div class="rf-prem" ${reuSocio() ? '' : 'hidden'}>
-      <button type="button" class="vg-sec-toggle ${RF.editando?'':'fechado'}" id="rf-prem-toggle">${icon('down')} Premissas ${RF.editando?'(recolher)':'(editar)'}</button>
-      ${RF.editando ? `<div class="rf-prem-grid">${campos.map(([k,l,t])=>`<label class="ps-label">${l}<input class="ps-input" type="${t||'number'}" step="any" data-rf-p="${k}" value="${escapeAttr(P[k]==null?'':P[k])}"></label>`).join('')}</div>
-        <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="btn-accent" id="rf-prem-salvar">${icon('check','tiny')} Salvar premissas</button></div>` : ''}
+      <button type="button" class="vg-sec-toggle ${RF.editando?'':'fechado'}" id="rf-prem-toggle">${icon('down')} Saldo de caixa (data-base) ${RF.editando?'(recolher)':'(editar)'}</button>
+      ${RF.editando ? `<div class="rf-prem-grid"><label class="ps-label">Saldo de caixa na data-base (R$)<input class="ps-input" type="number" step="any" data-rf-p="saldo_base" value="${escapeAttr(O.saldo_base==null?'':O.saldo_base)}"></label><label class="ps-label">Data-base do saldo<input class="ps-input" type="date" data-rf-p="saldo_base_data" value="${escapeAttr(O.saldo_base_data||'')}"></label></div>
+        <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="btn-accent" id="rf-prem-salvar">${icon('check','tiny')} Salvar saldo</button></div>` : ''}
     </div>`;
   el.querySelector('#rf-atualizar').addEventListener('click', ()=>rfCarregar());
-  el.querySelectorAll('[data-rf-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.rfGo)));
-  el.querySelectorAll('[data-rf-cen]').forEach(b=>b.addEventListener('click', ()=>{ RF.cenario = b.dataset.rfCen; renderRadarFin(); }));
-  el.querySelectorAll('[data-rf-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rfAcomp)));
   el.querySelector('#rf-prem-toggle').addEventListener('click', ()=>{ RF.editando = !RF.editando; renderRadarFin(); });
   const sv = el.querySelector('#rf-prem-salvar');
   if(sv) sv.addEventListener('click', async ()=>{
@@ -18520,6 +18559,99 @@ function renderRadarFin(){
     if(error){ sv.disabled = false; showAppAviso('Não foi possível salvar: '+(error.message||'')); return; }
     RF.editando = false; await rfCarregar();
   });
+  rfPintarCtrl(); rfPintarCorpo();
+}
+function rfPintarCtrl(){
+  const box = document.getElementById('rf-ctrl'); if(!box) return;
+  box.innerHTML = rfCtrlHtml();
+  box.querySelectorAll('[data-rf-modo]').forEach(b=>b.addEventListener('click', ()=>{ RF.modo = b.dataset.rfModo; rfPintarCtrl(); rfPintarCorpo(); }));
+  const mudar = (k, v, origem)=>{
+    RF.sim[RF.modo][k] = v;
+    const n = box.querySelector(`[data-rf-num="${k}"]`), r = box.querySelector(`[data-rf-range="${k}"]`);
+    if(origem!=='num' && n) n.value = Math.round(v*100)/100;
+    if(origem!=='range' && r){ if(v > Number(r.max)) r.max = Math.ceil(v); r.value = v; }
+    const ctl = (n||r).closest('.rf-ctl'); if(ctl) ctl.classList.add('mexido');
+    rfPintarCorpo();
+    clearTimeout(RF._tAc); RF._tAc = setTimeout(rfPintarCtrlAcoes, 200);
+  };
+  box.querySelectorAll('[data-rf-range]').forEach(r=>r.addEventListener('input', ()=>mudar(r.dataset.rfRange, Number(r.value), 'range')));
+  box.querySelectorAll('[data-rf-num]').forEach(i=>i.addEventListener('input', ()=>{ if(i.value==='') return; mudar(i.dataset.rfNum, Number(i.value), 'num'); }));
+  rfLigarAcoes(box);
+}
+function rfPintarCtrlAcoes(){
+  const box = document.getElementById('rf-ctrl'); if(!box) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = rfCtrlHtml();
+  const novo = tmp.querySelector('.rf-ctl-acoes'), velho = box.querySelector('.rf-ctl-acoes');
+  if(novo && velho){ velho.replaceWith(novo); rfLigarAcoes(box); }
+}
+function rfLigarAcoes(box){
+  const rs = box.querySelector('#rf-sim-reset'); if(rs) rs.addEventListener('click', ()=>{ RF.sim[RF.modo] = {}; rfPintarCtrl(); rfPintarCorpo(); });
+  const sv = box.querySelector('#rf-sim-salvar');
+  if(sv) sv.addEventListener('click', async ()=>{
+    const novo = Object.assign({}, RF.dados.premissas, RF.sim.ideal);
+    sv.disabled = true;
+    const { error } = await sb.from('fin_radar_premissas').update({ dados: novo, atualizado_em: new Date().toISOString(), atualizado_por: currentUser.id }).eq('id', 1);
+    if(error){ sv.disabled = false; showAppAviso('Não foi possível salvar: '+(error.message||'')); return; }
+    RF.sim.ideal = {}; await rfCarregar();
+  });
+}
+function rfPintarCorpo(){
+  const el = document.getElementById('rf-corpo'); if(!el || !RF.dados) return;
+  const D = RF.dados;
+  const Cr = rfCalcular(D, rfEfetivas(D,'real'), 'real'), Ci = rfCalcular(D, rfEfetivas(D,'ideal'), 'ideal');
+  const C = RF.modo==='ideal' ? Ci : Cr;
+  const comp = document.getElementById('rf-comp'); if(comp) comp.innerHTML = rfCompHtml(Cr, Ci);
+  const cor = n=> n===2 ? 'vermelho' : n===1 ? 'amarelo' : 'verde';
+  const pctBar = (v, alvo)=> alvo>0 ? Math.max(0, Math.min(100, Math.round(v/alvo*100))) : 0;
+  const tile = (rot, val, sub, nivel)=>`<div class="kpi-tile rf-kpi rf-${cor(nivel)}"><div class="label">${rot}</div><div class="value">${val}</div>${sub?`<small>${sub}</small>`:''}</div>`;
+  const barra = (rot, v, alvo, txt)=>{ const p = pctBar(v, alvo); return `<div class="rf-meta"><div class="rf-meta-hd"><span>${rot}</span><strong>${txt}</strong></div><div class="rf-bar"><div class="rf-fill ${p>=100?'ok':p>=60?'meio':'baixo'}" style="width:${p}%"></div></div></div>`; };
+  let resto = C.recMes; const cobre = (v)=>{ const c = Math.max(0, Math.min(v, resto)); resto -= c; return c; };
+  const cCusto = cobre(C.custo), cImp = cobre(C.impMes), cPl = cobre(C.pl), cGiro = cobre(C.giro);
+  const P = C.P; const real = C.modo==='real';
+  const n1 = v=>String(Math.round(v*10)/10).replace('.',',');
+  el.innerHTML = `
+    <div class="kpi-row rf-kpis">
+      ${tile('Caixa estimado hoje', formatBRL(C.saldo), `cobre ${C.custo? (C.saldo/C.custo).toFixed(1).replace('.',','):'—'} mês de ${real?'saídas':'custo fixo'}`, C.saldo<C.custo?2:C.saldo<C.reservaAlvo?1:0)}
+      ${tile(`Vendas em ${rfMesNome(C.mk)}`, `${C.vendidos}/${n1(C.meta)}`, C.faltamVendas? `faltam ${C.faltamVendas}` : 'meta batida', C.faltamVendas===0?0:(C.diasRest<10?2:1))}
+      ${tile('Recebido no mês', formatBRL(C.recMes), `de ${formatBRL(C.recPrevMes)} previstos`, C.recPrevMes && C.recMes/C.recPrevMes<0.5 && C.diasRest<10 ? 1 : 0)}
+      ${tile('Em atraso', formatBRL(C.atrasoTotal), `${(D.atrasados||[]).length} parcela${(D.atrasados||[]).length===1?'':'s'}`, C.atrasoTotal>0?2:0)}
+      ${tile('A receber em 15 dias', formatBRL(rfN(D.prox15)), '', 0)}
+    </div>
+
+    <h2 class="section-title com-titulo">${icon('target')} O que fazer agora</h2>
+    <div class="rf-recs">${C.rec.map(r=>`<div class="rf-rec rf-${cor(r.nivel)}"><span class="rf-dot"></span><p>${escapeHtml(r.txt)}</p>${r.acao && r.view ? `<button type="button" class="btn-mini" data-rf-go="${r.view}">${escapeHtml(r.acao)}</button>` : ''}</div>`).join('')}</div>
+
+    ${rfSolucoesHtml(C)}
+
+    <h2 class="section-title com-titulo">${icon('chart')} Metas de ${rfMesNome(C.mk)}</h2>
+    <div class="rf-metas">
+      ${barra(`Vendas de Mentoria Essência`, C.vendidos, Math.ceil(C.meta), `${C.vendidos} de ${n1(C.meta)}${C.sessoesNec!==null && C.faltamVendas ? ` · ~${C.sessoesNec} sessões para fechar` : ''}`)}
+      ${barra(real ? 'Receita do mês cobre as saídas' : 'Receita do mês cobre os custos fixos', cCusto, C.custo, `${formatBRL(cCusto)} de ${formatBRL(C.custo)}`)}
+      ${real ? '' : barra(`Impostos e comissões (${rfN(P.imposto_pct)+rfN(P.comissao_pct)}%)`, cImp, C.impMes, `${formatBRL(cImp)} de ${formatBRL(C.impMes)}`)}
+      ${barra('Pró-labore dos 4 sócios', cPl, C.pl, `${formatBRL(cPl)} de ${formatBRL(C.pl)}`)}
+      ${barra('Capital de giro', cGiro, C.giro, `${formatBRL(cGiro)} de ${formatBRL(C.giro)}`)}
+      ${barra(`Reserva de ${rfN(P.reserva_meses)} meses`, Math.max(0,C.saldo), C.reservaAlvo, `${formatBRL(Math.max(0,C.saldo))} de ${formatBRL(C.reservaAlvo)}`)}
+      <small class="rf-nota">A receita recebida no mês (${formatBRL(C.recMes)}) é distribuída nessa ordem: ${real?'saídas':'custos fixos, impostos e comissões'}, pró-labore e capital de giro. Necessidade total do mês: ${formatBRL(C.necessidade)}.</small>
+    </div>
+
+    <h2 class="section-title com-titulo">${icon('calendar')} Projeção dos próximos 6 meses</h2>
+    <small class="rf-nota" style="margin:0 0 14px">${real ? `Momento atual: ${n1(C.meta)} vendas/mês de ${formatBRL(C.ticket)} em ${n1(C.parc)} parcelas, saídas de ${formatBRL(C.custo)}/mês e ${n1(rfN(P.inad_pct))}% de inadimplência descontada do que entra.` : `Cenário ideal: ${n1(C.meta)} vendas/mês de ${formatBRL(C.ticket)} em ${n1(C.parc)} parcelas, custo de ${formatBRL(C.custo)}/mês, ${n1(rfN(P.imposto_pct)+rfN(P.comissao_pct))}% de impostos e comissão${rfN(P.inad_pct)?` e ${n1(rfN(P.inad_pct))}% de inadimplência`:''}.`}</small>
+    <div class="table-wrap"><table class="check-table rf-tab">
+      <thead><tr><th>Mês</th><th>A receber agendado</th><th>Vendas novas</th><th>Saídas previstas</th><th>Resultado</th><th>Caixa projetado</th><th>Caixa com pró-labore${C.sol.alvo>0?`<br><small>meta ${formatBRL(C.sol.alvo)}</small>`:''}</th></tr></thead>
+      <tbody>${C.proj.map(x=>`<tr><td><b>${rfMesNome(x.k)}</b>${x.k===C.mk?' <small>(resto do mês)</small>':''}</td><td>${formatBRL(x.agend)}</td><td>${x.novas? formatBRL(x.novas) : '—'}</td><td>${formatBRL(x.sai)}</td><td class="${x.res<0?'rf-neg':'rf-pos'}">${formatBRL(x.res)}</td><td class="${x.sal<0?'rf-neg':x.sal<C.reservaAlvo?'rf-alerta':'rf-pos'}"><b>${formatBRL(x.sal)}</b></td><td class="${x.salPl<0?'rf-neg':x.salPl<C.sol.alvo?'rf-alerta':'rf-pos'}">${formatBRL(x.salPl)}${C.sol.alvo>0 ? `<br><small>${x.salPl>=C.sol.alvo ? '+'+formatBRL(x.salPl-C.sol.alvo)+' da meta' : 'faltam '+formatBRL(C.sol.alvo-x.salPl)}</small>` : ''}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <small class="rf-nota">Saídas = o maior entre o que está lançado a pagar e ${real?'a média real de saídas':'o custo fixo'} (${formatBRL(C.custo)})${real?'':`, mais ${n1(rfN(P.imposto_pct)+rfN(P.comissao_pct))}% de impostos e comissão sobre o que entra`}. Vendas novas entram a partir do mês seguinte. Caixa com pró-labore desconta ${formatBRL(C.pl)}/mês. Em amarelo: abaixo da reserva alvo.</small>
+
+    <h2 class="section-title com-titulo">${icon('xcircle')} Clientes com risco de não pagamento</h2>
+    ${C.risco.length ? `<div class="rf-risco">${C.risco.map(h=>{ const s = getStudent(h.student_id); return `<div class="rf-cli rf-${cor(h.nivel)}"><div class="rf-cli-hd">${s ? `<button type="button" class="vg-nome-btn" data-rf-acomp="${h.student_id}">${escapeHtml(h.aluno)}</button>` : `<b>${escapeHtml(h.aluno||'—')}</b>`}<small>${rfN(h.pagas)} paga${rfN(h.pagas)===1?'':'s'} · a receber ${formatBRL(rfN(h.a_receber))}${h.prox_venc?` · próxima em ${tzDataCurta(h.prox_venc)}`:''}</small></div><p>${escapeHtml(h.motivo.join(' · '))}</p></div>`; }).join('')}</div>` : '<div class="empty-state">Nenhuma aluna com sinal de risco entre as parcelas vinculadas.</div>'}
+    ${(D.atrasados||[]).length ? `<h3 class="me-sub" style="margin-top:14px">Parcelas vencidas</h3><div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Vencimento</th><th>Aluna / descrição</th><th>Categoria</th><th>Parcela</th><th>Valor</th></tr></thead><tbody>${D.atrasados.map(a=>`<tr><td style="white-space:nowrap">${tzDataCurta(a.data_vencimento)} <small class="rf-neg">(${rdDiasDesde(a.data_vencimento+'T12:00:00-03:00')} dias)</small></td><td>${a.aluno ? `<b>${escapeHtml(a.aluno)}</b><br>` : ''}<small>${escapeHtml(a.descricao||'')}</small></td><td><small>${escapeHtml(a.cat||'')}</small></td><td>${a.parcela_num ? a.parcela_num+'/'+(a.parcela_total||'?') : '—'}</td><td><b>${formatBRL(rfN(a.valor))}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
+    <small class="rf-nota">O risco usa o histórico de cada aluna: parcelas vencidas agora, quantas pagou com mais de 2 dias de atraso e o atraso médio.${rfN(D.sem_aluno) ? ` ${rfN(D.sem_aluno)} parcelas de Mentoria a receber ainda não têm aluna vinculada e ficam de fora.` : ''}</small>
+
+    <h2 class="section-title com-titulo">${icon('money')} Últimos meses</h2>
+    <div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Mês</th><th>Receita operacional recebida</th><th>Saídas operacionais pagas</th><th>Repasses de atendimentos</th><th>Retiradas dos sócios</th><th>Empréstimos recebidos</th><th>Vendas</th></tr></thead>
+      <tbody>${C.hist.map(h=>`<tr><td><b>${rfMesNome(h.k)}</b></td><td>${formatBRL(h.rec)}</td><td>${formatBRL(h.pag)}</td><td>${formatBRL(h.rep)}</td><td>${formatBRL(h.ret)}</td><td>${h.emp?formatBRL(h.emp):'—'}</td><td>${h.vend}</td></tr>`).join('')}</tbody></table></div>`;
+  el.querySelectorAll('[data-rf-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.rfGo)));
+  el.querySelectorAll('[data-rf-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rfAcomp)));
 }
 
 function renderDre(){

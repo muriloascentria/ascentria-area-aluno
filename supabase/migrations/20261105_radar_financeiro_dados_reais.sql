@@ -1,0 +1,1 @@
+-- Radar Financeiro: bloco 'real' (ticket, parcelas e contratos dos últimos 3 meses fechados; inadimplência 180d). Aplicada via apply_migration em 2026-11-05.
