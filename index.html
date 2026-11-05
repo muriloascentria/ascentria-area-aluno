@@ -6995,7 +6995,7 @@ function goTo(view){
   if((view==='radar' || view==='evento') && !radarPode()) view = 'equipe';
   if(view==='desempenho' && !avPode()) view = 'equipe';
   if(view==='dre' && !drePode()) view = 'equipe';
-  if(view==='radarfin' && !reuSocio()) view = 'equipe';
+  if(view==='radarfin' && !rfPode()) view = 'equipe';
   if(view==='reunioes' && !reuPodeAbrir()) view = 'equipe';
   if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
   if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
@@ -16197,7 +16197,7 @@ const EQUIPE_ATALHOS = [
   {view:'ecrm',       desc:'CRM de vendas da mentoria, com o funil dos leads e as conversas. Abre em outra aba.', link:'https://www.ecrm.digital'},
   {view:'financeiro', desc:'Extrato, contas a receber e a pagar, faturamento e anexos.'},
   {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
-  {view:'radarfin',   desc:'Metas, caixa, projeção de 6 meses, clientes em risco e o que fazer agora (só sócios).'},
+  {view:'radarfin',   desc:'Metas, caixa, projeção de 6 meses, clientes em risco e o que fazer agora.'},
   {view:'treinamento',desc:'Aulas REC do time e o registro de aprendizados de cada pessoa.'},
   {view:'gestaotime', desc:'Funções de cada pessoa e a rotina diária, semanal e mensal, com a evolução de cada um.'},
 ];
@@ -16211,7 +16211,7 @@ function equipeViewPode(v){
   if(v==='radar' || v==='evento') return radarPode();
   if(v==='desempenho') return avPode();
   if(v==='dre') return drePode();
-  if(v==='radarfin') return reuSocio();
+  if(v==='radarfin') return rfPode();
   if(v==='reunioes') return reuPodeAbrir();
   if(v==='politicas') return polPodeAbrir();
   return true;
@@ -18251,6 +18251,9 @@ function dreIndicadoresHtml(d){
    projeção e as recomendações. Transferências entre contas, empréstimos e "Recebido Sócios" não contam
    como faturamento. */
 const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoEm:0 };
+/* Quem abre: os 4 sócios e a Mariane (assistente administrativa). Premissas: só os sócios editam. */
+const RF_EXTRA_UIDS = ['b01a4425-1ba8-4703-9c40-3301a0de7249'];
+function rfPode(){ return reuSocio() || (currentUserRole==='staff' && !!currentUser && RF_EXTRA_UIDS.includes(idEfetivo())); }
 async function rfCarregar(){
   RF.carregando = true; RF.erro = null;
   try{ const { data, error } = await sb.rpc('radar_financeiro'); if(error) throw error; if(!data || !data.hoje) throw new Error('resposta vazia do banco'); RF.dados = data; RF.carregadoEm = Date.now(); }
@@ -18329,7 +18332,7 @@ function rfCalcular(D){
 }
 function renderRadarFin(){
   const el = document.getElementById('view-radarfin'); if(!el) return;
-  if(!reuSocio()){ el.innerHTML = '<div class="empty-state">O Radar Financeiro é só dos sócios.</div>'; return; }
+  if(!rfPode()){ el.innerHTML = '<div class="empty-state">O Radar Financeiro é dos sócios e da administração.</div>'; return; }
   if(!RF.dados && !RF.carregando && !RF.erro){ rfCarregar(); }
   else if(RF.dados && !RF.carregando && Date.now()-RF.carregadoEm > 5*60*1000){ rfCarregar(); }
   if(!RF.dados){ el.innerHTML = RF.erro ? `<div class="empty-state">Não consegui carregar o Radar Financeiro.<br><small>${escapeHtml(RF.erro)}</small><br><br><button type="button" class="btn-outline" id="rf-tentar">Tentar de novo</button></div>` : '<div class="empty-state">Carregando o Radar Financeiro…</div>';
@@ -18384,7 +18387,8 @@ function renderRadarFin(){
     <div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Mês</th><th>Receita operacional recebida</th><th>Saídas operacionais pagas</th><th>Repasses de atendimentos</th><th>Retiradas dos sócios</th><th>Empréstimos recebidos</th><th>Vendas</th></tr></thead>
       <tbody>${C.hist.map(h=>`<tr><td><b>${rfMesNome(h.k)}</b></td><td>${formatBRL(h.rec)}</td><td>${formatBRL(h.pag)}</td><td>${formatBRL(h.rep)}</td><td>${formatBRL(h.ret)}</td><td>${h.emp?formatBRL(h.emp):'—'}</td><td>${h.vend}</td></tr>`).join('')}</tbody></table></div>
 
-    <div class="rf-prem">
+    ${reuSocio() ? '' : `<small class="rf-nota">Premissas atuais: meta de ${rfN(P.meta_vendas)} vendas/mês, ticket de ${formatBRL(rfN(P.ticket))}, impostos de ${rfN(P.imposto_pct)}%, comissão de ${rfN(P.comissao_pct)}%. Só os sócios alteram as premissas.</small>`}
+    <div class="rf-prem" ${reuSocio() ? '' : 'hidden'}>
       <button type="button" class="vg-sec-toggle ${RF.editando?'':'fechado'}" id="rf-prem-toggle">${icon('down')} Premissas ${RF.editando?'(recolher)':'(editar)'}</button>
       ${RF.editando ? `<div class="rf-prem-grid">${campos.map(([k,l,t])=>`<label class="ps-label">${l}<input class="ps-input" type="${t||'number'}" step="any" data-rf-p="${k}" value="${escapeAttr(P[k]==null?'':P[k])}"></label>`).join('')}</div>
         <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="btn-accent" id="rf-prem-salvar">${icon('check','tiny')} Salvar premissas</button></div>` : ''}
