@@ -10,6 +10,10 @@ comment on column public.gestao_itens.prova is
   'Prova exigida para marcar o item. {"tipo":"analise","vendedor":"Carmem","qtd":2} ou {"tipo":"analise","vendedor":"Adriana","todas":true}.';
 
 alter table public.tarefas_subtarefas add column if not exists prova uuid[];
+alter table public.tarefas_subtarefas add column if not exists prova_alunos uuid[];
+alter table public.tarefas_subtarefas add column if not exists prova_meta int;
+comment on column public.tarefas_subtarefas.prova_alunos is 'Mentorados do Radar apresentados como resolvidos ao marcar o item.';
+comment on column public.tarefas_subtarefas.prova_meta is 'Meta do dia no momento da marcação: casos abertos no nível ÷ dias úteis restantes da semana.';
 comment on column public.tarefas_subtarefas.prova is 'Análises (analise_sessoes.id) apresentadas como prova ao marcar o item.';
 
 -- Configuração da prova + janela de datas do item
@@ -35,7 +39,7 @@ begin
   select tarefa_id into v_tarefa from public.tarefas_subtarefas where id = p_sub;
   if v_tarefa is null or not public.tarefas_pode_editar(v_tarefa) then raise exception 'sem permissão'; end if;
   select * into c from public.rotina_prova_cfg(p_sub);
-  if c.prova is null then return; end if;
+  if c.prova is null or c.prova->>'tipo' <> 'analise' then return; end if;
 
   if coalesce((c.prova->>'todas')::boolean, false) then
     return query
@@ -61,12 +65,57 @@ begin
 end $$;
 
 -- Devolve null quando a prova é válida, ou o motivo da recusa
-create or replace function public.rotina_prova_erro(p_sub uuid, p_prova uuid[])
+-- Mentorados em que a pessoa registrou alguma ação hoje (horário de Brasília)
+create or replace function public.rotina_radar_acoes_hoje(p_user uuid default auth.uid())
+returns setof uuid language sql stable security definer set search_path = public as $$
+  with h as (select (now() at time zone 'America/Sao_Paulo')::date d)
+  select student_id from public.internal_records, h where autor_id = p_user and (created_at at time zone 'America/Sao_Paulo')::date = h.d
+  union select aluno_id from public.mensagens, h where de = p_user and aluno_id is not null and (created_at at time zone 'America/Sao_Paulo')::date = h.d
+  union select para from public.mensagens m, h where de = p_user and para is not null and (created_at at time zone 'America/Sao_Paulo')::date = h.d
+    and exists(select 1 from public.profiles p where p.id = m.para and p.role = 'aluno')
+  union select student_id from public.radar_momentos_resolvidos, h where resolvido_por = p_user and (resolvido_em at time zone 'America/Sao_Paulo')::date = h.d
+  union select aluno_id from public.radar_espera_ok, h where por = p_user and (ate at time zone 'America/Sao_Paulo')::date = h.d
+  union select student_id from public.acompanhamento_evolucao, h where updated_by = p_user and (updated_at at time zone 'America/Sao_Paulo')::date = h.d
+  union select student_id from public.acompanhamento_acoes, h where created_by = p_user and (created_at at time zone 'America/Sao_Paulo')::date = h.d
+  union select student_id from public.acompanhamento_observacoes, h where created_by = p_user and (created_at at time zone 'America/Sao_Paulo')::date = h.d;
+$$;
+grant execute on function public.rotina_radar_acoes_hoje(uuid) to authenticated;
+
+-- Tipo de prova do item (para a tela decidir qual janela abrir)
+create or replace function public.rotina_prova_tipo(p_sub uuid)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare v_tarefa uuid; v jsonb;
+begin
+  select tarefa_id into v_tarefa from public.tarefas_subtarefas where id = p_sub;
+  if v_tarefa is null or not public.tarefas_pode_editar(v_tarefa) then raise exception 'sem permissão'; end if;
+  select prova into v from public.rotina_prova_cfg(p_sub);
+  return v;
+end $$;
+grant execute on function public.rotina_prova_tipo(uuid) to authenticated;
+
+create or replace function public.rotina_prova_erro(p_sub uuid, p_prova uuid[], p_alunos uuid[] default null, p_meta int default null)
 returns text language plpgsql stable security definer set search_path = public as $$
-declare c record; v_qtd int; v_ok int; v_faltam int; v_usadas int;
+declare c record; v_qtd int; v_ok int; v_faltam int; v_usadas int; v_sem_acao int;
 begin
   select * into c from public.rotina_prova_cfg(p_sub);
   if c.prova is null then return null; end if;
+
+  if c.prova->>'tipo' = 'radar' then
+    -- Meta mínima de 1: sem casos no nível, o item fica desmarcado com justificativa ("nenhum caso hoje").
+    p_meta := greatest(coalesce(p_meta, 1), 1);
+    if coalesce(array_length(p_alunos, 1), 0) = 0 then
+      return 'Escolha os mentorados que você resolveu hoje.';
+    end if;
+    select count(*) into v_sem_acao from unnest(coalesce(p_alunos,'{}')) a
+     where a not in (select public.rotina_radar_acoes_hoje(auth.uid()));
+    if v_sem_acao > 0 then
+      return format('%s mentorado(s) escolhido(s) sem nenhuma ação sua registrada hoje (mensagem no Acompanhamento, registro de contato, próxima ação ou momento resolvido). Registre e tente de novo.', v_sem_acao);
+    end if;
+    if coalesce(array_length(p_alunos, 1), 0) < coalesce(p_meta, 1) then
+      return format('A meta de hoje é %s caso(s). Você marcou %s.', coalesce(p_meta,1), coalesce(array_length(p_alunos, 1), 0));
+    end if;
+    return null;
+  end if;
 
   if coalesce((c.prova->>'todas')::boolean, false) then
     select count(*) into v_faltam
@@ -121,12 +170,13 @@ begin
   end if;
 
   if new.concluida and not old.concluida then
-    v_erro := public.rotina_prova_erro(new.id, new.prova);
+    v_erro := public.rotina_prova_erro(new.id, new.prova, new.prova_alunos, new.prova_meta);
     if v_erro is not null then raise exception '%', v_erro; end if;
     new.justificativa := null; new.justificada_em := null; new.justificada_por := null;
   elsif not new.concluida and old.concluida then
-    new.prova := null;
-  elsif new.concluida and new.prova is distinct from old.prova then
+    new.prova := null; new.prova_alunos := null; new.prova_meta := null;
+  elsif new.concluida and (new.prova is distinct from old.prova or new.prova_alunos is distinct from old.prova_alunos
+                           or new.prova_meta is distinct from old.prova_meta) then
     raise exception 'A prova de um item já marcado não pode ser trocada. Desmarque e marque de novo.';
   end if;
 
@@ -169,5 +219,11 @@ insert into public.gestao_itens (papel_id, frequencia, texto, ordem, ativo, prov
 select 5, 'diaria', 'Analisar todas as sessões de venda da Adriana (lead presente) desde a última lista e postar o link de cada análise.', 900, true,
        '{"tipo":"analise","vendedor":"Adriana","todas":true}'::jsonb
  where not exists (select 1 from public.gestao_itens where papel_id = 5 and prova->>'vendedor' = 'Adriana');
+
+-- Radar: os dois itens diários da Sandra passam a exigir prova
+update public.gestao_itens set prova = '{"tipo":"radar","nivel":2}'::jsonb
+ where id = 198 and texto ilike '%RISCO do Radar%';
+update public.gestao_itens set prova = '{"tipo":"radar","nivel":1}'::jsonb
+ where id = 491 and texto ilike '%ATENÇÃO do Radar%';
 
 grant execute on function public.rotina_prova_candidatas(uuid) to authenticated;
