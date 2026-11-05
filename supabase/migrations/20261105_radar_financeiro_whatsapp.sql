@@ -1,0 +1,1 @@
+-- Radar Financeiro: atrasados trazem whatsapp (registro_clientes) para o botão de cobrança. Aplicada via apply_migration em 2026-11-05.

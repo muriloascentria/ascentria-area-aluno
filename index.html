@@ -687,6 +687,16 @@
   .rf-fill.meio{background:var(--individual);} .rf-fill.ok{background:var(--success);}
   .rf-nota{display:block;margin:6px 0 18px;font-size:11.5px;color:var(--text-mute);line-height:1.5;}
   .rf-tab td,.rf-tab th{white-space:nowrap;}
+  .rf-sol-intro{font-size:13.5px;font-weight:600;margin:0 0 10px;line-height:1.5;}
+  .rf-sols{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+  .rf-sol{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .rf-sol:first-child{grid-column:1/-1;}
+  .rf-sol-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
+  .rf-sol-num{font-weight:800;color:var(--accent);white-space:nowrap;}
+  .rf-sol p{margin:0;font-size:12.5px;line-height:1.55;color:var(--text-dim);}
+  .rf-cob{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+  .rf-cob-it{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;}
+  .rf-cob-it small{display:block;color:var(--text-mute);font-size:11.5px;}
   .rf-cen{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 6px;font-size:12.5px;color:var(--text-dim);}
   .rf-cen .role-toggle{display:inline-flex;flex-wrap:wrap;}
   .rf-neg{color:var(--danger);} .rf-pos{color:var(--success);} .rf-alerta{color:var(--individual);}
@@ -18290,20 +18300,50 @@ function rfCalcular(D){
   const cenario = RF.cenario==='real' ? 'real' : 'meta';
   const vendasProj = cenario==='real' ? mediaReal : meta;
   // Projeção: mês atual (o que ainda falta entrar e sair) + 5 meses.
-  const proj = []; let sal = saldo, salPl = saldo;
-  for(let i=0;i<6;i++){
-    const k = rfMesMais(mk, i), m = mes(k);
-    const agend = i===0 ? Math.max(0, rfN(m.rec_prev) - rfN(m.rec_pago)) : rfN(m.rec_prev);
-    const novas = i===0 ? 0 : vendasProj * (ticket/parc) * Math.min(i, parc);
-    const entra = agend + novas;
-    const custosMes = i===0 ? Math.max(0, Math.max(rfN(m.pag_prev), custo) - rfN(m.pag_pago)) : Math.max(rfN(m.pag_prev), custo);
-    const sai = custosMes + entra*pctSaida;
-    const res = entra - sai;
-    sal += res;
-    const plMes = i===0 ? Math.max(0, pl - rfN(m.retiradas)) : pl;
-    salPl += res - plMes;
-    proj.push({ k, agend, novas, entra, sai, res, sal, salPl, plMes });
-  }
+  const projetar = (o)=>{
+    const out = []; let sal = saldo, salPl = saldo;
+    const pc = Math.max(1, o.parc||parc);
+    for(let i=0;i<6;i++){
+      const k = rfMesMais(mk, i), m = mes(k);
+      const agend = i===0 ? Math.max(0, rfN(m.rec_prev) - rfN(m.rec_pago)) : rfN(m.rec_prev);
+      const novas = i===0 ? 0 : o.vendas * (ticket/pc) * Math.min(i, pc);
+      const entra = agend + novas;
+      const custoBase = Math.max(rfN(m.pag_prev), custo) - (o.corte||0);
+      const custosMes = i===0 ? Math.max(0, custoBase - rfN(m.pag_pago)) : custoBase;
+      const sai = custosMes + entra*pctSaida;
+      const res = entra - sai;
+      sal += res;
+      const plMes = i===0 ? Math.max(0, o.pl - rfN(m.retiradas)) : o.pl;
+      salPl += res - plMes;
+      out.push({ k, agend, novas, entra, sai, res, sal, salPl, plMes });
+    }
+    return out;
+  };
+  const proj = projetar({ vendas: vendasProj, pl });
+  const minPl = o=> Math.min(...projetar(o).map(x=>x.salPl));
+  // Soluções: quanto cada alavanca precisa mexer para o caixa com pró-labore não ficar negativo em 6 meses
+  const baseVendas = Math.max(0, mediaReal);
+  const sol = { baseVendas };
+  sol.minAtual = minPl({ vendas: baseVendas, pl });
+  sol.mesAperto = projetar({ vendas: baseVendas, pl }).reduce((a,x)=> x.salPl < a.salPl ? x : a).k;
+  sol.vendasNec = null; for(let v=0; v<=80; v++){ if(minPl({ vendas:v, pl }) >= 0){ sol.vendasNec = v; break; } }
+  const projReal = projetar({ vendas: baseVendas, pl });
+  sol.deficit = Math.max(0, -sol.minAtual);
+  sol.temporario = sol.minAtual < 0 && projReal[5].salPl > 0;
+  // A partir de quando o caixa volta a ficar positivo e se mantém (para devolver o que foi adiado)
+  sol.mesVolta = null; for(let i=0;i<6;i++){ if(projReal.slice(i).every(x=>x.salPl >= sol.deficit) ){ sol.mesVolta = projReal[i].k; break; } }
+  // Vendas para sair do vermelho a partir do 3º mês
+  sol.vendasNec2 = null; for(let v=0; v<=80; v++){ const pj = projetar({ vendas:v, pl }); if(pj.slice(2).every(x=>x.salPl>=0)){ sol.vendasNec2 = v; break; } }
+  sol.plSust = 0; for(let v=Math.ceil(pl/1000)*1000; v>=0; v-=1000){ if(minPl({ vendas: baseVendas, pl: v }) >= 0){ sol.plSust = v; break; } }
+  sol.corteNec = null; for(let c=0; c<=custo; c+=500){ if(minPl({ vendas: baseVendas, pl, corte:c }) >= 0){ sol.corteNec = c; break; } }
+  sol.ganho6x = projetar({ vendas: baseVendas, pl, parc: Math.min(6, parc) })[5].salPl - projetar({ vendas: baseVendas, pl })[5].salPl;
+  sol.vendaMes1 = ticket/parc*(1-pctSaida);
+  // Mês em que a reserva é formada (com pró-labore, cenário real)
+  const pr = projetar({ vendas: baseVendas, pl }); sol.mesReserva = (pr.find(x=>x.salPl >= reservaAlvo)||{}).k || null;
+  // Cobrança: vencidas por aluna
+  const porAluna = {};
+  (D.atrasados||[]).forEach(a=>{ const ch = a.student_id || ('c'+(a.cliente_id||a.id)); const g = porAluna[ch] || (porAluna[ch] = { nome:a.aluno || a.descricao || 'Sem nome', whatsapp:a.whatsapp, itens:[], total:0 }); g.itens.push(a); g.total += rfN(a.valor); if(!g.whatsapp && a.whatsapp) g.whatsapp = a.whatsapp; });
+  sol.cobranca = Object.values(porAluna).sort((a,b)=>b.total-a.total);
   // Necessidade do mês x receita operacional recebida
   const recMes = rfN(atual.rec_pago), recPrevMes = rfN(atual.rec_prev);
   const impMes = recPrevMes * pctSaida;
@@ -18335,7 +18375,57 @@ function rfCalcular(D){
   if(rfN(D.sem_aluno)>0) rec.push({ nivel:1, txt:`${rfN(D.sem_aluno)} parcelas de Mentoria a receber estão sem aluna vinculada no Financeiro (só ${rfN(D.com_aluno)} estão). Vincule a aluna nessas parcelas para o risco por cliente ficar completo.`, acao:'Abrir Financeiro', view:'financeiro' });
   if(medRet>0) rec.push({ nivel:0, txt:`Retiradas dos sócios: média de ${formatBRL(medRet)}/mês nos últimos 4 meses, contra a meta de pró-labore de ${formatBRL(pl)}.`, acao:null, view:null });
   rec.sort((a,b)=>b.nivel-a.nivel);
-  return { P, mk, meta, mediaReal, ultMeses, cenario, vendasProj, vendidos, faltamVendas, taxa, sessoesNec, diasRest, atrasoTotal, saldo, reservaAlvo, proj, recMes, recPrevMes, necessidade, impMes, custo, pl, giro, hist, risco, rec };
+  return { P, mk, sol, ticket, parc, meta, mediaReal, ultMeses, cenario, vendasProj, vendidos, faltamVendas, taxa, sessoesNec, diasRest, atrasoTotal, saldo, reservaAlvo, proj, recMes, recPrevMes, necessidade, impMes, custo, pl, giro, hist, risco, rec };
+}
+function rfWaLink(tel, nome, itens){
+  let d = String(tel||'').replace(/\D/g,''); if(!d) return null;
+  if(d.length<=11) d = '55'+d;
+  const prim = String(nome||'').trim().split(/\s+/)[0] || '';
+  const lista = itens.map(a=>`• ${tzDataCurta(a.data_vencimento)}: ${formatBRL(rfN(a.valor))}${a.parcela_num ? ` (parcela ${a.parcela_num}/${a.parcela_total||'?'})` : ''}`).join('\n');
+  const txt = `Oi, ${prim}! Tudo bem? 😊\n\nPassando para lembrar ${itens.length>1?'das parcelas que estão em aberto':'da parcela que está em aberto'} da mentoria:\n${lista}\n\nSe já pagou, me manda o comprovante que eu dou baixa por aqui. Se precisar combinar uma nova data, me fala que a gente ajusta. Obrigado!`;
+  return 'https://wa.me/'+d+'?text='+encodeURIComponent(txt);
+}
+function rfSolucoesHtml(C){
+  const S = C.sol; const br = v=>formatBRL(v); const n1 = v=>String(Math.round(v*10)/10).replace('.',',');
+  const cards = [];
+  const ok = S.minAtual >= 0;
+  const head = ok
+    ? `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa não fica negativo nos próximos 6 meses. O menor saldo previsto é ${br(S.minAtual)}. As soluções abaixo servem para formar a reserva mais rápido.`
+    : S.temporario
+      ? `O caixa fica ${br(S.deficit)} no vermelho em ${rfMesNome(S.mesAperto)}, e depois se recupera com as parcelas que já estão para entrar. É um aperto de curto prazo: o problema é o momento, não o tamanho do negócio.`
+      : `No ritmo atual (${n1(S.baseVendas)} vendas/mês) e com pró-labore de ${br(C.pl)}, o caixa chega a ${br(S.minAtual)} em ${rfMesNome(S.mesAperto)} e não se recupera nos 6 meses. É preciso mudar algo estrutural: vendas, pró-labore ou custos.`;
+  // 1. Cobrança
+  if(S.cobranca.length){
+    const cobre = S.deficit>0 ? Math.min(100, Math.round(C.atrasoTotal/S.deficit*100)) : null;
+    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>1. Cobrar o que já venceu</b><span class="rf-sol-num">${br(C.atrasoTotal)}</span></div><p>É o dinheiro mais rápido: já foi vendido e só falta entrar.${cobre!==null ? ` Sozinho, cobre ${cobre}% do buraco de ${rfMesNome(S.mesAperto)}.` : ''} O botão abre o WhatsApp com a mensagem pronta para você revisar e enviar.</p>
+      <div class="rf-cob">${S.cobranca.map(g=>{ const w = rfWaLink(g.whatsapp, g.nome, g.itens); return `<div class="rf-cob-it"><div><b>${escapeHtml(g.nome)}</b><small>${g.itens.length} parcela${g.itens.length>1?'s':''} · ${br(g.total)} · desde ${tzDataCurta(g.itens[0].data_vencimento)}</small></div>${w ? `<a class="btn-mini" href="${w}" target="_blank" rel="noopener">Cobrar no WhatsApp</a>` : '<small class="rf-neg">sem WhatsApp no cadastro</small>'}</div>`; }).join('')}</div></div>`);
+  }
+  let nro = S.cobranca.length ? 2 : 1;
+  // 2. Pró-labore
+  if(S.temporario){
+    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Adiar parte do pró-labore</b><span class="rf-sol-num">${br(S.deficit)}</span></div><p>Em ${rfMesNome(S.mesAperto)}, retirem ${br(Math.max(0, C.pl - S.deficit))} em vez de ${br(C.pl)} e deixem ${br(S.deficit)} para depois.${S.mesVolta ? ` Em ${rfMesNome(S.mesVolta)} o caixa já comporta devolver essa diferença sem ficar negativo.` : ''} O que entrar da cobrança diminui esse valor.</p></div>`);
+  } else if(!ok){
+    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Ajustar o pró-labore</b><span class="rf-sol-num">${br(S.plSust)}/mês</span></div><p>No ritmo atual de vendas, o pró-labore que cabe sem o caixa ficar negativo é de ${br(S.plSust)} por mês, ${br(C.pl - S.plSust)} abaixo da meta. Uma saída é retirar esse valor fixo e completar o restante só nos meses em que a meta de vendas for batida.</p></div>`);
+  }
+  // 3. Entrada / parcelamento
+  if(C.parc>6 && S.ganho6x>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Encurtar o parcelamento</b><span class="rf-sol-num">+${br(S.ganho6x)}</span></div><p>Se as vendas novas forem em até 6x em vez de ${C.parc}x, entram ${br(S.ganho6x)} a mais no caixa nos próximos 6 meses (o total vendido é o mesmo, só entra mais cedo). Duas formas: dar uma condição melhor no Pix ou em menos parcelas no cartão, ou pedir uma entrada maior na assinatura.</p></div>`);
+  // 4. Vendas
+  {
+    const v = S.vendasNec!==null ? S.vendasNec : S.vendasNec2;
+    const sess = v!==null && C.taxa>0 ? Math.ceil(v / C.taxa) : null;
+    let txt;
+    if(v===null) txt = `Nem com 80 vendas por mês o caixa se ajusta nos 6 meses: o ajuste precisa vir de pró-labore ou custos.`;
+    else if(v<=S.baseVendas) txt = `O ritmo atual (${n1(S.baseVendas)}) já basta${S.vendasNec===null ? ` para o caixa ficar positivo a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}. Bater a meta de ${C.meta} acelera a reserva.`;
+    else txt = `${S.vendasNec===null ? `As vendas novas só começam a entrar no mês seguinte, então não resolvem ${rfMesNome(S.mesAperto)}. ` : ''}Para o caixa com pró-labore ficar positivo${S.vendasNec===null ? ` a partir de ${rfMesNome(rfMesMais(C.mk,2))}` : ''}, são ${v} vendas por mês, ${n1(v - S.baseVendas)} a mais que a média atual.`;
+    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Vendas</b><span class="rf-sol-num">${v!==null ? v+' vendas/mês' : '—'}</span></div><p>${txt}${sess ? ` Com a taxa de fechamento de ${Math.round(C.taxa*100)}%, ${v} vendas pedem cerca de ${sess} sessões 1:1 realizadas por mês (${Math.ceil(sess/4.3)} por semana).` : ''} Cada venda nova soma ${br(S.vendaMes1)} por mês ao caixa, já sem impostos e comissão.</p></div>`);
+  }
+  // 5. Custos (só quando o problema é estrutural)
+  if(!ok && !S.temporario){
+    if(S.corteNec!==null && S.corteNec>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Cortar custos fixos</b><span class="rf-sol-num">−${br(S.corteNec)}/mês</span></div><p>Mantendo vendas e pró-labore como estão, seria preciso reduzir ${br(S.corteNec)} por mês dos custos (${Math.round(S.corteNec/C.custo*100)}% do custo fixo). Comece revisando assinaturas, ferramentas e serviços recorrentes no Financeiro.</p></div>`);
+  }
+  // 6. Reserva
+  cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Formar a reserva</b><span class="rf-sol-num">${S.mesReserva ? rfMesNome(S.mesReserva) : 'fora dos 6 meses'}</span></div><p>${S.mesReserva ? `No ritmo atual e pagando o pró-labore, a reserva de ${rfN(C.P.reserva_meses)} meses (${br(C.reservaAlvo)}) se forma em ${rfMesNome(S.mesReserva)}.` : `No ritmo atual e pagando o pró-labore, a reserva de ${br(C.reservaAlvo)} não se forma nos próximos 6 meses.`} Uma regra simples ajuda: separar 10% de toda entrada numa conta só para a reserva até chegar lá, e só então aumentar retiradas.</p></div>`);
+  return `<h2 class="section-title com-titulo">${icon('compass')} Soluções</h2><p class="rf-sol-intro ${ok?'rf-pos':'rf-neg'}">${escapeHtml(head)}</p><div class="rf-sols">${cards.join('')}</div><small class="rf-nota">As contas usam as Premissas e a média real de vendas dos últimos 3 meses fechados (${n1(S.baseVendas)}/mês). Cada número mostra quanto aquela saída precisa mexer, sozinha.</small>`;
 }
 function renderRadarFin(){
   const el = document.getElementById('view-radarfin'); if(!el) return;
@@ -18366,6 +18456,8 @@ function renderRadarFin(){
 
     <h2 class="section-title com-titulo">${icon('target')} O que fazer agora</h2>
     <div class="rf-recs">${C.rec.map(r=>`<div class="rf-rec rf-${cor(r.nivel)}"><span class="rf-dot"></span><p>${escapeHtml(r.txt)}</p>${r.acao && r.view ? `<button type="button" class="btn-mini" data-rf-go="${r.view}">${escapeHtml(r.acao)}</button>` : ''}</div>`).join('')}</div>
+
+    ${rfSolucoesHtml(C)}
 
     <h2 class="section-title com-titulo">${icon('chart')} Metas de ${rfMesNome(C.mk)}</h2>
     <div class="rf-metas">
