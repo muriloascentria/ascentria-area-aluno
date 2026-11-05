@@ -2538,6 +2538,15 @@
   h2.section-title.com-titulo{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text);margin:8px 0 14px;}
   h2.section-title.com-titulo .icon{width:17px;height:17px;color:var(--accent);}
   .com-nps h2.section-title.com-titulo{margin-top:0;}
+  #view-radarfin h2.section-title.com-titulo{margin:44px 0 16px;padding-top:26px;border-top:1px solid var(--border);}
+  #view-radarfin h3.me-sub{margin-top:28px !important;margin-bottom:12px;}
+  #view-radarfin .rf-kpis{margin-bottom:8px;}
+  #view-radarfin .rf-recs,#view-radarfin .rf-metas{margin-bottom:0;}
+  #view-radarfin .rf-sols{gap:14px;}
+  #view-radarfin .rf-sol{padding:16px 18px;}
+  #view-radarfin .rf-nota{margin:12px 0 0;}
+  #view-radarfin .rf-cen{margin-bottom:10px;}
+  @media (max-width:640px){ #view-radarfin h2.section-title.com-titulo{margin-top:34px;padding-top:20px;} }
   .vg-sec-head.com-sec-head{margin:8px 0 14px;}
   .com-nps .vg-sec-head.com-sec-head{margin-top:30px;}
   .nps-filtros{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:16px 0 12px;padding:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;}
@@ -18472,7 +18481,7 @@ function renderRadarFin(){
 
     <h2 class="section-title com-titulo">${icon('calendar')} Projeção dos próximos 6 meses</h2>
     <div class="rf-cen"><span>Vendas novas por mês:</span><div class="role-toggle"><button type="button" data-rf-cen="meta" class="${C.cenario==='meta'?'active':''}">Se bater a meta (${C.meta})</button><button type="button" data-rf-cen="real" class="${C.cenario==='real'?'active':''}">Se continuar como está (${String(C.mediaReal).replace('.',',')})</button></div></div>
-    <small class="rf-nota" style="margin-top:0">${C.cenario==='real' ? `Usando a média real de vendas de Mentoria Essência dos últimos 3 meses fechados (${C.ultMeses.map((v,i)=>rfMesNome(rfMesMais(C.mk, i-3))+': '+v).join(', ')}).` : `Usando a meta de ${C.meta} vendas por mês das Premissas.`}</small>
+    <small class="rf-nota" style="margin:0 0 14px">${C.cenario==='real' ? `Usando a média real de vendas de Mentoria Essência dos últimos 3 meses fechados (${C.ultMeses.map((v,i)=>rfMesNome(rfMesMais(C.mk, i-3))+': '+v).join(', ')}).` : `Usando a meta de ${C.meta} vendas por mês das Premissas.`}</small>
     <div class="table-wrap"><table class="check-table rf-tab">
       <thead><tr><th>Mês</th><th>A receber agendado</th><th>Vendas novas (meta)</th><th>Saídas previstas</th><th>Resultado</th><th>Caixa projetado</th><th>Caixa com pró-labore</th></tr></thead>
       <tbody>${C.proj.map(x=>`<tr><td><b>${rfMesNome(x.k)}</b>${x.k===C.mk?' <small>(resto do mês)</small>':''}</td><td>${formatBRL(x.agend)}</td><td>${x.novas? formatBRL(x.novas) : '—'}</td><td>${formatBRL(x.sai)}</td><td class="${x.res<0?'rf-neg':'rf-pos'}">${formatBRL(x.res)}</td><td class="${x.sal<0?'rf-neg':x.sal<C.reservaAlvo?'rf-alerta':'rf-pos'}"><b>${formatBRL(x.sal)}</b></td><td class="${x.salPl<0?'rf-neg':'rf-pos'}">${formatBRL(x.salPl)}</td></tr>`).join('')}</tbody>
