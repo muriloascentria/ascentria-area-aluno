@@ -1,0 +1,1 @@
+-- Mentores Essência: tabela me_materiais + bucket privado me-materiais (staff publica; me_liberado lê). Aplicada via apply_migration em 2026-11-05.
