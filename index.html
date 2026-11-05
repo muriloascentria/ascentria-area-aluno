@@ -2115,6 +2115,17 @@
   .tf-sub-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 2px;}
   .tf-sub-item.ok span{text-decoration:line-through;color:var(--text-mute);}
   .tf-sub-item span{flex:1;}
+  .tf-sub-just{display:block;font-size:12px;color:var(--text-mute);text-decoration:none;margin-top:2px;font-style:italic;}
+  .tf-sub-item.ok .tf-sub-just{display:none;}
+  .tf-rot-aviso{font-size:12px;color:var(--text-mute);margin:2px 0 6px;}
+  .rot-just-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .rot-just-box{background:var(--bg-elev);color:var(--text);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+  .rot-just-box h3{margin:0 0 6px;font-size:17px;}
+  .rot-just-lista{display:flex;flex-direction:column;gap:10px;margin:12px 0;}
+  .rot-just-item{display:flex;flex-direction:column;gap:4px;font-size:13px;}
+  .rot-just-item .ps-input.erro{border-color:var(--danger);}
+  .rot-just-erro{color:var(--danger);font-size:13px;margin-bottom:8px;}
+  .rot-just-acoes{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
   .tf-sub-add{display:flex;gap:8px;margin-top:8px;}
   .tf-sub-add .ps-input{margin:0;flex:1;}
   .tf-sub-add .btn-outline{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
@@ -13230,7 +13241,7 @@ async function carregarSubtarefasDe(ids){
   if(!ids.length) return;
   const { data } = await sb.from('tarefas_subtarefas').select('*').in('tarefa_id', ids).order('ordem').order('created_at');
   ids.forEach(id=>{ TAREFAS_SUB[id] = []; });
-  (data||[]).forEach(s=>{ (TAREFAS_SUB[s.tarefa_id] = TAREFAS_SUB[s.tarefa_id]||[]).push({id:s.id, tarefaId:s.tarefa_id, titulo:s.titulo, concluida:!!s.concluida, concluidaEm:s.concluida_em, concluidaPor:s.concluida_por, ordem:s.ordem}); });
+  (data||[]).forEach(s=>{ (TAREFAS_SUB[s.tarefa_id] = TAREFAS_SUB[s.tarefa_id]||[]).push({id:s.id, tarefaId:s.tarefa_id, titulo:s.titulo, concluida:!!s.concluida, concluidaEm:s.concluida_em, concluidaPor:s.concluida_por, ordem:s.ordem, justificativa:s.justificativa||'', justificadaEm:s.justificada_em}); });
 }
 /* Histórico de concluídas/canceladas: carregamento progressivo, 50 por vez. */
 async function carregarTarefasConcluidas(mais){
@@ -13592,9 +13603,58 @@ async function tarefasMarcarLidas(ids){
   TAREFAS_NOTIFS = TAREFAS_NOTIFS.filter(n=>!ids.includes(n.id));
   updateNotifBadge();
 }
+/* Rotinas da Gestão do Time: só concluem com todos os itens marcados ou justificados
+   (o banco também confere, no gatilho trg_tarefas_rotina_conclusao). */
+const ROTINA_JUST_MIN = 10;
+function tarefaEhRotina(t){
+  return !!t && /^Rotina (diária|semanal|mensal) ·/.test(t.titulo||'') && /^Lista enviada automaticamente pela Gestão do Time/.test(t.descricao||'');
+}
+/* Devolve true quando pode seguir com a conclusão. Se faltar justificativa, abre a janela
+   com os itens não marcados e salva o que a pessoa escrever. */
+function rotinaGarantirJustificativas(t){
+  if(!tarefaEhRotina(t)) return Promise.resolve(true);
+  const pend = (TAREFAS_SUB[t.id]||[]).filter(s=>!s.concluida);
+  const faltam = pend.filter(s=>(s.justificativa||'').trim().length < ROTINA_JUST_MIN);
+  if(!faltam.length) return Promise.resolve(true);
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'rot-just-ov';
+    ov.innerHTML = `<div class="rot-just-box" role="dialog" aria-modal="true">
+      <h3>Antes de concluir a rotina</h3>
+      <p class="desc">${pend.length} ${pend.length===1?'item ficou':'itens ficaram'} sem marcar. Marque na lista o que você fez ou escreva, em poucas palavras, por que não fez.</p>
+      <div class="rot-just-lista">${pend.map(s=>`<label class="rot-just-item"><span>${escapeHtml(s.titulo)}</span>
+        <input class="ps-input" type="text" maxlength="300" data-rot-just="${s.id}" value="${escapeAttr(s.justificativa||'')}" placeholder="Não fiz porque…"></label>`).join('')}</div>
+      <div class="rot-just-erro" hidden></div>
+      <div class="rot-just-acoes"><button type="button" class="btn-outline" data-rot-voltar>Voltar para a lista</button><button type="button" class="btn-primary" data-rot-ok>Salvar e concluir</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    const fechar = (v)=>{ ov.remove(); resolve(v); };
+    const primeiro = ov.querySelector('[data-rot-just]'); if(primeiro) setTimeout(()=>primeiro.focus(), 30);
+    ov.querySelector('[data-rot-voltar]').addEventListener('click', ()=>fechar(false));
+    ov.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(false); });
+    ov.querySelector('[data-rot-ok]').addEventListener('click', async ()=>{
+      const campos = [...ov.querySelectorAll('[data-rot-just]')];
+      const curtos = campos.filter(c=>c.value.trim().length < ROTINA_JUST_MIN);
+      campos.forEach(c=>c.classList.toggle('erro', curtos.includes(c)));
+      const er = ov.querySelector('.rot-just-erro');
+      if(curtos.length){ er.hidden = false; er.textContent = `Escreva pelo menos ${ROTINA_JUST_MIN} caracteres em cada item não feito (${curtos.length} ${curtos.length===1?'faltando':'faltando'}).`; curtos[0].focus(); return; }
+      const btn = ov.querySelector('[data-rot-ok]'); btn.disabled = true; btn.textContent = 'Salvando…';
+      for(const c of campos){
+        const sub = pend.find(s=>s.id===c.dataset.rotJust); const v = c.value.trim();
+        if(sub && v!==(sub.justificativa||'').trim()){
+          const { error } = await sb.from('tarefas_subtarefas').update({justificativa:v}).eq('id', sub.id);
+          if(error){ er.hidden = false; er.textContent = 'Não foi possível salvar: '+error.message; btn.disabled = false; btn.textContent = 'Salvar e concluir'; return; }
+          sub.justificativa = v;
+        }
+      }
+      fechar(true);
+    });
+  });
+}
 async function tarefaMudarStatus(id, status){
   const t = TAREFAS.find(x=>x.id===id);
   if(!t || t.status===status) return;
+  if(status==='concluida' && !(await rotinaGarantirJustificativas(t))){ await recarregarTarefa(id); return; }
   const { error } = await sb.from('tarefas').update({status}).eq('id', id);
   if(error){ alert('Não foi possível alterar a situação: '+(error.message||'')); return; }
   await recarregarTarefa(id);
@@ -13634,6 +13694,7 @@ async function openTarefaModal(id, defaults){
   const podeDelegarAgora = tarefasPossoDelegar();
   const ativos = TAREFAS_EQUIPE.filter(m=>m.ativo || m.userId===t.responsavelId || (t.coresponsaveis||[]).includes(m.userId));
   const subs = nova ? [] : (TAREFAS_SUB[t.id]||[]);
+  const rotina = !nova && tarefaEhRotina(t);
   const ro = (ok)=> ok ? '' : 'disabled';
   const draftNovoSubs = []; // subtarefas digitadas antes de salvar a tarefa nova
   const histLabel = (h)=>{
@@ -13679,12 +13740,13 @@ async function openTarefaModal(id, defaults){
       <textarea class="ps-input" id="tf-m-desc" rows="3" placeholder="Detalhes, contexto, links…" ${ro(dono)}>${escapeHtml(t.descricao)}</textarea>
 
       <h4 class="tf-h">${icon('check','tiny')} Subtarefas ${subs.length? `<span class="qtd">${subs.filter(s=>s.concluida).length}/${subs.length}</span>` : ''}</h4>
+      ${rotina && t.status!=='concluida' && t.status!=='cancelada' ? `<p class="tf-rot-aviso">Para concluir a rotina, marque o que foi feito. O que não foi feito pede uma justificativa curta na hora de concluir.</p>` : ''}
       <div class="tf-subs" id="tf-subs">
         ${(nova ? draftNovoSubs.map((s,i)=>({id:'d'+i, titulo:s, concluida:false})) : subs).map(s=>`
           <div class="tf-sub-item ${s.concluida?'ok':''}">
             <input type="checkbox" data-tf-sub="${s.id}" ${s.concluida?'checked':''} ${ro(podeEditar)}>
-            <span>${escapeHtml(s.titulo)}</span>
-            ${podeEditar ? `<button type="button" class="btn-mini icon-only danger" data-tf-sub-del="${s.id}" title="Remover">${icon('x','tiny')}</button>` : ''}
+            <span>${escapeHtml(s.titulo)}${!s.concluida && s.justificativa ? `<small class="tf-sub-just">Não feito: ${escapeHtml(s.justificativa)}</small>` : ''}</span>
+            ${podeEditar && !(rotina && !tarefasSouAdmin()) ? `<button type="button" class="btn-mini icon-only danger" data-tf-sub-del="${s.id}" title="Remover">${icon('x','tiny')}</button>` : ''}
           </div>`).join('') || '<div class="tf-vazio">Nenhuma subtarefa.</div>'}
       </div>
       ${podeEditar ? `<div class="tf-sub-add"><input class="ps-input" type="text" id="tf-sub-novo" placeholder="Nova subtarefa… (Enter para adicionar)" maxlength="200"><button type="button" class="btn-outline" id="tf-sub-add">${icon('plus','tiny')} Adicionar</button></div>` : ''}
@@ -13837,7 +13899,7 @@ async function openTarefaModal(id, defaults){
   $('#tf-hist-toggle').addEventListener('click', ()=>{ const h = $('#tf-hist'); h.hidden = !h.hidden; });
   // ações
   const acao = async (payload, msg)=>{ const { error } = await sb.from('tarefas').update(payload).eq('id', t.id); if(error){ alert((msg||'Não foi possível')+': '+error.message); return false; } await recarregarTarefa(t.id); return true; };
-  const b1 = $('#tf-m-concluir'); if(b1) b1.addEventListener('click', async ()=>{ if(await acao({status:'concluida'})){ closeModal(); renderTarefas(); } });
+  const b1 = $('#tf-m-concluir'); if(b1) b1.addEventListener('click', async ()=>{ if(!(await rotinaGarantirJustificativas(t))){ await recarregarTarefa(t.id); openTarefaModal(t.id); return; } if(await acao({status:'concluida'})){ closeModal(); renderTarefas(); } });
   const b2 = $('#tf-m-reabrir'); if(b2) b2.addEventListener('click', async ()=>{ if(await acao({status:'pendente'})){ closeModal(); renderTarefas(); } });
   const b3 = $('#tf-m-cancelar'); if(b3) b3.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Cancelar esta tarefa? Ela sai das pendências e fica no histórico.', {title:'Cancelar tarefa', confirmLabel:'Cancelar tarefa', cancelLabel:'Voltar'}))) return; if(await acao({status:'cancelada'})){ closeModal(); renderTarefas(); } });
   const b4 = $('#tf-m-excluir'); if(b4) b4.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Excluir esta tarefa? Ela some das listas, mas o registro fica guardado para auditoria.', {title:'Excluir tarefa', confirmLabel:'Excluir', cancelLabel:'Voltar'}))) return; if(await acao({excluida:true})){ TAREFAS = TAREFAS.filter(x=>x.id!==t.id); closeModal(); renderTarefas(); } });
