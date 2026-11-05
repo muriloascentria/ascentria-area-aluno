@@ -720,14 +720,18 @@
   .rf-sols{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
   .rf-sol{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
   .rf-sol.rf-sol-cob{grid-column:1/-1;}
-  .me-mat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:8px;}
-  .me-mat{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:1fr auto;gap:10px 14px;padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);}
-  .me-mat-ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(184,134,47,.14);}
-  .me-mat-ic .icon{stroke:#b8862f;width:20px;height:20px;}
-  .me-mat-txt small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#b8862f;margin-bottom:2px;}
-  .me-mat-txt b{display:block;font-size:14px;line-height:1.35;color:var(--text);}
+  .me-mat-cat{border:1px solid var(--border);border-radius:14px;padding:10px 16px 6px;margin:0 0 18px;min-width:0;}
+  .me-mat-cat legend{padding:0 8px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#b8862f;}
+  .me-mat{display:flex;align-items:center;gap:14px;padding:12px 2px;border-bottom:1px solid var(--border);}
+  .me-mat:last-child{border-bottom:0;}
+  .me-mat-ic{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(184,134,47,.14);}
+  .me-mat-ic .icon{stroke:#b8862f;width:18px;height:18px;}
+  .me-mat-txt{flex:1;min-width:0;}
+  .me-mat-txt b{display:block;font-size:13.5px;line-height:1.35;color:var(--text);}
+  .me-mat-txt small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .me-mat-txt p{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--text-dim);}
-  .me-mat-btn{grid-column:1/-1;justify-self:start;display:inline-flex;align-items:center;gap:8px;}
+  .me-mat-btn{flex:none;display:inline-flex;align-items:center;gap:6px;}
+  @media (max-width:520px){ .me-mat{flex-wrap:wrap;} .me-mat-btn{margin-left:50px;} }
   .rf-sol-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;}
   .rf-sol-hd b{text-transform:uppercase;letter-spacing:.05em;font-size:12.5px;}
   .rf-sol-num{font-weight:800;color:var(--accent);white-space:nowrap;}
@@ -11036,12 +11040,12 @@ function renderMeMateriais(){
   const nomes = Object.keys(grupos);
   el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
     <p class="section-sub" style="text-align:center">Materiais de apoio exclusivos do Mentores Essência.</p>
-    ${nomes.length ? nomes.map(c=>`${nomes.length>1 || c!=='Materiais' ? `<h3 class="me-sub">${escapeHtml(c)}</h3>` : ''}
-      <div class="me-mat-grid">${grupos[c].map(m=>`<div class="me-mat">
-        <div class="me-mat-ic">${icon('folder')}</div>
-        <div class="me-mat-txt"><small>${meMatTipo(m)}</small><b>${escapeHtml(m.titulo)}</b>${m.descricao ? `<p>${linkify(m.descricao)}</p>` : ''}</div>
-        <button type="button" class="btn-accent me-mat-btn" data-me-mat-abrir="${m.id}">${icon(m.arquivo_path?'download':'externallink','tiny')}<span>${m.arquivo_path?'Baixar':'Abrir'}</span></button>
-      </div>`).join('')}</div>`).join('') : '<div class="empty-state">Os materiais do Mentores Essência aparecem aqui assim que a equipe publicar.</div>'}`;
+    ${nomes.length ? nomes.map(c=>`<fieldset class="me-mat-cat">${nomes.length>1 || c!=='Materiais' ? `<legend>${escapeHtml(c)}</legend>` : ''}
+      ${grupos[c].map(m=>`<div class="me-mat">
+        <div class="me-mat-ic">${icon('paperclip')}</div>
+        <div class="me-mat-txt"><b>${escapeHtml(m.titulo)}</b><small>${meMatTipo(m)}${m.arquivo_nome ? ' · '+escapeHtml(m.arquivo_nome) : ''}</small>${m.descricao ? `<p>${linkify(m.descricao)}</p>` : ''}</div>
+        <button type="button" class="btn-mini me-mat-btn" data-me-mat-abrir="${m.id}">${icon(m.arquivo_path?'download':'externallink','tiny')}<span>${m.arquivo_path?'Baixar':'Abrir'}</span></button>
+      </div>`).join('')}</fieldset>`).join('') : '<div class="empty-state">Os materiais do Mentores Essência aparecem aqui assim que a equipe publicar.</div>'}`;
   el.querySelectorAll('[data-me-mat-abrir]').forEach(b=>b.addEventListener('click', ()=>meMatAbrir(b.dataset.meMatAbrir)));
 }
 function renderMeSessoes(){
