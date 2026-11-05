@@ -19638,6 +19638,9 @@ function rdDiasDesde(iso){ if(!iso) return null; return Math.max(0, Math.floor((
 function rdHorasDesde(iso){ if(!iso) return null; return Math.max(0, Math.floor((Date.now()-new Date(iso).getTime())/3600000)); }
 function rdTempo(h){ return h < 48 ? `${h}h` : `${Math.floor(h/24)} dias`; }
 function rdDiasTxt(d){ return d===0 ? 'hoje' : d===1 ? 'ontem' : `há ${d} dias`; }
+function rdDashboardCompleto(s){
+  return MODULES.every(m=>{ let feitos = 0; try{ feitos = (getModuleChecklistState(s.id, m.id)||[]).slice(0, m.total).filter(Boolean).length; }catch(e){} return feitos >= m.total; });
+}
 function rdEstagioReal(s){
   for(let i=0;i<MODULES.length;i++){
     const m = MODULES[i];
@@ -19676,7 +19679,8 @@ function rdAvaliar(s, r){
   // 2. Avanço no dashboard (a medição começou em 03/10)
   const dAvanco = rdDiasDesde(r.ultimo_avanco || RADAR_INICIO_MEDICAO+'T00:00:00-03:00');
   const txtAv = r.ultimo_avanco ? `${dAvanco} dias sem avançar no dashboard` : `Sem avançar no dashboard desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`;
-  if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv);
+  /* Quem já concluiu todas as tarefas do dashboard não tem mais o que marcar: não entra como parado. */
+  if(!rdDashboardCompleto(s)){ if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv); }
   // 3. Mensagem do aluno esperando a equipe
   const hEspera = rdHorasDesde(r.aguardando_desde);
   if(hEspera!==null && hEspera>=48) add(2, `Esperando resposta da equipe há ${rdTempo(hEspera)}`, 'espera');
@@ -19724,7 +19728,7 @@ function rdMomentos(s){
       const diaTroca = Math.ceil(proxLim/f) + 1;
       const falta = diaTroca - dias;
       const prox = RADAR_ESTAGIOS[RADAR_REGUA.indexOf(proxLim)+1];
-      if(falta>=0 && falta<=7) out.push({chave:'mod:'+prox, em:falta, txt: falta===0 ? `Entra hoje em ${prox} pelo cronograma` : `Entra em ${prox} pelo cronograma em ${falta} dia${falta>1?'s':''}`});
+      if(falta>=0 && falta<=7 && rdEstagioReal(s).idx < RADAR_ESTAGIOS.indexOf(prox)) out.push({chave:'mod:'+prox, em:falta, txt: falta===0 ? `Entra hoje em ${prox} pelo cronograma` : `Entra em ${prox} pelo cronograma em ${falta} dia${falta>1?'s':''}`});
     }
   }
   try{
@@ -19744,7 +19748,7 @@ function rdMomentos(s){
     const f = rdFator(s);
     RADAR_REGUA.forEach((lim, i)=>{
       const diaTroca = Math.ceil(lim/f) + 1; const falta = diaTroca - dias; const prox = RADAR_ESTAGIOS[i+1];
-      if(prox && falta<0 && dataEm(falta)>=CORTE && pend('mod:'+prox)) out.push({chave:'mod:'+prox, em:falta, atrasado:true, txt:`Entrou em ${prox} pelo cronograma ${ha(-falta)}`});
+      if(prox && falta<0 && dataEm(falta)>=CORTE && pend('mod:'+prox) && rdEstagioReal(s).idx < RADAR_ESTAGIOS.indexOf(prox)) out.push({chave:'mod:'+prox, em:falta, atrasado:true, txt:`Entrou em ${prox} pelo cronograma ${ha(-falta)}`});
     });
   }
   try{
