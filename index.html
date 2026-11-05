@@ -18253,7 +18253,7 @@ function dreIndicadoresHtml(d){
 const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoEm:0 };
 async function rfCarregar(){
   RF.carregando = true; RF.erro = null;
-  try{ const { data, error } = await sb.rpc('radar_financeiro'); if(error) throw error; RF.dados = data; RF.carregadoEm = Date.now(); }
+  try{ const { data, error } = await sb.rpc('radar_financeiro'); if(error) throw error; if(!data || !data.hoje) throw new Error('resposta vazia do banco'); RF.dados = data; RF.carregadoEm = Date.now(); }
   catch(e){ console.error('radar_financeiro', e); RF.erro = e.message || 'erro'; }
   RF.carregando = false;
   if(currentView==='radarfin') renderRadarFin();
