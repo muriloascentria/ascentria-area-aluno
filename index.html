@@ -1185,6 +1185,7 @@
   .ps-label-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;}
   .ps-nao-tenho{font:inherit;font-size:11px;font-weight:600;padding:3px 10px;margin-bottom:4px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
   .ps-nao-tenho:hover{border-color:var(--accent);color:var(--accent);}
+  .ps-swatch-dot.ps-swatch-na{background:none !important;border:1.5px dashed var(--border);}
   .ps-locked .ps-nao-tenho{display:none;}
   .ps-rowlabel .ps-nao-tenho-row{display:block;margin:6px 0 0;}
   .ps-row-acoes{display:flex;align-items:center;gap:6px;}
@@ -9366,12 +9367,15 @@ function openModuleChecklist(modId, hlIdx){
 /* ================= VIEW: PAINEL DO MÉTODO (compartilhado aluno + equipe) ================= */
 /* Um tópico só conta como "Preenchido" quando TODAS as suas seções têm conteúdo real —
    não basta clicar em Salvar. Cada tipo de seção define "ter conteúdo" à sua maneira. */
+/* "Não se aplica": o aluno marca o que não usa; conta como preenchido. "Não tenho" é o nome antigo. */
+const PS_NA = 'Não se aplica';
+function psEhNA(v){ return /^\s*(não tenho|nao tenho|não se aplica|nao se aplica)\s*$/i.test(String(v||'')); }
 function sectionFilled(section, data){
   const val = sectionValue(data, section);
   if(section.type==='fields') return section.fields.every(f=>(val[f.key]||'').trim()!=='');
   if(section.type==='list') return val.some(v=>(v||'').trim()!=='');
   if(section.type==='checklist') return val.length>0 && val.every(it=>(it.text||'').trim()!=='');
-  if(section.type==='swatches') return val.every(v=>/^#([0-9a-f]{3}){1,2}$/i.test(String(v||'').replace(/\s+/g,'')));
+  if(section.type==='swatches') return val.every(v=>psEhNA(v) || /^#([0-9a-f]{3}){1,2}$/i.test(String(v||'').replace(/\s+/g,'')));
   /* "Totalmente completo": TODAS as linhas precisam ter TODAS as colunas reais preenchidas — não
      basta preencher uma célula em uma linha (ex.: só marcar o Status de um dia no Funil de
      Conteúdo). "__label" é o rótulo automático da linha (dia da semana, nome da ação fixa) e não
@@ -9768,7 +9772,7 @@ function renderSectionHTML(section, data){
     return `<div class="ps-section">
       <h4 class="ps-h">${section.label}</h4>
       ${section.fields.map(f=>`
-        <div class="ps-label-row"><label class="ps-label">${f.label}</label>${(val[f.key]||'').trim() ? '' : `<button type="button" class="ps-nao-tenho" data-nao-tenho="${section.key}|${f.key}" title="Marque se você não tem ou não usa isso">Não tenho</button>`}</div>
+        <div class="ps-label-row"><label class="ps-label">${f.label}</label>${(val[f.key]||'').trim() ? '' : `<button type="button" class="ps-nao-tenho" data-nao-tenho="${section.key}|${f.key}" title="Marque se isso não se aplica a você">Não se aplica</button>`}</div>
         ${f.gabarito? `<div class="gabarito">${f.gabarito}</div>`:''}
         <textarea class="ps-input" rows="1" data-fkind="fields" data-skey="${section.key}" data-fkey="${f.key}">${escapeAttr(val[f.key]||'')}</textarea>
       `).join('')}
@@ -9800,13 +9804,15 @@ function renderSectionHTML(section, data){
     </div>`;
   }
   if(section.type==='swatches'){
+    const swVazio = val.some(v=>!String(v||'').trim());
     return `<div class="ps-section">
-      <h4 class="ps-h">${section.label}</h4>
+      <div class="ps-label-row"><h4 class="ps-h">${section.label}</h4>${swVazio ? `<button type="button" class="ps-nao-tenho" data-nao-tenho-sw="${section.key}" title="Marque se as cores que faltam não se aplicam a você">Não se aplica</button>` : ''}</div>
       <div class="ps-swatches">
         ${val.map((v,i)=>{
+          const na = psEhNA(v);
           const hex = /^#([0-9a-f]{3}){1,2}$/i.test(v)? v : '#1c1e19';
           return `<div class="ps-swatch">
-            <span class="ps-swatch-dot" style="background:${hex}"></span>
+            <span class="ps-swatch-dot${na?' ps-swatch-na':''}" style="${na?'':`background:${hex}`}"></span>
             <input class="ps-input" data-fkind="swatches" data-skey="${section.key}" data-idx="${i}" value="${escapeAttr(v)}" placeholder="#xxxxxx">
           </div>`;
         }).join('')}
@@ -9827,9 +9833,9 @@ function renderSectionHTML(section, data){
         <thead><tr>${section.fixedRows?'<th></th>':''}${cols.map(c=>`<th>${c.label}</th>`).join('')}${section.fixedRows?'':'<th></th>'}</tr></thead>
         <tbody>
           ${rows.map((row,i)=>{
-            /* Linha com alguma coluna vazia: botão "Não tenho" preenche as vazias de uma vez. */
+            /* Linha com alguma coluna vazia: botão "Não se aplica" preenche as vazias de uma vez. */
             const ntBtn = cols.some(c=>c.key!=='__label' && !String(row[c.key]||'').trim())
-              ? `<button type="button" class="ps-nao-tenho ps-nao-tenho-row" data-nao-tenho-row="${section.key}|${i}" title="Marque se esta linha não se aplica a você">Não tenho</button>` : '';
+              ? `<button type="button" class="ps-nao-tenho ps-nao-tenho-row" data-nao-tenho-row="${section.key}|${i}" title="Marque se esta linha não se aplica a você">Não se aplica</button>` : '';
             return `<tr>
             ${section.fixedRows? `<td class="ps-rowlabel">${row.__label}${ntBtn}</td>` : ''}
             ${cols.map(c=>{
@@ -10128,14 +10134,20 @@ function bindSectionEvents(sections, data, rerender, saveKey){
   modalEl.querySelectorAll('[data-nao-tenho]').forEach(b=>b.addEventListener('click', ()=>{
     const [skey, fkey] = b.dataset.naoTenho.split('|');
     const section = sections.find(x=>x.key===skey); if(!section) return;
-    sectionValue(data, section)[fkey] = 'Não tenho';
+    sectionValue(data, section)[fkey] = PS_NA;
     persist(); rerender();
   }));
   modalEl.querySelectorAll('[data-nao-tenho-row]').forEach(b=>b.addEventListener('click', ()=>{
     const [skey, idx] = b.dataset.naoTenhoRow.split('|');
     const section = sections.find(x=>x.key===skey); if(!section) return;
     const row = sectionValue(data, section)[+idx]; if(!row) return;
-    section.columns.forEach(c=>{ if(c.key!=='__label' && !String(row[c.key]||'').trim()) row[c.key] = 'Não tenho'; });
+    section.columns.forEach(c=>{ if(c.key!=='__label' && !String(row[c.key]||'').trim()) row[c.key] = PS_NA; });
+    persist(); rerender();
+  }));
+  modalEl.querySelectorAll('[data-nao-tenho-sw]').forEach(b=>b.addEventListener('click', ()=>{
+    const section = sections.find(x=>x.key===b.dataset.naoTenhoSw); if(!section) return;
+    const arr = sectionValue(data, section);
+    arr.forEach((v,i)=>{ if(!String(v||'').trim()) arr[i] = PS_NA; });
     persist(); rerender();
   }));
   modalEl.querySelectorAll('[data-fkind]').forEach(inp=>{
@@ -10558,7 +10570,7 @@ function openTopicModal(quadrant, topicId){
         <h3>${topic.title}</h3>
         ${topic.desc? `<p class="desc">${topic.desc}</p>` : ''}
         ${(topic.intro||[]).map(t=>`<div class="topic-note">${t}</div>`).join('')}
-        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : `Salvo — ainda falta preencher: <strong>${escapeHtml(topicFaltando(topic, data).join(', '))}</strong>. Se algum item não se aplica a você, clique em Editar e use o botão "Não tenho" ou escreva "não tenho" no campo.`}</div>` : ''}
+        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : `Salvo — ainda falta preencher: <strong>${escapeHtml(topicFaltando(topic, data).join(', '))}</strong>. Se algum item não se aplica a você, clique em Editar e use o botão "Não se aplica".`}</div>` : ''}
         <div class="${editing? '' : 'ps-locked'}">
           ${(topic.sections||[]).map(sec=>renderSectionHTML(sec, data)).join('')}
         </div>
