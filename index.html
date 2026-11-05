@@ -687,6 +687,8 @@
   .rf-fill.meio{background:var(--individual);} .rf-fill.ok{background:var(--success);}
   .rf-nota{display:block;margin:6px 0 18px;font-size:11.5px;color:var(--text-mute);line-height:1.5;}
   .rf-tab td,.rf-tab th{white-space:nowrap;}
+  .rf-cen{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 6px;font-size:12.5px;color:var(--text-dim);}
+  .rf-cen .role-toggle{display:inline-flex;flex-wrap:wrap;}
   .rf-neg{color:var(--danger);} .rf-pos{color:var(--success);} .rf-alerta{color:var(--individual);}
   .rf-risco{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;}
   .rf-cli{border:1px solid var(--border);border-left:4px solid var(--individual);border-radius:var(--radius-sm);background:var(--bg-card);padding:10px 12px;}
@@ -18250,7 +18252,7 @@ function dreIndicadoresHtml(d){
    reserva), editáveis aqui. O banco entrega tudo pronto em radar_financeiro(); aqui só se calcula a
    projeção e as recomendações. Transferências entre contas, empréstimos e "Recebido Sócios" não contam
    como faturamento. */
-const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoEm:0 };
+const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoEm:0, cenario:'meta' };
 /* Quem abre: os 4 sócios e a Mariane (assistente administrativa). Premissas: só os sócios editam. */
 const RF_EXTRA_UIDS = ['b01a4425-1ba8-4703-9c40-3301a0de7249'];
 function rfPode(){ return reuSocio() || (currentUserRole==='staff' && !!currentUser && RF_EXTRA_UIDS.includes(idEfetivo())); }
@@ -18282,12 +18284,17 @@ function rfCalcular(D){
   const sessoesNec = taxa>0 ? Math.ceil(faltamVendas / taxa) : null;
   const atrasoTotal = (D.atrasados||[]).reduce((a,x)=>a+rfN(x.valor),0);
   const saldo = rfN(D.saldo_estimado);
+  // Média real de vendas: últimos 3 meses fechados
+  const ultMeses = [-3,-2,-1].map(i=>rfN(vend(rfMesMais(mk, i)).vendidos));
+  const mediaReal = Math.round(ultMeses.reduce((a,b)=>a+b,0)/3*10)/10;
+  const cenario = RF.cenario==='real' ? 'real' : 'meta';
+  const vendasProj = cenario==='real' ? mediaReal : meta;
   // Projeção: mês atual (o que ainda falta entrar e sair) + 5 meses.
   const proj = []; let sal = saldo, salPl = saldo;
   for(let i=0;i<6;i++){
     const k = rfMesMais(mk, i), m = mes(k);
     const agend = i===0 ? Math.max(0, rfN(m.rec_prev) - rfN(m.rec_pago)) : rfN(m.rec_prev);
-    const novas = i===0 ? 0 : meta * (ticket/parc) * Math.min(i, parc);
+    const novas = i===0 ? 0 : vendasProj * (ticket/parc) * Math.min(i, parc);
     const entra = agend + novas;
     const custosMes = i===0 ? Math.max(0, Math.max(rfN(m.pag_prev), custo) - rfN(m.pag_pago)) : Math.max(rfN(m.pag_prev), custo);
     const sai = custosMes + entra*pctSaida;
@@ -18328,7 +18335,7 @@ function rfCalcular(D){
   if(rfN(D.sem_aluno)>0) rec.push({ nivel:1, txt:`${rfN(D.sem_aluno)} parcelas de Mentoria a receber estão sem aluna vinculada no Financeiro (só ${rfN(D.com_aluno)} estão). Vincule a aluna nessas parcelas para o risco por cliente ficar completo.`, acao:'Abrir Financeiro', view:'financeiro' });
   if(medRet>0) rec.push({ nivel:0, txt:`Retiradas dos sócios: média de ${formatBRL(medRet)}/mês nos últimos 4 meses, contra a meta de pró-labore de ${formatBRL(pl)}.`, acao:null, view:null });
   rec.sort((a,b)=>b.nivel-a.nivel);
-  return { P, mk, meta, vendidos, faltamVendas, taxa, sessoesNec, diasRest, atrasoTotal, saldo, reservaAlvo, proj, recMes, recPrevMes, necessidade, impMes, custo, pl, giro, hist, risco, rec };
+  return { P, mk, meta, mediaReal, ultMeses, cenario, vendasProj, vendidos, faltamVendas, taxa, sessoesNec, diasRest, atrasoTotal, saldo, reservaAlvo, proj, recMes, recPrevMes, necessidade, impMes, custo, pl, giro, hist, risco, rec };
 }
 function renderRadarFin(){
   const el = document.getElementById('view-radarfin'); if(!el) return;
@@ -18372,6 +18379,8 @@ function renderRadarFin(){
     </div>
 
     <h2 class="section-title com-titulo">${icon('calendar')} Projeção dos próximos 6 meses</h2>
+    <div class="rf-cen"><span>Vendas novas por mês:</span><div class="role-toggle"><button type="button" data-rf-cen="meta" class="${C.cenario==='meta'?'active':''}">Se bater a meta (${C.meta})</button><button type="button" data-rf-cen="real" class="${C.cenario==='real'?'active':''}">Se continuar como está (${String(C.mediaReal).replace('.',',')})</button></div></div>
+    <small class="rf-nota" style="margin-top:0">${C.cenario==='real' ? `Usando a média real de vendas de Mentoria Essência dos últimos 3 meses fechados (${C.ultMeses.map((v,i)=>rfMesNome(rfMesMais(C.mk, i-3))+': '+v).join(', ')}).` : `Usando a meta de ${C.meta} vendas por mês das Premissas.`}</small>
     <div class="table-wrap"><table class="check-table rf-tab">
       <thead><tr><th>Mês</th><th>A receber agendado</th><th>Vendas novas (meta)</th><th>Saídas previstas</th><th>Resultado</th><th>Caixa projetado</th><th>Caixa com pró-labore</th></tr></thead>
       <tbody>${C.proj.map(x=>`<tr><td><b>${rfMesNome(x.k)}</b>${x.k===C.mk?' <small>(resto do mês)</small>':''}</td><td>${formatBRL(x.agend)}</td><td>${x.novas? formatBRL(x.novas) : '—'}</td><td>${formatBRL(x.sai)}</td><td class="${x.res<0?'rf-neg':'rf-pos'}">${formatBRL(x.res)}</td><td class="${x.sal<0?'rf-neg':x.sal<C.reservaAlvo?'rf-alerta':'rf-pos'}"><b>${formatBRL(x.sal)}</b></td><td class="${x.salPl<0?'rf-neg':'rf-pos'}">${formatBRL(x.salPl)}</td></tr>`).join('')}</tbody>
@@ -18395,6 +18404,7 @@ function renderRadarFin(){
     </div>`;
   el.querySelector('#rf-atualizar').addEventListener('click', ()=>rfCarregar());
   el.querySelectorAll('[data-rf-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.rfGo)));
+  el.querySelectorAll('[data-rf-cen]').forEach(b=>b.addEventListener('click', ()=>{ RF.cenario = b.dataset.rfCen; renderRadarFin(); }));
   el.querySelectorAll('[data-rf-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rfAcomp)));
   el.querySelector('#rf-prem-toggle').addEventListener('click', ()=>{ RF.editando = !RF.editando; renderRadarFin(); });
   const sv = el.querySelector('#rf-prem-salvar');
