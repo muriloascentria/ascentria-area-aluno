@@ -667,6 +667,11 @@
   tr.vg-cancelado td:has(.acesso-canc-tag), tr.vg-cancelado td:last-child{opacity:1;}
   .me-meta-quem{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:11.5px;color:var(--success);font-weight:600;}
   .me-conv-faixa{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px auto 14px;padding:7px 14px;max-width:560px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:12.5px;font-weight:600;text-align:center;}
+  .dp-lista{list-style:none;padding:0;margin:4px 0 4px;display:flex;flex-direction:column;gap:6px;}
+  .dp-lista li{display:flex;align-items:center;gap:6px;font-size:13.5px;}
+  .dp-lista small{color:var(--text-mute);}
+  #dp-abrir{display:inline-flex;align-items:center;gap:6px;}
+  .dp-hint{display:flex;align-items:center;gap:4px;margin-top:3px;font-size:11.5px;color:var(--warning, #d9a441);font-weight:600;}
   .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
   .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
   .app-confirm-card h4{font-size:15.5px;margin:0 0 8px;}
@@ -9115,6 +9120,68 @@ function syncChecklistFromCourse(student, course, checked){
 }
 
 /* ================= MODAL: CHECKLIST DO MÓDULO (Dashboard) ================= */
+/* ---- Dashboard x Painel do Método ----
+   Tarefas do Dashboard que só podem ser marcadas com o quadro correspondente do Painel preenchido
+   (número do item no módulo, contando de 1 -> quadros do Painel). O Radar mostra quem tem a tarefa
+   marcada com o quadro vazio (marcações feitas antes desta regra). */
+const DASH_PAINEL = {
+  ser:        {14:['persona'], 24:['mvv'], 42:['identidade']},
+  conectar:   {6:['paginas'], 7:['paginas'], 8:['paginas'], 9:['paginas'], 10:['paginas'], 11:['paginas'], 21:['funil'], 26:['avaliacao'], 61:['parceiros'], 62:['projetos']},
+  transformar:{7:['agendamento'], 10:['registro'], 13:['orientacoes'], 20:['avaliacao-jornada']},
+  gerenciar:  {9:['contratos'], 12:['politicas','pops'], 18:['prescricoes'], 21:['laudos'], 30:['precificacao'], 33:['rotina']},
+};
+function painelAcharTopico(topicId){
+  for(const q of QUADRANTS){ const i = q.topics.findIndex(t=>t.id===topicId); if(i>=0) return { q, t:q.topics[i], i }; }
+  return null;
+}
+function painelTopicoPreenchido(s, topicId){
+  const a = painelAcharTopico(topicId); if(!a) return true;
+  try{ return topicFilled(a.q, a.t, a.i, s); }catch(e){ return true; }
+}
+function dashPainelFaltando(s, modId, idx){
+  const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req) return [];
+  return req.filter(t=>!painelTopicoPreenchido(s, t)).map(painelAcharTopico).filter(Boolean);
+}
+function painelPreenchidos(s){
+  let tot = 0, ok = 0;
+  QUADRANTS.forEach(q=>q.topics.forEach((t,i)=>{ tot++; try{ if(topicFilled(q,t,i,s)) ok++; }catch(e){} }));
+  return { ok, tot };
+}
+function dashPainelIncoerencias(s){
+  const out = [];
+  Object.keys(DASH_PAINEL).forEach(modId=>{
+    let st = []; try{ st = getModuleChecklistState(s.id, modId) || []; }catch(e){}
+    Object.keys(DASH_PAINEL[modId]).forEach(n=>{
+      const idx = +n - 1;
+      if(!st[idx]) return;
+      dashPainelFaltando(s, modId, idx).forEach(a=>{ if(!out.some(o=>o.t.id===a.t.id)) out.push(a); });
+    });
+  });
+  return out;
+}
+function dashPainelAvisoBloqueio(faltam, voltar){
+  const wrap = document.createElement('div');
+  wrap.className = 'app-confirm-backdrop';
+  wrap.innerHTML = `
+    <div class="app-confirm-card">
+      <h4>Antes, preencha o Painel do Método</h4>
+      <p>Esta tarefa só pode ser marcada depois que ${faltam.length>1 ? 'estes quadros estiverem preenchidos' : 'este quadro estiver preenchido'} no Painel do Método:</p>
+      <ul class="dp-lista">${faltam.map(a=>`<li>${icon(a.q.icon,'tiny')} <b>${escapeHtml(a.t.title)}</b> <small>${escapeHtml(a.q.title)}</small></li>`).join('')}</ul>
+      <div class="app-confirm-actions"><button type="button" class="btn-outline" id="dp-fechar">Agora não</button><button type="button" class="btn-accent" id="dp-abrir">${icon('compass','tiny')} Abrir no Painel</button></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = ()=>wrap.remove();
+  wrap.querySelector('#dp-fechar').addEventListener('click', fechar);
+  wrap.addEventListener('click', e=>{ if(e.target===wrap) fechar(); });
+  wrap.querySelector('#dp-abrir').addEventListener('click', ()=>{
+    fechar();
+    const a = faltam[0];
+    if(document.getElementById('modal-backdrop').classList.contains('open')) reallyCloseModal();
+    panelQuadrantId = a.q.id;
+    goTo('painel');
+    setTimeout(()=>openTopicModal(a.q, a.t.id), 60);
+  });
+}
 function openModuleChecklist(modId, hlIdx){
   const s = getStudent(currentStudentId);
   const mod = getModule(modId);
@@ -9137,7 +9204,7 @@ function openModuleChecklist(modId, hlIdx){
             return `
             <div class="mod-check-item ${state[idx]?'done':''}" data-idx="${idx}">
               <span class="box">${state[idx]? icon('tick') : ''}</span>
-              <span class="txt">${label}</span>
+              <span class="txt">${label}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx]) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>escapeHtml(a.t.title)).join(', ')}</small>` : ''; })()}</span>
               ${linkedCourse? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
             </div>`;
           }).join('')}
@@ -9155,6 +9222,10 @@ function openModuleChecklist(modId, hlIdx){
     document.querySelectorAll('.mod-check-item').forEach(el=>{
       el.addEventListener('click',()=>{
         const idx = +el.dataset.idx;
+        if(!state[idx]){
+          const faltam = dashPainelFaltando(s, modId, idx);
+          if(faltam.length){ dashPainelAvisoBloqueio(faltam); return; }
+        }
         state[idx] = !state[idx];
         s.moduleProgress[modId] = state.filter(Boolean).length;
         syncModuleChecklist(s.id, modId, idx, state[idx]);
@@ -19708,6 +19779,9 @@ function rdAvaliar(s, r){
   const ultNps = (NPS_UI.rows||[]).filter(x=>x.aluno_id===s.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
   if(ultNps && ultNps.nota<=6) add(2, `NPS ${ultNps.nota} aos ${ultNps.marco} meses (detrator)`);
   else if(ultNps && ultNps.nota<=8) add(1, `NPS ${ultNps.nota} aos ${ultNps.marco} meses (neutro)`);
+  // 8b. Dashboard x Painel do Método: tarefa marcada com o quadro do Painel vazio
+  const incoer = dashPainelIncoerencias(s);
+  if(incoer.length) add(1, `Painel do Método incoerente: tarefa marcada no Dashboard, mas ${incoer.length>1 ? 'os quadros '+incoer.map(a=>a.t.title).join(', ')+' estão vazios' : 'o quadro '+incoer[0].t.title+' está vazio'}`);
   // 9. Próxima ação vencida
   const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
   if(r.prazo && r.prazo < hojeISO) add(1, `Próxima ação vencida em ${tzDataCurta(r.prazo)}`);
@@ -19947,6 +20021,7 @@ function renderRadar(){
           <div class="rd-dados">
             ${dado('Último acesso', a.dAcesso===null ? 'nunca' : rdDiasTxt(a.dAcesso), nivelDe(a.dAcesso,7,14))}
             ${dado('Último avanço no dashboard', r.ultimo_avanco ? rdDiasTxt(a.dAvanco) : `sem registro desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`, a.dAvanco>=30?'vermelho':a.dAvanco>=14?'amarelo':'')}
+            ${(()=>{ const pp = painelPreenchidos(s); const inc = dashPainelIncoerencias(s).length; return dado('Painel do Método', `${pp.ok}/${pp.tot} quadros preenchidos${inc ? ` · ${inc} incoerente${inc>1?'s':''} com o Dashboard` : ''}`, inc ? 'amarelo' : ''); })()}
             ${dado('Ritmo', a.esp ? `deveria: ${RADAR_ESTAGIOS[a.esp.idx]} · está: ${RADAR_ESTAGIOS[a.real.idx]}` : 'sem data de matrícula', a.esp ? (a.esp.idx-a.real.idx>=2?'vermelho':a.esp.idx-a.real.idx===1?'amarelo':'') : '')}
             ${dado('Mensagem esperando a equipe', a.hEspera===null ? 'nenhuma' : 'há '+rdTempo(a.hEspera), a.hEspera===null?'':a.hEspera>=48?'vermelho':a.hEspera>=24?'amarelo':'')}
             ${dado('Última mensagem do aluno', r.ult_msg_aluno ? rdDiasTxt(rdDiasDesde(r.ult_msg_aluno)) : 'nunca escreveu', '')}
