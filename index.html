@@ -736,8 +736,13 @@
   .rf-cli-hd small{color:var(--text-mute);font-size:11.5px;}
   .rf-cli p{margin:6px 0 0;font-size:12.5px;}
   .rf-prem{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
-  .rf-prem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px;}
+  .rf-prem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,280px));gap:14px;align-items:end;margin-top:10px;}
   .rf-prem-grid .ps-label{display:flex;flex-direction:column;gap:4px;font-size:12px;}
+  .rf-prem-campo{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--text-dim);}
+  .rf-prem-campo .ps-input{height:42px;box-sizing:border-box;margin:0;width:100%;max-width:none;}
+  .rf-prem-valor{display:flex;align-items:center;font-weight:800;color:var(--text);background:var(--bg-card);}
+  .rf-btn-ic{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}
+  .rf-btn-ic .icon{flex:none;}
   .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
   .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
   .app-confirm-card h4{font-size:15.5px;margin:0 0 8px;}
@@ -18545,25 +18550,36 @@ function renderRadarFin(){
     const t = document.getElementById('rf-tentar'); if(t) t.addEventListener('click', ()=>{ RF.erro = null; renderRadarFin(); }); return; }
   const O = RF.dados.premissas || {};
   el.innerHTML = `
-    <p class="section-sub" style="margin-top:0">Atualizado com o Financeiro e o Registro de Sessões 1:1. Caixa estimado a partir do saldo de ${formatBRL(rfN(O.saldo_base))} em ${tzDataCurta(O.saldo_base_data)} (Inter + Infinity), somando o que entrou e saiu depois. <button type="button" class="link-btn" id="rf-atualizar">Atualizar</button></p>
+    <p class="section-sub" style="margin-top:0">Atualizado com o Financeiro e o Registro de Sessões 1:1. Saldo de caixa em ${tzDataCurta(O.saldo_base_data)}: ${formatBRL(rfN(RF.dados.saldo_base_calc ?? O.saldo_base))} (Inter + Infinity), calculado pelo Financeiro. Caixa estimado hoje soma tudo o que entrou e saiu depois. <button type="button" class="link-btn" id="rf-atualizar">Atualizar</button></p>
     <div class="rf-sim" id="rf-ctrl"></div>
     <div id="rf-comp"></div>
     <div id="rf-corpo"></div>
     <div class="rf-prem" ${reuSocio() ? '' : 'hidden'}>
       <button type="button" class="vg-sec-toggle ${RF.editando?'':'fechado'}" id="rf-prem-toggle">${icon('down')} Saldo de caixa (data-base) ${RF.editando?'(recolher)':'(editar)'}</button>
-      ${RF.editando ? `<div class="rf-prem-grid"><label class="ps-label">Saldo de caixa na data-base (R$)<input class="ps-input" type="number" step="any" data-rf-p="saldo_base" value="${escapeAttr(O.saldo_base==null?'':O.saldo_base)}"></label><label class="ps-label">Data-base do saldo<input class="ps-input" type="date" data-rf-p="saldo_base_data" value="${escapeAttr(O.saldo_base_data||'')}"></label></div>
-        <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="btn-accent" id="rf-prem-salvar">${icon('check','tiny')} Salvar saldo</button></div>` : ''}
+      ${RF.editando ? `<div class="rf-prem-grid"><label class="rf-prem-campo"><span>Data-base do saldo</span><input class="ps-input" type="date" id="rf-base-data" value="${escapeAttr(O.saldo_base_data||'')}"></label><div class="rf-prem-campo"><span>Saldo de caixa na data-base</span><div class="ps-input rf-prem-valor" id="rf-base-valor">${formatBRL(rfN(RF.dados.saldo_base_calc ?? O.saldo_base))}</div></div></div>
+        <small class="rf-nota">O saldo é calculado sozinho pelo Financeiro: parte do saldo de referência de ${formatBRL(rfN(O.saldo_ancora ?? O.saldo_base))} em ${tzDataCurta(O.data_ancora || O.saldo_base_data)} e soma tudo o que foi marcado como recebido e diminui tudo o que foi marcado como pago até a data escolhida.</small>
+        <div class="modal-actions" style="justify-content:flex-start;margin-top:12px"><button type="button" class="btn-accent rf-btn-ic" id="rf-prem-salvar">${icon('check','tiny')}<span>Salvar data-base</span></button></div>` : ''}
     </div>`;
   el.querySelector('#rf-atualizar').addEventListener('click', ()=>rfCarregar());
   el.querySelector('#rf-prem-toggle').addEventListener('click', ()=>{ RF.editando = !RF.editando; renderRadarFin(); });
   const sv = el.querySelector('#rf-prem-salvar');
   if(sv) sv.addEventListener('click', async ()=>{
     const novo = Object.assign({}, RF.dados.premissas);
-    el.querySelectorAll('[data-rf-p]').forEach(i=>{ const k = i.dataset.rfP; novo[k] = i.type==='date' ? i.value : (i.value==='' ? null : Number(i.value)); });
+    const dt = el.querySelector('#rf-base-data').value; if(!dt){ showAppAviso('Escolha a data-base.'); return; }
     sv.disabled = true;
+    const r = await sb.rpc('radar_fin_saldo_em', { p_data: dt });
+    if(r.error){ sv.disabled = false; showAppAviso('Não foi possível calcular o saldo: '+(r.error.message||'')); return; }
+    novo.saldo_base_data = dt; novo.saldo_base = Number(r.data);
     const { error } = await sb.from('fin_radar_premissas').update({ dados: novo, atualizado_em: new Date().toISOString(), atualizado_por: currentUser.id }).eq('id', 1);
     if(error){ sv.disabled = false; showAppAviso('Não foi possível salvar: '+(error.message||'')); return; }
     RF.editando = false; await rfCarregar();
+  });
+  const bd = el.querySelector('#rf-base-data');
+  if(bd) bd.addEventListener('change', async ()=>{
+    const out = el.querySelector('#rf-base-valor'); if(!bd.value || !out) return;
+    out.textContent = 'Calculando…';
+    const r = await sb.rpc('radar_fin_saldo_em', { p_data: bd.value });
+    out.textContent = r.error ? 'Não consegui calcular' : formatBRL(Number(r.data));
   });
   rfPintarCtrl(); rfPintarCorpo();
 }

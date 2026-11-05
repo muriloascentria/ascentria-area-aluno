@@ -1,0 +1,1 @@
+-- Radar Financeiro: saldo da data-base calculado pelo Financeiro (radar_fin_saldo_em) a partir de saldo_ancora/data_ancora. Aplicada via apply_migration em 2026-11-05.
