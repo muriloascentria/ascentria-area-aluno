@@ -2117,6 +2117,11 @@
   .tf-sub-item span{flex:1;}
   .tf-sub-just{display:block;font-size:12px;color:var(--text-mute);text-decoration:none;margin-top:2px;font-style:italic;}
   .tf-sub-item.ok .tf-sub-just{display:none;}
+  .tf-sub-prova{display:inline-block;width:100%;font-size:12px;color:var(--success);margin-top:2px;}
+  .rot-prova-item{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;}
+  .rot-prova-item.bloq{opacity:.6;}
+  .rot-prova-item a{color:var(--accent);margin-left:4px;}
+  .rot-prova-aviso{color:var(--danger);margin-left:4px;}
   .tf-rot-aviso{font-size:12px;color:var(--text-mute);margin:2px 0 6px;}
   .rot-just-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;}
   .rot-just-box{background:var(--bg-elev);color:var(--text);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.25);}
@@ -13241,7 +13246,7 @@ async function carregarSubtarefasDe(ids){
   if(!ids.length) return;
   const { data } = await sb.from('tarefas_subtarefas').select('*').in('tarefa_id', ids).order('ordem').order('created_at');
   ids.forEach(id=>{ TAREFAS_SUB[id] = []; });
-  (data||[]).forEach(s=>{ (TAREFAS_SUB[s.tarefa_id] = TAREFAS_SUB[s.tarefa_id]||[]).push({id:s.id, tarefaId:s.tarefa_id, titulo:s.titulo, concluida:!!s.concluida, concluidaEm:s.concluida_em, concluidaPor:s.concluida_por, ordem:s.ordem, justificativa:s.justificativa||'', justificadaEm:s.justificada_em}); });
+  (data||[]).forEach(s=>{ (TAREFAS_SUB[s.tarefa_id] = TAREFAS_SUB[s.tarefa_id]||[]).push({id:s.id, tarefaId:s.tarefa_id, titulo:s.titulo, concluida:!!s.concluida, concluidaEm:s.concluida_em, concluidaPor:s.concluida_por, ordem:s.ordem, justificativa:s.justificativa||'', justificadaEm:s.justificada_em, prova:s.prova||[]}); });
 }
 /* Histórico de concluídas/canceladas: carregamento progressivo, 50 por vez. */
 async function carregarTarefasConcluidas(mais){
@@ -13651,6 +13656,45 @@ function rotinaGarantirJustificativas(t){
     });
   });
 }
+/* Itens da rotina que pedem prova (ex.: análise de vendas): ao marcar, a pessoa escolhe
+   as análises que fez. O banco confere de novo (rotina_prova_erro). Devolve true se marcou. */
+async function rotinaMarcarComProva(sub){
+  const { data: cands, error } = await sb.rpc('rotina_prova_candidatas', { p_sub: sub.id });
+  if(error || !cands || !cands.length) return null; // item sem prova: segue o caminho normal
+  const todas = cands.some(c=>c.obrigatoria);
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'rot-just-ov';
+    const linha = c=>{
+      const sem = !c.link_analise, usada = !!c.usada, bloq = sem || usada;
+      const marcada = todas ? !sem : false;
+      return `<label class="rot-prova-item ${bloq?'bloq':''}"><input type="checkbox" data-rot-prova="${c.analise_id||''}" ${bloq?'disabled':''} ${marcada?'checked':''}>
+        <span><b>${escapeHtml(c.lead||'Sem nome')}</b> · ${c.data_sessao? tzDataCurta(c.data_sessao) : '—'} · ${escapeHtml(c.vendedor||'')}
+        ${sem ? '<small class="rot-prova-aviso">sem link da análise postado</small>' : usada ? '<small class="rot-prova-aviso">já usada como prova</small>' : `<a href="${escapeAttr(c.link_analise)}" target="_blank" rel="noopener">abrir análise</a>`}</span></label>`;
+    };
+    ov.innerHTML = `<div class="rot-just-box" role="dialog" aria-modal="true">
+      <h3>Prova da análise</h3>
+      <p class="desc">${todas ? 'Marque a análise de cada uma destas sessões. Todas precisam ter o link da análise postado em Análise de Sessões.' : 'Marque as análises que você fez. Só aparecem sessões com o link da análise já postado em Análise de Sessões.'}</p>
+      <p class="tf-rot-aviso">${escapeHtml(sub.titulo)}</p>
+      <div class="rot-just-lista">${cands.map(linha).join('')}</div>
+      <div class="rot-just-erro" hidden></div>
+      <div class="rot-just-acoes"><button type="button" class="btn-outline" data-rot-voltar>Cancelar</button><button type="button" class="btn-primary" data-rot-ok>Marcar como feito</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    const fechar = v=>{ ov.remove(); resolve(v); };
+    ov.querySelector('[data-rot-voltar]').addEventListener('click', ()=>fechar(false));
+    ov.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(false); });
+    ov.querySelector('[data-rot-ok]').addEventListener('click', async ()=>{
+      const ids = [...ov.querySelectorAll('[data-rot-prova]:checked')].map(c=>c.dataset.rotProva).filter(Boolean);
+      const er = ov.querySelector('.rot-just-erro');
+      if(!ids.length){ er.hidden = false; er.textContent = 'Marque pelo menos uma análise.'; return; }
+      const btn = ov.querySelector('[data-rot-ok]'); btn.disabled = true; btn.textContent = 'Salvando…';
+      const { error: e2 } = await sb.from('tarefas_subtarefas').update({concluida:true, prova:ids}).eq('id', sub.id);
+      if(e2){ er.hidden = false; er.textContent = e2.message; btn.disabled = false; btn.textContent = 'Marcar como feito'; return; }
+      fechar(true);
+    });
+  });
+}
 async function tarefaMudarStatus(id, status){
   const t = TAREFAS.find(x=>x.id===id);
   if(!t || t.status===status) return;
@@ -13745,7 +13789,7 @@ async function openTarefaModal(id, defaults){
         ${(nova ? draftNovoSubs.map((s,i)=>({id:'d'+i, titulo:s, concluida:false})) : subs).map(s=>`
           <div class="tf-sub-item ${s.concluida?'ok':''}">
             <input type="checkbox" data-tf-sub="${s.id}" ${s.concluida?'checked':''} ${ro(podeEditar)}>
-            <span>${escapeHtml(s.titulo)}${!s.concluida && s.justificativa ? `<small class="tf-sub-just">Não feito: ${escapeHtml(s.justificativa)}</small>` : ''}</span>
+            <span>${escapeHtml(s.titulo)}${!s.concluida && s.justificativa ? `<small class="tf-sub-just">Não feito: ${escapeHtml(s.justificativa)}</small>` : ''}${s.concluida && (s.prova||[]).length ? `<small class="tf-sub-prova">Prova: ${s.prova.length} ${s.prova.length===1?'análise':'análises'}</small>` : ''}</span>
             ${podeEditar && !(rotina && !tarefasSouAdmin()) ? `<button type="button" class="btn-mini icon-only danger" data-tf-sub-del="${s.id}" title="Remover">${icon('x','tiny')}</button>` : ''}
           </div>`).join('') || '<div class="tf-vazio">Nenhuma subtarefa.</div>'}
       </div>
@@ -13852,6 +13896,11 @@ async function openTarefaModal(id, defaults){
   if(nova){ rebind(); return; }
   if(subInput){ subInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addSub(); } }); $('#tf-sub-add').addEventListener('click', addSub); }
   modal.querySelectorAll('[data-tf-sub]').forEach(cb=>cb.addEventListener('change', async ()=>{
+    if(rotina && cb.checked){
+      const sub = subs.find(x=>x.id===cb.dataset.tfSub);
+      const res = sub ? await rotinaMarcarComProva(sub) : null;
+      if(res!==null){ await recarregarTarefa(t.id); openTarefaModal(t.id); return; }
+    }
     const { error } = await sb.from('tarefas_subtarefas').update({concluida: cb.checked}).eq('id', cb.dataset.tfSub);
     if(error){ alert('Não foi possível atualizar: '+error.message); cb.checked = !cb.checked; return; }
     await recarregarTarefa(t.id); openTarefaModal(t.id);
