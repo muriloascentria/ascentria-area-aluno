@@ -719,9 +719,13 @@
   .rf-sol-intro{font-size:13.5px;font-weight:600;margin:0 0 10px;line-height:1.5;}
   .rf-sols{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
   .rf-sol{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
-  .rf-sol:first-child{grid-column:1/-1;}
-  .rf-sol-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;}
+  .rf-sol.rf-sol-cob{grid-column:1/-1;}
+  .rf-sol-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;}
+  .rf-sol-hd b{text-transform:uppercase;letter-spacing:.05em;font-size:12.5px;}
   .rf-sol-num{font-weight:800;color:var(--accent);white-space:nowrap;}
+  .rf-sol:not(.rf-sol-cob) .rf-sol-hd{flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:10px;}
+  .rf-sol:not(.rf-sol-cob) .rf-sol-num{display:inline-block;font-size:17px;color:#9a7430;background:rgba(168,130,58,.13);padding:4px 10px;border-radius:8px;}
+  :root[data-theme="dark"] .rf-sol:not(.rf-sol-cob) .rf-sol-num{color:#d9b56e;background:rgba(217,181,110,.14);}
   .rf-sol p{margin:0;font-size:12.5px;line-height:1.55;color:var(--text-dim);}
   .rf-cob{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
   .rf-cob-it{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;}
@@ -18468,7 +18472,7 @@ function rfSolucoesHtml(C){
   // 1. Cobrança
   if(S.cobranca.length){
     const cobre = S.deficit>0 ? Math.min(100, Math.round(C.atrasoTotal/S.deficit*100)) : null;
-    cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>1. Cobrar o que já venceu</b><span class="rf-sol-num">${br(C.atrasoTotal)}</span></div><p>É o dinheiro mais rápido: já foi vendido e só falta entrar.${cobre!==null ? ` Sozinho, cobre ${cobre}% do buraco de ${rfMesNome(S.mesAperto)}.` : ''} O botão abre o WhatsApp com a mensagem pronta para você revisar e enviar.</p>
+    cards.push(`<div class="rf-sol rf-sol-cob"><div class="rf-sol-hd"><b>1. Cobrar o que já venceu</b><span class="rf-sol-num">${br(C.atrasoTotal)}</span></div><p>É o dinheiro mais rápido: já foi vendido e só falta entrar.${cobre!==null ? ` Sozinho, cobre ${cobre}% do buraco de ${rfMesNome(S.mesAperto)}.` : ''} O botão abre o WhatsApp com a mensagem pronta para você revisar e enviar.</p>
       <div class="rf-cob">${S.cobranca.map(g=>{ const w = rfWaLink(g.whatsapp, g.nome, g.itens); return `<div class="rf-cob-it"><div><b>${escapeHtml(g.nome)}</b><small>${g.itens.length} parcela${g.itens.length>1?'s':''} · ${br(g.total)} · desde ${tzDataCurta(g.itens[0].data_vencimento)}</small></div>${w ? `<a class="btn-mini" href="${w}" target="_blank" rel="noopener">Cobrar no WhatsApp</a>` : '<small class="rf-neg">sem WhatsApp no cadastro</small>'}</div>`; }).join('')}</div></div>`);
   }
   let nro = S.cobranca.length ? 2 : 1;
@@ -18480,7 +18484,7 @@ function rfSolucoesHtml(C){
     cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Ajustar o pró-labore</b><span class="rf-sol-num">${br(S.plSust)}/mês</span></div><p>Com esse ritmo de vendas, o pró-labore que cabe sem o caixa ficar ${limTxt} é de ${br(S.plSust)} por mês, ${br(C.pl - S.plSust)} abaixo da meta. Uma saída é retirar esse valor fixo e completar o restante só nos meses em que a meta de vendas for batida.</p></div>`);
   }
   // 3. Entrada / parcelamento
-  if(C.parc>6 && S.ganho6x>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Encurtar o parcelamento</b><span class="rf-sol-num">+${br(S.ganho6x)}</span></div><p>Se as vendas novas forem em até 6x em vez de ${C.parc}x, entram ${br(S.ganho6x)} a mais no caixa nos próximos 6 meses (o total vendido é o mesmo, só entra mais cedo). Duas formas: dar uma condição melhor no Pix ou em menos parcelas no cartão, ou pedir uma entrada maior na assinatura.</p></div>`);
+  if(C.parc>6 && S.ganho6x>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Encurtar o parcelamento</b><span class="rf-sol-num">+${br(S.ganho6x)}</span></div><p>Se as vendas novas forem em até 6x em vez de ${n1(C.parc)}x, entram ${br(S.ganho6x)} a mais no caixa nos próximos 6 meses (o total vendido é o mesmo, só entra mais cedo). Duas formas: dar uma condição melhor no Pix ou em menos parcelas no cartão, ou pedir uma entrada maior na assinatura.</p></div>`);
   // 4. Vendas
   {
     const v = S.vendasNec!==null ? S.vendasNec : S.vendasNec2;
@@ -18496,7 +18500,7 @@ function rfSolucoesHtml(C){
     if(S.corteNec!==null && S.corteNec>0) cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Cortar custos fixos</b><span class="rf-sol-num">−${br(S.corteNec)}/mês</span></div><p>Mantendo vendas e pró-labore do cenário, seria preciso reduzir ${br(S.corteNec)} por mês dos custos (${Math.round(S.corteNec/C.custo*100)}% do custo fixo). Comece revisando assinaturas, ferramentas e serviços recorrentes no Financeiro.</p></div>`);
   }
   // 6. Reserva
-  cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Formar a reserva</b><span class="rf-sol-num">${S.mesReserva ? rfMesNome(S.mesReserva) : 'fora dos 6 meses'}</span></div><p>${S.mesReserva ? `Nesse cenário, pagando o pró-labore, a reserva de ${rfN(C.P.reserva_meses)} meses (${br(C.reservaAlvo)}) se forma em ${rfMesNome(S.mesReserva)}.` : `Nesse cenário, pagando o pró-labore, a reserva de ${br(C.reservaAlvo)} não se forma nos próximos 6 meses.`} Uma regra simples ajuda: separar 10% de toda entrada numa conta só para a reserva até chegar lá, e só então aumentar retiradas.</p></div>`);
+  cards.push(`<div class="rf-sol"><div class="rf-sol-hd"><b>${nro++}. Formar a reserva</b><span class="rf-sol-num">${S.mesReserva ? rfMesNome(S.mesReserva) : 'Fora dos 6 meses'}</span></div><p>${S.mesReserva ? `Nesse cenário, pagando o pró-labore, a reserva de ${rfN(C.P.reserva_meses)} meses (${br(C.reservaAlvo)}) se forma em ${rfMesNome(S.mesReserva)}.` : `Nesse cenário, pagando o pró-labore, a reserva de ${br(C.reservaAlvo)} não se forma nos próximos 6 meses.`} Uma regra simples ajuda: separar 10% de toda entrada numa conta só para a reserva até chegar lá, e só então aumentar retiradas.</p></div>`);
   return `<h2 class="section-title com-titulo">${icon('compass')} Soluções</h2><p class="rf-sol-intro ${ok?'rf-pos':'rf-neg'}">${escapeHtml(head)}</p><div class="rf-sols">${cards.join('')}</div><small class="rf-nota">As contas usam os números do cenário escolhido no topo (${C.modo==='ideal'?'Cenário ideal':'Momento atual'}). Cada número mostra quanto aquela saída precisa mexer, sozinha, para o caixa com pró-labore não ficar ${limTxt} em nenhum mês.</small>`;
 }
 const RF_CAMPOS = {
