@@ -1,0 +1,3 @@
+-- Radar Financeiro (só os 4 sócios): tabela fin_radar_premissas (meta 9 vendas, ticket 11.000, impostos 6%,
+-- comissão 6%, custo fixo 13.442,32, pró-labore 40.000, capital de giro 5.000, reserva 3 meses, saldo-base
+-- 6.121,98 em 30/09/2026, 12 parcelas médias) e função radar_financeiro(). (aplicada no Supabase em 05/11/2026)

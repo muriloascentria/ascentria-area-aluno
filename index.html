@@ -672,6 +672,31 @@
   .dp-lista small{color:var(--text-mute);}
   #dp-abrir{display:inline-flex;align-items:center;gap:6px;}
   .dp-hint{display:flex;align-items:center;gap:4px;margin-top:3px;font-size:11.5px;color:var(--warning, #d9a441);font-weight:600;}
+  .rf-kpis .kpi-tile small{display:block;margin-top:4px;font-size:11.5px;color:var(--text-mute);}
+  .rf-kpi.rf-vermelho .value{color:var(--danger);} .rf-kpi.rf-amarelo .value{color:var(--individual);} .rf-kpi.rf-verde .value{color:var(--success);}
+  .rf-recs{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+  .rf-rec{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-left:4px solid var(--success);border-radius:var(--radius-sm);background:var(--bg-card);}
+  .rf-rec p{margin:0;flex:1;font-size:13.5px;line-height:1.45;}
+  .rf-rec.rf-vermelho{border-left-color:var(--danger);} .rf-rec.rf-amarelo{border-left-color:var(--individual);}
+  .rf-rec .btn-mini{white-space:nowrap;}
+  .rf-metas{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+  .rf-meta-hd{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:4px;flex-wrap:wrap;}
+  .rf-meta-hd strong{font-size:12.5px;}
+  .rf-bar{height:9px;border-radius:9px;background:var(--bg-elev);overflow:hidden;border:1px solid var(--border);}
+  .rf-fill{height:100%;border-radius:9px;background:var(--danger);}
+  .rf-fill.meio{background:var(--individual);} .rf-fill.ok{background:var(--success);}
+  .rf-nota{display:block;margin:6px 0 18px;font-size:11.5px;color:var(--text-mute);line-height:1.5;}
+  .rf-tab td,.rf-tab th{white-space:nowrap;}
+  .rf-neg{color:var(--danger);} .rf-pos{color:var(--success);} .rf-alerta{color:var(--individual);}
+  .rf-risco{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;}
+  .rf-cli{border:1px solid var(--border);border-left:4px solid var(--individual);border-radius:var(--radius-sm);background:var(--bg-card);padding:10px 12px;}
+  .rf-cli.rf-vermelho{border-left-color:var(--danger);}
+  .rf-cli-hd{display:flex;flex-direction:column;gap:2px;}
+  .rf-cli-hd small{color:var(--text-mute);font-size:11.5px;}
+  .rf-cli p{margin:6px 0 0;font-size:12.5px;}
+  .rf-prem{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .rf-prem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px;}
+  .rf-prem-grid .ps-label{display:flex;flex-direction:column;gap:4px;font-size:12px;}
   .app-confirm-backdrop{position:fixed;inset:0;background:rgba(5,5,10,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;}
   .app-confirm-card{width:100%;max-width:400px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
   .app-confirm-card h4{font-size:15.5px;margin:0 0 8px;}
@@ -3273,6 +3298,7 @@
     </a>
     <button class="nav-item restrict" id="nav-financeiro" data-view="financeiro" style="display:none"></button>
     <button class="nav-item restrict" id="nav-dre" data-view="dre" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-radarfin" data-view="radarfin" style="display:none"></button>
     <button class="nav-item restrict" id="nav-treinamento" data-view="treinamento" style="display:none"></button>
     <button class="nav-item restrict" id="nav-gestaotime" data-view="gestaotime" style="display:none"></button>
 
@@ -3354,6 +3380,7 @@
       <div class="view" id="view-planner"></div>
       <div class="view" id="view-desempenho"></div>
       <div class="view" id="view-dre"></div>
+      <div class="view" id="view-radarfin"></div>
       <div class="view" id="view-reunioes"></div>
       <div class="view" id="view-politicas"></div>
       <div class="view" id="view-equipe"></div>
@@ -3448,7 +3475,7 @@ const NAV_LABELS = {
   radar:['radar','Radar dos Mentorados'],
   evento:['award','Evento Essência Experience'],
   desempenho:['chart','Desempenho das Consultoras'],
-  dre:['money','DRE'],
+  dre:['money','DRE'], radarfin:['radar','Radar Financeiro'],
   reunioes:['file','Reuniões e Atas'],
   politicas:['file','Políticas Internas'],
   equipe:['home','Início'],
@@ -3459,7 +3486,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', interno:'restrict', embarque:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', reunioes:'restrict', politicas:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', interno:'restrict', embarque:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', radarfin:'restrict', reunioes:'restrict', politicas:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito', mentores:'Mentores Essência' };
 
@@ -6732,7 +6759,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','vendas','analise','desempenho','clientes','financeiro','dre','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -6968,6 +6995,7 @@ function goTo(view){
   if((view==='radar' || view==='evento') && !radarPode()) view = 'equipe';
   if(view==='desempenho' && !avPode()) view = 'equipe';
   if(view==='dre' && !drePode()) view = 'equipe';
+  if(view==='radarfin' && !reuSocio()) view = 'equipe';
   if(view==='reunioes' && !reuPodeAbrir()) view = 'equipe';
   if(equipeNoModoAluno() && VIEWS_EQUIPE.includes(view)) view = getViewingTier()==='curso' ? 'aulas' : 'inicio';
   if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
@@ -6993,7 +7021,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, radarfin:renderRadarFin, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
                comunicacao:renderComunicacao, embarque:renderEmbarque, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens,
                me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno','me_aulas','me_sessoes','me_metas'];
@@ -16169,6 +16197,7 @@ const EQUIPE_ATALHOS = [
   {view:'ecrm',       desc:'CRM de vendas da mentoria, com o funil dos leads e as conversas. Abre em outra aba.', link:'https://www.ecrm.digital'},
   {view:'financeiro', desc:'Extrato, contas a receber e a pagar, faturamento e anexos.'},
   {view:'dre',        desc:'Demonstrativo de resultado de cada mês, gerado com os lançamentos do Financeiro.'},
+  {view:'radarfin',   desc:'Metas, caixa, projeção de 6 meses, clientes em risco e o que fazer agora (só sócios).'},
   {view:'treinamento',desc:'Aulas REC do time e o registro de aprendizados de cada pessoa.'},
   {view:'gestaotime', desc:'Funções de cada pessoa e a rotina diária, semanal e mensal, com a evolução de cada um.'},
 ];
@@ -16182,6 +16211,7 @@ function equipeViewPode(v){
   if(v==='radar' || v==='evento') return radarPode();
   if(v==='desempenho') return avPode();
   if(v==='dre') return drePode();
+  if(v==='radarfin') return reuSocio();
   if(v==='reunioes') return reuPodeAbrir();
   if(v==='politicas') return polPodeAbrir();
   return true;
@@ -18213,6 +18243,167 @@ function dreIndicadoresHtml(d){
     <div class="kpi-tile"><div class="label">Novos alunos / mentorados ativos</div><div class="value" style="font-size:17px">${i.novosAlunos||0} / ${i.mentoradosAtivos||0}</div></div>
   </div>`;
 }
+
+/* ================= RADAR FINANCEIRO (só os 4 sócios) =================
+   Junta o Financeiro (lançamentos a receber e a pagar), o Registro de Sessões 1:1 (vendas) e as
+   premissas da planilha "Radar com Planejamento de Vendas" (meta, ticket, impostos, custos, pró-labore,
+   reserva), editáveis aqui. O banco entrega tudo pronto em radar_financeiro(); aqui só se calcula a
+   projeção e as recomendações. Transferências entre contas, empréstimos e "Recebido Sócios" não contam
+   como faturamento. */
+const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoEm:0 };
+async function rfCarregar(){
+  RF.carregando = true; RF.erro = null;
+  try{ const { data, error } = await sb.rpc('radar_financeiro'); if(error) throw error; RF.dados = data; RF.carregadoEm = Date.now(); }
+  catch(e){ console.error('radar_financeiro', e); RF.erro = e.message || 'erro'; }
+  RF.carregando = false;
+  if(currentView==='radarfin') renderRadarFin();
+}
+const rfMesNome = k=>{ const [y,m] = k.split('-').map(Number); return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][m-1]+'/'+String(y).slice(2); };
+const rfMesMais = (k,n)=>{ const [y,m] = k.split('-').map(Number); const d = new Date(y, m-1+n, 1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+const rfN = v=>Number(v)||0;
+function rfCalcular(D){
+  const P = D.premissas || {};
+  const hoje = D.hoje; const mk = hoje.slice(0,7);
+  const mes = k=> (D.meses||[]).find(x=>x.mes===k) || {};
+  const vend = k=> (D.vendas||[]).find(x=>x.mes===k) || {};
+  const meta = rfN(P.meta_vendas), ticket = rfN(P.ticket), custo = rfN(P.custo_fixo), pl = rfN(P.prolabore_meta), giro = rfN(P.capital_giro);
+  const pctSaida = (rfN(P.imposto_pct) + rfN(P.comissao_pct))/100;
+  const parc = Math.max(1, rfN(P.parcelas_medias)||12);
+  const reservaAlvo = rfN(P.reserva_meses) * custo;
+  const atual = mes(mk), vAtual = vend(mk);
+  const [ano, mm] = mk.split('-').map(Number);
+  const ultimoDia = new Date(ano, mm, 0).getDate(); const diaHoje = Number(hoje.slice(8,10));
+  const diasRest = ultimoDia - diaHoje;
+  const vendidos = rfN(vAtual.vendidos), faltamVendas = Math.max(0, meta - vendidos);
+  const taxa = rfN(D.taxa_90d);
+  const sessoesNec = taxa>0 ? Math.ceil(faltamVendas / taxa) : null;
+  const atrasoTotal = (D.atrasados||[]).reduce((a,x)=>a+rfN(x.valor),0);
+  const saldo = rfN(D.saldo_estimado);
+  // Projeção: mês atual (o que ainda falta entrar e sair) + 5 meses.
+  const proj = []; let sal = saldo, salPl = saldo;
+  for(let i=0;i<6;i++){
+    const k = rfMesMais(mk, i), m = mes(k);
+    const agend = i===0 ? Math.max(0, rfN(m.rec_prev) - rfN(m.rec_pago)) : rfN(m.rec_prev);
+    const novas = i===0 ? 0 : meta * (ticket/parc) * Math.min(i, parc);
+    const entra = agend + novas;
+    const custosMes = i===0 ? Math.max(0, Math.max(rfN(m.pag_prev), custo) - rfN(m.pag_pago)) : Math.max(rfN(m.pag_prev), custo);
+    const sai = custosMes + entra*pctSaida;
+    const res = entra - sai;
+    sal += res;
+    const plMes = i===0 ? Math.max(0, pl - rfN(m.retiradas)) : pl;
+    salPl += res - plMes;
+    proj.push({ k, agend, novas, entra, sai, res, sal, salPl, plMes });
+  }
+  // Necessidade do mês x receita operacional recebida
+  const recMes = rfN(atual.rec_pago), recPrevMes = rfN(atual.rec_prev);
+  const impMes = recPrevMes * pctSaida;
+  const necessidade = custo + impMes + pl + giro;
+  // Histórico dos últimos meses
+  const hist = []; for(let i=-4;i<=0;i++){ const k = rfMesMais(mk, i), m = mes(k), v = vend(k); hist.push({ k, rec:rfN(m.rec_pago), pag:rfN(m.pag_pago), ret:rfN(m.retiradas), rep:rfN(m.repasses), emp:rfN(m.emprestimo_in), vend:rfN(v.vendidos) }); }
+  const medRet = hist.slice(0,4).reduce((a,h)=>a+h.ret,0)/4;
+  // Risco por cliente
+  const risco = (D.historico||[]).map(h=>{
+    const pagas = rfN(h.pagas), atr = rfN(h.pagas_atraso), venc = rfN(h.abertas_vencidas);
+    const pct = pagas ? atr/pagas : 0;
+    let nivel = 0, motivo = [];
+    if(venc>0){ nivel = 2; motivo.push(`${venc} parcela${venc>1?'s':''} vencida${venc>1?'s':''} (${formatBRL(rfN(h.valor_vencido))})`); }
+    if(pagas>=2 && pct>=0.3){ nivel = Math.max(nivel, 1); motivo.push(`pagou ${atr} de ${pagas} com atraso`); }
+    if(rfN(h.media_dias)>=5){ nivel = Math.max(nivel, 1); motivo.push(`atraso médio de ${h.media_dias} dias`); }
+    if(nivel===0 && rfN(h.prox15)>0 && atr>0){ nivel = 1; motivo.push('já atrasou antes e tem parcela nos próximos 15 dias'); }
+    return Object.assign({}, h, { nivel, motivo, pct });
+  }).filter(h=>h.nivel>0).sort((a,b)=>b.nivel-a.nivel || rfN(b.valor_vencido)-rfN(a.valor_vencido));
+  // Recomendações
+  const rec = [];
+  if(faltamVendas>0) rec.push({ nivel: diasRest<10 ? 2 : 1, txt:`Faltam ${faltamVendas} venda${faltamVendas>1?'s':''} para a meta de ${meta} em ${rfMesNome(mk)}${diasRest>0?` (restam ${diasRest} dias)`:''}.${sessoesNec!==null ? ` Com a taxa de fechamento dos últimos 90 dias (${Math.round(taxa*100)}%), são cerca de ${sessoesNec} sessões 1:1 realizadas.` : ''} Sessões agendadas no Registro: ${rfN(D.agendadas_mes)}.`, acao:'Abrir Sessões 1:1', view:'vendas' });
+  else rec.push({ nivel:0, txt:`Meta de ${meta} vendas de ${rfMesNome(mk)} batida (${vendidos}).`, acao:'Ver Sessões 1:1', view:'vendas' });
+  if(atrasoTotal>0) rec.push({ nivel:2, txt:`${formatBRL(atrasoTotal)} em ${(D.atrasados||[]).length} parcela${(D.atrasados||[]).length>1?'s':''} vencida${(D.atrasados||[]).length>1?'s':''}: cobrar hoje (lista abaixo).`, acao:'Abrir Financeiro', view:'financeiro' });
+  if(saldo < reservaAlvo) rec.push({ nivel: saldo < custo ? 2 : 1, txt:`O caixa estimado (${formatBRL(saldo)}) cobre ${custo ? (saldo/custo).toFixed(1).replace('.',',') : '—'} mês de custo fixo; a reserva alvo é de ${rfN(P.reserva_meses)} meses (${formatBRL(reservaAlvo)}). Priorize receber o que está vencido e segure retiradas extras até formar a reserva.`, acao:'Abrir DRE', view:'dre' });
+  const negPl = proj.find(x=>x.salPl<0), neg = proj.find(x=>x.sal<0);
+  if(neg) rec.push({ nivel:2, txt:`Mesmo sem pró-labore, o caixa projetado fica negativo em ${rfMesNome(neg.k)} (${formatBRL(neg.sal)}). Reveja custos fixos e antecipe recebíveis.`, acao:'Abrir Financeiro', view:'financeiro' });
+  else if(negPl) rec.push({ nivel:1, txt:`Com o pró-labore de ${formatBRL(pl)}/mês, o caixa projetado fica negativo em ${rfMesNome(negPl.k)} (${formatBRL(negPl.salPl)}). Para sustentar o pró-labore é preciso manter a meta de ${meta} vendas por mês e formar a reserva antes de aumentar as retiradas.`, acao:'Ver projeção', view:null });
+  if(rfN(D.prox15)>0) rec.push({ nivel:0, txt:`Vencem ${formatBRL(rfN(D.prox15))} nos próximos 15 dias: um lembrete às alunas antes do vencimento reduz atraso.`, acao:'Abrir Financeiro', view:'financeiro' });
+  if(rfN(D.sem_aluno)>0) rec.push({ nivel:1, txt:`${rfN(D.sem_aluno)} parcelas de Mentoria a receber estão sem aluna vinculada no Financeiro (só ${rfN(D.com_aluno)} estão). Vincule a aluna nessas parcelas para o risco por cliente ficar completo.`, acao:'Abrir Financeiro', view:'financeiro' });
+  if(medRet>0) rec.push({ nivel:0, txt:`Retiradas dos sócios: média de ${formatBRL(medRet)}/mês nos últimos 4 meses, contra a meta de pró-labore de ${formatBRL(pl)}.`, acao:null, view:null });
+  rec.sort((a,b)=>b.nivel-a.nivel);
+  return { P, mk, meta, vendidos, faltamVendas, taxa, sessoesNec, diasRest, atrasoTotal, saldo, reservaAlvo, proj, recMes, recPrevMes, necessidade, impMes, custo, pl, giro, hist, risco, rec };
+}
+function renderRadarFin(){
+  const el = document.getElementById('view-radarfin'); if(!el) return;
+  if(!reuSocio()){ el.innerHTML = '<div class="empty-state">O Radar Financeiro é só dos sócios.</div>'; return; }
+  if(!RF.dados && !RF.carregando && !RF.erro){ rfCarregar(); }
+  else if(RF.dados && !RF.carregando && Date.now()-RF.carregadoEm > 5*60*1000){ rfCarregar(); }
+  if(!RF.dados){ el.innerHTML = RF.erro ? `<div class="empty-state">Não consegui carregar o Radar Financeiro.<br><small>${escapeHtml(RF.erro)}</small><br><br><button type="button" class="btn-outline" id="rf-tentar">Tentar de novo</button></div>` : '<div class="empty-state">Carregando o Radar Financeiro…</div>';
+    const t = document.getElementById('rf-tentar'); if(t) t.addEventListener('click', ()=>{ RF.erro = null; renderRadarFin(); }); return; }
+  const C = rfCalcular(RF.dados);
+  const cor = n=> n===2 ? 'vermelho' : n===1 ? 'amarelo' : 'verde';
+  const pctBar = (v, alvo)=> alvo>0 ? Math.max(0, Math.min(100, Math.round(v/alvo*100))) : 0;
+  const tile = (rot, val, sub, nivel)=>`<div class="kpi-tile rf-kpi rf-${cor(nivel)}"><div class="label">${rot}</div><div class="value">${val}</div>${sub?`<small>${sub}</small>`:''}</div>`;
+  const barra = (rot, v, alvo, txt)=>{ const p = pctBar(v, alvo); return `<div class="rf-meta"><div class="rf-meta-hd"><span>${rot}</span><strong>${txt}</strong></div><div class="rf-bar"><div class="rf-fill ${p>=100?'ok':p>=60?'meio':'baixo'}" style="width:${p}%"></div></div></div>`; };
+  // cascata: a receita recebida no mês cobre, em ordem, custos fixos, impostos e comissões, pró-labore e capital de giro
+  let resto = C.recMes; const cobre = (v)=>{ const c = Math.max(0, Math.min(v, resto)); resto -= c; return c; };
+  const cCusto = cobre(C.custo), cImp = cobre(C.impMes), cPl = cobre(C.pl), cGiro = cobre(C.giro);
+  const P = C.P;
+  const campos = [['meta_vendas','Meta de vendas por mês',''],['ticket','Ticket médio (R$)',''],['parcelas_medias','Parcelas médias por venda',''],['imposto_pct','Impostos (% da receita)',''],['comissao_pct','Comissão comercial (%)',''],['custo_fixo','Custo fixo mensal (R$)',''],['prolabore_meta','Meta de pró-labore dos 4 sócios (R$)',''],['capital_giro','Meta de capital de giro (R$/mês)',''],['reserva_meses','Reserva alvo (meses de custo fixo)',''],['saldo_base','Saldo de caixa na data-base (R$)',''],['saldo_base_data','Data-base do saldo','date']];
+  el.innerHTML = `
+    <p class="section-sub" style="margin-top:0">Atualizado com o Financeiro e o Registro de Sessões 1:1. Caixa estimado a partir do saldo de ${formatBRL(rfN(P.saldo_base))} em ${tzDataCurta(P.saldo_base_data)} (Inter + Infinity), somando o que entrou e saiu depois. <button type="button" class="link-btn" id="rf-atualizar">Atualizar</button></p>
+    <div class="kpi-row rf-kpis">
+      ${tile('Caixa estimado hoje', formatBRL(C.saldo), `cobre ${C.custo? (C.saldo/C.custo).toFixed(1).replace('.',','):'—'} mês de custo fixo`, C.saldo<C.custo?2:C.saldo<C.reservaAlvo?1:0)}
+      ${tile(`Vendas em ${rfMesNome(C.mk)}`, `${C.vendidos}/${C.meta}`, C.faltamVendas? `faltam ${C.faltamVendas}` : 'meta batida', C.faltamVendas===0?0:(C.diasRest<10?2:1))}
+      ${tile('Recebido no mês', formatBRL(C.recMes), `de ${formatBRL(C.recPrevMes)} previstos`, C.recPrevMes && C.recMes/C.recPrevMes<0.5 && C.diasRest<10 ? 1 : 0)}
+      ${tile('Em atraso', formatBRL(C.atrasoTotal), `${(RF.dados.atrasados||[]).length} parcela${(RF.dados.atrasados||[]).length===1?'':'s'}`, C.atrasoTotal>0?2:0)}
+      ${tile('A receber em 15 dias', formatBRL(rfN(RF.dados.prox15)), '', 0)}
+    </div>
+
+    <h2 class="section-title com-titulo">${icon('target')} O que fazer agora</h2>
+    <div class="rf-recs">${C.rec.map(r=>`<div class="rf-rec rf-${cor(r.nivel)}"><span class="rf-dot"></span><p>${escapeHtml(r.txt)}</p>${r.acao && r.view ? `<button type="button" class="btn-mini" data-rf-go="${r.view}">${escapeHtml(r.acao)}</button>` : ''}</div>`).join('')}</div>
+
+    <h2 class="section-title com-titulo">${icon('chart')} Metas de ${rfMesNome(C.mk)}</h2>
+    <div class="rf-metas">
+      ${barra(`Vendas de Mentoria Essência`, C.vendidos, C.meta, `${C.vendidos} de ${C.meta}${C.sessoesNec!==null && C.faltamVendas ? ` · ~${C.sessoesNec} sessões para fechar` : ''}`)}
+      ${barra('Receita do mês cobre os custos fixos', cCusto, C.custo, `${formatBRL(cCusto)} de ${formatBRL(C.custo)}`)}
+      ${barra(`Impostos e comissões (${rfN(P.imposto_pct)+rfN(P.comissao_pct)}%)`, cImp, C.impMes, `${formatBRL(cImp)} de ${formatBRL(C.impMes)}`)}
+      ${barra('Pró-labore dos 4 sócios (meta)', cPl, C.pl, `${formatBRL(cPl)} de ${formatBRL(C.pl)}`)}
+      ${barra('Capital de giro', cGiro, C.giro, `${formatBRL(cGiro)} de ${formatBRL(C.giro)}`)}
+      ${barra(`Reserva de ${rfN(P.reserva_meses)} meses`, Math.max(0,C.saldo), C.reservaAlvo, `${formatBRL(Math.max(0,C.saldo))} de ${formatBRL(C.reservaAlvo)}`)}
+      <small class="rf-nota">A receita recebida no mês (${formatBRL(C.recMes)}) é distribuída nessa ordem: custos fixos, impostos e comissões, pró-labore e capital de giro. Necessidade total do mês: ${formatBRL(C.necessidade)}.</small>
+    </div>
+
+    <h2 class="section-title com-titulo">${icon('calendar')} Projeção dos próximos 6 meses</h2>
+    <div class="table-wrap"><table class="check-table rf-tab">
+      <thead><tr><th>Mês</th><th>A receber agendado</th><th>Vendas novas (meta)</th><th>Saídas previstas</th><th>Resultado</th><th>Caixa projetado</th><th>Caixa com pró-labore</th></tr></thead>
+      <tbody>${C.proj.map(x=>`<tr><td><b>${rfMesNome(x.k)}</b>${x.k===C.mk?' <small>(resto do mês)</small>':''}</td><td>${formatBRL(x.agend)}</td><td>${x.novas? formatBRL(x.novas) : '—'}</td><td>${formatBRL(x.sai)}</td><td class="${x.res<0?'rf-neg':'rf-pos'}">${formatBRL(x.res)}</td><td class="${x.sal<0?'rf-neg':x.sal<C.reservaAlvo?'rf-alerta':'rf-pos'}"><b>${formatBRL(x.sal)}</b></td><td class="${x.salPl<0?'rf-neg':'rf-pos'}">${formatBRL(x.salPl)}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <small class="rf-nota">Saídas = o maior entre o que está lançado a pagar e o custo fixo (${formatBRL(C.custo)}), mais ${rfN(P.imposto_pct)}% de impostos e ${rfN(P.comissao_pct)}% de comissão sobre o que entra. Vendas novas = ${C.meta} vendas/mês de ${formatBRL(rfN(P.ticket))} recebidas em ${rfN(P.parcelas_medias)} parcelas a partir do mês seguinte. Caixa com pró-labore desconta a meta de ${formatBRL(C.pl)}/mês. Em amarelo: abaixo da reserva alvo.</small>
+
+    <h2 class="section-title com-titulo">${icon('xcircle')} Clientes com risco de não pagamento</h2>
+    ${C.risco.length ? `<div class="rf-risco">${C.risco.map(h=>{ const s = getStudent(h.student_id); return `<div class="rf-cli rf-${cor(h.nivel)}"><div class="rf-cli-hd">${s ? `<button type="button" class="vg-nome-btn" data-rf-acomp="${h.student_id}">${escapeHtml(h.aluno)}</button>` : `<b>${escapeHtml(h.aluno||'—')}</b>`}<small>${rfN(h.pagas)} paga${rfN(h.pagas)===1?'':'s'} · a receber ${formatBRL(rfN(h.a_receber))}${h.prox_venc?` · próxima em ${tzDataCurta(h.prox_venc)}`:''}</small></div><p>${escapeHtml(h.motivo.join(' · '))}</p></div>`; }).join('')}</div>` : '<div class="empty-state">Nenhuma aluna com sinal de risco entre as parcelas vinculadas.</div>'}
+    ${(RF.dados.atrasados||[]).length ? `<h3 class="me-sub" style="margin-top:14px">Parcelas vencidas</h3><div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Vencimento</th><th>Aluna / descrição</th><th>Categoria</th><th>Parcela</th><th>Valor</th></tr></thead><tbody>${RF.dados.atrasados.map(a=>`<tr><td style="white-space:nowrap">${tzDataCurta(a.data_vencimento)} <small class="rf-neg">(${rdDiasDesde(a.data_vencimento+'T12:00:00-03:00')} dias)</small></td><td>${a.aluno ? `<b>${escapeHtml(a.aluno)}</b><br>` : ''}<small>${escapeHtml(a.descricao||'')}</small></td><td><small>${escapeHtml(a.cat||'')}</small></td><td>${a.parcela_num ? a.parcela_num+'/'+(a.parcela_total||'?') : '—'}</td><td><b>${formatBRL(rfN(a.valor))}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
+    <small class="rf-nota">O risco usa o histórico de cada aluna: parcelas vencidas agora, quantas pagou com mais de 2 dias de atraso e o atraso médio. ${rfN(RF.dados.sem_aluno)} parcelas de Mentoria a receber ainda não têm aluna vinculada no Financeiro e ficam de fora desta lista.</small>
+
+    <h2 class="section-title com-titulo">${icon('money')} Últimos meses</h2>
+    <div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Mês</th><th>Receita operacional recebida</th><th>Saídas operacionais pagas</th><th>Repasses de atendimentos</th><th>Retiradas dos sócios</th><th>Empréstimos recebidos</th><th>Vendas</th></tr></thead>
+      <tbody>${C.hist.map(h=>`<tr><td><b>${rfMesNome(h.k)}</b></td><td>${formatBRL(h.rec)}</td><td>${formatBRL(h.pag)}</td><td>${formatBRL(h.rep)}</td><td>${formatBRL(h.ret)}</td><td>${h.emp?formatBRL(h.emp):'—'}</td><td>${h.vend}</td></tr>`).join('')}</tbody></table></div>
+
+    <div class="rf-prem">
+      <button type="button" class="vg-sec-toggle ${RF.editando?'':'fechado'}" id="rf-prem-toggle">${icon('down')} Premissas ${RF.editando?'(recolher)':'(editar)'}</button>
+      ${RF.editando ? `<div class="rf-prem-grid">${campos.map(([k,l,t])=>`<label class="ps-label">${l}<input class="ps-input" type="${t||'number'}" step="any" data-rf-p="${k}" value="${escapeAttr(P[k]==null?'':P[k])}"></label>`).join('')}</div>
+        <div class="modal-actions" style="justify-content:flex-start"><button type="button" class="btn-accent" id="rf-prem-salvar">${icon('check','tiny')} Salvar premissas</button></div>` : ''}
+    </div>`;
+  el.querySelector('#rf-atualizar').addEventListener('click', ()=>rfCarregar());
+  el.querySelectorAll('[data-rf-go]').forEach(b=>b.addEventListener('click', ()=>goTo(b.dataset.rfGo)));
+  el.querySelectorAll('[data-rf-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rfAcomp)));
+  el.querySelector('#rf-prem-toggle').addEventListener('click', ()=>{ RF.editando = !RF.editando; renderRadarFin(); });
+  const sv = el.querySelector('#rf-prem-salvar');
+  if(sv) sv.addEventListener('click', async ()=>{
+    const novo = Object.assign({}, RF.dados.premissas);
+    el.querySelectorAll('[data-rf-p]').forEach(i=>{ const k = i.dataset.rfP; novo[k] = i.type==='date' ? i.value : (i.value==='' ? null : Number(i.value)); });
+    sv.disabled = true;
+    const { error } = await sb.from('fin_radar_premissas').update({ dados: novo, atualizado_em: new Date().toISOString(), atualizado_por: currentUser.id }).eq('id', 1);
+    if(error){ sv.disabled = false; showAppAviso('Não foi possível salvar: '+(error.message||'')); return; }
+    RF.editando = false; await rfCarregar();
+  });
+}
+
 function renderDre(){
   const el = document.getElementById('view-dre'); if(!el) return;
   if(!drePode()){ el.innerHTML = '<div class="empty-state">Área do CEO e da Head Financeira.</div>'; return; }
