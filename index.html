@@ -690,7 +690,7 @@
   .rf-sim{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:4px 0 16px;}
   .rf-modo{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:14px;}
   .rf-modo .role-toggle{display:inline-flex;}
-  .rf-modo .role-toggle button{font-size:13px;padding:8px 16px;}
+  .rf-modo .role-toggle button{font-size:12.5px;padding:8px 16px;text-transform:uppercase;letter-spacing:.06em;}
   .rf-modo small{font-size:12px;color:var(--text-mute);flex:1;min-width:220px;}
   .rf-ctls,.rf-fixos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px;align-items:stretch;}
   .rf-ctl{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:20px 34px auto;align-content:start;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);}
@@ -707,8 +707,9 @@
   .rf-fixo span{font-size:11.5px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:18px;}
   .rf-fixo b{font-size:15px;line-height:22px;}
   .rf-fixo small{font-size:11px;line-height:1.35;color:var(--text-mute);}
-  @media (max-width:980px){ .rf-ctls,.rf-fixos{grid-template-columns:repeat(2,minmax(0,1fr));} }
-  @media (max-width:520px){ .rf-ctls,.rf-fixos{grid-template-columns:1fr;} }
+  .rf-ctls.rf-ctls-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  @media (max-width:980px){ .rf-ctls,.rf-fixos,.rf-ctls.rf-ctls-3{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:520px){ .rf-ctls,.rf-fixos,.rf-ctls.rf-ctls-3{grid-template-columns:1fr;} }
   .rf-ctl-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;}
   .rf-ctl-acoes:empty{display:none;}
   .rf-sim-aviso{font-size:11.5px;color:var(--text-mute);}
@@ -18518,7 +18519,7 @@ function rfCtrlHtml(){
   const algumMexido = Object.keys(RF.sim[modo]).some(mexido);
   return `<div class="rf-modo"><div class="role-toggle"><button type="button" data-rf-modo="real" class="${modo==='real'?'active':''}">Momento atual</button><button type="button" data-rf-modo="ideal" class="${modo==='ideal'?'active':''}">Cenário ideal</button></div>
       <small>${modo==='real' ? 'Tudo calculado com os números reais da empresa. Ajuste vendas, pró-labore e caixa desejado para simular.' : 'As metas da empresa. Arraste os controles: o Radar inteiro se recalcula na hora, sem salvar.'}</small></div>
-    <div class="rf-ctls">${(modo==='real'?RF_EDIT_REAL:RF_EDIT_IDEAL).map(campo).join('')}</div>
+    <div class="rf-ctls ${modo==='real'?'rf-ctls-3':''}">${(modo==='real'?RF_EDIT_REAL:RF_EDIT_IDEAL).map(campo).join('')}</div>
     ${modo==='real' ? `<div class="rf-fixos">${fixo('Ticket médio real', formatBRL(B.ticket), `${B.contratos||'—'} contratos de Mentoria dos últimos 3 meses`)}${fixo('Parcelas médias reais', String(B.parcelas).replace('.',','), 'por contrato')}${fixo('Saídas reais por mês', formatBRL(B.custo), 'média paga, já com impostos e comissões')}${fixo('Inadimplência real', String(B.inad).replace('.',',')+'%', 'do que venceu nos últimos 6 meses')}</div>` : ''}
     <div class="rf-ctl-acoes">${algumMexido ? `<button type="button" class="btn-outline btn-mini" id="rf-sim-reset">${modo==='real'?'Voltar aos números reais':'Voltar às metas oficiais'}</button>` : ''}${modo==='ideal' && reuSocio() && algumMexido ? `<button type="button" class="btn-accent btn-mini" id="rf-sim-salvar">${icon('check','tiny')} Salvar como metas oficiais</button>` : ''}${algumMexido ? '<small class="rf-sim-aviso">Simulação: só você está vendo esses números.</small>' : ''}</div>`;
 }
