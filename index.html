@@ -5565,6 +5565,7 @@ async function bootstrapData(){
     LIVE_SESSIONS.length = 0; (liveRows||[]).forEach(r=>LIVE_SESSIONS.push(mapLiveSessionRow(r)));
     await tarefasBootstrap();
     await msgBootstrap();
+    tvCarregar();
     currentStudentId = null;
     return;
   }
@@ -5583,6 +5584,7 @@ async function bootstrapData(){
     (recRows||[]).forEach(c=>COURSES.push({id:c.id, modId:c.mod_id, cat:c.cat, title:c.title, duration:c.duration||'—', tint:[c.tint1||'#8d916f', c.tint2||'#bec6b1'], desc:c.description||'', videoLink:c.video_link||'', materiais:[]}));
     await carregarTreinamentoRegistros();
     await tarefasBootstrap();
+    tvCarregar();
     /* Vendedora incluída no Acompanhamento: carrega só a lista de mentorados (nome e foto), para as
        conversas aparecerem. O banco libera apenas o perfil dos mentorados, nada de fichas ou finanças. */
     try{ const { data: podeAcomp } = await sb.rpc('pode_acompanhamento'); ACOMP_EXTRA = !!podeAcomp; }catch(e){ ACOMP_EXTRA = false; }
