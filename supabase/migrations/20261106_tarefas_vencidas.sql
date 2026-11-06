@@ -1,0 +1,1 @@
+-- Tarefas: alerta de tarefas vencidas (tarefa_alertas_vencidas + RPCs) e cargo Assistente de Operações. Aplicadas via apply_migration em 2026-11-06.

@@ -2311,6 +2311,28 @@
   @keyframes bvBrilho{0%{left:-60%}60%,100%{left:130%}}
   @keyframes bvSino{0%,100%{filter:drop-shadow(0 0 0 rgba(232,194,90,0))}50%{filter:drop-shadow(0 0 7px rgba(232,194,90,.95))}}
   @media (prefers-reduced-motion: reduce){.notif-item.notif-bv::after,#notif-btn.bv-brilho{animation:none;}}
+  .notif-item.notif-tv{background:linear-gradient(120deg,rgba(220,53,69,.22),rgba(255,120,120,.08) 55%,rgba(220,53,69,.18));border-left-color:#e5484d;}
+  .notif-item.notif-tv:hover{background:linear-gradient(120deg,rgba(220,53,69,.32),rgba(255,120,120,.14) 55%,rgba(220,53,69,.26));}
+  .notif-item.notif-tv::after{background:linear-gradient(100deg,transparent,rgba(255,190,190,.40),transparent);}
+  .notif-item.notif-tv .notif-txt strong{color:#ff6b6b;}
+  .notif-item.notif-tv .notif-txt small{white-space:normal;}
+  .tv-ic{background:linear-gradient(135deg,#ff5a5f,#c81e2b)!important;color:#fff!important;box-shadow:0 0 12px rgba(229,72,77,.65);}
+  .tv-pill{background:linear-gradient(135deg,#ff8a8a,#d63340)!important;color:#fff!important;}
+  #notif-btn.tv-brilho{color:#ff5a5f;animation:tvSino 1.6s ease-in-out infinite;}
+  #notif-btn.tv-brilho .notif-badge{background:linear-gradient(135deg,#ff6b6b,#c81e2b);color:#fff;box-shadow:0 0 10px rgba(255,90,95,.9);}
+  @keyframes tvSino{0%,100%{filter:drop-shadow(0 0 0 rgba(255,90,95,0))}50%{filter:drop-shadow(0 0 8px rgba(255,90,95,.95))}}
+  @media (prefers-reduced-motion: reduce){#notif-btn.tv-brilho{animation:none;}}
+  .tv-painel{margin-bottom:26px;}
+  .tv-lista{display:flex;flex-direction:column;gap:8px;}
+  .tv-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);}
+  .tv-item.ligado{border-color:rgba(229,72,77,.6);box-shadow:inset 3px 0 0 #e5484d;}
+  .tv-nome{flex:1;min-width:0;}
+  .tv-nome b{display:block;font-size:13.5px;}
+  .tv-nome small{display:block;font-size:12px;color:var(--text-mute);}
+  .tv-num{min-width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:var(--bg-soft,rgba(0,0,0,.05));color:var(--text-mute);}
+  .tv-num.tem{background:rgba(229,72,77,.15);color:#e5484d;}
+  .tv-btn{flex:none;}
+  @media (max-width:520px){ .tv-item{flex-wrap:wrap;} .tv-btn{width:100%;} }
   .notif-vazio{padding:22px 16px;font-size:13px;color:var(--text-mute);text-align:center;line-height:1.5;}
   @media (max-width:520px){ #notif-painel{left:8px;right:8px!important;width:auto;} }
   .msg-aula{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-top:4px;border:1px solid var(--border);border-radius:12px;background:var(--bg-elev);color:var(--text);font:inherit;text-align:left;cursor:pointer;max-width:340px;width:100%;}
@@ -4308,6 +4330,63 @@ function pendenciasDoSino(){
    aparece até a pessoa responder ("Agora não" guarda visto_em); o aviso do sino fica até ela entrar.
    Quem decide se já está liberado é o banco (comunidade_e27_pendente). */
 let E27 = null;
+/* Alerta de tarefas vencidas: a Mariane liga, no Painel de Tarefas Vencidas (aba Tarefas), o alerta
+   de um membro do time; enquanto estiver ligado e ele tiver tarefa vencida, o sino dele fica vermelho
+   com o aviso. Some sozinho quando ele zera as vencidas ou quando a Mariane desliga. */
+const TV_MARIANE = 'b01a4425-1ba8-4703-9c40-3301a0de7249';
+let TV_ALERTA = { ativo:false, vencidas:0 };
+const TV_UI = { painel:null, carregando:false, aberto:true };
+let TV_TIMER = null;
+async function tvCarregar(){
+  try{
+    const { data, error } = await sb.rpc('tarefas_vencidas_meu_alerta');
+    if(!error && data) TV_ALERTA = data;
+  }catch(e){ console.warn('tarefas_vencidas_meu_alerta', e); }
+  if(!TV_TIMER) TV_TIMER = setInterval(tvCarregar, 5*60*1000);
+  if(typeof updateNotifBadge==='function') updateNotifBadge();
+}
+function tvAtivo(){ return !!(TV_ALERTA && TV_ALERTA.ativo && Number(TV_ALERTA.vencidas)>0); }
+function tvSouMariane(){ return !!(currentUser && currentUser.id===TV_MARIANE); }
+async function tvPainelCarregar(){
+  if(TV_UI.carregando) return; TV_UI.carregando = true;
+  const { data, error } = await sb.rpc('tarefas_vencidas_painel');
+  TV_UI.carregando = false;
+  TV_UI.painel = error ? [] : (data||[]);
+  if(error) console.error('tarefas_vencidas_painel', error);
+  if(currentView==='tarefas') renderTarefas();
+}
+function tvPainelHtml(){
+  if(!tvSouMariane()) return '';
+  if(TV_UI.painel===null){ tvPainelCarregar(); }
+  const lista = TV_UI.painel || [];
+  const comVenc = lista.filter(m=>Number(m.vencidas)>0).length;
+  return `<div class="tv-painel">
+    <div class="vg-sec-head" data-tv-toggle>
+      <h2 class="section-title com-titulo">${icon('bell')} Painel de Tarefas Vencidas</h2>
+      <span class="qtd">${comVenc} com vencidas</span>
+      <button type="button" class="vg-sec-toggle ${TV_UI.aberto?'':'fechado'}">${icon('down')} ${TV_UI.aberto?'Recolher':'Expandir'}</button>
+    </div>
+    <div ${TV_UI.aberto?'':'hidden'}>
+      <p class="section-sub" style="margin-top:0">Ligue o alerta de quem precisa finalizar tarefas vencidas. Enquanto estiver ligado, o sino da pessoa fica vermelho com o aviso. Ele some sozinho quando ela zera as vencidas, ou quando você desligar.</p>
+      ${TV_UI.painel===null ? '<div class="empty-state">Carregando…</div>' : `<div class="tv-lista">${lista.map(m=>{ const n = Number(m.vencidas)||0; return `<div class="tv-item ${m.ativo?'ligado':''}">
+        <div class="tv-nome"><b>${escapeHtml(m.nome)}</b><small>${n ? `${n} tarefa${n>1?'s':''} vencida${n>1?'s':''} · a mais antiga venceu em ${tzDataCurta(m.mais_antiga)}` : 'Nenhuma tarefa vencida'}${m.ativo && m.ativado_em ? ` · alerta ligado em ${new Date(m.ativado_em).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})}` : ''}</small></div>
+        <span class="tv-num ${n?'tem':''}">${n}</span>
+        <button type="button" class="${m.ativo?'btn-outline':'btn-accent'} btn-mini tv-btn" data-tv-alerta="${m.user_id}" data-tv-ativo="${m.ativo?'1':'0'}" ${!m.ativo && !n ? 'disabled title="Sem tarefas vencidas"' : ''}>${m.ativo ? 'Desligar alerta' : 'Ligar alerta'}</button>
+      </div>`; }).join('') || '<div class="empty-state">Nenhum membro ativo em Tarefas.</div>'}</div>`}
+    </div>
+  </div>`;
+}
+function tvPainelBind(el){
+  const t = el.querySelector('[data-tv-toggle]'); if(t) t.addEventListener('click', ()=>{ TV_UI.aberto = !TV_UI.aberto; renderTarefas(); });
+  el.querySelectorAll('[data-tv-alerta]').forEach(b=>b.addEventListener('click', async ev=>{
+    ev.stopPropagation(); b.disabled = true;
+    const ligar = b.dataset.tvAtivo!=='1';
+    const { error } = await sb.rpc('tarefas_vencidas_alerta', { p_user:b.dataset.tvAlerta, p_ativo:ligar });
+    if(error){ b.disabled = false; showAppAviso('Não foi possível alterar o alerta: '+(error.message||'')); return; }
+    await tvPainelCarregar();
+    if(currentUser && b.dataset.tvAlerta===currentUser.id) tvCarregar();
+  }));
+}
 async function e27Carregar(){
   try{
     const { data, error } = await sb.rpc('comunidade_e27_pendente');
@@ -5628,7 +5707,7 @@ async function bootstrapData(){
       });
     }),
   ];
-  if(currentUserRole!=='aluno') onda.push(carregarRecadoDia());
+  if(currentUserRole!=='aluno') onda.push(carregarRecadoDia(), tvCarregar());
   if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios(), acessoCarregar());
   else if(msgSouMentorado()) onda.push(msgBootstrap(), e27Carregar());
 
@@ -6660,16 +6739,18 @@ function openBloqueioMentoradosModal(titulo, texto){
 function isAnswered(p){
   return p.comments.some(c=>{ const a=getPerson(c.authorId); return a && a.role==='staff'; });
 }
+function tvOn0(){ return typeof tvAtivo==='function' && tvAtivo(); }
 function updateNotifBadge(){
   const dot = document.getElementById('notif-dot');
   const badge = document.getElementById('notif-badge');
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
+  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
   if(typeof appBadge==='function') appBadge(pend.length + tf);
   const sinoBtn = document.getElementById('notif-btn');
-  if(sinoBtn) sinoBtn.classList.toggle('bv-brilho', pend.some(x=>x.motivo==='boasvindas' || x.motivo==='e27'));
+  const tvOn = currentRole!=='aluno' && typeof tvAtivo==='function' && tvAtivo();
+  if(sinoBtn){ sinoBtn.classList.toggle('tv-brilho', tvOn); sinoBtn.classList.toggle('bv-brilho', !tvOn && pend.some(x=>x.motivo==='boasvindas' || x.motivo==='e27')); }
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
@@ -6734,6 +6815,10 @@ function notifItens(){
       if(msgSouMentorado()) itens.push({ tipo:'mensagem', avatarDe:a.ultimaDe, quando:a.ultimaEm, titulo:`${quem ? quem.name.split(' ')[0] : 'A equipe'} respondeu no seu Acompanhamento`, sub:a.ultimaTexto||'', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
       else itens.push({ tipo:'mensagem', avatarDe:a.alunoId, quando:a.ultimaEm, titulo:`${aluno ? aluno.name.split(' ')[0] : 'Mentorado'} · ${a.naoLidas} ${a.naoLidas===1?'nova mensagem':'novas mensagens'} no Acompanhamento`, sub: a.ultimaTexto ? `${a.ultimaDe===a.alunoId ? '' : msgNomeDe(a.ultimaDe)+': '}${a.ultimaTexto}` : '', acao: ()=>msgAbrirConversa(msgChaveAcomp(a.alunoId)) });
     });
+  }
+  if(currentRole!=='aluno' && tvAtivo()){
+    const n = Number(TV_ALERTA.vencidas);
+    itens.unshift({ tipo:'vencidas', quando:TV_ALERTA.ativado_em, titulo:`Você tem ${n} tarefa${n>1?'s':''} vencida${n>1?'s':''}`, sub:'A Mariane pediu que você finalize as tarefas em atraso. Abra suas tarefas e conclua as que estão com o prazo vencido.', acao: ()=>{ if(typeof tarefasUI!=='undefined'){ tarefasUI.aba='minhas'; } goTo('tarefas'); } });
   }
   pendenciasDoSino().forEach(x=>{
     const c = x.course_id && typeof getCourse==='function' ? getCourse(x.course_id) : null;
@@ -6805,7 +6890,7 @@ function notifPainelHtml(){
   const itens = notifItens();
   const av = (it)=> it.grupo ? msgGrupoAvatar(34, it.grupo) : it.avatarDe ? msgAvatarDe(it.avatarDe, 34) : `<span class="notif-ic">${icon(it.icone||'bell','tiny')}</span>`;
   return `<div class="notif-hd"><strong>Notificações</strong>${itens.length ? `<span class="msg-badge">${itens.length}</span>` : ''}</div>
-    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">Entrar na comunidade E27</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
+    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='vencidas' ? `<button type="button" class="notif-item notif-bv notif-tv" data-notif="${i}"><span class="notif-ic tv-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts tv-pill">Finalizar tarefas vencidas</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">Entrar na comunidade E27</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
 }
 function notifPainelEl(){
   let p = document.getElementById('notif-painel');
@@ -13719,6 +13804,7 @@ function renderTarefas(){
   }
   const tfFechado = !!tarefasUI.recolhidos.__tarefas;
   el.innerHTML = `
+    ${tvPainelHtml()}
     <div class="vg-sec-head tf-sec-head" data-tf-recolher="__tarefas">
       <h2 class="section-title com-titulo">${icon('check')} Tarefas</h2>
       <span class="qtd">${kpis.pend} pendente${kpis.pend===1?'':'s'}</span>
@@ -13782,6 +13868,7 @@ function renderTarefas(){
     ${tarefasSouAdmin() ? tarefasAdminHtml() : ''}
   `;
   bindTarefas(el);
+  tvPainelBind(el);
 }
 function tarefasAdminHtml(){
   return `
