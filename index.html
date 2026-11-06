@@ -3449,7 +3449,7 @@
           <button data-role="staff" title="Equipe interna">Equipe</button>
           <button data-role="consultora" id="role-consultora" style="display:none" title="Ver a plataforma como as consultoras de vendas veem">Consultora</button>
           <button data-role="editor" id="role-editor" style="display:none" title="Ver a plataforma como o editor de vídeos vê">Editor</button>
-          <button data-role="cs" id="role-cs" style="display:none" title="Ver a plataforma como o Customer Success vê (sem Comunicação, Financeiro, Sessões 1:1, Análise e eCRM)">CS</button>
+          <button data-role="cs" id="role-cs" style="display:none" title="Ver a plataforma como a Navegadora vê (sem Comunicação, Financeiro, Sessões 1:1, Análise e eCRM)">Navegadora</button>
         </div>
         <div class="role-toggle pt-toggle" id="pt-toggle" style="display:none"></div>
         <button class="icon-btn" id="notif-btn" title="Notificações">
@@ -20889,7 +20889,7 @@ const EVENTO_UI = { aba:'premio' };
 function renderEvento(){
   const el = document.getElementById('view-evento');
   if(!el) return;
-  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e do Customer Success.</div>'; return; }
+  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e da Navegadora.</div>'; return; }
   const abas = `
     <h2 class="section-title com-titulo">${icon('award')} Evento Essência Experience</h2>
     <div class="ev-abas" role="tablist">
@@ -20912,7 +20912,7 @@ function renderEvento(){
 function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
-  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e do Customer Success.</div>'; return; }
+  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e da Navegadora.</div>'; return; }
   // O NPS não aparece mais aqui (fica em Comunicação), mas a nota entra no alerta de cada mentorado.
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
   if(RADAR_UI.rows===null && !RADAR_UI.carregando && !RADAR_UI.erro){ radarCarregar(); }
@@ -21093,7 +21093,7 @@ function aeSituacao(s, salvo){
    Acompanhamento só começa depois do onboarding do eSIS; quem não tem onboarding registrado passa a
    receber quando completa 30 dias na plataforma (regra no banco: checkpoint_elegivel). */
 const OB_ETAPAS = [
-  { k:'abertura', nome:'Onboarding de abertura', resp:'Customer Success', apos:0 },
+  { k:'abertura', nome:'Onboarding de abertura', resp:'Navegadora', apos:0 },
   { k:'expert',   nome:'Onboarding com o Expert', resp:'Expert', apos:10 },
   { k:'esis',     nome:'Onboarding do eSIS', resp:'', apos:10 },
 ];
