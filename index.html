@@ -1189,6 +1189,8 @@
   .ps-label-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;}
   .ps-nao-tenho{font:inherit;font-size:11px;font-weight:600;padding:3px 10px;margin-bottom:4px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
   .ps-nao-tenho:hover{border-color:var(--accent);color:var(--accent);}
+  .cob-res{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg-soft,rgba(0,0,0,.05));}
+  .cob-pago{color:var(--success);} .cob-sem_resposta,.cob-recusou,.cob-juridico{color:var(--danger,#b4443a);} .cob-prometeu,.cob-negociado{color:#a07a2c;}
   .ps-swatch-dot.ps-swatch-na{background:none !important;border:1.5px dashed var(--border);}
   .ps-locked .ps-nao-tenho{display:none;}
   .ps-rowlabel .ps-nao-tenho-row{display:block;margin:6px 0 0;}
@@ -4469,7 +4471,7 @@ let internoDiagTab = 'wispform';
    A escolha de cada pessoa é lembrada no próprio navegador dela. */
 /* Seções recolhíveis do Acompanhamento Interno (mesmo padrão da Visão Geral). O estado fica salvo
    no navegador, então cada pessoa da equipe mantém as seções do jeito que deixou. */
-const INTERNO_SECOES_PADRAO = { competencias:true,diag:false, checklist:true, checklistReg:true, encontros:true, contatos:true, futuros:true, internos:true, mentores:true};
+const INTERNO_SECOES_PADRAO = { competencias:true,diag:false, checklist:true, checklistReg:true, encontros:true, contatos:true, cobrancas:true, futuros:true, internos:true, mentores:true};
 function getInternoAberto(){
   let salvo = {};
   try{ salvo = JSON.parse(localStorage.getItem('ascentria-interno-aberto')||'{}') || {}; }catch(e){ salvo = {}; }
@@ -12340,6 +12342,81 @@ function intVincularRegistro(s, r){
     reallyCloseModal(); renderInterno();
   });
 }
+/* Registro de Cobranças Financeiras: histórico das cobranças feitas a mentorados e alunos do Método
+   e da Pós em atraso (canal, valor, resultado, próximo passo). Só a equipe vê (RLS is_staff). */
+const COBRANCAS = {};
+const COB_CANAIS = { whatsapp:'WhatsApp', ligacao:'Ligação', email:'E-mail', plat:'Mensagem no Plat', notificacao:'Notificação oficial', reuniao:'Reunião' };
+const COB_RESULTADOS = { sem_resposta:'Sem resposta', prometeu:'Prometeu pagar', negociado:'Negociado', pago:'Pago', recusou:'Recusou pagar', juridico:'Encaminhado ao jurídico' };
+async function cobCarregar(sid){
+  if(COBRANCAS[sid] && COBRANCAS[sid].carregando) return;
+  COBRANCAS[sid] = { carregando:true, lista:(COBRANCAS[sid]||{}).lista || null };
+  const { data, error } = await sb.from('cobranca_registros').select('*').eq('student_id', sid).order('data', {ascending:false}).order('id', {ascending:false});
+  COBRANCAS[sid] = { carregando:false, lista: error ? [] : (data||[]) };
+  if(error) console.error('cobranca_registros', error);
+  if(currentView==='interno' && currentStudentId===sid) renderInterno();
+}
+function cobSecaoHtml(s, intHead, intBody){
+  const c = COBRANCAS[s.id];
+  if(!c) cobCarregar(s.id);
+  const lista = c && c.lista ? c.lista : null;
+  const hoje = (()=>{ const d = new Date(Date.now()-3*3600e3); return d.toISOString().slice(0,10); })();
+  return `
+    ${intHead('cobrancas', 'money', 'Registro de Cobranças Financeiras', lista ? lista.length : null)}
+    ${intBody('cobrancas')}
+    <p class="section-sub" style="margin-top:0">Registre aqui cada cobrança feita a este aluno com parcelas em atraso: o canal, o valor cobrado, o que ele respondeu e o próximo passo. A cobrança é tratada só com o próprio aluno, nunca com terceiros, e sem constrangimento.</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead><tr><th>Data</th><th>Canal</th><th>Responsável</th><th>Valor / parcelas</th><th>Resultado</th><th>Próximo passo</th><th>Resumo</th><th></th></tr></thead>
+        <tbody>
+          ${lista===null ? '<tr><td colspan="8" style="color:var(--text-mute)">Carregando…</td></tr>' : lista.map(r=>`
+            <tr>
+              <td style="white-space:nowrap">${formatDateBR(r.data)}</td>
+              <td style="white-space:nowrap">${escapeHtml(COB_CANAIS[r.canal]||r.canal)}</td>
+              <td><span class="resp-pill">${escapeHtml(r.responsavel)}</span></td>
+              <td style="white-space:nowrap">${r.valor!=null ? formatBRL(Number(r.valor)) : '—'}${r.parcelas ? `<br><small style="color:var(--text-mute)">${escapeHtml(r.parcelas)}</small>` : ''}</td>
+              <td style="white-space:nowrap">${r.resultado ? `<span class="cob-res cob-${escapeAttr(r.resultado)}">${escapeHtml(COB_RESULTADOS[r.resultado]||r.resultado)}</span>` : '—'}</td>
+              <td style="white-space:nowrap">${r.proximo_passo ? formatDateBR(r.proximo_passo) : '—'}</td>
+              <td style="min-width:240px">${resumoCell(r.resumo||'', 'cob-'+r.id)}</td>
+              <td><button class="btn-mini danger" data-del-cob="${r.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
+            </tr>`).join('') || '<tr><td colspan="8" style="color:var(--text-mute)">Nenhuma cobrança registrada para este aluno.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div class="add-form form-contato" id="form-cobranca">
+      <div class="field"><label>Canal</label><select class="ps-input" id="new-cob-canal">${Object.entries(COB_CANAIS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-cob-data" value="${hoje}"></div>
+      <div class="field"><label>Responsável</label><select class="ps-input" id="new-cob-resp">${selectOpts(['Mariane','Carmem Goretty','Murilo Pedroso','Diego Eller','Sandra Bublitz','Viviane da Silva'], '')}</select></div>
+      <div class="field"><label>Valor cobrado (R$)</label><input class="ps-input" type="number" step="0.01" min="0" id="new-cob-valor" placeholder="Ex.: 999,75"></div>
+      <div class="field"><label>Parcelas cobradas</label><input class="ps-input" type="text" id="new-cob-parcelas" placeholder="Ex.: 2/12 e 3/12 (vencidas em 10/09 e 10/10)"></div>
+      <div class="field"><label>Resultado</label><select class="ps-input" id="new-cob-resultado"><option value="">Selecione</option>${Object.entries(COB_RESULTADOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div class="field"><label>Próximo passo (data)</label><input class="ps-input" type="date" id="new-cob-prox"></div>
+      <div class="field full"><label>Resumo</label><textarea class="ps-input" id="new-cob-resumo" placeholder="O que foi enviado ou conversado e o que o aluno respondeu..."></textarea></div>
+      <div class="actions"><button class="btn-accent" id="add-cob-btn">${icon('plus')} Adicionar cobrança</button></div>
+    </div>
+    </div>`;
+}
+function cobBind(s){
+  const add = document.getElementById('add-cob-btn');
+  if(add) add.addEventListener('click', async ()=>{
+    const v = id=>document.getElementById(id).value.trim();
+    const reg = { student_id:s.id, data:v('new-cob-data'), canal:v('new-cob-canal'), responsavel:v('new-cob-resp'), valor: v('new-cob-valor')==='' ? null : Number(v('new-cob-valor').replace(',','.')), parcelas:v('new-cob-parcelas')||null, resultado:v('new-cob-resultado')||null, proximo_passo:v('new-cob-prox')||null, resumo:v('new-cob-resumo') };
+    if(!reg.data || !reg.responsavel || !reg.resumo){ showAppAviso('Preencha a data, o responsável e o resumo da cobrança.'); return; }
+    add.disabled = true;
+    const { data, error } = await sb.from('cobranca_registros').insert(reg).select().single();
+    if(error){ add.disabled = false; showAppAviso('Não foi possível salvar: '+(error.message||'')); return; }
+    const c = COBRANCAS[s.id] || (COBRANCAS[s.id] = { lista:[] });
+    c.lista = [data].concat(c.lista||[]);
+    renderInterno();
+  });
+  document.querySelectorAll('[data-del-cob]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!confirmDelete('Excluir este registro de cobrança? Essa ação não pode ser desfeita.')) return;
+    const id = b.dataset.delCob;
+    const { error } = await sb.from('cobranca_registros').delete().eq('id', id);
+    if(error){ showAppAviso('Não foi possível excluir: '+(error.message||'')); return; }
+    const c = COBRANCAS[s.id]; if(c && c.lista) c.lista = c.lista.filter(x=>String(x.id)!==String(id));
+    renderInterno();
+  }));
+}
 function renderInterno(){
   const s = getStudent(currentStudentId);
   if(s && AE_UI.sid!==s.id) intAeCarregar(s.id);
@@ -12501,6 +12578,8 @@ function renderInterno(){
     </div>
     </div>
 
+    ${cobSecaoHtml(s, intHead, intBody)}
+
     ${intHead('futuros', 'calendar', 'Agendamento de Encontros', futuros.length)}
     ${intBody('futuros')}
     <p class="section-sub" style="margin-top:0">Agende aqui o próximo encontro com este mentorado — ao salvar, ele aparece automaticamente na Agenda ao Vivo dele, em "Próximos encontros" (visível só pra ele, não pro resto da turma).</p>
@@ -12635,6 +12714,7 @@ function renderInterno(){
     setInternoAberto(k, abrindo);
   }));
   document.getElementById('acomp-pdf-btn').addEventListener('click',()=>exportAcompanhamentoPDF(s));
+  cobBind(s);
   { const dp = document.getElementById('diag-panel'); if(dp && dp.querySelector('[data-msg-audio]')) msgAudioCarregar(dp); }
   const diagK = v=>{ const [tipo, i] = String(v).split(':'); return { tipo, i:+i, ans:getInternalAnswers(s.id, tipo), ed:getInternalEditing(s.id, tipo) }; };
   document.querySelectorAll('#diag-panel [data-diag-save]').forEach(btn=>{

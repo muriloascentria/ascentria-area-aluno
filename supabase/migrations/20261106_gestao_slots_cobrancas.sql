@@ -1,0 +1,1 @@
+-- Gestão do Time: slots de agenda (vendas sexta/1º dia útil; financeira segunda 7h/dia 1 7h), condições de itens e tabela cobranca_registros. Aplicadas via apply_migration em 2026-11-06.
