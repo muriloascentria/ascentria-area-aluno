@@ -4346,7 +4346,7 @@ async function tvCarregar(){
   if(typeof updateNotifBadge==='function') updateNotifBadge();
 }
 function tvAtivo(){ return !!(TV_ALERTA && TV_ALERTA.ativo && Number(TV_ALERTA.vencidas)>0); }
-function tvSouMariane(){ return !!(currentUser && currentUser.id===TV_MARIANE); }
+function tvSouMariane(){ return !!(currentUser && (currentUser.id===TV_MARIANE || currentUser.id==='7e570000-0000-4000-8000-0000000000ae')); }
 async function tvPainelCarregar(){
   if(TV_UI.carregando) return; TV_UI.carregando = true;
   const { data, error } = await sb.rpc('tarefas_vencidas_painel');
