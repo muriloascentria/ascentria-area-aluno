@@ -1,0 +1,2 @@
+-- Casos do dia da Sandra: tabela sandra_casos_dia, RPC sandra_casos_registrar e condição 'checkpoint_dia'
+-- em gestao_item_vale (aplicado via MCP em 06/11/2026; ver migração sandra_casos_do_dia no Supabase).

@@ -5788,7 +5788,7 @@ async function enterApp(){
   }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
   goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
-  if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); }
+  if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); setTimeout(scPreencherCasos, 1500); }
   if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
   setTimeout(pwaConvidarInstalar, 2500);
   setTimeout(pushConvidar, 6000);
@@ -20870,6 +20870,57 @@ function rdResolverMomento(s, m){
 }
 /* O radar se atualiza sozinho: ao abrir a tela (se os dados tiverem mais de 2 minutos) e a cada 5 minutos com a tela aberta. */
 setInterval(()=>{ if(currentView==='radar' && !document.hidden && RADAR_UI.rows && !RADAR_UI.carregando) radarCarregar(); }, 5*60*1000);
+/* ================= CASOS DO DIA DA SANDRA (rotina diária da Head de Desenvolvimento) =================
+   A rotina chega às 7h com dois itens marcados "(abra o Essência PLAT para ver os nomes do dia)". Quando
+   a Sandra abre o sistema, os nomes entram no lugar da marca, calculados com o mesmo Radar dos Mentorados:
+   · Momentos-Chave: os casos pendentes divididos pelos dias úteis que faltam até sexta (os mais atrasados
+     primeiro). O que ela resolve sai do Radar; o que fica volta no dia seguinte.
+   · Radar: 1 mentorado em vermelho e 1 em laranja, evitando repetir quem já veio nos últimos 7 dias.
+   O que foi sorteado fica em sandra_casos_dia. */
+const SC_SANDRA = 'a29026ae-d252-4456-bb26-eec09ba778c4';
+const SC_MARCA = '(abra o Essência PLAT para ver os nomes do dia)';
+function scNomes(l){ return l.length<=1 ? (l[0]||'') : l.slice(0,-1).join(', ')+' e '+l[l.length-1]; }
+async function scPreencherCasos(){
+  try{
+    if(!currentUser || currentUser.id!==SC_SANDRA) return;
+    const hoje = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
+    const { data: ts } = await sb.from('tarefas').select('id').eq('responsavel_id', currentUser.id).eq('prazo_data', hoje).eq('excluida', false).like('titulo', 'Rotina diária%');
+    if(!ts || !ts.length) return;
+    const { data: subs } = await sb.from('tarefas_subtarefas').select('id,tarefa_id,titulo').in('tarefa_id', ts.map(t=>t.id)).like('titulo', '%'+SC_MARCA+'%');
+    if(!subs || !subs.length) return;
+    if(NPS_UI.rows===null) await npsCarregarEquipe();
+    await radarCarregar();
+    if(!RADAR_UI.rows) return;
+    const lista = RADAR_UI.rows.map(r=>{ const st = getStudent(r.aluno_id); return st ? { s:st, a:rdAvaliar(st, r) } : null; }).filter(Boolean);
+    const d7 = new Date(Date.now()-3*3600000-7*86400000).toISOString().slice(0,10);
+    const { data: hist } = await sb.from('sandra_casos_dia').select('tipo,student_id').gte('dia', d7).lt('dia', hoje);
+    const recentes = new Set((hist||[]).filter(h=>h.tipo!=='momento').map(h=>h.student_id));
+    for(const sub of subs){
+      let titulo, tipo, ids;
+      if(sub.titulo.includes('Momentos-Chave')){
+        const mom = lista.flatMap(x=>rdMomentos(x.s).map(m=>({ s:x.s, em:m.em }))).sort((a,b)=>a.em-b.em);
+        const ordem = []; mom.forEach(m=>{ if(!ordem.includes(m.s)) ordem.push(m.s); });
+        const dow = new Date(hoje+'T12:00:00').getDay() || 7;
+        const n = Math.ceil(ordem.length / Math.max(1, 6-dow));
+        const esc = ordem.slice(0, n);
+        tipo = 'momento'; ids = esc.map(x=>x.id);
+        titulo = esc.length ? sub.titulo.replace(SC_MARCA, scNomes(esc.map(x=>x.name))) : 'Momentos-Chave: nenhum caso pendente hoje.';
+      } else {
+        const peso = x=>x.a.motivos.filter(m=>m.nivel===2).length*10 + x.a.motivos.length;
+        const pick = nv=>{ const c = lista.filter(x=>x.a.nivel===nv).sort((a,b)=>peso(b)-peso(a)); return c.find(x=>!recentes.has(x.s.id)) || c[0] || null; };
+        const v = pick(2), l = pick(1);
+        const partes = [v ? v.s.name+' (vermelho)' : null, l ? l.s.name+' (laranja)' : null].filter(Boolean);
+        tipo = 'radar'; ids = [v ? v.s.id : null, l ? l.s.id : null];
+        titulo = partes.length ? sub.titulo.replace(SC_MARCA, scNomes(partes)) : 'Radar dos Mentorados: nenhum caso em vermelho ou laranja hoje.';
+      }
+      const { error } = await sb.rpc('sandra_casos_registrar', { p_sub:sub.id, p_titulo:titulo, p_tipo:tipo, p_ids:ids });
+      if(error){ console.warn('sandra_casos_registrar', error); continue; }
+      const loc = (typeof TAREFAS_SUB!=='undefined' && TAREFAS_SUB[sub.tarefa_id]||[]).find(x=>x.id===sub.id);
+      if(loc) loc.titulo = titulo;
+    }
+    if(currentView==='tarefas') renderTarefas();
+  }catch(e){ console.warn('scPreencherCasos', e); }
+}
 async function radarCarregar(){
   RADAR_UI.carregando = true; RADAR_UI.erro = false;
   try{
