@@ -2963,6 +2963,15 @@
   .aniv-bloco-hd .icon{width:18px;height:18px;color:var(--accent);}
   .aniv-qtd{min-width:20px;height:20px;border-radius:10px;background:var(--accent-soft);color:var(--accent-2);font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;}
   .aniv-bloco-lista{display:flex;flex-direction:column;gap:8px;}
+  .aniv-feito{border:1px solid var(--border);border-radius:12px;padding:0;}
+  .aniv-feito summary{list-style:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:9px 12px;cursor:pointer;}
+  .aniv-feito summary::-webkit-details-marker{display:none;}
+  .aniv-feito summary strong{font-size:13px;}
+  .aniv-feito summary .aniv-tags{margin:0;display:inline-flex;flex-wrap:wrap;gap:4px;}
+  .aniv-feito-dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--success-soft);}
+  .aniv-feito-det{display:block;padding:0 12px 10px 32px;font-size:12px;line-height:1.5;color:var(--text-dim);}
+  .aniv-feito-det .icon{vertical-align:-2px;margin-right:4px;}
+  .aniv-feito-det .icon{stroke:var(--success);}
   .aniv-bloco-item{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--bg-elev);}
   .aniv-bloco-txt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
   .aniv-env-todos{margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;}
@@ -5018,20 +5027,23 @@ function aniversariantesEquipeHtml(){
     <div class="aniv-bloco">
       <div class="aniv-bloco-hd">${icon('gift')} <strong>Aniversariantes de hoje</strong> <span class="aniv-qtd">${lista.length}</span></div>
       <div class="aniv-bloco-lista">
-        ${lista.map(a=>`
+        ${lista.map(a=>{ const env = carregado && anivEnvioDe(a); if(env){ const quem = anivQuem(env.por); const hora = env.em ? new Date(env.em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}) : ''; return `
+          <details class="aniv-feito">
+            <summary><span class="aniv-feito-dot" title="Parabéns enviados"></span><strong>${escapeHtml(a.nome)}</strong><span class="aniv-tags">${a.tags.length ? a.tags.map(t=>`<span class="aniv-tag">${escapeHtml(t)}</span>`).join('') : '<span class="aniv-tag vazia">Sem TAG</span>'}</span></summary>
+            <div class="aniv-feito-det">${icon('check','tiny')} Parabéns enviados${quem ? ' por <b>'+escapeHtml(quem)+'</b>' : ''}${hora ? ' às '+hora : ''}${a.idade ? ' · '+a.idade+' anos' : ''}${a.cidade ? ' · '+escapeHtml(a.cidade) : ''}</div>
+          </details>`; } return `
           <div class="aniv-bloco-item">
             ${initialsAvatar(a.initials, a.color, 40, a.avatarUrl)}
             <div class="aniv-bloco-txt">
               <strong>${escapeHtml(a.nome)}</strong>
               <small>${a.idade? a.idade+' anos' : 'Parabéns!'}${a.cidade? ' · '+escapeHtml(a.cidade) : ''}</small>
               <div class="aniv-tags">${a.tags.length ? a.tags.map(t=>`<span class="aniv-tag">${escapeHtml(t)}</span>`).join('') : '<span class="aniv-tag vazia">Sem TAG</span>'}</div>
-              ${(()=>{ const e = anivEnvioDe(a); return e ? `<div class="aniv-ok">${icon('check','tiny')} Parabéns enviados${anivQuem(e.por)? ' por '+escapeHtml(anivQuem(e.por)) : ''}</div>` : ''; })()}
             </div>
             ${carregado && !anivEnvioDe(a) ? `<button type="button" class="btn-mini aniv-env-btn" data-aniv-env="${escapeAttr(a.id)}" title="Marcar que a equipe já mandou os parabéns">${icon('check','tiny')}<span> Marcar enviado</span></button>` : ''}
             ${a.whatsapp ? `<a class="btn-mini" href="https://wa.me/55${escapeAttr(String(a.whatsapp).replace(/\D/g,''))}" target="_blank" rel="noopener" title="Mandar mensagem no WhatsApp">${icon('comment','tiny')}<span> WhatsApp</span></a>` : ''}
-          </div>`).join('')}
+          </div>`; }).join('')}
       </div>
-      ${carregado ? (faltam.length ? (lista.length>1 ? `<button type="button" class="btn-accent aniv-btn aniv-env-todos" data-aniv-env="todos">${icon('check','tiny')} ${faltam.length<lista.length ? 'Marcar os outros como enviados' : 'Marcar parabéns como enviados'}</button>` : '') : `<div class="aniv-rodape aniv-rodape-ok">${icon('check','tiny')} Tudo certo: o time já mandou os parabéns hoje.</div>`) : ''}
+      ${carregado ? (faltam.length ? (lista.length>1 ? `<button type="button" class="btn-accent aniv-btn aniv-env-todos" data-aniv-env="todos">${icon('check','tiny')} ${faltam.length<lista.length ? 'Marcar os outros como enviados' : 'Marcar parabéns como enviados'}</button>` : '') : '') : ''}
       <small class="aniv-bloco-pe">Vem do Registro de Clientes — todo mundo com data de nascimento cadastrada entra aqui, com a TAG de origem.</small>
     </div>`;
 }
