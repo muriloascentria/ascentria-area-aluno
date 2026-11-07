@@ -3136,6 +3136,8 @@
   .mc-abrir-txt{display:inline-flex;align-items:center;gap:4px;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--text);}
   .mc-txt{display:block;overflow-wrap:anywhere;}
   .mc-vazio{color:var(--text-mute);}
+  .mc-stcel{display:flex;align-items:center;gap:4px;} .mc-stcel .ps-input{flex:1;min-width:0;}
+  .mc-del{flex:0 0 auto;background:none;border:0;color:var(--text-mute);cursor:pointer;padding:4px;display:inline-flex;} .mc-del:hover{color:var(--danger);}
   .mc-acoes{display:flex;flex-wrap:wrap;gap:10px;}
   .mc-acoes .mc-btn{width:200px;height:40px;box-sizing:border-box;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin:0;padding:0 14px;}
   .mc-acoes .mc-btn.salvo{background:var(--success);border-color:var(--success);}
@@ -16816,7 +16818,7 @@ function mcAulasHtml(dono, mariane){
         <td>${dono ? `<input class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="titulo" value="${escapeAttr(a.titulo||'')}" placeholder="Nome da aula">` : `<span class="mc-txt">${escapeHtml(a.titulo||'')}</span>`}</td>
         <td>${lnk(a,'bruto',dono)}</td>
         <td>${lnk(a,'editado',!mariane)}</td>
-        <td>${dono ? `<select class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="status">${MC_AULA_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select>`
+        <td>${dono ? `<div class="mc-stcel"><select class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="status">${MC_AULA_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select><button type="button" class="mc-del" data-mc-del="aula:${a.id}" title="Excluir a linha">${icon('trash','tiny')}</button></div>`
               : mariane && (subir || a.status==='Publicada') ? `<label class="mc-pub"><input type="checkbox" data-mc-pub="${a.id}" ${a.status==='Publicada'?'checked':''}> Publicada</label>`
               : `<span class="mc-st mc-st-${escapeAttr((a.status||'').toLowerCase())}">${escapeHtml(a.status||'')}</span>`}</td>
       </tr>`; }).join('') || `<tr><td colspan="6" class="mc-vazio">Nenhuma aula para edição.</td></tr>`}</tbody>
@@ -16825,6 +16827,17 @@ function mcAulasHtml(dono, mariane){
 }
 /* As células salvam sozinhas ao sair do campo; o botão Salvar força o campo aberto a salvar e confirma. */
 const MC_PEND = new Set();
+function mcExcluirBind(el){
+  el.querySelectorAll('[data-mc-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const [tipo, idS] = b.dataset.mcDel.split(':'), id = Number(idS);
+    if(!confirm(tipo==='aula' ? 'Excluir esta aula da lista?' : 'Excluir esta linha do funil?')) return;
+    const { error } = await sb.from(tipo==='aula' ? 'marca_aulas' : 'marca_funil').delete().eq('id', id);
+    if(error){ alert('Não foi possível excluir: '+error.message); return; }
+    if(tipo==='aula') MC.aulas = (MC.aulas||[]).filter(x=>x.id!==id);
+    else Object.keys(MC.funil).forEach(k=>{ MC.funil[k] = (MC.funil[k]||[]).filter(x=>x.id!==id); });
+    renderMarca();
+  }));
+}
 function mcSalvarBind(el){
   el.querySelectorAll('[data-mc-salvar]').forEach(b=>b.addEventListener('click', async ()=>{
     const sp = b.querySelector('span');
@@ -16916,7 +16929,7 @@ function renderMarca(){
     <div class="fs-semanas">${semanas.map((x,n)=>`<button type="button" class="filter-tab ${x===sem?'active':''}" data-mc-sem="${x}">${n===0?'ESTA SEMANA':fsRotSemana(x)}</button>`).join('')}</div>
     ${paraEditar ? `<div class="mc-aviso">${icon('film','tiny')} ${paraEditar} ${paraEditar===1?'vídeo esperando':'vídeos esperando'} edição nesta semana</div>` : ''}
     <table class="mc-tab">
-      <colgroup><col style="width:5%"><col style="width:8%"><col style="width:14%"><col style="width:12%"><col style="width:17%"><col style="width:8%"><col style="width:13%"><col style="width:13%"><col style="width:10%"></colgroup>
+      <colgroup><col style="width:5%"><col style="width:8%"><col style="width:13%"><col style="width:12%"><col style="width:16%"><col style="width:8%"><col style="width:13%"><col style="width:13%"><col style="width:12%"></colgroup>
       <thead><tr><th>Data</th><th>Dia</th><th>Link do Conteúdo</th><th>Objetivo</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
       <tbody>${linhas.map(r=>{
         const esperando = String(r.bruto||'').trim() && !String(r.editado||'').trim();
@@ -16927,7 +16940,7 @@ function renderMarca(){
           <td>${txt(r,'objetivo','Consciência')}</td><td>${txt(r,'descricao')}</td><td>${txt(r,'formato','Reels…')}</td>
           <td>${lnk(r,'bruto',dono)}</td>
           <td>${lnk(r,'editado',true)}</td>
-          <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="status">${MC_STATUS.map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="mc-st mc-st-${escapeAttr((r.status||'').toLowerCase())}">${escapeHtml(r.status||'')}</span>`}</td>
+          <td>${dono ? `<div class="mc-stcel"><select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="status">${MC_STATUS.map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select><button type="button" class="mc-del" data-mc-del="funil:${r.id}" title="Excluir a linha">${icon('trash','tiny')}</button></div>` : `<span class="mc-st mc-st-${escapeAttr((r.status||'').toLowerCase())}">${escapeHtml(r.status||'')}</span>`}</td>
         </tr>`; }).join('')}</tbody>
     </table>
     ${dono ? `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add">${icon('plus','tiny')}<span>Adicionar conteúdo</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>` : ''}`;
@@ -16955,6 +16968,7 @@ function renderMarca(){
   mcAulasBind(el);
   el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>{ const pr = mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
   mcSalvarBind(el);
+  mcExcluirBind(el);
   el.querySelectorAll('.mc-at').forEach(i=>i.addEventListener('change', async ()=>{
     const { error } = await sb.from('marca_ativos').upsert({ chave:i.dataset.mcAt, link:i.value.trim(), atualizado_em:new Date().toISOString() });
     if(error){ alert('Não foi possível salvar: '+error.message); return; }
