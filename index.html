@@ -3129,7 +3129,17 @@
   .fs-resp dt{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);margin-top:8px;}
   .fs-resp dd{margin:0;white-space:pre-wrap;font-size:14px;}
   .fs-status{font-size:13px;color:var(--text-dim);margin-bottom:10px;}
-  .fs-form{display:flex;flex-direction:column;gap:10px;max-width:760px;}
+  .fs-form{display:flex;flex-direction:column;gap:12px;max-width:760px;}
+  .fs-campo{display:flex;flex-direction:column;gap:5px;}
+  .fs-campo label{font-size:12.5px;font-weight:500;color:var(--text-dim);}
+  .fs-campo textarea{width:100%;box-sizing:border-box;resize:vertical;}
+  .fs-chip{display:inline-block;font-size:12.5px;font-weight:400;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:5px 12px;}
+  .fs-chip b{color:var(--text);font-weight:600;letter-spacing:.04em;}
+  .fs-acoes{display:flex;}
+  .fs-acoes .btn-accent{display:inline-flex;flex-direction:row;align-items:center;gap:8px;white-space:nowrap;}
+  .fs-sem-arq{display:flex;flex-direction:column;gap:8px;}
+  .fs-sem-arq+.fs-sem-arq{border-top:1px solid var(--border);padding-top:12px;}
+  .fs-sem-tit{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);font-weight:600;}
 
   .gt-atualizar{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;margin-top:6px;}
   .gt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));grid-auto-rows:1fr;gap:14px;}
@@ -16576,19 +16586,23 @@ const FS_AREAS = {
     ['processos','Processos de Vendas que precisam de ajuste'],
     ['decisoes','Decisões que precisam do Murilo'] ]},
 };
-const FS = { linhas:null, carregando:false, semana:null, aberto:null, salvando:false };
+const FS = { linhas:null, carregando:false, aberto:null, salvando:false };
+const FS_INICIO = '2026-11-02';
 function fsMeuCfg(){ return currentUserRole==='staff' && currentUser ? FS_AREAS[idEfetivo()] || null : null; }
 function fsSouLider(){ return !!fsMeuCfg(); }
 function fsSemana(offset){ const d = gtData(gtHojeISO()); d.setDate(d.getDate() - ((d.getDay()+6)%7) - 7*(offset||0)); return gtISO(d); }
-/* Só as semanas desde que o Fechamento da Semana existe (02/11/2026), no máximo as 6 últimas. */
-function fsSemanas(){ return [0,1,2,3,4,5].map(fsSemana).filter(x=>x>='2026-11-02'); }
 function fsRotSemana(iso){ const d = gtData(iso), f = new Date(d); f.setDate(f.getDate()+4); const dm = x=>String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0'); return dm(d)+' a '+dm(f); }
 function fsQuando(iso){ return iso ? new Date(iso).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}).replace(',', ' às') : ''; }
+/* A semana fica aberta até quinta-feira às 23h59 (horário de Brasília). Depois disso vai para o arquivo. */
+function fsAberta(semana){
+  const lim = gtData(semana); lim.setDate(lim.getDate()+3);
+  return gtHojeISO() <= gtISO(lim);
+}
 async function fsCarregar(forcar){
   if(FS.carregando || (FS.linhas && !forcar)) return;
   FS.carregando = true;
   try{
-    const { data, error } = await sb.from('gestao_fechamentos').select('*').gte('semana', fsSemana(7)).order('semana', {ascending:false});
+    const { data, error } = await sb.from('gestao_fechamentos').select('*').gte('semana', FS_INICIO).order('semana', {ascending:false});
     if(error) throw error;
     FS.linhas = data || [];
   }catch(e){ console.error('gestao_fechamentos', e); FS.linhas = FS.linhas || []; }
@@ -16599,69 +16613,72 @@ function fsLinha(uid, semana, area){
   const ls = (FS.linhas||[]).filter(l=>l.semana===semana && l.area===area && (l.user_id===uid || (PEOPLE[l.user_id] && PEOPLE[l.user_id].espelhoDe===uid)));
   return ls.find(l=>l.user_id===uid) || ls[0] || null;  // o da pessoa real vem antes do da conta de teste
 }
-/* ---- Tela do líder: só o próprio formulário ---- */
+/* ---- Tela do líder: só o fechamento da semana atual ---- */
 function fsRenderLider(el){
   const cfg = fsMeuCfg();
   if(FS.linhas===null){ el.innerHTML = '<div class="empty-state">Carregando o fechamento…</div>'; fsCarregar(); return; }
-  const semana = FS.semana || fsSemana(0);
+  const semana = fsSemana(0), aberta = fsAberta(semana);
   const linha = (FS.linhas||[]).find(l=>l.semana===semana && l.area===cfg.area && l.user_id===currentUser.id) || null;
   const r = (linha && linha.respostas) || {};
-  const semanas = fsSemanas();
+  const situacao = linha ? 'enviado em '+fsQuando(linha.atualizado_em||linha.enviado_em) : (aberta ? 'ainda não enviado' : 'não enviado');
   el.innerHTML = `
     <h2 class="section-title" style="margin-top:4px">FECHAMENTO DA SEMANA · ${escapeHtml(cfg.area.toUpperCase())}</h2>
-    <p class="section-sub">Preencha na quinta-feira e envie ao Murilo. Ele lê os fechamentos na sexta para a análise do panorama geral. Você pode voltar e completar até o fim da semana.</p>
-    <div class="fs-semanas" ${semanas.length<2?'hidden':''}>${semanas.map(s=>`<button type="button" class="filter-tab ${s===semana?'active':''}" data-fs-semana="${s}">${s===semanas[0]?'Esta semana':fsRotSemana(s)}</button>`).join('')}</div>
-    <div class="fs-status">${linha ? `${icon('check','tiny')} Enviado em ${escapeHtml(fsQuando(linha.enviado_em))}${linha.atualizado_em && linha.atualizado_em!==linha.enviado_em ? ' · atualizado em '+escapeHtml(fsQuando(linha.atualizado_em)) : ''}${linha.lido_em ? ' · lido pelo Murilo' : ''}` : 'Ainda não enviado nesta semana ('+escapeHtml(fsRotSemana(semana))+').'}</div>
-    <form class="fs-form" id="fs-form">
-      ${cfg.campos.map(([k,rot])=>`<div class="field full"><label for="fs-${k}">${escapeHtml(rot)}</label><textarea class="ps-input" id="fs-${k}" data-fs-campo="${k}" rows="3" placeholder="Escreva aqui. Se não houver nada, escreva 'Nada nesta semana'.">${escapeHtml(r[k]||'')}</textarea></div>`).join('')}
-      <div class="modal-actions"><button type="submit" class="btn-accent" id="fs-enviar">${icon('send','tiny')} ${linha ? 'Atualizar o fechamento' : 'Enviar ao Murilo'}</button></div>
-    </form>`;
-  el.querySelectorAll('[data-fs-semana]').forEach(b=>b.addEventListener('click', ()=>{ FS.semana = b.dataset.fsSemana; renderGestaoTime(); }));
-  el.querySelector('#fs-form').addEventListener('submit', async e=>{
+    <p class="section-sub">${aberta ? 'Preencha e envie ao Murilo até quinta-feira às 23h59. Até lá você pode voltar e ajustar.' : 'O fechamento desta semana foi encerrado na quinta-feira às 23h59 e está com o Murilo. O próximo abre na segunda-feira.'}</p>
+    <div class="fs-semanas"><span class="fs-chip"><b>ESTA SEMANA</b> · ${escapeHtml(situacao)} (${escapeHtml(fsRotSemana(semana))})</span></div>
+    ${aberta ? `<form class="fs-form" id="fs-form">
+      ${cfg.campos.map(([k,rot])=>`<div class="fs-campo"><label for="fs-${k}">${escapeHtml(rot)}</label><textarea class="ps-input" id="fs-${k}" data-fs-campo="${k}" rows="3" placeholder="Escreva aqui. Se não houver nada, escreva 'Nada nesta semana'.">${escapeHtml(r[k]||'')}</textarea></div>`).join('')}
+      <div class="fs-acoes"><button type="submit" class="btn-accent" id="fs-enviar">${icon('send','tiny')}<span>${linha ? 'Atualizar o fechamento' : 'Enviar ao Murilo'}</span></button></div>
+    </form>` : ''}`;
+  const form = el.querySelector('#fs-form');
+  if(!form) return;
+  form.addEventListener('submit', async e=>{
     e.preventDefault();
     if(FS.salvando) return;
+    if(!fsAberta(semana)){ renderGestaoTime(); return; }
     const resp = {}; let algum = false;
     el.querySelectorAll('[data-fs-campo]').forEach(t=>{ const v = t.value.trim(); resp[t.dataset.fsCampo] = v; if(v) algum = true; });
     if(!algum){ alert('Preencha pelo menos um dos campos antes de enviar.'); return; }
-    const btn = el.querySelector('#fs-enviar'); FS.salvando = true; btn.disabled = true; btn.textContent = 'Enviando…';
+    const btn = el.querySelector('#fs-enviar'); FS.salvando = true; btn.disabled = true; btn.querySelector('span').textContent = 'Enviando…';
     try{
       let res;
       if(linha) res = await sb.from('gestao_fechamentos').update({ respostas:resp, atualizado_em:new Date().toISOString(), lido_em:null }).eq('id', linha.id).select().single();
       else res = await sb.from('gestao_fechamentos').insert({ user_id:currentUser.id, area:cfg.area, semana, respostas:resp }).select().single();
       if(res.error) throw res.error;
       FS.linhas = (FS.linhas||[]).filter(l=>l.id!==res.data.id).concat([res.data]);
-    }catch(err){ console.error(err); alert('Não foi possível enviar: '+((err&&err.message)||'')); }
+    }catch(err){ console.error(err); alert('Não foi possível enviar. O prazo é quinta-feira às 23h59. '+((err&&err.message)||'')); }
     FS.salvando = false; renderGestaoTime();
   });
 }
-/* ---- Painel do Murilo: os três fechamentos da semana ---- */
+/* ---- Painel do Murilo: a semana aberta em cima e o arquivo das semanas encerradas embaixo ---- */
+function fsLideresHtml(semana){
+  return `<div class="fs-lista">${Object.entries(FS_AREAS).map(([uid,c])=>{
+    const l = fsLinha(uid, semana, c.area), aberto = FS.aberto===uid+'|'+semana;
+    return `<div class="fs-item ${l?'ok':'pend'}">
+      <button type="button" class="fs-linha" data-fs-abrir="${uid}" data-fs-sem="${semana}" ${l?'':'disabled'}>
+        <span class="fs-sinal"></span><b>${escapeHtml(c.area)}</b><span class="fs-quem">${escapeHtml(c.pessoa)}</span>
+        <span class="fs-st">${l ? 'Enviado em '+escapeHtml(fsQuando(l.atualizado_em||l.enviado_em))+(l.lido_em?' · lido':' · novo')+(l.user_id!==uid?' · conta de teste':'') : (fsAberta(semana) ? 'Ainda não enviado' : 'Não enviado')}</span>
+      </button>
+      ${l && aberto ? `<dl class="fs-resp">${c.campos.map(([k,rot])=>`<dt>${escapeHtml(rot)}</dt><dd>${escapeHtml((l.respostas||{})[k]||'—')}</dd>`).join('')}</dl>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
 function fsPainelMuriloHtml(){
   if(FS.linhas===null){ fsCarregar(); return '<div class="fs-painel"><div class="fs-tit">FECHAMENTO DA SEMANA</div><div class="gt-atual-det">Carregando…</div></div>'; }
-  const semana = FS.semana || fsSemana(0);
-  const semanas = fsSemanas();
-  const lideres = Object.entries(FS_AREAS);
-  const enviados = lideres.filter(([uid,c])=>fsLinha(uid, semana, c.area)).length;
+  const atual = fsSemana(0), aberta = fsAberta(atual);
+  const n = Object.entries(FS_AREAS).filter(([uid,c])=>fsLinha(uid, atual, c.area)).length;
+  const arquivo = [0,1,2,3,4,5,6,7,8,9,10,11].map(fsSemana).filter(x=>x>=FS_INICIO && !fsAberta(x));
   return `<div class="fs-painel">
-    <div class="fs-cab"><div class="fs-tit">${icon('calendar','tiny')} FECHAMENTO DA SEMANA <span class="fs-conta">${enviados} de ${lideres.length} enviados</span></div>
-      <div class="fs-semanas" ${semanas.length<2?'hidden':''}>${semanas.map(s=>`<button type="button" class="filter-tab ${s===semana?'active':''}" data-fs-semana="${s}">${s===semanas[0]?'Esta semana':fsRotSemana(s)}</button>`).join('')}</div></div>
-    <div class="fs-lista">
-      ${lideres.map(([uid,c])=>{
-        const l = fsLinha(uid, semana, c.area), aberto = FS.aberto===uid+'|'+semana;
-        return `<div class="fs-item ${l?'ok':'pend'}">
-          <button type="button" class="fs-linha" data-fs-abrir="${uid}" ${l?'':'disabled'}>
-            <span class="fs-sinal"></span><b>${escapeHtml(c.area)}</b><span class="fs-quem">${escapeHtml(c.pessoa)}</span>
-            <span class="fs-st">${l ? 'Enviado em '+escapeHtml(fsQuando(l.atualizado_em||l.enviado_em))+(l.lido_em?' · lido':' · novo')+(l.user_id!==uid?' · conta de teste':'') : 'Ainda não enviado'}</span>
-          </button>
-          ${l && aberto ? `<dl class="fs-resp">${c.campos.map(([k,rot])=>`<dt>${escapeHtml(rot)}</dt><dd>${escapeHtml((l.respostas||{})[k]||'—')}</dd>`).join('')}</dl>` : ''}
-        </div>`;
-      }).join('')}
-    </div>
-  </div>`;
+    <div class="fs-cab"><div class="fs-tit">${icon('calendar','tiny')} FECHAMENTO DA SEMANA <span class="fs-conta">${aberta ? n+' de 3 enviados · '+escapeHtml(fsRotSemana(atual))+' · prazo quinta-feira às 23h59' : 'nenhuma semana aberta'}</span></div></div>
+    ${aberta ? fsLideresHtml(atual) : '<div class="gt-atual-det">O fechamento desta semana foi encerrado na quinta-feira às 23h59 e está no arquivo abaixo. O próximo abre na segunda-feira.</div>'}
+  </div>
+  ${arquivo.length ? `<div class="fs-painel">
+    <div class="fs-cab"><div class="fs-tit">${icon('folder','tiny')} ARQUIVO DOS FECHAMENTOS DA SEMANA</div></div>
+    ${arquivo.map(sem=>`<div class="fs-sem-arq"><div class="fs-sem-tit">${escapeHtml(fsRotSemana(sem))}</div>${fsLideresHtml(sem)}</div>`).join('')}
+  </div>` : ''}`;
 }
 function fsBindMurilo(el){
-  el.querySelectorAll('.fs-painel [data-fs-semana]').forEach(b=>b.addEventListener('click', ()=>{ FS.semana = b.dataset.fsSemana; FS.aberto = null; renderGestaoTime(); }));
   el.querySelectorAll('[data-fs-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
-    const uid = b.dataset.fsAbrir, semana = FS.semana || fsSemana(0), chave = uid+'|'+semana;
+    const uid = b.dataset.fsAbrir, semana = b.dataset.fsSem, chave = uid+'|'+semana;
     FS.aberto = FS.aberto===chave ? null : chave;
     const l = fsLinha(uid, semana, FS_AREAS[uid].area);
     if(l && !l.lido_em && FS.aberto){ l.lido_em = new Date().toISOString(); try{ await sb.from('gestao_fechamentos').update({ lido_em:l.lido_em }).eq('id', l.id); }catch(e){ console.warn(e); } }
