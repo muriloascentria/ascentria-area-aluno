@@ -3123,28 +3123,37 @@
   /* Início da equipe interna: grade de botões grandes, um por área do menu */
   /* Gestão do Time */
   .gt-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
-  .mc-bloco{display:flex;flex-direction:column;gap:10px;margin:18px 0;}
-  .mc-tit{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--text-dim);}
-  .mc-tabela{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
-  .mc-tabela table{width:100%;border-collapse:collapse;font-size:13px;min-width:980px;}
-  .mc-tabela th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-mute);padding:8px;background:var(--bg-elev);white-space:nowrap;}
-  .mc-tabela td{padding:6px 8px;border-top:1px solid var(--border);vertical-align:middle;}
-  .mc-tabela .ps-input{padding:6px 8px;font-size:13px;min-width:110px;width:100%;box-sizing:border-box;}
-  .mc-lnk{display:flex;gap:6px;align-items:center;} .mc-lnk .ps-input{min-width:150px;}
-  .mc-abrir{white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+  .mc-sec{border-top:1px solid var(--border);padding:12px 0;}
+  .mc-sec-h{display:flex;align-items:center;gap:8px;background:none;border:0;color:var(--text);font:inherit;font-size:14px;font-weight:700;letter-spacing:.06em;cursor:pointer;padding:4px 0;}
+  .mc-sec-h .icon{transition:transform .15s;} .mc-sec.fechada .mc-sec-h .icon{transform:rotate(-90deg);}
+  .mc-sec-b{display:flex;flex-direction:column;gap:10px;margin-top:10px;}
+  .mc-tab{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .mc-tab th{text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--text-mute);padding:7px 5px;background:var(--bg-elev);overflow:hidden;text-overflow:ellipsis;}
+  .mc-tab td{padding:5px;border-top:1px solid var(--border);vertical-align:middle;overflow:hidden;}
+  .mc-tab .ps-input{padding:5px 6px;font-size:12.5px;width:100%;min-width:0;box-sizing:border-box;}
+  .mc-tab select.ps-input{padding-right:18px;}
+  .mc-data{font-variant-numeric:tabular-nums;color:var(--text-dim);}
+  .mc-lnk{display:flex;gap:4px;align-items:center;min-width:0;} .mc-lnk .ps-input{flex:1;min-width:0;}
+  .mc-abrir{display:inline-flex;flex:0 0 auto;color:var(--text-dim);} .mc-abrir:hover{color:var(--text);}
+  .mc-abrir-txt{display:inline-flex;align-items:center;gap:4px;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--text);}
+  .mc-txt{display:block;overflow-wrap:anywhere;}
   .mc-vazio{color:var(--text-mute);}
   #mc-add{align-self:flex-start;display:inline-flex;flex-direction:row;align-items:center;gap:6px;width:auto;white-space:nowrap;}
   tr.mc-esperando td{background:var(--individual-soft);}
   .mc-aviso{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--individual);font-weight:600;}
   .mc-st{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--bg-elev);}
-  .mc-st-pronto{color:var(--individual);} .mc-st-publicado{color:var(--success);}
-  .mc-ideia-form{display:flex;gap:8px;max-width:720px;} .mc-ideia-form .ps-input{flex:1;min-width:0;}
+  .mc-st-pronto{color:var(--individual);} .mc-st-postado{color:var(--success);}
+  .mc-ativos{display:flex;flex-direction:column;gap:8px;}
+  .mc-ativo{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .mc-ativo-rot{font-size:12.5px;font-weight:600;letter-spacing:.03em;}
+  .mc-ideia-form{display:flex;gap:8px;} .mc-ideia-form .ps-input{flex:1;min-width:0;}
   .mc-ideia-form .btn-accent{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
-  .mc-ideias{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-width:720px;}
+  .mc-ideias{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
   .mc-ideias li{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
   .mc-ideias li label{flex:1;display:flex;gap:8px;align-items:center;min-width:0;}
   .mc-ideias li.usada span{text-decoration:line-through;color:var(--text-mute);}
   .mc-ideias li small{color:var(--text-mute);font-size:12px;}
+  @media (max-width:700px){ .mc-ativo{grid-template-columns:minmax(0,1fr);gap:6px;} }
   .fs-painel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:14px 0 18px;display:flex;flex-direction:column;gap:12px;}
   .fs-cab{display:flex;flex-direction:column;gap:8px;}
   .fs-tit{font-weight:600;font-size:15px;letter-spacing:.04em;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -16748,13 +16757,17 @@ function fsBindMurilo(el){
    "Pronto"). Conteúdo marcado "Publicado" com link entra sozinho na Avaliação de Conteúdo.
    Tabelas marca_funil, marca_ideias e marca_avaliacao. */
 const MC_DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-const MC_STATUS = ['Produzindo','Pronto','Publicado'];
+const MC_STATUS = ['Produzindo','Pronto','Postado'];
 const MC_AVAL = [['link','Link'],['data_funil','Data no Funil'],['views','Views'],['shared','Shared'],['saved','Saved'],['likes','Likes'],['views_seg','Views Seguidores'],['views_nao_seg','Views Não Seguidores'],['insights','Insights']];
-const MC = { semana:null, funil:{}, ideias:null, aval:null, carregando:{}, semeando:{} };
+/* Materiais da marca: um link (pasta ou arquivo do Drive) para cada item, na tabela marca_ativos. */
+const MC_ATIVOS = [['manual','Manual de Marca da Ascentria'],['timbrado','Papel Timbrado da Ascentria'],['logo_consultorio','Logotipo Consultório Simulado'],['logo_plantao','Logotipo Plantão de Dúvidas'],['logo_mastermind','Logotipo Mastermind'],['logo_treinamento','Logotipo Treinamento de Vendas'],['template_mastermind','Template Apresentação Mastermind']];
+const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, carregando:{}, semeando:{}, fechado:{} };
 function mcSouDono(){ return souMurilo() || (currentUserProfile && currentUserProfile.espelhoDe===GT_MURILO_UID); }
 function mcPode(){ return mcSouDono() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
 function mcEditaTudo(){ return souMurilo() && currentRole!=='editor'; }
-function mcSemanas(){ return [-1,0,1,2].map(o=>fsSemana(-o)).sort(); }
+/* Esta semana e as três seguintes (a semana passada não aparece no topo). */
+function mcSemanas(){ return [0,1,2,3].map(o=>fsSemana(-o)); }
+function mcData(sem, dia){ const d = gtData(sem); d.setDate(d.getDate()+Math.max(0, MC_DIAS.indexOf(dia))); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
 async function mcCarregarSemana(sem){
   if(MC.carregando[sem]) return; MC.carregando[sem] = true;
   try{
@@ -16773,62 +16786,80 @@ async function mcCarregarSemana(sem){
 async function mcCarregarExtras(){
   if(MC.carregando.extras) return; MC.carregando.extras = true;
   try{
-    const [i, a] = await Promise.all([ sb.from('marca_ideias').select('*').order('usada').order('criado_em', {ascending:false}), sb.from('marca_avaliacao').select('*').order('criado_em', {ascending:false}) ]);
+    const dono = mcEditaTudo();
+    const [i, a, at] = await Promise.all([
+      dono ? sb.from('marca_ideias').select('*').order('usada').order('criado_em', {ascending:false}) : Promise.resolve({data:[]}),
+      dono ? sb.from('marca_avaliacao').select('*').order('criado_em', {ascending:false}) : Promise.resolve({data:[]}),
+      sb.from('marca_ativos').select('*') ]);
     MC.ideias = i.data || []; MC.aval = a.data || [];
-  }catch(e){ MC.ideias = MC.ideias || []; MC.aval = MC.aval || []; }
+    MC.ativos = {}; (at.data||[]).forEach(x=>{ MC.ativos[x.chave] = x.link; });
+  }catch(e){ MC.ideias = MC.ideias || []; MC.aval = MC.aval || []; MC.ativos = MC.ativos || {}; }
   MC.carregando.extras = false;
   if(currentView==='marca') renderMarca();
 }
-function mcLinkBtn(url, rot){ const u = String(url||'').trim(); return /^https?:\/\//i.test(u) ? `<a class="btn-mini mc-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} ${escapeHtml(rot)}</a>` : '<span class="mc-vazio">—</span>'; }
+function mcAbrir(url){ const u = String(url||'').trim(); return /^https?:\/\//i.test(u) ? `<a class="mc-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener" title="Abrir">${icon('externallink','tiny')}</a>` : ''; }
+function mcSecao(id, titulo, corpo){
+  const aberto = !MC.fechado[id];
+  return `<section class="mc-sec ${aberto?'':'fechada'}">
+    <button type="button" class="mc-sec-h" data-mc-toggle="${id}" aria-expanded="${aberto}">${icon('down','tiny')}<span>${titulo}</span></button>
+    ${aberto ? `<div class="mc-sec-b">${corpo}</div>` : ''}
+  </section>`;
+}
 function renderMarca(){
   const el = document.getElementById('view-marca'); if(!el) return;
   if(!mcPode()){ el.innerHTML = '<div class="empty-state">Esta área é do Murilo e do editor de vídeos.</div>'; return; }
   const dono = mcEditaTudo();
-  const sem = MC.semana || fsSemana(0);
+  const semanas = mcSemanas();
+  let sem = MC.semana && semanas.includes(MC.semana) ? MC.semana : semanas[0];
   if(MC.funil[sem]===undefined){ el.innerHTML = '<div class="empty-state">Carregando o funil…</div>'; mcCarregarSemana(sem); return; }
-  if(dono && MC.ideias===null) mcCarregarExtras();
+  if(MC.ativos===null) mcCarregarExtras();
   const linhas = MC.funil[sem] || [];
   const paraEditar = linhas.filter(r=>String(r.bruto||'').trim() && !String(r.editado||'').trim()).length;
-  const inp = (r,k,ph)=> dono ? `<input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${escapeAttr(ph||'')}">` : `<span>${escapeHtml(r[k]||'') || '<span class="mc-vazio">—</span>'}</span>`;
-  const lnk = (r,k,rot)=> dono ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="Link da pasta do Drive">${mcLinkBtn(r[k], 'Abrir')}</div>` : mcLinkBtn(r[k], 'Abrir pasta');
-  el.innerHTML = `
-    <h2 class="section-title com-titulo" style="margin-top:4px">${icon('image')} CONTEÚDO E MARCA</h2>
-    <p class="section-sub">${dono ? 'Monte o funil da semana. Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Publicado" com o link do post, ele entra sozinho na Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
-    <div class="fs-semanas">${mcSemanas().map(s=>`<button type="button" class="filter-tab ${s===sem?'active':''}" data-mc-sem="${s}">${s===fsSemana(0)?'ESTA SEMANA':fsRotSemana(s)}</button>`).join('')}</div>
+  const txt = (r,k,ph)=> dono ? `<input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${escapeAttr(ph||'')}">` : `<span class="mc-txt">${escapeHtml(r[k]||'')}</span>`;
+  const lnk = (r,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${k==='link'?'Link do post':'Link do Drive'}">${mcAbrir(r[k])}</div>`
+                                : (String(r[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(r[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
+  const funil = `
+    <div class="fs-semanas">${semanas.map((x,n)=>`<button type="button" class="filter-tab ${x===sem?'active':''}" data-mc-sem="${x}">${n===0?'ESTA SEMANA':fsRotSemana(x)}</button>`).join('')}</div>
     ${paraEditar ? `<div class="mc-aviso">${icon('film','tiny')} ${paraEditar} ${paraEditar===1?'vídeo esperando':'vídeos esperando'} edição nesta semana</div>` : ''}
-    <div class="mc-bloco"><div class="mc-tit">FUNIL DE CONTEÚDO · ${escapeHtml(fsRotSemana(sem))}</div>
-    <div class="mc-tabela"><table>
-      <thead><tr><th>Dia</th><th>Link do Conteúdo</th><th>Objetivo (etapa de consciência)</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th>${dono?'<th></th>':''}</tr></thead>
+    <table class="mc-tab">
+      <colgroup><col style="width:5%"><col style="width:8%"><col style="width:14%"><col style="width:12%"><col style="width:17%"><col style="width:8%"><col style="width:13%"><col style="width:13%"><col style="width:10%"></colgroup>
+      <thead><tr><th>Data</th><th>Dia</th><th>Link do Conteúdo</th><th>Objetivo</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
       <tbody>${linhas.map(r=>{
         const esperando = String(r.bruto||'').trim() && !String(r.editado||'').trim();
         return `<tr class="${esperando?'mc-esperando':''}">
+          <td class="mc-data">${mcData(sem, r.dia)}</td>
           <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="dia">${MC_DIAS.map(d=>`<option ${d===r.dia?'selected':''}>${d}</option>`).join('')}</select>` : `<b>${escapeHtml(r.dia)}</b>`}</td>
-          <td>${dono ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="link" value="${escapeAttr(r.link||'')}" placeholder="Link do post">${mcLinkBtn(r.link,'Abrir')}</div>` : mcLinkBtn(r.link,'Ver post')}</td>
-          <td>${inp(r,'objetivo')}</td><td>${inp(r,'descricao')}</td><td>${inp(r,'formato','Reels, carrossel…')}</td>
-          <td>${lnk(r,'bruto')}</td>
-          <td><div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="editado" value="${escapeAttr(r.editado||'')}" placeholder="Link da pasta do Drive">${mcLinkBtn(r.editado,'Abrir')}</div></td>
+          <td>${lnk(r,'link',dono)}</td>
+          <td>${txt(r,'objetivo','Consciência')}</td><td>${txt(r,'descricao')}</td><td>${txt(r,'formato','Reels…')}</td>
+          <td>${lnk(r,'bruto',dono)}</td>
+          <td>${lnk(r,'editado',true)}</td>
           <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="status">${MC_STATUS.map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="mc-st mc-st-${escapeAttr((r.status||'').toLowerCase())}">${escapeHtml(r.status||'')}</span>`}</td>
-          ${dono ? `<td><button type="button" class="btn-mini" data-mc-del="${r.id}" title="Excluir a linha">${icon('trash','tiny')}</button></td>` : ''}
-        </tr>`; }).join('') || `<tr><td colspan="9" class="mc-vazio">Nenhum conteúdo nesta semana ainda.</td></tr>`}</tbody>
-    </table></div>
-    ${dono ? `<button type="button" class="btn-outline" id="mc-add">${icon('plus','tiny')} Adicionar conteúdo</button>` : ''}
-    </div>
-    ${dono ? `
-    <div class="mc-bloco"><div class="mc-tit">BANCO DE IDEIAS</div>
-      <form class="mc-ideia-form" id="mc-ideia-form"><input class="ps-input" id="mc-ideia" placeholder="Anote uma ideia de conteúdo…"><button type="submit" class="btn-accent">${icon('plus','tiny')}<span>Registrar</span></button></form>
-      <ul class="mc-ideias">${(MC.ideias||[]).map(i=>`<li class="${i.usada?'usada':''}"><label><input type="checkbox" data-mc-ideia="${i.id}" ${i.usada?'checked':''}> <span>${escapeHtml(i.texto)}</span></label><small>${tzDataCurta(String(i.criado_em).slice(0,10))}</small><button type="button" class="btn-mini" data-mc-ideia-del="${i.id}" title="Excluir">${icon('x','tiny')}</button></li>`).join('') || '<li class="mc-vazio">Nenhuma ideia registrada.</li>'}</ul>
-    </div>
-    <div class="mc-bloco"><div class="mc-tit">AVALIAÇÃO DE CONTEÚDO</div>
-      <div class="mc-tabela"><table><thead><tr>${MC_AVAL.map(([,r])=>`<th>${r}</th>`).join('')}<th></th></tr></thead>
-      <tbody>${(MC.aval||[]).map(a=>`<tr>${MC_AVAL.map(([k])=> k==='link' ? `<td>${mcLinkBtn(a.link,'Ver post')}</td>` : `<td><input class="ps-input mc-av" data-mc-av="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}"></td>`).join('')}<td><button type="button" class="btn-mini" data-mc-av-del="${a.id}" title="Excluir">${icon('trash','tiny')}</button></td></tr>`).join('') || `<tr><td colspan="10" class="mc-vazio">Os conteúdos marcados como "Publicado" no funil aparecem aqui.</td></tr>`}</tbody></table></div>
-    </div>` : ''}`;
+        </tr>`; }).join('')}</tbody>
+    </table>
+    ${dono ? `<button type="button" class="btn-outline" id="mc-add">${icon('plus','tiny')} Adicionar conteúdo</button>` : ''}`;
+  const aval = `<table class="mc-tab"><thead><tr>${MC_AVAL.map(([,r])=>`<th>${r}</th>`).join('')}</tr></thead>
+      <tbody>${(MC.aval||[]).map(a=>`<tr>${MC_AVAL.map(([k])=> k==='link' ? `<td>${String(a.link||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(a.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Ver post</a>` : ''}</td>` : `<td><input class="ps-input mc-av" data-mc-av="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}"></td>`).join('')}</tr>`).join('') || `<tr><td colspan="9" class="mc-vazio">Os conteúdos marcados como "Postado" no funil aparecem aqui com o link.</td></tr>`}</tbody></table>`;
+  const ativos = `<div class="mc-ativos">${MC_ATIVOS.map(([k,rot])=>{
+      const v = (MC.ativos||{})[k]||'';
+      return `<div class="mc-ativo"><span class="mc-ativo-rot">${escapeHtml(rot.toUpperCase())}</span>
+        ${dono ? `<div class="mc-lnk"><input class="ps-input mc-at" data-mc-at="${k}" value="${escapeAttr(v)}" placeholder="Cole aqui o link do Drive">${mcAbrir(v)}</div>`
+               : (v ? `<a class="mc-abrir-txt" href="${escapeAttr(v)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '<span class="mc-vazio">Sem link ainda</span>')}
+      </div>`; }).join('')}</div>`;
+  const ideias = `<form class="mc-ideia-form" id="mc-ideia-form"><input class="ps-input" id="mc-ideia" placeholder="Anote uma ideia de conteúdo…"><button type="submit" class="btn-accent">${icon('plus','tiny')}<span>Registrar</span></button></form>
+      <ul class="mc-ideias">${(MC.ideias||[]).map(i=>`<li class="${i.usada?'usada':''}"><label><input type="checkbox" data-mc-ideia="${i.id}" ${i.usada?'checked':''}> <span>${escapeHtml(i.texto)}</span></label><small>${tzDataCurta(String(i.criado_em).slice(0,10))}</small><button type="button" class="btn-mini" data-mc-ideia-del="${i.id}" title="Excluir">${icon('x','tiny')}</button></li>`).join('') || '<li class="mc-vazio">Nenhuma ideia registrada.</li>'}</ul>`;
+  el.innerHTML = `
+    <p class="section-sub" style="margin-top:4px">${dono ? 'Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Postado" com o link do conteúdo, ele desce sozinho para a Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
+    ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil)}
+    ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval) : ''}
+    ${mcSecao('ativos', 'MATERIAIS DA MARCA', ativos)}
+    ${dono ? mcSecao('ideias', 'BANCO DE IDEIAS', ideias) : ''}`;
+  el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
   el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
   el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value)));
-  el.querySelectorAll('[data-mc-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirm('Excluir esta linha do funil?')) return;
-    const { error } = await sb.from('marca_funil').delete().eq('id', Number(b.dataset.mcDel));
-    if(error){ alert('Não foi possível excluir: '+error.message); return; }
-    MC.funil[sem] = MC.funil[sem].filter(r=>r.id!==Number(b.dataset.mcDel)); renderMarca();
+  el.querySelectorAll('.mc-at').forEach(i=>i.addEventListener('change', async ()=>{
+    const { error } = await sb.from('marca_ativos').upsert({ chave:i.dataset.mcAt, link:i.value.trim(), atualizado_em:new Date().toISOString() });
+    if(error){ alert('Não foi possível salvar: '+error.message); return; }
+    MC.ativos[i.dataset.mcAt] = i.value.trim(); renderMarca();
   }));
   const add = el.querySelector('#mc-add');
   if(add) add.addEventListener('click', async ()=>{
@@ -16856,11 +16887,6 @@ function renderMarca(){
     const id = Number(i.dataset.mcAv); const { error } = await sb.from('marca_avaliacao').update({ [i.dataset.mcK]: i.value }).eq('id', id);
     if(error) alert('Não foi possível salvar: '+error.message); else { const a = MC.aval.find(x=>x.id===id); if(a) a[i.dataset.mcK] = i.value; }
   }));
-  el.querySelectorAll('[data-mc-av-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirm('Excluir esta avaliação?')) return;
-    const id = Number(b.dataset.mcAvDel); await sb.from('marca_avaliacao').delete().eq('id', id);
-    MC.aval = MC.aval.filter(x=>x.id!==id); renderMarca();
-  }));
 }
 async function mcSalvar(sem, id, k, v){
   const r = (MC.funil[sem]||[]).find(x=>x.id===id); if(!r) return;
@@ -16872,16 +16898,15 @@ async function mcSalvar(sem, id, k, v){
     }
     const patch = { [k]: v, atualizado_em: new Date().toISOString() };
     if(k==='editado'){ patch.editado_em = new Date().toISOString(); patch.editado_por = currentUser.id; if(v.trim() && r.status==='Produzindo') patch.status = 'Pronto'; }
-    if(k==='status' && v==='Publicado' && !r.publicado_em) patch.publicado_em = new Date().toISOString();
+    if(k==='status' && v==='Postado' && !r.publicado_em) patch.publicado_em = new Date().toISOString();
     const { data, error } = await sb.from('marca_funil').update(patch).eq('id', id).select().single();
     if(error) throw error;
     Object.assign(r, data);
-    /* Publicado com link do post: entra uma vez na Avaliação de Conteúdo. */
-    if(r.status==='Publicado' && String(r.link||'').trim()){
+    /* Postado com link do conteúdo: desce uma vez para a Avaliação de Conteúdo. */
+    if(r.status==='Postado' && String(r.link||'').trim()){
       if(MC.aval===null) await mcCarregarExtras();
       if(!(MC.aval||[]).some(a=>a.funil_id===r.id || String(a.link).trim()===String(r.link).trim())){
-        const hoje = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'});
-        const { data: av } = await sb.from('marca_avaliacao').insert({ link:String(r.link).trim(), data_funil:hoje, funil_id:r.id }).select().single();
+        const { data: av } = await sb.from('marca_avaliacao').insert({ link:String(r.link).trim(), data_funil:mcData(sem, r.dia), funil_id:r.id }).select().single();
         if(av) MC.aval.unshift(av);
       }
     }
