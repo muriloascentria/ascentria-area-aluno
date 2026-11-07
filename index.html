@@ -16855,8 +16855,8 @@ function renderMarca(){
     <p class="section-sub" style="margin-top:0">${dono ? 'Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Postado" com o link do conteúdo, ele desce sozinho para a Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil, `${linhas.length} conteúdo${linhas.length===1?'':'s'}`)}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval, `${(MC.aval||[]).length} postado${(MC.aval||[]).length===1?'':'s'}`) : ''}
-    ${mcSecao('ativos', 'MATERIAIS DA MARCA', ativos)}
-    ${mcSecao('links', 'LINKS IMPORTANTES', links)}
+    ${dono ? mcSecao('ativos', 'MATERIAIS DA MARCA', ativos) : ''}
+    ${dono ? mcSecao('links', 'LINKS IMPORTANTES', links) : ''}
     ${dono ? mcSecao('ideias', 'BANCO DE IDEIAS', ideias, `${(MC.ideias||[]).filter(i=>!i.usada).length} para usar`) : ''}`;
   el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
   el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
