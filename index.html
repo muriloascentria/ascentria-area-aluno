@@ -1454,6 +1454,11 @@
   .an-table td{vertical-align:top;word-break:break-word;}
   .an-table .ps-cell{width:100%;}
   .an-lead{min-width:170px;}
+  .an-tag-av{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#fff;border-radius:6px;padding:4px 9px;box-shadow:0 1px 0 rgba(0,0,0,.12);}
+  .an-tag-av.diego{background:#1d4ed8;} .an-tag-av.carmem{background:#be185d;}
+  .an-tag-av .an-tag-voce{background:rgba(255,255,255,.25);border-radius:4px;padding:1px 5px;font-size:10px;}
+  .an-tag-av.feita{opacity:.55;}
+  .an-tag-modal{font-size:13px;padding:7px 12px;margin:2px 0 10px;}
   .an-manual{display:inline-block;margin-top:4px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--shared);background:var(--shared-soft);border-radius:20px;padding:2px 7px;}
   .an-vend{min-width:0;}
   /* Links e WhatsApp como blocos com a mesma entrelinha das demais células — em flex o conteúdo
@@ -6227,6 +6232,7 @@ function mapAnaliseRow(r){
     vivianeAssistiu:!!r.viviane_assistiu, vivianeAp1:r.viviane_aprendizado1||'', vivianeAp2:r.viviane_aprendizado2||'',
     adrianaAssistiu:!!r.adriana_assistiu, adrianaAp1:r.adriana_aprendizado1||'', adrianaAp2:r.adriana_aprendizado2||'',
     ordem:r.ordem, createdAt:r.created_at,
+    avaliador:r.avaliador||'', selecao:r.selecao||'', semana:r.semana||'',
   };
 }
 /* Campos de texto gravam com um respiro curto: a pessoa está digitando, então esperamos ela parar
@@ -18473,13 +18479,25 @@ function anDestBind(){
     if(error){ console.error(error); alert('Não foi possível tirar.'); anDestCarregar(); }
   }));
 }
+/* Tag de quem avalia a sessão. Marcação automática no banco: toda reunião realizada da Adriana
+   (revezando Diego e Carmem) e, toda segunda, 2 reuniões não vendidas do Diego (Carmem avalia) e
+   2 da Carmem (Diego avalia) sorteadas da semana anterior (analise_marcar_adriana / analise_sortear_semana). */
+function anTagAvHtml(a, modal){
+  if(!a.avaliador) return '';
+  const eu = currentUser ? idEfetivo() : null;
+  const v = ANALISE_VENDEDORAS.find(x=>x.nome===a.avaliador);
+  const feita = !!String(a.linkAnalise||'').trim() && /^https?:/i.test(String(a.linkAnalise||'').trim());
+  const voce = v && v.userId===eu && !feita;
+  const origem = a.selecao==='sorteio' ? 'sorteada na semana' : 'Adriana: 100% analisadas';
+  return `<span class="an-tag-av ${a.avaliador.toLowerCase()} ${feita?'feita':''} ${modal?'an-tag-modal':''}" title="${escapeAttr(origem)}">${icon('award','tiny')} Avaliação: ${escapeHtml(a.avaliador)}${voce? ' <span class="an-tag-voce">você</span>' : ''}${feita? ' · feita' : ''}</span>`;
+}
 function anTemAnalise(a){ return ANALISE_VENDEDORAS.some(v=> a[v.assistiu] || String(a[v.ap[0]]||'').trim() || String(a[v.ap[1]]||'').trim()); }
 function renderAnalise(){
   const busca = analiseBusca.trim().toLowerCase();
   const lista = ANALISE_SESSOES
     /* Só as sessões já analisadas. Buscando pelo nome ou WhatsApp, aparece também a sessão ainda sem análise,
        para quem for analisar conseguir abrir e registrar. */
-    .filter(a=> busca ? ((a.leadNome||'').toLowerCase().includes(busca) || (a.whatsapp||'').toLowerCase().includes(busca)) : (a.id===analiseNovoId || anTemAnalise(a)))
+    .filter(a=> busca ? ((a.leadNome||'').toLowerCase().includes(busca) || (a.whatsapp||'').toLowerCase().includes(busca)) : (a.id===analiseNovoId || !!a.avaliador || anTemAnalise(a)))
     .slice()
     .sort((a,b)=> (b.ordem||0)-(a.ordem||0) || String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 
@@ -18496,7 +18514,7 @@ function renderAnalise(){
       </div>
       <div class="actions"><button class="btn-accent" id="analise-add">${icon('plus','ps-plus')} Adicionar lead manualmente</button></div>
     </div>
-    <p class="section-sub" style="margin:-4px 0 12px">Aparecem aqui só as sessões que já têm análise registrada. Para analisar uma sessão nova, busque o lead pelo nome ou WhatsApp.</p>
+    <p class="section-sub" style="margin:-4px 0 12px">Aparecem aqui as sessões marcadas para avaliação e as que já têm análise registrada. Sobem sozinhas todas as reuniões realizadas da Adriana (revezando Diego e Carmem) e, toda segunda, 2 reuniões não vendidas do Diego (Carmem avalia) e 2 da Carmem (Diego avalia), sorteadas da semana anterior. A tag colorida mostra quem avalia.</p>
 
     <div class="table-wrap"><table class="check-table an-table">
       <colgroup>
@@ -18511,7 +18529,7 @@ function renderAnalise(){
       </tr></thead>
       <tbody>
         ${lista.map(a=>`<tr>
-          <td><span class="an-lead"><button type="button" class="an-lead-link" data-an-ir-venda="${escapeAttr(a.vendaSessaoId||'')}" data-an-ir-nome="${escapeAttr(a.leadNome||'')}" title="Abrir no Registro de Sessões 1:1">${escapeHtml(a.leadNome||'—')}</button></span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span></td>
+          <td><span class="an-lead"><button type="button" class="an-lead-link" data-an-ir-venda="${escapeAttr(a.vendaSessaoId||'')}" data-an-ir-nome="${escapeAttr(a.leadNome||'')}" title="Abrir no Registro de Sessões 1:1">${escapeHtml(a.leadNome||'—')}</button></span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span>${anTagAvHtml(a)}</td>
           <td><div class="an-links">
             ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo') : `<span class="link-btn an-subindo" title="Vídeo ainda subindo">${icon('upload','tiny')} Subindo</span>`}
             ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : `<span class="link-btn an-subindo" title="Análise ainda subindo">${icon('upload','tiny')} Subindo</span>`}
@@ -20096,6 +20114,7 @@ function openAnaliseModal(id){
     <div class="modal-body form-modal">
       <div class="cat">Análise Sessões 1:1</div>
       <h3>${escapeHtml(a.leadNome || 'Novo lead')}</h3>
+      ${anTagAvHtml(a, true)}
       ${podeLead ? `
       <div class="ps-section">
         <label class="ps-label">Lead</label>
