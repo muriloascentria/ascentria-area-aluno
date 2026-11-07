@@ -8134,9 +8134,9 @@ function bindCourseComments(c){
     });
   });
   modalEl.querySelectorAll('[data-del-post]').forEach(btn=>{
-    btn.addEventListener('click',(e)=>{
+    btn.addEventListener('click', async (e)=>{
       e.stopPropagation();
-      if(!confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.')) return;
+      if(!(await confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.'))) return;
       const pid = btn.dataset.delPost;
       const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
       if(idx>-1){
@@ -8151,9 +8151,9 @@ function bindCourseComments(c){
     });
   });
   modalEl.querySelectorAll('[data-del-comment]').forEach(btn=>{
-    btn.addEventListener('click',(e)=>{
+    btn.addEventListener('click', async (e)=>{
       e.stopPropagation();
-      if(!confirmDelete('Excluir este comentário? Essa ação não pode ser desfeita.')) return;
+      if(!(await confirmDelete('Excluir este comentário? Essa ação não pode ser desfeita.'))) return;
       const cid = btn.dataset.delComment;
       const p = COMMUNITY_POSTS.find(x=>x.comments.some(cm=>cm.id==cid));
       if(p){
@@ -9139,9 +9139,9 @@ function renderComunidade(){
     });
   });
   root.querySelectorAll('[data-del-post]').forEach(btn=>{
-    btn.addEventListener('click',(e)=>{
+    btn.addEventListener('click', async (e)=>{
       e.stopPropagation();
-      if(!confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.')) return;
+      if(!(await confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.'))) return;
       const pid = btn.dataset.delPost;
       const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
       if(idx>-1){
@@ -9156,9 +9156,9 @@ function renderComunidade(){
     });
   });
   root.querySelectorAll('[data-del-comment]').forEach(btn=>{
-    btn.addEventListener('click',(e)=>{
+    btn.addEventListener('click', async (e)=>{
       e.stopPropagation();
-      if(!confirmDelete('Excluir este comentário? Essa ação não pode ser desfeita.')) return;
+      if(!(await confirmDelete('Excluir este comentário? Essa ação não pode ser desfeita.'))) return;
       const cid = btn.dataset.delComment;
       const p = COMMUNITY_POSTS.find(x=>x.comments.some(c=>c.id==cid));
       if(p){
@@ -9912,7 +9912,7 @@ function renderFaturamentoChart(monthTotals, year, fmt){
 /* Confirmação antes de qualquer ação destrutiva (excluir, remover, apagar) — chamado no início
    de todo handler de exclusão da plataforma, para nunca apagar nada sem o usuário confirmar. */
 function confirmDelete(msg){
-  return window.confirm(msg || 'Tem certeza que deseja excluir? Essa ação não pode ser desfeita.');
+  return showAppConfirm(msg || 'Tem certeza que deseja excluir? Essa ação não pode ser desfeita.', {title:'Excluir', confirmLabel:'Excluir'});
 }
 /* Converte URLs "https://..."/"http://..." dentro de um texto em links clicáveis, escapando o resto do texto com segurança. */
 function linkify(text, item){
@@ -10600,8 +10600,8 @@ function bindSectionEvents(sections, data, rerender, saveKey){
   /* Excluir de fato só é permitido de dentro do banco de descartados — nunca do quadro ativo — pra
      manter a garantia de que um lead só some pra sempre se você entrar lá e confirmar. */
   modalEl.querySelectorAll('[data-crmdelete]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir este lead definitivamente? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir este lead definitivamente? Essa ação não pode ser desfeita.'))) return;
       const skey = btn.dataset.skey;
       const section = sections.find(s=>s.key===skey);
       const val = sectionValue(data, section);
@@ -11376,7 +11376,7 @@ function meInternoBind(s){
     ME.sessoes[sid].unshift(data); ME.sessoes[sid].sort((a,b)=>String(b.data||'').localeCompare(String(a.data||''))); renderInterno();
   });
   v.querySelectorAll('[data-me-ses-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirmDelete('Excluir esta sessão do Mentores Essência?')) return;
+    if(!(await confirmDelete('Excluir esta sessão do Mentores Essência?'))) return;
     const { error } = await sb.from('me_sessoes').update({ ativo:false }).eq('id', b.dataset.meSesDel);
     if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
     ME.sessoes[sid] = ME.sessoes[sid].filter(x=>String(x.id)!==b.dataset.meSesDel); renderInterno();
@@ -11397,7 +11397,7 @@ function meInternoBind(s){
     m.status = feita ? 'Concluída' : 'Pendente'; m.concluida_em = feita ? new Date().toISOString() : null; m.concluida_por_nome = feita ? ((currentUserProfile||{}).name || null) : null; renderInterno();
   }));
   v.querySelectorAll('[data-me-meta-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirmDelete('Excluir esta meta do Mentores Essência?')) return;
+    if(!(await confirmDelete('Excluir esta meta do Mentores Essência?'))) return;
     const { error } = await sb.from('me_metas').update({ ativo:false }).eq('id', b.dataset.meMetaDel);
     if(error){ alert('Não foi possível excluir: '+(error.message||'')); return; }
     ME.metas[sid] = ME.metas[sid].filter(x=>String(x.id)!==b.dataset.meMetaDel); renderInterno();
@@ -11486,7 +11486,7 @@ function meMatConteudoBind(v){
   });
   v.querySelectorAll('[data-me-mat-abrir]').forEach(b=>b.addEventListener('click', ()=>meMatAbrir(b.dataset.meMatAbrir)));
   v.querySelectorAll('[data-me-mat-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirmDelete('Remover este material do Mentores Essência?')) return;
+    if(!(await confirmDelete('Remover este material do Mentores Essência?'))) return;
     const { error } = await sb.from('me_materiais').update({ ativo:false }).eq('id', b.dataset.meMatDel);
     if(error){ showAppAviso('Não foi possível remover: '+(error.message||'')); return; }
     ME.materiais = (ME.materiais||[]).filter(m=>String(m.id)!==b.dataset.meMatDel); renderConteudo();
@@ -11513,7 +11513,7 @@ function meConteudoBind(){
     (ME.aulas = ME.aulas || []).push(data); renderConteudo();
   });
   v.querySelectorAll('[data-me-aula-del]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirmDelete('Remover esta aula do Mentores Essência?')) return;
+    if(!(await confirmDelete('Remover esta aula do Mentores Essência?'))) return;
     const { error } = await sb.from('me_aulas').update({ ativo:false }).eq('id', b.dataset.meAulaDel);
     if(error){ alert('Não foi possível remover: '+(error.message||'')); return; }
     ME.aulas = ME.aulas.filter(a=>String(a.id)!==b.dataset.meAulaDel); renderConteudo();
@@ -12629,7 +12629,7 @@ function cobBind(s){
     renderInterno();
   });
   document.querySelectorAll('[data-del-cob]').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!confirmDelete('Excluir este registro de cobrança? Essa ação não pode ser desfeita.')) return;
+    if(!(await confirmDelete('Excluir este registro de cobrança? Essa ação não pode ser desfeita.'))) return;
     const id = b.dataset.delCob;
     const { error } = await sb.from('cobranca_registros').delete().eq('id', id);
     if(error){ showAppAviso('Não foi possível excluir: '+(error.message||'')); return; }
@@ -12954,8 +12954,8 @@ function renderInterno(){
     btn.addEventListener('click',()=>{ const k = diagK(btn.dataset.diagEdit); k.ed[k.i] = true; renderInterno(); });
   });
   document.querySelectorAll('#diag-panel [data-diag-delete]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir esta resposta do diagnóstico? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir esta resposta do diagnóstico? Essa ação não pode ser desfeita.'))) return;
       const k = diagK(btn.dataset.diagDelete);
       k.ans[k.i] = ''; k.ed[k.i] = true;
       syncInternalDiagAnswer(s.id, k.tipo, k.i, '');
@@ -13006,8 +13006,8 @@ function renderInterno(){
     });
   });
   document.querySelectorAll('[data-del-task]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir esta tarefa do checklist? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir esta tarefa do checklist? Essa ação não pode ser desfeita.'))) return;
       const id = btn.dataset.delTask;
       syncChecklistItemDelete(id);
       s.checklist = s.checklist.filter(t=>t.id!=id);
@@ -13087,8 +13087,8 @@ function renderInterno(){
     });
   });
   document.querySelectorAll('[data-del-contato-futuro]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir esta reunião agendada? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir esta reunião agendada? Essa ação não pode ser desfeita.'))) return;
       const idx = LIVE_SESSIONS.findIndex(l=>l.id==btn.dataset.delContatoFuturo);
       if(idx>-1){ syncLiveSessionDelete(LIVE_SESSIONS[idx].id); LIVE_SESSIONS.splice(idx,1); }
       renderInterno();
@@ -13117,10 +13117,10 @@ function renderInterno(){
     });
   });
   document.querySelectorAll('[data-unsync-session]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
+    btn.addEventListener('click', async ()=>{
       const c = s.contatos.find(x=>x.id==btn.dataset.unsyncSession);
       if(!c || !c.sessionId) return;
-      if(!confirmDelete('Remover este registro de Minhas Sessões 1:1? Essa ação não pode ser desfeita.')) return;
+      if(!(await confirmDelete('Remover este registro de Minhas Sessões 1:1? Essa ação não pode ser desfeita.'))) return;
       syncSessionDelete(c.sessionId);
       syncContatoUnsync(c.id);
       s.sessions = s.sessions.filter(x=>x.id!=c.sessionId);
@@ -13130,8 +13130,8 @@ function renderInterno(){
     });
   });
   document.querySelectorAll('[data-del-contato]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir este registro de contato? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir este registro de contato? Essa ação não pode ser desfeita.'))) return;
       const id = btn.dataset.delContato;
       const c = s.contatos.find(x=>x.id==id);
       // Se este contato já tinha sido adicionado a Minhas Sessões 1:1, remove a sessão vinculada junto —
@@ -13164,8 +13164,8 @@ function renderInterno(){
     }catch(e){ console.error(e); btn.disabled = false; }
   });
   document.querySelectorAll('[data-del-record]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir este registro interno? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir este registro interno? Essa ação não pode ser desfeita.'))) return;
       const id = btn.dataset.delRecord;
       syncInternalRecordDelete(id);
       s.registrosInternos = s.registrosInternos.filter(r=>r.id!=id);
@@ -13213,8 +13213,8 @@ function bindConteudoCourseEvents(){
     btn.addEventListener('click',()=>openEditCourseModal(btn.dataset.editCourse));
   });
   document.querySelectorAll('[data-del-course]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir esta aula? Ela some da plataforma para todos os alunos e essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir esta aula? Ela some da plataforma para todos os alunos e essa ação não pode ser desfeita.'))) return;
       const idx = COURSES.findIndex(c=>c.id===btn.dataset.delCourse);
       if(idx>-1){ syncCourseDelete(COURSES[idx].id); COURSES.splice(idx,1); }
       renderConteudo();
@@ -13345,7 +13345,7 @@ function renderConteudo(){
     </div>`;
   const cBody = (chave)=> `<div class="int-sec-corpo" id="cont-sec-${chave}" ${aberto[chave]? '' : 'hidden'}>`;
   document.getElementById('view-conteudo').innerHTML = `
-
+    <div id="cont-gravar"></div>
     ${cHead('aulas', 'film', 'Aulas', COURSES.length)}
     ${cBody('aulas')}
     <p class="section-sub" style="margin-top:0">Arraste pelo ícone ⠿ ou use as setas para reordenar as aulas dentro de cada módulo.</p>
@@ -13511,8 +13511,8 @@ function renderConteudo(){
     renderConteudo();
   });
   document.querySelectorAll('[data-del-material]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir este material? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir este material? Essa ação não pode ser desfeita.'))) return;
       const idx = MATERIALS.findIndex(m=>m.id==btn.dataset.delMaterial);
       if(idx>-1){ syncMaterialDelete(MATERIALS[idx].id); MATERIALS.splice(idx,1); }
       renderConteudo();
@@ -13533,8 +13533,8 @@ function renderConteudo(){
     }catch(e){ console.error(e); btn.disabled = false; }
   });
   document.querySelectorAll('[data-del-live]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir este encontro da agenda? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir este encontro da agenda? Essa ação não pode ser desfeita.'))) return;
       const idx = LIVE_SESSIONS.findIndex(l=>l.id==btn.dataset.delLive);
       if(idx>-1){ syncLiveSessionDelete(LIVE_SESSIONS[idx].id); LIVE_SESSIONS.splice(idx,1); }
       renderConteudo();
@@ -13579,6 +13579,7 @@ function renderConteudo(){
       renderConteudo();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
+  mcGravarRefresh();
 }
 
 /* ================= VIEW: TAREFAS (gestão de tarefas da equipe interna) =================
@@ -14826,7 +14827,7 @@ async function gtfConcluir(t, feita){
   if(linha && linha.id){ Object.assign(t, gtfMap(linha)); updateNotifBadge(); renderMensagens(); }
 }
 async function gtfExcluir(t){
-  if(!confirmDelete('Excluir esta tarefa do grupo?')) return;
+  if(!(await confirmDelete('Excluir esta tarefa do grupo?'))) return;
   MSG_GTAREFAS = MSG_GTAREFAS.filter(x=>x!==t);
   updateNotifBadge(); renderMensagens();
   const { error } = await sb.from('mensagens_grupo_tarefas').delete().eq('id', t.id);
@@ -16837,7 +16838,7 @@ async function mcCarregarGravar(){
   try{ const { data, error } = await sb.from('marca_aulas_gravar').select('*').order('ordem').order('id'); if(error) throw error; MC.gravar = data || []; }
   catch(e){ console.error('marca_aulas_gravar', e); MC.gravar = MC.gravar || []; }
   MC.carregando.gravar = false;
-  if(currentView==='marca') renderMarca();
+  mcGravarRefresh();
 }
 function mcGravarHtml(arquivo){
   const lista = (MC.gravar||[]).filter(a=> arquivo ? a.status==='Finalizado' : a.status!=='Finalizado');
@@ -16857,6 +16858,18 @@ function mcGravarHtml(arquivo){
   </table>
   ${arquivo ? '' : `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add-grav">${icon('plus','tiny')}<span>Adicionar aula</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>`}`;
 }
+/* As duas seções moram no Gerenciar Conteúdo (só para o Murilo), no alto da aba. */
+function mcGravarRefresh(){
+  const el = document.getElementById('cont-gravar'); if(!el) return;
+  if(!mcEditaTudo()){ el.innerHTML = ''; return; }
+  if(MC.gravar===null){ el.innerHTML = '<div class="gt-atual-det">Carregando as aulas para gravar…</div>'; mcCarregarGravar(); return; }
+  const fin = MC.gravar.filter(a=>a.status==='Finalizado').length;
+  el.innerHTML = mcSecao('gravar', 'AULAS PARA GRAVAR', mcGravarHtml(false), `${MC.gravar.length-fin} em andamento`)
+               + mcSecao('arqgrav', 'ARQUIVO AULAS GRAVADAS', mcGravarHtml(true), `${fin} gravada${fin===1?'':'s'}`);
+  el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; mcGravarRefresh(); }));
+  mcSalvarBind(el);
+  mcGravarBind(el);
+}
 function mcGravarBind(el){
   el.querySelectorAll('.mc-gv').forEach(i=>i.addEventListener('change', ()=>{ const pr = (async ()=>{
     const id = Number(i.dataset.mcGv), k = i.dataset.mcK, a = (MC.gravar||[]).find(x=>x.id===id); if(!a) return;
@@ -16864,26 +16877,26 @@ function mcGravarBind(el){
     if(k==='status') patch.finalizado_em = i.value==='Finalizado' ? new Date().toISOString() : null;
     const { data, error } = await sb.from('marca_aulas_gravar').update(patch).eq('id', id).select().single();
     if(error){ alert('Não foi possível salvar: '+error.message); return; }
-    Object.assign(a, data); if(k==='status') renderMarca();
+    Object.assign(a, data); if(k==='status') mcGravarRefresh();
   })(); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
   const add = el.querySelector('#mc-add-grav');
   if(add) add.addEventListener('click', async ()=>{
     const { data, error } = await sb.from('marca_aulas_gravar').insert({ ordem: Math.max(0, ...(MC.gravar||[]).map(x=>x.ordem||0)) + 1 }).select().single();
     if(error){ alert('Não foi possível adicionar: '+error.message); return; }
-    MC.gravar.push(data); renderMarca();
+    MC.gravar.push(data); mcGravarRefresh();
   });
   el.querySelectorAll('[data-mc-gv-voltar]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = Number(b.dataset.mcGvVoltar), a = (MC.gravar||[]).find(x=>x.id===id);
     const { data, error } = await sb.from('marca_aulas_gravar').update({ status:'Em edição', finalizado_em:null, atualizado_em:new Date().toISOString() }).eq('id', id).select().single();
     if(error){ alert('Não foi possível salvar: '+error.message); return; }
-    if(a) Object.assign(a, data); renderMarca();
+    if(a) Object.assign(a, data); mcGravarRefresh();
   }));
   el.querySelectorAll('[data-mc-gv-del]').forEach(b=>b.addEventListener('click', async ()=>{
     if(!(await showAppConfirm('Excluir esta aula da lista?', {title:'Excluir', confirmLabel:'Excluir'}))) return;
     const id = Number(b.dataset.mcGvDel);
     const { error } = await sb.from('marca_aulas_gravar').delete().eq('id', id);
     if(error){ alert('Não foi possível excluir: '+error.message); return; }
-    MC.gravar = MC.gravar.filter(x=>x.id!==id); renderMarca();
+    MC.gravar = MC.gravar.filter(x=>x.id!==id); mcGravarRefresh();
   }));
 }
 async function mcCarregarAulas(){
@@ -17003,7 +17016,6 @@ function renderMarca(){
   if(!mcPode()){ el.innerHTML = '<div class="empty-state">Esta área é do Murilo e do editor de vídeos.</div>'; return; }
   const dono = mcEditaTudo();
   if(MC.aulas===null) mcCarregarAulas();
-  if(dono && MC.gravar===null) mcCarregarGravar();
   if(!dono && mcSouMariane()){
     const prontas = (MC.aulas||[]).filter(a=>a.status==='Pronto').length;
     el.innerHTML = `<p class="section-sub" style="margin-top:0">As aulas com o link em EDITADO estão prontas para subir em Gerenciar Conteúdo. Depois de subir, marque "Publicada".</p>
@@ -17054,8 +17066,6 @@ function renderMarca(){
   el.innerHTML = `
     <p class="section-sub" style="margin-top:0">${dono ? 'Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Postado" com o link do conteúdo, ele desce sozinho para a Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil, `${linhas.length} conteúdo${linhas.length===1?'':'s'}`)}
-    ${dono ? mcSecao('gravar', 'AULAS PARA GRAVAR', MC.gravar===null ? '<div class="gt-atual-det">Carregando…</div>' : mcGravarHtml(false), MC.gravar ? `${MC.gravar.filter(a=>a.status!=='Finalizado').length} em andamento` : null) : ''}
-    ${dono ? mcSecao('arqgrav', 'ARQUIVO AULAS GRAVADAS', MC.gravar===null ? '' : mcGravarHtml(true), MC.gravar ? `${MC.gravar.filter(a=>a.status==='Finalizado').length} gravada${MC.gravar.filter(a=>a.status==='Finalizado').length===1?'':'s'}` : null) : ''}
     ${mcSecao('aulas', 'AULAS PARA EDIÇÃO', MC.aulas===null ? '<div class="gt-atual-det">Carregando…</div>' : mcAulasHtml(dono, false), MC.aulas ? `${MC.aulas.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null)}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval, `${(MC.aval||[]).length} postado${(MC.aval||[]).length===1?'':'s'}`) : ''}
     ${dono ? mcSecao('ativos', 'MATERIAIS DA MARCA', ativos) : ''}
@@ -17067,7 +17077,6 @@ function renderMarca(){
   el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>{ const pr = mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
   mcSalvarBind(el);
   mcExcluirBind(el);
-  mcGravarBind(el);
   el.querySelectorAll('.mc-at').forEach(i=>i.addEventListener('change', async ()=>{
     const { error } = await sb.from('marca_ativos').upsert({ chave:i.dataset.mcAt, link:i.value.trim(), atualizado_em:new Date().toISOString() });
     if(error){ alert('Não foi possível salvar: '+error.message); return; }
@@ -18051,8 +18060,8 @@ function renderVendas(){
     });
   });
   document.querySelectorAll('[data-del-venda]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Excluir este registro de sessão? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Excluir este registro de sessão? Essa ação não pode ser desfeita.'))) return;
       const id = btn.dataset.delVenda;
       syncVendaSessaoDelete(id);
       VENDA_SESSOES = VENDA_SESSOES.filter(v=>v.id!=id);
@@ -22384,8 +22393,8 @@ function renderVisaoGeral(){
     });
   });
   document.querySelectorAll('[data-del-code]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      if(!confirmDelete('Remover este código de acesso? Essa ação não pode ser desfeita.')) return;
+    btn.addEventListener('click', async ()=>{
+      if(!(await confirmDelete('Remover este código de acesso? Essa ação não pode ser desfeita.'))) return;
       const idx = ACCESS_CODES.findIndex(c=>c.id==btn.dataset.delCode);
       if(idx>-1){ syncAccessCodeDelete(ACCESS_CODES[idx].id); ACCESS_CODES.splice(idx,1); }
       renderVisaoGeral();
@@ -22594,8 +22603,8 @@ function openClienteDetalheModal(id){
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('cd-fechar').addEventListener('click', closeModal);
   document.getElementById('cd-editar').addEventListener('click', ()=> openClienteModal(c.id));
-  document.getElementById('cd-excluir').addEventListener('click', ()=>{
-    if(!confirmDelete(`Excluir o cadastro de "${c.nome}"? Essa ação não pode ser desfeita.`)) return;
+  document.getElementById('cd-excluir').addEventListener('click', async ()=>{
+    if(!(await confirmDelete(`Excluir o cadastro de "${c.nome}"? Essa ação não pode ser desfeita.`))) return;
     syncClienteDelete(c.id);
     CLIENTES_REGISTRO = CLIENTES_REGISTRO.filter(x=>x.id!=c.id);
     closeModal();
@@ -23722,13 +23731,13 @@ function renderFinCadastroSimples(container, kind){
     btn.addEventListener('click', ()=> openFinCadastroEditModal(kind, btn.dataset.finCadEdit));
   });
   document.querySelectorAll('[data-fin-cad-del]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
+    btn.addEventListener('click', async ()=>{
       const id = btn.dataset.finCadDel;
       const used = inUseCount(id);
       const msg = used>0
         ? `Este item já foi usado em ${used} lançamento${used>1?'s':''}. Remover mesmo assim? Os lançamentos existentes não serão apagados, só deixam de mostrar esse nome.`
         : 'Remover este item?';
-      if(!confirmDelete(msg)) return;
+      if(!(await confirmDelete(msg))) return;
       if(kind==='categorias'){ syncFinCategoriaDelete(id); const i=FIN_CATEGORIAS.findIndex(c=>c.id===id); if(i>-1) FIN_CATEGORIAS.splice(i,1); }
       else if(kind==='contas'){ syncFinContaDelete(id); const i=FIN_CONTAS.findIndex(c=>c.id===id); if(i>-1) FIN_CONTAS.splice(i,1); }
       else { syncFinFormaDelete(id); const i=FIN_FORMAS.findIndex(f=>f.id===id); if(i>-1) FIN_FORMAS.splice(i,1); }
@@ -24066,7 +24075,7 @@ function openFinLancamentoModal(tipo, existingId){
         if(!escopo) return;
         alvos = alvosPorEscopo(escopo);
       }
-      if(!confirmDelete(alvos.length>1 ? `Excluir ${alvos.length} lançamentos? Essa ação não pode ser desfeita.` : 'Excluir este lançamento? Essa ação não pode ser desfeita.')) return;
+      if(!(await confirmDelete(alvos.length>1 ? `Excluir ${alvos.length} lançamentos? Essa ação não pode ser desfeita.` : 'Excluir este lançamento? Essa ação não pode ser desfeita.'))) return;
       const ids = alvos.map(l=>l.id);
       if(ids.length===1) syncFinLancamentoDelete(ids[0]);
       else syncNow(sb.from('fin_lancamentos').delete().in('id', ids));
