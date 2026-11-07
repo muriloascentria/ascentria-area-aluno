@@ -1944,6 +1944,13 @@
   .vac-item{margin-bottom:5px;}
   .vendas-alert-card .vac-empty{font-size:12.5px;color:var(--text-mute);}
   .vendas-meta{margin:0 0 16px;}
+  .mt-card .mt-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
+  .mt-card .mt-bloco.bad .vm-barra i{background:var(--danger);}
+  .mt-card .mt-bloco.ok .vm-barra i{background:var(--success);}
+  .mt-card .mt-bloco.bad .vm-falta b{color:var(--danger);}
+  .mt-card .mt-bloco.ok .vm-falta b{color:var(--success);}
+  .mt-card{margin:0 0 16px;}
+  @media (max-width:700px){ .mt-card .mt-grid{grid-template-columns:minmax(0,1fr);gap:12px;} }
   .vendas-meta.ok{background:var(--success-soft);border-color:rgba(34,197,94,0.35);}
   .vendas-meta.ok .vac-title{color:var(--success);} .vendas-meta.ok .vac-title .icon{stroke:var(--success);}
   .vm-base{font-weight:500;text-transform:none;letter-spacing:0;color:var(--text-mute);font-size:11.5px;margin-left:4px;}
@@ -18981,6 +18988,7 @@ const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoE
 const RF_EXTRA_UIDS = ['b01a4425-1ba8-4703-9c40-3301a0de7249'];
 function rfPode(){ return reuSocio() || (currentUserRole==='staff' && !!currentUser && RF_EXTRA_UIDS.includes(idEfetivo())); }
 async function rfCarregar(){
+  MT_FIN_UI.venc90 = null;
   RF.carregando = true; RF.erro = null;
   try{ const { data, error } = await sb.rpc('radar_financeiro'); if(error) throw error; if(!data || !data.hoje) throw new Error('resposta vazia do banco'); RF.dados = data; RF.carregadoEm = Date.now(); }
   catch(e){ console.error('radar_financeiro', e); RF.erro = e.message || 'erro'; }
@@ -19221,6 +19229,7 @@ function renderRadarFin(){
     const t = document.getElementById('rf-tentar'); if(t) t.addEventListener('click', ()=>{ RF.erro = null; renderRadarFin(); }); return; }
   const O = RF.dados.premissas || {};
   el.innerHTML = `
+    ${mtFinHtml()}
     <p class="section-sub" style="margin-top:0">Atualizado com o Financeiro e o Registro de Sessões 1:1. Saldo de caixa em ${tzDataCurta(O.saldo_base_data)}: ${formatBRL(rfN(RF.dados.saldo_base_calc ?? O.saldo_base))} (Inter + Infinity), calculado pelo Financeiro. Caixa estimado hoje soma tudo o que entrou e saiu depois. <button type="button" class="link-btn" id="rf-atualizar">Atualizar</button></p>
     <div class="rf-sim" id="rf-ctrl"></div>
     <div id="rf-comp"></div>
@@ -21125,6 +21134,72 @@ function renderEvento(){
   el.querySelectorAll('[data-ev-aba]').forEach(b=>b.addEventListener('click', ()=>{ EVENTO_UI.aba = b.dataset.evAba; renderEvento(); }));
   el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
 }
+
+/* ================= QUADROS DE METAS (Desenvolvimento e Financeiro) =================
+   Mesmo visual da meta do Registro de Sessões 1:1. Cada bloco tem um limite (quanto menor, melhor)
+   ou um alvo (quanto maior, melhor); a barra fica verde dentro da meta e vermelha fora dela. */
+function mtCardHtml(titulo, sub, blocos){
+  const tudoOk = blocos.every(b=>b.estado==='ok');
+  return `<div class="vendas-alert-card vendas-meta mt-card ${tudoOk?'ok':''}">
+    <div class="vac-title">${icon('target')} ${escapeHtml(titulo)} ${sub ? `<span class="vm-base">${escapeHtml(sub)}</span>` : ''}</div>
+    <div class="mt-grid">${blocos.map(b=>`<div class="vm-bloco mt-bloco ${b.estado}">
+      <div class="vm-rot">${escapeHtml(b.rot)}</div>
+      <div class="vm-num"><b>${b.valor}</b> ${b.de}</div>
+      <div class="vm-barra"><i style="width:${Math.max(3, Math.min(100, Math.round(b.pct)))}%"></i></div>
+      <div class="vm-falta">${b.falta}</div>
+    </div>`).join('')}</div>
+  </div>`;
+}
+/* Desenvolvimento: até 10% dos mentorados em vermelho, até 20% em atenção e nenhum Momento-Chave atrasado. */
+const MT_DEV = { vermelhoPct:10, atencaoPct:20 };
+function mtDevHtml(lista, momentos){
+  const tot = lista.length; if(!tot) return '';
+  const v = lista.filter(x=>x.a.nivel===2).length, a = lista.filter(x=>x.a.nivel===1).length;
+  const limV = Math.max(1, Math.floor(tot*MT_DEV.vermelhoPct/100)), limA = Math.max(1, Math.floor(tot*MT_DEV.atencaoPct/100));
+  const atras = momentos.filter(m=>m.atrasado && !RADAR_UI.resolvidos[m.s.id+'|'+m.chave]).length;
+  const limite = (n, lim, nome)=>({ estado: n<=lim ? 'ok' : 'bad', pct: n/lim*100, falta: n<=lim ? `<b>Dentro da meta</b>${lim-n ? ` · cabem mais ${lim-n}` : ''}` : `<b>${n-lim} acima da meta</b> · tirar ${n-lim} do ${nome}` });
+  return mtCardHtml('Metas do Desenvolvimento', `${tot} mentorados ativos`, [
+    Object.assign({ rot:'Em vermelho (risco)', valor:v, de:`de até ${limV} (${MT_DEV.vermelhoPct}%)` }, limite(v, limV, 'vermelho')),
+    Object.assign({ rot:'Em atenção (laranja)', valor:a, de:`de até ${limA} (${MT_DEV.atencaoPct}%)` }, limite(a, limA, 'laranja')),
+    { rot:'Momentos-Chave atrasados', valor:atras, de:'meta: nenhum', estado: atras ? 'bad' : 'ok', pct: atras ? 100 : 3, falta: atras ? `<b>Resolver ${atras}</b> nos Momentos-Chave abaixo` : '<b>Nenhum atrasado</b>' },
+  ]);
+}
+/* Financeiro: inadimplência até 3% do que venceu nos últimos 90 dias, nenhum atraso com mais de 30 dias
+   e caixa estimado acima do caixa desejado das premissas. */
+const MT_FIN = { inadPct:3, inadAlerta:5, atrasoDias:30 };
+const MT_FIN_UI = { venc90:null, carregando:false };
+async function mtFinCarregar(){
+  if(MT_FIN_UI.carregando) return; MT_FIN_UI.carregando = true;
+  try{
+    const hoje = gtHojeISO(), d = gtData(hoje); d.setDate(d.getDate()-90);
+    const linhas = await lerTudo('fin_lancamentos', q=>q.select('valor,pagou,data_vencimento').eq('tipo','receber').gte('data_vencimento', gtISO(d)).lt('data_vencimento', hoje));
+    MT_FIN_UI.venc90 = linhas.reduce((t,l)=>t+(Number(l.valor)||0), 0);
+  }catch(e){ console.warn('metas financeiro', e); MT_FIN_UI.venc90 = 0; }
+  MT_FIN_UI.carregando = false;
+  if(currentView==='radarfin') renderRadarFin();
+}
+function mtFinHtml(){
+  const D = RF.dados; if(!D) return '';
+  if(MT_FIN_UI.venc90===null){ mtFinCarregar(); return ''; }
+  const hoje = gtHojeISO(), lim30 = gtData(hoje); lim30.setDate(lim30.getDate()-MT_FIN.atrasoDias);
+  const iso30 = gtISO(lim30), d90 = gtData(hoje); d90.setDate(d90.getDate()-90); const iso90 = gtISO(d90);
+  const atr = D.atrasados || [];
+  const aberto90 = atr.filter(x=>x.data_vencimento>=iso90).reduce((t,x)=>t+(Number(x.valor)||0), 0);
+  const pct = MT_FIN_UI.venc90 ? aberto90/MT_FIN_UI.venc90*100 : 0;
+  const velhos = atr.filter(x=>x.data_vencimento < iso30);
+  const velhosQtd = new Set(velhos.map(x=>x.cliente_id||x.student_id||x.aluno)).size;
+  const caixa = rfN(D.saldo_estimado), alvo = rfN((D.premissas||{}).caixa_meta);
+  const n1 = v=>String(Math.round(v*10)/10).replace('.', ',');
+  const blocos = [
+    { rot:'Inadimplência (90 dias)', valor:`${n1(pct)}%`, de:`de até ${MT_FIN.inadPct}%`, estado: pct<=MT_FIN.inadPct ? 'ok' : 'bad', pct: pct/MT_FIN.inadPct*100,
+      falta: pct<=MT_FIN.inadPct ? `<b>Dentro da meta</b> · ${formatBRL(aberto90)} em aberto` : `<b>${formatBRL(aberto90)} em aberto</b>${pct>MT_FIN.inadAlerta ? ' · acima do alerta de '+MT_FIN.inadAlerta+'%' : ''}` },
+    { rot:`Atrasos com mais de ${MT_FIN.atrasoDias} dias`, valor:velhosQtd, de:'meta: nenhum', estado: velhosQtd ? 'bad' : 'ok', pct: velhosQtd ? 100 : 3,
+      falta: velhosQtd ? `<b>${formatBRL(velhos.reduce((t,x)=>t+(Number(x.valor)||0),0))}</b> · cada um precisa de plano no Registro de Cobranças` : '<b>Nenhum atraso antigo</b>' },
+  ];
+  if(alvo>0) blocos.push({ rot:'Caixa estimado hoje', valor:formatBRL(caixa), de:`de ${formatBRL(alvo)}`, estado: caixa>=alvo ? 'ok' : 'bad', pct: caixa/alvo*100,
+      falta: caixa>=alvo ? '<b>Meta de caixa batida</b>' : `Faltam <b>${formatBRL(alvo-caixa)}</b>` });
+  return mtCardHtml('Metas do Financeiro', 'atualizadas com o Financeiro', blocos);
+}
 function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
@@ -21157,6 +21232,7 @@ function renderRadar(){
   const dado = (rotulo, valor, alerta)=>`<div class="rd-dado ${alerta?'rd-dado-'+alerta:''}"><span>${rotulo}</span><strong>${valor}</strong></div>`;
   const nivelDe = (d, am, ve)=> d===null ? 'vermelho' : d>=ve ? 'vermelho' : d>=am ? 'amarelo' : '';
   el.innerHTML = `
+    ${mtDevHtml(lista, momentos)}
     <p class="section-sub" style="margin-top:0">Vermelhos primeiro, com o motivo escrito ao lado. Os números se atualizam sozinhos ao abrir a tela e a cada 5 minutos com ela aberta.
       <button type="button" class="link-btn" id="rd-atualizar">Atualizar</button></p>
     <div class="kpi-row rd-kpis">
