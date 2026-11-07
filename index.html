@@ -3151,6 +3151,7 @@
   .mc-abrir-txt{display:inline-flex;align-items:center;gap:4px;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--text);}
   .mc-txt{display:block;overflow-wrap:anywhere;}
   .mc-vazio{color:var(--text-mute);}
+  .mc-tab textarea.mc-ta{resize:vertical;line-height:1.4;font-family:inherit;}
   .mc-stcel{display:flex;align-items:center;gap:4px;} .mc-stcel .ps-input{flex:1;min-width:0;}
   .mc-del{flex:0 0 auto;background:none;border:0;color:var(--text-mute);cursor:pointer;padding:4px;display:inline-flex;} .mc-del:hover{color:var(--danger);}
   .mc-acoes{display:flex;flex-wrap:wrap;gap:10px;}
@@ -16849,8 +16850,8 @@ function mcGravarHtml(arquivo){
     <thead><tr><th>Curso</th><th>Tema</th><th>Descrição</th><th>${arquivo ? 'Finalizada em' : 'Status'}</th></tr></thead>
     <tbody>${lista.map(a=>`<tr>
       <td><select class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="curso">${MC_GRAV_CURSOS.map(c=>`<option ${c===a.curso?'selected':''}>${c}</option>`).join('')}</select></td>
-      <td><input class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="tema" value="${escapeAttr(a.tema||'')}" placeholder="Tema da aula"></td>
-      <td><input class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="descricao" value="${escapeAttr(a.descricao||'')}" placeholder="O que a aula precisa cobrir"></td>
+      <td><textarea class="ps-input mc-gv mc-ta" rows="2" data-mc-gv="${a.id}" data-mc-k="tema" placeholder="Tema da aula">${escapeHtml(a.tema||'')}</textarea></td>
+      <td><textarea class="ps-input mc-gv mc-ta" rows="3" data-mc-gv="${a.id}" data-mc-k="descricao" placeholder="O que a aula precisa cobrir">${escapeHtml(a.descricao||'')}</textarea></td>
       <td><div class="mc-stcel">${arquivo
           ? `<span class="mc-data" style="flex:1">${quando(a.finalizado_em)}</span><button type="button" class="mc-del" data-mc-gv-voltar="${a.id}" title="Voltar para Aulas para Gravar">${icon('back','tiny')}</button>`
           : `<select class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="status">${MC_GRAV_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select>`}<button type="button" class="mc-del" data-mc-gv-del="${a.id}" title="Excluir">${icon('trash','tiny')}</button></div></td>
