@@ -23235,7 +23235,11 @@ function openTreinamentoModal(courseId){
 }
 /* Busca do Financeiro: procura por cliente/aluno, descrição ou categoria em TODOS os lançamentos
    (pagos, em aberto e futuros), com o período limitado ao mês selecionado, ao ano ou a tudo. */
-function finBuscaAtiva(){ return !!finBusca.texto.trim() || finBusca.situacao!=='todas' || (finBusca.periodo==='dias' && !!finBusca.de); }
+function finBuscaAtiva(){ return !!finBusca.texto.trim() || finBusca.situacao!=='todas'; }
+/* Com "Por dias" escolhido, Contas a Receber, Contas a Pagar e Extrato mostram só o intervalo de dias. */
+function finPorDias(){ return finBusca.periodo==='dias' && !!finBusca.de; }
+function finNoPeriodoView(d){ return finPorDias() ? (!!d && d>=finBusca.de && d<=(finBusca.ate||finBusca.de)) : finNoMes(d, finView.year, finView.month); }
+function finRotuloPeriodo(){ return finPorDias() ? (finBusca.ate && finBusca.ate!==finBusca.de ? `${formatDateBR(finBusca.de)} a ${formatDateBR(finBusca.ate)}` : formatDateBR(finBusca.de)) : `${MESES_LONGO[finView.month]}/${finView.year}`; }
 function finSituacao(l){
   if(l.pagou) return 'pago';
   const hoje = new Date(); const h = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
@@ -23329,7 +23333,7 @@ function renderFinLancamentos(container){
   /* Contas a Receber / a Pagar mostram SÓ o que ainda está em aberto. Assim que o lançamento é marcado
      como pago ele sai da aba e passa a viver no extrato da conta bancária que recebeu/pagou. */
   const emAberto = (tipo)=> FIN_LANCAMENTOS
-    .filter(l=>l.tipo===tipo && !l.pagou && finNoMes(l.dataVencimento, finView.year, finView.month))
+    .filter(l=>l.tipo===tipo && !l.pagou && finNoPeriodoView(l.dataVencimento))
     .sort(byVencAsc);
   const resumo = computeFinResumo(finView.year, finView.month);
 
@@ -23367,7 +23371,7 @@ function renderFinLancamentos(container){
       </div>
       <div class="table-wrap"><table class="ps-table">
         <thead><tr><th>Vencimento</th><th>Descrição</th><th>Cliente</th><th>Conta</th><th>Forma</th><th>Parcela</th><th title="Boleto / nota / fatura para pagar">Anexos</th><th style="text-align:right">Valor</th></tr></thead>
-        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nada em aberto em ${MESES_LONGO[finView.month]}/${finView.year} — o que já foi ${finTab==='receber'?'recebido':'pago'} está no Extrato.</td></tr>`}</tbody>
+        <tbody>${list.map(rowHtml).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nada em aberto em ${finRotuloPeriodo()} — o que já foi ${finTab==='receber'?'recebido':'pago'} está no Extrato.</td></tr>`}</tbody>
       </table></div>
       <div class="cf-total">Total ${finTab==='receber'?'a receber':'a pagar'} em aberto${contaNome ? ' em '+escapeHtml(contaNome) : ''}: <strong>${formatBRL(total)}</strong></div>
     `;
@@ -23375,7 +23379,7 @@ function renderFinLancamentos(container){
     /* Extrato por conta bancária: uma aba para cada conta cadastrada (Inter, Infinity...). Só entra o
        que já foi efetivado, lançado no mês do pagamento — é um extrato bancário de verdade, não uma
        previsão. As abas saem do cadastro de Contas, então criar uma conta nova já cria o extrato dela. */
-    const pagos = FIN_LANCAMENTOS.filter(l=>l.pagou && finNoMes(finDataEfetiva(l), finView.year, finView.month));
+    const pagos = FIN_LANCAMENTOS.filter(l=>l.pagou && finNoPeriodoView(finDataEfetiva(l)));
     const semConta = pagos.filter(l=>!l.contaId || !FIN_CONTAS.some(c=>c.id===l.contaId));
     const opcoes = FIN_CONTAS.map(c=>({id:c.id, nome:c.nome}));
     if(semConta.length) opcoes.push({id:'__sem__', nome:'Sem conta'});
@@ -23394,7 +23398,9 @@ function renderFinLancamentos(container){
     const daConta = pagos.filter(ehDaConta).sort(byEfetivaAsc);
     /* Saldo anterior: tudo que já foi efetivado nesta conta antes do 1º dia do mês — assim o mês
        começa de onde o anterior parou, como no extrato do banco. */
-    const saldoAnterior = finSaldoAnterior(ehDaConta, finView.year, finView.month);
+    const saldoAnterior = finPorDias()
+      ? FIN_LANCAMENTOS.filter(l=>l.pagou && ehDaConta(l) && (finDataEfetiva(l)||'') < finBusca.de).reduce((s,l)=> s + (l.tipo==='pagar'? -finValorEfetivo(l) : finValorEfetivo(l)), 0)
+      : finSaldoAnterior(ehDaConta, finView.year, finView.month);
     let saldo = saldoAnterior;
     const rows = daConta.map(l=>{
       const v = finValorEfetivo(l);
@@ -23408,7 +23414,7 @@ function renderFinLancamentos(container){
       <div class="table-wrap"><table class="ps-table">
         <thead><tr><th>Data</th><th>Categoria</th><th>Cliente</th><th>Descrição</th><th>Tipo</th><th title="Documento pago e comprovante / nota fiscal">Anexos</th><th style="text-align:right">Valor</th><th style="text-align:right">Saldo</th></tr></thead>
         <tbody>
-        <tr class="fin-saldo-anterior"><td style="white-space:nowrap">${String(new Date(finView.year, finView.month, 1).getDate()).padStart(2,'0')}/${String(finView.month+1).padStart(2,'0')}/${finView.year}</td><td colspan="6" style="color:var(--text-mute)">Saldo anterior (até ${MESES_LONGO[(finView.month+11)%12]}${finView.month===0? '/'+(finView.year-1) : ''})</td><td class="cf-saldo ${saldoAnterior<0?'neg':''}" style="text-align:right;font-weight:700">${formatBRL(saldoAnterior)}</td></tr>
+        <tr class="fin-saldo-anterior"><td style="white-space:nowrap">${finPorDias() ? formatDateBR(finBusca.de) : `${String(new Date(finView.year, finView.month, 1).getDate()).padStart(2,'0')}/${String(finView.month+1).padStart(2,'0')}/${finView.year}`}</td><td colspan="6" style="color:var(--text-mute)">Saldo anterior (até ${MESES_LONGO[(finView.month+11)%12]}${finView.month===0? '/'+(finView.year-1) : ''})</td><td class="cf-saldo ${saldoAnterior<0?'neg':''}" style="text-align:right;font-weight:700">${formatBRL(saldoAnterior)}</td></tr>
         ${rows.map(({l,saldo,v})=>`<tr data-fllinha="${l.id}" title="${escapeAttr(l.descricao||'')}">
           <td style="white-space:nowrap">${formatDateBR(finDataEfetiva(l))}</td>
           <td>${escapeHtml((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome || '—')}</td>
@@ -23418,7 +23424,7 @@ function renderFinLancamentos(container){
           <td>${finAnexosHtml(l, ['documento','comprovante'], ['comprovante'])}</td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
           <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
-        </tr>`).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${MESES_LONGO[finView.month]}/${finView.year}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
+        </tr>`).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">${opcoes.length? `Nenhuma movimentação em ${escapeHtml(nomeConta)} em ${finRotuloPeriodo()}.` : 'Cadastre uma conta bancária em "Contas" para ver o extrato dela.'}</td></tr>`}</tbody>
       </table></div>
       <div class="cf-total">Saldo anterior: <strong>${formatBRL(saldoAnterior)}</strong> · Entradas: <strong>${formatBRL(entradas)}</strong> · Saídas: <strong class="neg">${formatBRL(saidas)}</strong> · Saldo final em ${escapeHtml(nomeConta)}: <strong class="${saldo<0?'neg':''}">${formatBRL(saldo)}</strong></div>
     `;
