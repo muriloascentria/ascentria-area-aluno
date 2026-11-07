@@ -3140,7 +3140,9 @@
   tr.mc-esperando td{background:var(--individual-soft);}
   .mc-aviso{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--individual);font-weight:600;}
   .mc-st{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--bg-elev);}
-  .mc-st-pronto{color:var(--individual);} .mc-st-postado{color:var(--success);}
+  .mc-st-pronto{color:var(--individual);} .mc-st-postado,.mc-st-publicada{color:var(--success);}
+  .mc-pub{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  #mc-add-aula{align-self:flex-start;display:inline-flex;flex-direction:row;align-items:center;gap:6px;width:auto;white-space:nowrap;}
   .mc-ativos{display:flex;flex-direction:column;gap:8px;}
   .mc-ativo{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
   .mc-ativo-rot{font-size:12.5px;font-weight:600;letter-spacing:.03em;}
@@ -16760,9 +16762,13 @@ const MC_AVAL = [['link','Link'],['data_funil','Data no Funil'],['views','Views'
 /* Materiais da marca: um link (pasta ou arquivo do Drive) para cada item, na tabela marca_ativos. */
 const MC_ATIVOS = [['manual','Manual de Marca da Ascentria'],['timbrado','Papel Timbrado da Ascentria'],['logo_consultorio','Logotipo Consultório Simulado'],['logo_plantao','Logotipo Plantão de Dúvidas'],['logo_mastermind','Logotipo Mastermind'],['logo_treinamento','Logotipo Treinamento de Vendas'],['template_mastermind','Template Apresentação Mastermind']];
 const MC_LINKS = [['site_murilo','WEBSITE MURILO PEDROSO'],['site_metodo','WEBSITE MÉTODO ESSÊNCIA'],['site_ascentria','WEBSITE ASCENTRIA'],['site_experience','WEBSITE ESSÊNCIA EXPERIENCE'],['esis','eSIS'],['eplat','essência PLAT']];
-const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, carregando:{}, semeando:{}, fechado:{} };
+const MC_CURSOS = ['Pós-Graduação','Método Essência'];
+const MC_AULA_ST = ['Produzindo','Pronto','Publicada'];
+const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, aulas:null, carregando:{}, semeando:{}, fechado:{} };
 function mcSouDono(){ return souMurilo() || (currentUserProfile && currentUserProfile.espelhoDe===GT_MURILO_UID); }
-function mcPode(){ return mcSouDono() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
+const MC_MARIANE = 'b01a4425-1ba8-4703-9c40-3301a0de7249';
+function mcSouMariane(){ return currentUserRole==='staff' && currentUser && idEfetivo()===MC_MARIANE; }
+function mcPode(){ return mcSouDono() || mcSouMariane() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
 function mcEditaTudo(){ return souMurilo() && currentRole!=='editor'; }
 /* Esta semana e as três seguintes (a semana passada não aparece no topo). */
 function mcSemanas(){ return [0,1,2,3].map(o=>fsSemana(-o)); }
@@ -16782,6 +16788,67 @@ async function mcCarregarSemana(sem){
   MC.carregando[sem] = false;
   if(currentView==='marca') renderMarca();
 }
+async function mcCarregarAulas(){
+  if(MC.carregando.aulas) return; MC.carregando.aulas = true;
+  try{
+    const d = gtData(gtHojeISO()); d.setDate(d.getDate()-60);
+    const { data, error } = await sb.from('marca_aulas').select('*').or(`status.neq.Publicada,data.gte.${gtISO(d)}`).order('data', {ascending:false}).order('id', {ascending:false});
+    if(error) throw error; MC.aulas = data || [];
+  }catch(e){ console.error('marca_aulas', e); MC.aulas = MC.aulas || []; }
+  MC.carregando.aulas = false;
+  if(currentView==='marca') renderMarca();
+}
+function mcAulasHtml(dono, mariane){
+  const lista = MC.aulas || [];
+  const fmt = iso=>iso ? iso.slice(8,10)+'/'+iso.slice(5,7) : '';
+  const lnk = (a,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}" placeholder="Link do Drive">${mcAbrir(a[k])}</div>`
+                               : (String(a[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(a[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
+  return `<table class="mc-tab">
+    <colgroup><col style="width:9%"><col style="width:15%"><col style="width:28%"><col style="width:17%"><col style="width:17%"><col style="width:14%"></colgroup>
+    <thead><tr><th>Data</th><th>Curso</th><th>Aula</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
+    <tbody>${lista.map(a=>{
+      const esperando = String(a.bruto||'').trim() && !String(a.editado||'').trim();
+      const subir = a.status==='Pronto';
+      return `<tr class="${esperando?'mc-esperando':''}">
+        <td>${dono ? `<input type="date" class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="data" value="${escapeAttr(a.data||'')}">` : `<span class="mc-data">${fmt(a.data)}</span>`}</td>
+        <td>${dono ? `<select class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="curso">${MC_CURSOS.map(c=>`<option ${c===a.curso?'selected':''}>${c}</option>`).join('')}</select>` : escapeHtml(a.curso||'')}</td>
+        <td>${dono ? `<input class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="titulo" value="${escapeAttr(a.titulo||'')}" placeholder="Nome da aula">` : `<span class="mc-txt">${escapeHtml(a.titulo||'')}</span>`}</td>
+        <td>${lnk(a,'bruto',dono)}</td>
+        <td>${lnk(a,'editado',!mariane)}</td>
+        <td>${dono ? `<select class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="status">${MC_AULA_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select>`
+              : mariane && (subir || a.status==='Publicada') ? `<label class="mc-pub"><input type="checkbox" data-mc-pub="${a.id}" ${a.status==='Publicada'?'checked':''}> Publicada</label>`
+              : `<span class="mc-st mc-st-${escapeAttr((a.status||'').toLowerCase())}">${escapeHtml(a.status||'')}</span>`}</td>
+      </tr>`; }).join('') || `<tr><td colspan="6" class="mc-vazio">Nenhuma aula para edição.</td></tr>`}</tbody>
+  </table>
+  ${dono ? `<button type="button" class="btn-outline" id="mc-add-aula">${icon('plus','tiny')} Adicionar aula</button>` : ''}`;
+}
+function mcAulasBind(el){
+  el.querySelectorAll('.mc-au').forEach(i=>i.addEventListener('change', async ()=>{
+    const id = Number(i.dataset.mcAu), k = i.dataset.mcK, v = i.value, a = (MC.aulas||[]).find(x=>x.id===id); if(!a) return;
+    try{
+      let res;
+      if(!mcEditaTudo()){ if(k!=='editado') return; res = await sb.rpc('marca_salvar_editado_aula', { p_id:id, p_link:v }); }
+      else {
+        const patch = { [k]:v, atualizado_em:new Date().toISOString() };
+        if(k==='editado'){ patch.editado_em = patch.atualizado_em; patch.editado_por = currentUser.id; if(v.trim() && a.status==='Produzindo') patch.status = 'Pronto'; }
+        res = await sb.from('marca_aulas').update(patch).eq('id', id).select().single();
+      }
+      if(res.error) throw res.error; Object.assign(a, res.data); renderMarca();
+    }catch(e){ alert('Não foi possível salvar: '+((e&&e.message)||'')); }
+  }));
+  el.querySelectorAll('[data-mc-pub]').forEach(c=>c.addEventListener('change', async ()=>{
+    const id = Number(c.dataset.mcPub), a = (MC.aulas||[]).find(x=>x.id===id);
+    const { data, error } = await sb.rpc('marca_aula_publicada', { p_id:id, p_pub:c.checked });
+    if(error){ alert('Não foi possível salvar: '+error.message); return; }
+    if(a) Object.assign(a, data); renderMarca();
+  }));
+  const add = el.querySelector('#mc-add-aula');
+  if(add) add.addEventListener('click', async ()=>{
+    const { data, error } = await sb.from('marca_aulas').insert({ data:gtHojeISO() }).select().single();
+    if(error){ alert('Não foi possível adicionar: '+error.message); return; }
+    MC.aulas.unshift(data); renderMarca();
+  });
+}
 async function mcCarregarExtras(){
   if(MC.carregando.extras) return; MC.carregando.extras = true;
   try{
@@ -16798,7 +16865,7 @@ async function mcCarregarExtras(){
 }
 function mcAbrir(url){ const u = String(url||'').trim(); return /^https?:\/\//i.test(u) ? `<a class="mc-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener" title="Abrir">${icon('externallink','tiny')}</a>` : ''; }
 /* Seções recolhíveis no padrão do ePLAT (o mesmo cabeçalho da aba Tarefas e da Visão Geral). */
-const MC_ICONES = { funil:'chart', aval:'award', ativos:'folder', links:'externallink', ideias:'comment' };
+const MC_ICONES = { aulas:'film', funil:'chart', aval:'award', ativos:'folder', links:'externallink', ideias:'comment' };
 function mcSecao(id, titulo, corpo, qtd){
   const aberto = !MC.fechado[id];
   return `<div class="vg-sec-head" data-mc-toggle="${id}">
@@ -16812,6 +16879,15 @@ function renderMarca(){
   const el = document.getElementById('view-marca'); if(!el) return;
   if(!mcPode()){ el.innerHTML = '<div class="empty-state">Esta área é do Murilo e do editor de vídeos.</div>'; return; }
   const dono = mcEditaTudo();
+  if(MC.aulas===null) mcCarregarAulas();
+  if(!dono && mcSouMariane()){
+    const prontas = (MC.aulas||[]).filter(a=>a.status==='Pronto').length;
+    el.innerHTML = `<p class="section-sub" style="margin-top:0">As aulas com o link em EDITADO estão prontas para subir em Gerenciar Conteúdo. Depois de subir, marque "Publicada".</p>
+      ${MC.aulas===null ? '<div class="empty-state">Carregando…</div>' : mcSecao('aulas', 'AULAS PARA EDIÇÃO', mcAulasHtml(false, true), `${prontas} para subir`)}`;
+    el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
+    mcAulasBind(el);
+    return;
+  }
   const semanas = mcSemanas();
   let sem = MC.semana && semanas.includes(MC.semana) ? MC.semana : semanas[0];
   if(MC.funil[sem]===undefined){ el.innerHTML = '<div class="empty-state">Carregando o funil…</div>'; mcCarregarSemana(sem); return; }
@@ -16854,12 +16930,14 @@ function renderMarca(){
   el.innerHTML = `
     <p class="section-sub" style="margin-top:0">${dono ? 'Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Postado" com o link do conteúdo, ele desce sozinho para a Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil, `${linhas.length} conteúdo${linhas.length===1?'':'s'}`)}
+    ${mcSecao('aulas', 'AULAS PARA EDIÇÃO', MC.aulas===null ? '<div class="gt-atual-det">Carregando…</div>' : mcAulasHtml(dono, false), MC.aulas ? `${MC.aulas.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null)}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval, `${(MC.aval||[]).length} postado${(MC.aval||[]).length===1?'':'s'}`) : ''}
     ${dono ? mcSecao('ativos', 'MATERIAIS DA MARCA', ativos) : ''}
     ${dono ? mcSecao('links', 'LINKS IMPORTANTES', links) : ''}
     ${dono ? mcSecao('ideias', 'BANCO DE IDEIAS', ideias, `${(MC.ideias||[]).filter(i=>!i.usada).length} para usar`) : ''}`;
   el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
   el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
+  mcAulasBind(el);
   el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value)));
   el.querySelectorAll('.mc-at').forEach(i=>i.addEventListener('change', async ()=>{
     const { error } = await sb.from('marca_ativos').upsert({ chave:i.dataset.mcAt, link:i.value.trim(), atualizado_em:new Date().toISOString() });
