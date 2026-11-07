@@ -16968,14 +16968,17 @@ function mcExcluirBind(el){
 }
 function mcSalvarBind(el){
   el.querySelectorAll('[data-mc-salvar]').forEach(b=>b.addEventListener('click', async ()=>{
-    const sp = b.querySelector('span');
+    const marcar = (txt, salvo, travado)=>document.querySelectorAll('[data-mc-salvar]').forEach(x=>{
+      const sp = x.querySelector('span'); if(sp) sp.textContent = txt; x.disabled = !!travado; x.classList.toggle('salvo', !!salvo);
+    });
+    marcar('Salvando…', false, true);
     if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
-    sp.textContent = 'Salvando…'; b.disabled = true;
-    await new Promise(r=>setTimeout(r, 50));
-    await Promise.all([...MC_PEND]);
-    const alvo = document.querySelector('#view-marca [data-mc-salvar]') ? document.querySelectorAll('#view-marca [data-mc-salvar]') : [];
-    alvo.forEach(x=>{ x.disabled = false; x.classList.add('salvo'); x.querySelector('span').textContent = 'Salvo'; });
-    setTimeout(()=>document.querySelectorAll('#view-marca [data-mc-salvar]').forEach(x=>{ x.classList.remove('salvo'); x.querySelector('span').textContent = 'Salvar'; }), 1800);
+    try{
+      await new Promise(r=>setTimeout(r, 60));
+      await Promise.race([ Promise.allSettled([...MC_PEND]), new Promise(r=>setTimeout(r, 8000)) ]);
+    }catch(e){ console.warn(e); }
+    marcar('Salvo', true, false);
+    setTimeout(()=>marcar('Salvar', false, false), 1800);
   }));
 }
 function mcAulasBind(el){
