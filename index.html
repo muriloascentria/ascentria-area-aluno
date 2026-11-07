@@ -3123,6 +3123,28 @@
   /* Início da equipe interna: grade de botões grandes, um por área do menu */
   /* Gestão do Time */
   .gt-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .mc-bloco{display:flex;flex-direction:column;gap:10px;margin:18px 0;}
+  .mc-tit{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--text-dim);}
+  .mc-tabela{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .mc-tabela table{width:100%;border-collapse:collapse;font-size:13px;min-width:980px;}
+  .mc-tabela th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-mute);padding:8px;background:var(--bg-elev);white-space:nowrap;}
+  .mc-tabela td{padding:6px 8px;border-top:1px solid var(--border);vertical-align:middle;}
+  .mc-tabela .ps-input{padding:6px 8px;font-size:13px;min-width:110px;width:100%;box-sizing:border-box;}
+  .mc-lnk{display:flex;gap:6px;align-items:center;} .mc-lnk .ps-input{min-width:150px;}
+  .mc-abrir{white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+  .mc-vazio{color:var(--text-mute);}
+  #mc-add{align-self:flex-start;display:inline-flex;flex-direction:row;align-items:center;gap:6px;width:auto;white-space:nowrap;}
+  tr.mc-esperando td{background:var(--individual-soft);}
+  .mc-aviso{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--individual);font-weight:600;}
+  .mc-st{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--bg-elev);}
+  .mc-st-pronto{color:var(--individual);} .mc-st-publicado{color:var(--success);}
+  .mc-ideia-form{display:flex;gap:8px;max-width:720px;} .mc-ideia-form .ps-input{flex:1;min-width:0;}
+  .mc-ideia-form .btn-accent{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .mc-ideias{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-width:720px;}
+  .mc-ideias li{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .mc-ideias li label{flex:1;display:flex;gap:8px;align-items:center;min-width:0;}
+  .mc-ideias li.usada span{text-decoration:line-through;color:var(--text-mute);}
+  .mc-ideias li small{color:var(--text-mute);font-size:12px;}
   .fs-painel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:14px 0 18px;display:flex;flex-direction:column;gap:12px;}
   .fs-cab{display:flex;flex-direction:column;gap:8px;}
   .fs-tit{font-weight:600;font-size:15px;letter-spacing:.04em;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -3458,6 +3480,7 @@
     <button class="nav-item restrict" id="nav-reunioes" data-view="reunioes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-politicas" data-view="politicas" style="display:none"></button>
     <button class="nav-item restrict" id="nav-conteudo" data-view="conteudo" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-marca" data-view="marca" style="display:none"></button>
     <button class="nav-item restrict" id="nav-vendas" data-view="vendas" style="display:none"></button>
     <button class="nav-item restrict" id="nav-analise" data-view="analise" style="display:none"></button>
     <button class="nav-item restrict" id="nav-desempenho" data-view="desempenho" style="display:none"></button>
@@ -3554,6 +3577,7 @@
       <div class="view" id="view-radarfin"></div>
       <div class="view" id="view-reunioes"></div>
       <div class="view" id="view-politicas"></div>
+      <div class="view" id="view-marca"></div>
       <div class="view" id="view-equipe"></div>
       <div class="view" id="view-tarefas"></div>
       <div class="view" id="view-comunicacao"></div>
@@ -3636,6 +3660,7 @@ const NAV_LABELS = {
   me_aulas:['film','Aulas'], me_sessoes:['video','Minhas Sessões 1:1'], me_metas:['target','Minhas Metas'], me_materiais:['folder','Materiais'],
   interno:['lock','Acompanhamento Interno'],
   conteudo:['upload','Gerenciar Conteúdo'],
+  marca:['image','Conteúdo e Marca'],
   visaogeral:['users','Visão Geral'],
   vendas:['idcard','Registro de Sessões 1:1'],
   analise:['chart','Análise Sessões 1:1'],
@@ -3657,7 +3682,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', me_materiais:'mentores', interno:'restrict', embarque:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', radarfin:'restrict', reunioes:'restrict', politicas:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', me_materiais:'mentores', interno:'restrict', embarque:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', radarfin:'restrict', reunioes:'restrict', politicas:'restrict', marca:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito', mentores:'Mentores Essência' };
 
@@ -6997,7 +7022,7 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','marca','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -7230,6 +7255,7 @@ function goTo(view){
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo() && !fsSouLider()) view = 'equipe';
+  if(view==='marca' && !mcPode()) view = 'equipe';
   if((view==='radar' || view==='evento') && !radarPode()) view = 'equipe';
   if(view==='desempenho' && !avPode()) view = 'equipe';
   if(view==='dre' && !drePode()) view = 'equipe';
@@ -7259,7 +7285,7 @@ function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
-               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, radarfin:renderRadarFin, treinamento:renderTreinamento, gestaotime:renderGestaoTime, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
+               vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, radarfin:renderRadarFin, treinamento:renderTreinamento, gestaotime:renderGestaoTime, marca:renderMarca, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
                comunicacao:renderComunicacao, embarque:renderEmbarque, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens,
                me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas, me_materiais:renderMeMateriais};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno','me_aulas','me_sessoes','me_metas','me_materiais'];
@@ -16714,6 +16740,154 @@ function fsBindMurilo(el){
     renderGestaoTime();
   }));
 }
+
+/* ================= CONTEÚDO E MARCA (Murilo e editor de vídeos) =================
+   Mesmo modelo do Funil de Conteúdo do Painel do Método dos mentorados, com duas colunas a mais:
+   BRUTO (link da pasta do Drive com o que foi gravado) e EDITADO (link da pasta com o vídeo pronto).
+   O Murilo edita tudo; o editor vê o funil, abre o bruto e sobe o link do editado (o conteúdo vira
+   "Pronto"). Conteúdo marcado "Publicado" com link entra sozinho na Avaliação de Conteúdo.
+   Tabelas marca_funil, marca_ideias e marca_avaliacao. */
+const MC_DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+const MC_STATUS = ['Produzindo','Pronto','Publicado'];
+const MC_AVAL = [['link','Link'],['data_funil','Data no Funil'],['views','Views'],['shared','Shared'],['saved','Saved'],['likes','Likes'],['views_seg','Views Seguidores'],['views_nao_seg','Views Não Seguidores'],['insights','Insights']];
+const MC = { semana:null, funil:{}, ideias:null, aval:null, carregando:{}, semeando:{} };
+function mcSouDono(){ return souMurilo() || (currentUserProfile && currentUserProfile.espelhoDe===GT_MURILO_UID); }
+function mcPode(){ return mcSouDono() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
+function mcEditaTudo(){ return souMurilo() && currentRole!=='editor'; }
+function mcSemanas(){ return [-1,0,1,2].map(o=>fsSemana(-o)).sort(); }
+async function mcCarregarSemana(sem){
+  if(MC.carregando[sem]) return; MC.carregando[sem] = true;
+  try{
+    const { data, error } = await sb.from('marca_funil').select('*').eq('semana', sem).order('ordem').order('id');
+    if(error) throw error;
+    MC.funil[sem] = data || [];
+    if(!MC.funil[sem].length && mcEditaTudo() && !MC.semeando[sem]){
+      MC.semeando[sem] = true;
+      const { data: novas } = await sb.from('marca_funil').insert(MC_DIAS.map((d,i)=>({ semana:sem, dia:d, ordem:i }))).select();
+      MC.funil[sem] = novas || [];
+    }
+  }catch(e){ console.error('marca_funil', e); MC.funil[sem] = MC.funil[sem] || []; }
+  MC.carregando[sem] = false;
+  if(currentView==='marca') renderMarca();
+}
+async function mcCarregarExtras(){
+  if(MC.carregando.extras) return; MC.carregando.extras = true;
+  try{
+    const [i, a] = await Promise.all([ sb.from('marca_ideias').select('*').order('usada').order('criado_em', {ascending:false}), sb.from('marca_avaliacao').select('*').order('criado_em', {ascending:false}) ]);
+    MC.ideias = i.data || []; MC.aval = a.data || [];
+  }catch(e){ MC.ideias = MC.ideias || []; MC.aval = MC.aval || []; }
+  MC.carregando.extras = false;
+  if(currentView==='marca') renderMarca();
+}
+function mcLinkBtn(url, rot){ const u = String(url||'').trim(); return /^https?:\/\//i.test(u) ? `<a class="btn-mini mc-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} ${escapeHtml(rot)}</a>` : '<span class="mc-vazio">—</span>'; }
+function renderMarca(){
+  const el = document.getElementById('view-marca'); if(!el) return;
+  if(!mcPode()){ el.innerHTML = '<div class="empty-state">Esta área é do Murilo e do editor de vídeos.</div>'; return; }
+  const dono = mcEditaTudo();
+  const sem = MC.semana || fsSemana(0);
+  if(MC.funil[sem]===undefined){ el.innerHTML = '<div class="empty-state">Carregando o funil…</div>'; mcCarregarSemana(sem); return; }
+  if(dono && MC.ideias===null) mcCarregarExtras();
+  const linhas = MC.funil[sem] || [];
+  const paraEditar = linhas.filter(r=>String(r.bruto||'').trim() && !String(r.editado||'').trim()).length;
+  const inp = (r,k,ph)=> dono ? `<input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${escapeAttr(ph||'')}">` : `<span>${escapeHtml(r[k]||'') || '<span class="mc-vazio">—</span>'}</span>`;
+  const lnk = (r,k,rot)=> dono ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="Link da pasta do Drive">${mcLinkBtn(r[k], 'Abrir')}</div>` : mcLinkBtn(r[k], 'Abrir pasta');
+  el.innerHTML = `
+    <h2 class="section-title com-titulo" style="margin-top:4px">${icon('image')} CONTEÚDO E MARCA</h2>
+    <p class="section-sub">${dono ? 'Monte o funil da semana. Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Publicado" com o link do post, ele entra sozinho na Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
+    <div class="fs-semanas">${mcSemanas().map(s=>`<button type="button" class="filter-tab ${s===sem?'active':''}" data-mc-sem="${s}">${s===fsSemana(0)?'ESTA SEMANA':fsRotSemana(s)}</button>`).join('')}</div>
+    ${paraEditar ? `<div class="mc-aviso">${icon('film','tiny')} ${paraEditar} ${paraEditar===1?'vídeo esperando':'vídeos esperando'} edição nesta semana</div>` : ''}
+    <div class="mc-bloco"><div class="mc-tit">FUNIL DE CONTEÚDO · ${escapeHtml(fsRotSemana(sem))}</div>
+    <div class="mc-tabela"><table>
+      <thead><tr><th>Dia</th><th>Link do Conteúdo</th><th>Objetivo (etapa de consciência)</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th>${dono?'<th></th>':''}</tr></thead>
+      <tbody>${linhas.map(r=>{
+        const esperando = String(r.bruto||'').trim() && !String(r.editado||'').trim();
+        return `<tr class="${esperando?'mc-esperando':''}">
+          <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="dia">${MC_DIAS.map(d=>`<option ${d===r.dia?'selected':''}>${d}</option>`).join('')}</select>` : `<b>${escapeHtml(r.dia)}</b>`}</td>
+          <td>${dono ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="link" value="${escapeAttr(r.link||'')}" placeholder="Link do post">${mcLinkBtn(r.link,'Abrir')}</div>` : mcLinkBtn(r.link,'Ver post')}</td>
+          <td>${inp(r,'objetivo')}</td><td>${inp(r,'descricao')}</td><td>${inp(r,'formato','Reels, carrossel…')}</td>
+          <td>${lnk(r,'bruto')}</td>
+          <td><div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="editado" value="${escapeAttr(r.editado||'')}" placeholder="Link da pasta do Drive">${mcLinkBtn(r.editado,'Abrir')}</div></td>
+          <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="status">${MC_STATUS.map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="mc-st mc-st-${escapeAttr((r.status||'').toLowerCase())}">${escapeHtml(r.status||'')}</span>`}</td>
+          ${dono ? `<td><button type="button" class="btn-mini" data-mc-del="${r.id}" title="Excluir a linha">${icon('trash','tiny')}</button></td>` : ''}
+        </tr>`; }).join('') || `<tr><td colspan="9" class="mc-vazio">Nenhum conteúdo nesta semana ainda.</td></tr>`}</tbody>
+    </table></div>
+    ${dono ? `<button type="button" class="btn-outline" id="mc-add">${icon('plus','tiny')} Adicionar conteúdo</button>` : ''}
+    </div>
+    ${dono ? `
+    <div class="mc-bloco"><div class="mc-tit">BANCO DE IDEIAS</div>
+      <form class="mc-ideia-form" id="mc-ideia-form"><input class="ps-input" id="mc-ideia" placeholder="Anote uma ideia de conteúdo…"><button type="submit" class="btn-accent">${icon('plus','tiny')}<span>Registrar</span></button></form>
+      <ul class="mc-ideias">${(MC.ideias||[]).map(i=>`<li class="${i.usada?'usada':''}"><label><input type="checkbox" data-mc-ideia="${i.id}" ${i.usada?'checked':''}> <span>${escapeHtml(i.texto)}</span></label><small>${tzDataCurta(String(i.criado_em).slice(0,10))}</small><button type="button" class="btn-mini" data-mc-ideia-del="${i.id}" title="Excluir">${icon('x','tiny')}</button></li>`).join('') || '<li class="mc-vazio">Nenhuma ideia registrada.</li>'}</ul>
+    </div>
+    <div class="mc-bloco"><div class="mc-tit">AVALIAÇÃO DE CONTEÚDO</div>
+      <div class="mc-tabela"><table><thead><tr>${MC_AVAL.map(([,r])=>`<th>${r}</th>`).join('')}<th></th></tr></thead>
+      <tbody>${(MC.aval||[]).map(a=>`<tr>${MC_AVAL.map(([k])=> k==='link' ? `<td>${mcLinkBtn(a.link,'Ver post')}</td>` : `<td><input class="ps-input mc-av" data-mc-av="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}"></td>`).join('')}<td><button type="button" class="btn-mini" data-mc-av-del="${a.id}" title="Excluir">${icon('trash','tiny')}</button></td></tr>`).join('') || `<tr><td colspan="10" class="mc-vazio">Os conteúdos marcados como "Publicado" no funil aparecem aqui.</td></tr>`}</tbody></table></div>
+    </div>` : ''}`;
+  el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
+  el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value)));
+  el.querySelectorAll('[data-mc-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!confirm('Excluir esta linha do funil?')) return;
+    const { error } = await sb.from('marca_funil').delete().eq('id', Number(b.dataset.mcDel));
+    if(error){ alert('Não foi possível excluir: '+error.message); return; }
+    MC.funil[sem] = MC.funil[sem].filter(r=>r.id!==Number(b.dataset.mcDel)); renderMarca();
+  }));
+  const add = el.querySelector('#mc-add');
+  if(add) add.addEventListener('click', async ()=>{
+    const ult = linhas[linhas.length-1], idx = ult ? (MC_DIAS.indexOf(ult.dia)+1)%7 : 0;
+    const { data, error } = await sb.from('marca_funil').insert({ semana:sem, dia:MC_DIAS[idx], ordem:(ult?ult.ordem:0)+1 }).select().single();
+    if(error){ alert('Não foi possível adicionar: '+error.message); return; }
+    MC.funil[sem].push(data); renderMarca();
+  });
+  const fi = el.querySelector('#mc-ideia-form');
+  if(fi) fi.addEventListener('submit', async e=>{
+    e.preventDefault(); const t = el.querySelector('#mc-ideia').value.trim(); if(!t) return;
+    const { data, error } = await sb.from('marca_ideias').insert({ texto:t }).select().single();
+    if(error){ alert('Não foi possível registrar: '+error.message); return; }
+    MC.ideias.unshift(data); renderMarca();
+  });
+  el.querySelectorAll('[data-mc-ideia]').forEach(c=>c.addEventListener('change', async ()=>{
+    const id = Number(c.dataset.mcIdeia); await sb.from('marca_ideias').update({ usada:c.checked }).eq('id', id);
+    const i = MC.ideias.find(x=>x.id===id); if(i) i.usada = c.checked; renderMarca();
+  }));
+  el.querySelectorAll('[data-mc-ideia-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id = Number(b.dataset.mcIdeiaDel); await sb.from('marca_ideias').delete().eq('id', id);
+    MC.ideias = MC.ideias.filter(x=>x.id!==id); renderMarca();
+  }));
+  el.querySelectorAll('.mc-av').forEach(i=>i.addEventListener('change', async ()=>{
+    const id = Number(i.dataset.mcAv); const { error } = await sb.from('marca_avaliacao').update({ [i.dataset.mcK]: i.value }).eq('id', id);
+    if(error) alert('Não foi possível salvar: '+error.message); else { const a = MC.aval.find(x=>x.id===id); if(a) a[i.dataset.mcK] = i.value; }
+  }));
+  el.querySelectorAll('[data-mc-av-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!confirm('Excluir esta avaliação?')) return;
+    const id = Number(b.dataset.mcAvDel); await sb.from('marca_avaliacao').delete().eq('id', id);
+    MC.aval = MC.aval.filter(x=>x.id!==id); renderMarca();
+  }));
+}
+async function mcSalvar(sem, id, k, v){
+  const r = (MC.funil[sem]||[]).find(x=>x.id===id); if(!r) return;
+  try{
+    if(!mcEditaTudo()){
+      if(k!=='editado') return;
+      const { data, error } = await sb.rpc('marca_salvar_editado', { p_id:id, p_link:v });
+      if(error) throw error; Object.assign(r, data); renderMarca(); return;
+    }
+    const patch = { [k]: v, atualizado_em: new Date().toISOString() };
+    if(k==='editado'){ patch.editado_em = new Date().toISOString(); patch.editado_por = currentUser.id; if(v.trim() && r.status==='Produzindo') patch.status = 'Pronto'; }
+    if(k==='status' && v==='Publicado' && !r.publicado_em) patch.publicado_em = new Date().toISOString();
+    const { data, error } = await sb.from('marca_funil').update(patch).eq('id', id).select().single();
+    if(error) throw error;
+    Object.assign(r, data);
+    /* Publicado com link do post: entra uma vez na Avaliação de Conteúdo. */
+    if(r.status==='Publicado' && String(r.link||'').trim()){
+      if(MC.aval===null) await mcCarregarExtras();
+      if(!(MC.aval||[]).some(a=>a.funil_id===r.id || String(a.link).trim()===String(r.link).trim())){
+        const hoje = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'});
+        const { data: av } = await sb.from('marca_avaliacao').insert({ link:String(r.link).trim(), data_funil:hoje, funil_id:r.id }).select().single();
+        if(av) MC.aval.unshift(av);
+      }
+    }
+    if(['status','editado','bruto','link','dia'].includes(k)) renderMarca();
+  }catch(e){ console.error('marca', e); alert('Não foi possível salvar: '+((e&&e.message)||'')); }
+}
 function renderGestaoTime(){
   const el = document.getElementById('view-gestaotime');
   if(!souMurilo()){ if(fsSouLider()) return fsRenderLider(el); el.innerHTML = '<div class="empty-state">Esta área é exclusiva do Murilo.</div>'; return; }
@@ -16945,6 +17119,7 @@ const EQUIPE_ATALHOS = [
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
   {view:'politicas',  desc:'Políticas internas da Ascentria, com os POPs de cada área, os links e a revisão dos sócios nos documentos em revisão.'},
   {view:'conteudo',   desc:'Aulas, materiais, agenda ao vivo e avisos da plataforma.'},
+  {view:'marca',      desc:'Funil de conteúdo da semana, com os arquivos brutos e editados, banco de ideias e avaliação dos conteúdos.'},
   {view:'vendas',     desc:'Sessões 1:1 de venda, indicadores e objeções dos leads.'},
   {view:'analise',    desc:'Vídeos das vendas e a análise de cada pessoa do time comercial.'},
   {view:'desempenho', desc:'Evolução das notas de cada consultora nas vendas analisadas, etapa por etapa do roteiro.'},
@@ -16969,6 +17144,7 @@ function equipeViewPode(v){
   if(v==='radarfin') return rfPode();
   if(v==='reunioes') return reuPodeAbrir();
   if(v==='politicas') return polPodeAbrir();
+  if(v==='marca') return mcPode();
   return true;
 }
 /* Acerta o menu lateral da equipe com as mesmas regras do Início (chamado ao trocar de modo e ao abrir o
@@ -16983,7 +17159,7 @@ function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
   if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
-  if(papel==='editor') return ['equipe','mensagens','conteudo','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='editor') return ['equipe','mensagens','conteudo','marca','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
   if(papel==='me_convidado') return ['me_aulas','me_sessoes','me_metas','me_materiais'];
   return null; // equipe interna: tudo
 }
