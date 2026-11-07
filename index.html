@@ -3152,6 +3152,21 @@
   .mc-txt{display:block;overflow-wrap:anywhere;}
   .mc-vazio{color:var(--text-mute);}
   .mc-tab textarea.mc-ta{resize:vertical;line-height:1.4;font-family:inherit;}
+  .gv-lista{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+  .gv-item{display:grid;grid-template-columns:150px minmax(0,1fr) 190px;gap:14px;align-items:start;padding:12px 14px;border-top:1px solid var(--border);border-left:3px solid transparent;}
+  .gv-item:first-child{border-top:0;}
+  .gv-item.gv-st-gravando{border-left-color:var(--individual);} .gv-item.gv-st-em-edicao{border-left-color:var(--accent);} .gv-item.gv-st-finalizado{border-left-color:var(--success);}
+  .gv-texto{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .gv-auto{width:100%;box-sizing:border-box;resize:none;overflow:hidden;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text);font:inherit;padding:3px 6px;margin:0;line-height:1.45;}
+  .gv-auto:hover{border-color:var(--border);} .gv-auto:focus{outline:none;border-color:var(--accent);background:var(--bg-elev);}
+  .gv-tema{font-size:14px;font-weight:600;}
+  .gv-desc{font-size:13px;color:var(--text-dim);}
+  .gv-item .ps-input{padding:6px 8px;font-size:12.5px;width:100%;box-sizing:border-box;}
+  .gv-lado{display:flex;align-items:center;gap:4px;}
+  .gv-lado .gv-status{flex:1;min-width:0;}
+  .gv-data{flex:1;font-size:12.5px;color:var(--text-dim);}
+  .gv-vazio{padding:14px;}
+  @media (max-width:760px){ .gv-item{grid-template-columns:minmax(0,1fr);gap:8px;} .gv-curso{max-width:200px;} }
   .mc-stcel{display:flex;align-items:center;gap:4px;} .mc-stcel .ps-input{flex:1;min-width:0;}
   .mc-del{flex:0 0 auto;background:none;border:0;color:var(--text-mute);cursor:pointer;padding:4px;display:inline-flex;} .mc-del:hover{color:var(--danger);}
   .mc-acoes{display:flex;flex-wrap:wrap;gap:10px;}
@@ -16845,20 +16860,22 @@ function mcGravarHtml(arquivo){
   const lista = (MC.gravar||[]).filter(a=> arquivo ? a.status==='Finalizado' : a.status!=='Finalizado');
   if(arquivo) lista.sort((a,b)=>String(b.finalizado_em||'').localeCompare(String(a.finalizado_em||'')));
   const quando = iso=>iso ? new Date(iso).toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}) : '';
-  return `<table class="mc-tab">
-    <colgroup>${arquivo ? '<col style="width:16%"><col style="width:26%"><col style="width:40%"><col style="width:18%">' : '<col style="width:16%"><col style="width:28%"><col style="width:40%"><col style="width:16%">'}</colgroup>
-    <thead><tr><th>Curso</th><th>Tema</th><th>Descrição</th><th>${arquivo ? 'Finalizada em' : 'Status'}</th></tr></thead>
-    <tbody>${lista.map(a=>`<tr>
-      <td><select class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="curso">${MC_GRAV_CURSOS.map(c=>`<option ${c===a.curso?'selected':''}>${c}</option>`).join('')}</select></td>
-      <td><textarea class="ps-input mc-gv mc-ta" rows="2" data-mc-gv="${a.id}" data-mc-k="tema" placeholder="Tema da aula">${escapeHtml(a.tema||'')}</textarea></td>
-      <td><textarea class="ps-input mc-gv mc-ta" rows="3" data-mc-gv="${a.id}" data-mc-k="descricao" placeholder="O que a aula precisa cobrir">${escapeHtml(a.descricao||'')}</textarea></td>
-      <td><div class="mc-stcel">${arquivo
-          ? `<span class="mc-data" style="flex:1">${quando(a.finalizado_em)}</span><button type="button" class="mc-del" data-mc-gv-voltar="${a.id}" title="Voltar para Aulas para Gravar">${icon('back','tiny')}</button>`
-          : `<select class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="status">${MC_GRAV_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select>`}<button type="button" class="mc-del" data-mc-gv-del="${a.id}" title="Excluir">${icon('trash','tiny')}</button></div></td>
-    </tr>`).join('') || `<tr><td colspan="4" class="mc-vazio">${arquivo ? 'As aulas marcadas como "Finalizado" aparecem aqui.' : 'Nenhuma aula para gravar. Adicione a primeira.'}</td></tr>`}</tbody>
-  </table>
+  return `<div class="gv-lista">${lista.map(a=>`<div class="gv-item gv-st-${escapeAttr(normTxt(a.status||'').replace(/\s+/g,'-'))}">
+      <select class="ps-input mc-gv gv-curso" data-mc-gv="${a.id}" data-mc-k="curso" aria-label="Curso">${MC_GRAV_CURSOS.map(c=>`<option ${c===a.curso?'selected':''}>${c}</option>`).join('')}</select>
+      <div class="gv-texto">
+        <textarea class="mc-gv gv-tema gv-auto" rows="1" data-mc-gv="${a.id}" data-mc-k="tema" placeholder="Tema da aula" aria-label="Tema">${escapeHtml(a.tema||'')}</textarea>
+        <textarea class="mc-gv gv-desc gv-auto" rows="1" data-mc-gv="${a.id}" data-mc-k="descricao" placeholder="O que a aula precisa cobrir" aria-label="Descrição">${escapeHtml(a.descricao||'')}</textarea>
+      </div>
+      <div class="gv-lado">
+        ${arquivo ? `<span class="gv-data">Finalizada em ${quando(a.finalizado_em)}</span><button type="button" class="mc-del" data-mc-gv-voltar="${a.id}" title="Voltar para Aulas para Gravar">${icon('back','tiny')}</button>`
+                  : `<select class="ps-input mc-gv gv-status" data-mc-gv="${a.id}" data-mc-k="status" aria-label="Status">${MC_GRAV_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select>`}
+        <button type="button" class="mc-del" data-mc-gv-del="${a.id}" title="Excluir">${icon('trash','tiny')}</button>
+      </div>
+    </div>`).join('') || `<div class="mc-vazio gv-vazio">${arquivo ? 'As aulas marcadas como "Finalizado" aparecem aqui.' : 'Nenhuma aula para gravar. Adicione a primeira.'}</div>`}</div>
   ${arquivo ? '' : `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add-grav">${icon('plus','tiny')}<span>Adicionar aula</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>`}`;
 }
+/* Caixas de texto que crescem com o conteúdo, para o tema e a descrição aparecerem inteiros. */
+function gvAutoAltura(el){ el.querySelectorAll('.gv-auto').forEach(t=>{ const f = ()=>{ t.style.height = 'auto'; t.style.height = t.scrollHeight+'px'; }; f(); t.addEventListener('input', f); }); }
 /* As duas seções moram no Gerenciar Conteúdo (só para o Murilo), no alto da aba. */
 function mcGravarRefresh(){
   const el = document.getElementById('cont-gravar'); if(!el) return;
@@ -16870,6 +16887,7 @@ function mcGravarRefresh(){
   el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; mcGravarRefresh(); }));
   mcSalvarBind(el);
   mcGravarBind(el);
+  gvAutoAltura(el);
 }
 function mcGravarBind(el){
   el.querySelectorAll('.mc-gv').forEach(i=>i.addEventListener('change', ()=>{ const pr = (async ()=>{
