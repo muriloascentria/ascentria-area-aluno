@@ -837,6 +837,11 @@
   .aniv-banner .icon{color:var(--accent-2);flex-shrink:0;}
   .aniv-banner strong{color:var(--accent-2);}
   /* Status do "Exportar backup" (Visão Geral) */
+  .backup-hist{margin-top:12px;font-size:13px;color:var(--text-dim);}
+  .bk-ult{margin-bottom:6px;color:var(--text);} .bk-ult.atrasado{color:var(--danger);}
+  .bk-ult .icon{vertical-align:-2px;}
+  .bk-lista{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px;}
+  .bk-vazio{color:var(--text-mute);}
   .backup-status{margin-top:10px;font-size:12.5px;color:var(--text-dim);line-height:1.6;}
   .backup-status.ok{color:var(--success);}
   .backup-status.warn{color:var(--danger);}
@@ -7298,6 +7303,20 @@ async function fetchTableAll(table){
   }
   return out;
 }
+/* Histórico das exportações de backup (tabela backup_registros): comprova o backup semanal. */
+let BK_HIST = null;
+async function bkCarregar(){
+  try{ const { data } = await sb.from('backup_registros').select('*').order('criado_em', {ascending:false}).limit(8); BK_HIST = data || []; }catch(e){ BK_HIST = BK_HIST || []; }
+  const el = document.getElementById('backup-hist'); if(el) el.innerHTML = bkHistHtml();
+}
+function bkHistHtml(){
+  if(BK_HIST===null){ bkCarregar(); return ''; }
+  if(!BK_HIST.length) return '<div class="bk-vazio">Nenhum backup registrado ainda.</div>';
+  const quando = iso=>new Date(iso).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}).replace(',', ' às');
+  const ult = BK_HIST[0], dias = Math.floor((Date.now()-new Date(ult.criado_em).getTime())/86400000);
+  return `<div class="bk-ult ${dias>7?'atrasado':''}">${icon(dias>7?'bell':'check','tiny')} Último backup: <b>${escapeHtml(quando(ult.criado_em))}</b>${PEOPLE[ult.user_id] ? ' por '+escapeHtml(PEOPLE[ult.user_id].name.split(' ')[0]) : ''}${dias>7 ? ` · há ${dias} dias, faça o desta semana` : ''}</div>
+    <ul class="bk-lista">${BK_HIST.map(b=>`<li>${escapeHtml(quando(b.criado_em))}${PEOPLE[b.user_id] ? ' · '+escapeHtml(PEOPLE[b.user_id].name.split(' ')[0]) : ''}${b.registros ? ' · '+Number(b.registros).toLocaleString('pt-BR')+' registros' : ''}${b.tamanho_mb ? ' · '+String(b.tamanho_mb).replace('.', ',')+' MB' : ''}${b.tabelas_com_erro && b.tabelas_com_erro.length ? ' · com falhas' : ''}</li>`).join('')}</ul>`;
+}
 async function exportarBackup(){
   const btn = document.getElementById('backup-btn');
   const statusEl = document.getElementById('backup-status');
@@ -7331,6 +7350,9 @@ async function exportarBackup(){
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
     const tamanho = (blob.size/1024/1024).toFixed(2);
+    /* Registra a exportação (data e autor), para a rotina semanal de backup poder ser comprovada. */
+    try{ await sb.from('backup_registros').insert({ user_id:currentUser.id, registros:totalLinhas, tamanho_mb:Number(tamanho), tabelas_com_erro:falhas }); }catch(e){ console.warn('backup_registros', e); }
+    bkCarregar();
     say(falhas.length
       ? `${icon('bell','tiny')} Backup baixado com <strong>${totalLinhas.toLocaleString('pt-BR')}</strong> registros (${tamanho} MB), mas estas tabelas falharam: <strong>${falhas.map(escapeHtml).join(', ')}</strong>. Vale tentar de novo.`
       : `${icon('check','tiny')} Backup baixado: <strong>${totalLinhas.toLocaleString('pt-BR')}</strong> registros de ${BACKUP_TABLES.length} tabelas (${tamanho} MB). Guarde o arquivo no Drive.`,
@@ -21894,6 +21916,7 @@ function renderVisaoGeral(){
       <button class="btn-accent backup-btn" id="backup-btn">${icon('download','ps-plus')} Exportar backup</button>
     </div>
     <div id="backup-status" class="backup-status"></div>
+    <div id="backup-hist" class="backup-hist">${bkHistHtml()}</div>
     </div>
 
   `;
