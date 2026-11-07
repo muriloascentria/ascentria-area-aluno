@@ -16775,7 +16775,8 @@ function mcPode(){ return mcSouDono() || mcSouMariane() || currentUserRole==='ed
 function mcEditaTudo(){ return souMurilo() && currentRole!=='editor'; }
 /* Esta semana e as três seguintes (a semana passada não aparece no topo). */
 function mcSemanas(){ return [0,1,2,3].map(o=>fsSemana(-o)); }
-function mcData(sem, dia){ const d = gtData(sem); d.setDate(d.getDate()+Math.max(0, MC_DIAS.indexOf(dia))); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+function mcDataISO(sem, dia){ const d = gtData(sem); d.setDate(d.getDate()+Math.max(0, MC_DIAS.indexOf(dia))); return gtISO(d); }
+function mcData(sem, dia, iso){ const x = iso || mcDataISO(sem, dia); return x.slice(8,10)+'/'+x.slice(5,7); }
 async function mcCarregarSemana(sem){
   if(MC.carregando[sem]) return; MC.carregando[sem] = true;
   try{
@@ -16784,7 +16785,7 @@ async function mcCarregarSemana(sem){
     MC.funil[sem] = data || [];
     if(!MC.funil[sem].length && mcEditaTudo() && !MC.semeando[sem]){
       MC.semeando[sem] = true;
-      const { data: novas } = await sb.from('marca_funil').insert(MC_DIAS.map((d,i)=>({ semana:sem, dia:d, ordem:i }))).select();
+      const { data: novas } = await sb.from('marca_funil').insert(MC_DIAS.map((d,i)=>({ semana:sem, dia:d, ordem:i, data:mcDataISO(sem, d) }))).select();
       MC.funil[sem] = novas || [];
     }
   }catch(e){ console.error('marca_funil', e); MC.funil[sem] = MC.funil[sem] || []; }
@@ -16920,7 +16921,7 @@ function renderMarca(){
   let sem = MC.semana && semanas.includes(MC.semana) ? MC.semana : semanas[0];
   if(MC.funil[sem]===undefined){ el.innerHTML = '<div class="empty-state">Carregando o funil…</div>'; mcCarregarSemana(sem); return; }
   if(MC.ativos===null) mcCarregarExtras();
-  const linhas = MC.funil[sem] || [];
+  const linhas = (MC.funil[sem] || []).slice().sort((a,b)=>(a.data||mcDataISO(sem,a.dia)).localeCompare(b.data||mcDataISO(sem,b.dia)) || (a.ordem-b.ordem) || (a.id-b.id));
   const paraEditar = linhas.filter(r=>String(r.bruto||'').trim() && !String(r.editado||'').trim()).length;
   const txt = (r,k,ph)=> dono ? `<input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${escapeAttr(ph||'')}">` : `<span class="mc-txt">${escapeHtml(r[k]||'')}</span>`;
   const lnk = (r,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${k==='link'?'Link do post':'Link do Drive'}">${mcAbrir(r[k])}</div>`
@@ -16929,12 +16930,12 @@ function renderMarca(){
     <div class="fs-semanas">${semanas.map((x,n)=>`<button type="button" class="filter-tab ${x===sem?'active':''}" data-mc-sem="${x}">${n===0?'ESTA SEMANA':fsRotSemana(x)}</button>`).join('')}</div>
     ${paraEditar ? `<div class="mc-aviso">${icon('film','tiny')} ${paraEditar} ${paraEditar===1?'vídeo esperando':'vídeos esperando'} edição nesta semana</div>` : ''}
     <table class="mc-tab">
-      <colgroup><col style="width:5%"><col style="width:8%"><col style="width:13%"><col style="width:12%"><col style="width:16%"><col style="width:8%"><col style="width:13%"><col style="width:13%"><col style="width:12%"></colgroup>
+      <colgroup><col style="width:10%"><col style="width:8%"><col style="width:12%"><col style="width:11%"><col style="width:14%"><col style="width:7%"><col style="width:12%"><col style="width:12%"><col style="width:14%"></colgroup>
       <thead><tr><th>Data</th><th>Dia</th><th>Link do Conteúdo</th><th>Objetivo</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
       <tbody>${linhas.map(r=>{
         const esperando = String(r.bruto||'').trim() && !String(r.editado||'').trim();
         return `<tr class="${esperando?'mc-esperando':''}">
-          <td class="mc-data">${mcData(sem, r.dia)}</td>
+          <td>${dono ? `<input type="date" class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="data" value="${escapeAttr(r.data || mcDataISO(sem, r.dia))}">` : `<span class="mc-data">${mcData(sem, r.dia, r.data)}</span>`}</td>
           <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="dia">${MC_DIAS.map(d=>`<option ${d===r.dia?'selected':''}>${d}</option>`).join('')}</select>` : `<b>${escapeHtml(r.dia)}</b>`}</td>
           <td>${lnk(r,'link',dono)}</td>
           <td>${txt(r,'objetivo','Consciência')}</td><td>${txt(r,'descricao')}</td><td>${txt(r,'formato','Reels…')}</td>
@@ -16977,7 +16978,7 @@ function renderMarca(){
   const add = el.querySelector('#mc-add');
   if(add) add.addEventListener('click', async ()=>{
     const ult = linhas[linhas.length-1], idx = ult ? (MC_DIAS.indexOf(ult.dia)+1)%7 : 0;
-    const { data, error } = await sb.from('marca_funil').insert({ semana:sem, dia:MC_DIAS[idx], ordem:(ult?ult.ordem:0)+1 }).select().single();
+    const { data, error } = await sb.from('marca_funil').insert({ semana:sem, dia:MC_DIAS[idx], ordem:(ult?ult.ordem:0)+1, data:mcDataISO(sem, MC_DIAS[idx]) }).select().single();
     if(error){ alert('Não foi possível adicionar: '+error.message); return; }
     MC.funil[sem].push(data); renderMarca();
   });
@@ -17010,20 +17011,27 @@ async function mcSalvar(sem, id, k, v){
       if(error) throw error; Object.assign(r, data); renderMarca(); return;
     }
     const patch = { [k]: v, atualizado_em: new Date().toISOString() };
+    if(k==='data' && v){ const d = gtData(v); patch.dia = MC_DIAS[(d.getDay()+6)%7]; const seg = new Date(d); seg.setDate(seg.getDate()-((d.getDay()+6)%7)); patch.semana = gtISO(seg); }
+    if(k==='dia'){ const base = gtData(r.semana || sem); base.setDate(base.getDate()+MC_DIAS.indexOf(v)); patch.data = gtISO(base); }
     if(k==='editado'){ patch.editado_em = new Date().toISOString(); patch.editado_por = currentUser.id; if(v.trim() && r.status==='Produzindo') patch.status = 'Pronto'; }
     if(k==='status' && v==='Postado' && !r.publicado_em) patch.publicado_em = new Date().toISOString();
     const { data, error } = await sb.from('marca_funil').update(patch).eq('id', id).select().single();
     if(error) throw error;
     Object.assign(r, data);
+    /* Data levada para outra semana: a linha sai desta semana e aparece na semana certa. */
+    if(k==='data' && data.semana !== sem){
+      MC.funil[sem] = (MC.funil[sem]||[]).filter(x=>x.id!==id);
+      if(MC.funil[data.semana]) MC.funil[data.semana].push(data);
+    }
     /* Postado com link do conteúdo: desce uma vez para a Avaliação de Conteúdo. */
     if(r.status==='Postado' && String(r.link||'').trim()){
       if(MC.aval===null) await mcCarregarExtras();
       if(!(MC.aval||[]).some(a=>a.funil_id===r.id || String(a.link).trim()===String(r.link).trim())){
-        const { data: av } = await sb.from('marca_avaliacao').insert({ link:String(r.link).trim(), data_funil:mcData(sem, r.dia), funil_id:r.id }).select().single();
+        const { data: av } = await sb.from('marca_avaliacao').insert({ link:String(r.link).trim(), data_funil:mcData(sem, r.dia, r.data), funil_id:r.id }).select().single();
         if(av) MC.aval.unshift(av);
       }
     }
-    if(['status','editado','bruto','link','dia'].includes(k)) renderMarca();
+    if(['status','editado','bruto','link','dia','data'].includes(k)) renderMarca();
   }catch(e){ console.error('marca', e); alert('Não foi possível salvar: '+((e&&e.message)||'')); }
 }
 function renderGestaoTime(){
