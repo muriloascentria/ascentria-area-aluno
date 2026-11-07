@@ -16594,7 +16594,8 @@ async function fsCarregar(forcar){
   if(currentView==='gestaotime') renderGestaoTime();
 }
 function fsLinha(uid, semana, area){
-  return (FS.linhas||[]).find(l=>l.semana===semana && l.area===area && (l.user_id===uid || (PEOPLE[l.user_id] && PEOPLE[l.user_id].espelhoDe===uid))) || null;
+  const ls = (FS.linhas||[]).filter(l=>l.semana===semana && l.area===area && (l.user_id===uid || (PEOPLE[l.user_id] && PEOPLE[l.user_id].espelhoDe===uid)));
+  return ls.find(l=>l.user_id===uid) || ls[0] || null;  // o da pessoa real vem antes do da conta de teste
 }
 /* ---- Tela do líder: só o próprio formulário ---- */
 function fsRenderLider(el){
@@ -16647,7 +16648,7 @@ function fsPainelMuriloHtml(){
         return `<div class="fs-item ${l?'ok':'pend'}">
           <button type="button" class="fs-linha" data-fs-abrir="${uid}" ${l?'':'disabled'}>
             <span class="fs-sinal"></span><b>${escapeHtml(c.area)}</b><span class="fs-quem">${escapeHtml(c.pessoa)}</span>
-            <span class="fs-st">${l ? 'Enviado em '+escapeHtml(fsQuando(l.atualizado_em||l.enviado_em))+(l.lido_em?' · lido':' · novo') : 'Ainda não enviado'}</span>
+            <span class="fs-st">${l ? 'Enviado em '+escapeHtml(fsQuando(l.atualizado_em||l.enviado_em))+(l.lido_em?' · lido':' · novo')+(l.user_id!==uid?' · conta de teste':'') : 'Ainda não enviado'}</span>
           </button>
           ${l && aberto ? `<dl class="fs-resp">${c.campos.map(([k,rot])=>`<dt>${escapeHtml(rot)}</dt><dd>${escapeHtml((l.respostas||{})[k]||'—')}</dd>`).join('')}</dl>` : ''}
         </div>`;
