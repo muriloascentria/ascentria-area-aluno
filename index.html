@@ -977,6 +977,8 @@
   .pill.pago{background:var(--success-soft);color:var(--success);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
   .pill.pago .icon{width:10px;height:10px;stroke:var(--success);}
   .pill.receita{background:var(--success-soft);color:var(--success);white-space:nowrap;}
+  .pill.emprestimo{background:rgba(110,140,200,.16);color:#8fb0e6;}
+  .pill.neutro{background:var(--bg-elev);color:var(--text-dim);}
   .pill.despesa{background:var(--individual-soft);color:var(--individual);white-space:nowrap;}
   /* Barra de busca simples (Aulas, Visão Geral) */
   .busca-bar{display:flex;gap:8px;align-items:center;margin:8px 0 14px;}
@@ -9817,7 +9819,7 @@ function computeFaturamento(sid, descontos){
    e o mês/ano usado é o do dia do pagamento (quando não tem, cai pro vencimento). */
 function computeFinFaturamento(){
   const buckets = {};
-  FIN_LANCAMENTOS.filter(l=>l.tipo==='receber' && l.pagou).forEach(l=>{
+  FIN_LANCAMENTOS.filter(l=>l.tipo==='receber' && l.pagou && finNatureza(l)==='operacao').forEach(l=>{
     const dateStr = l.diaPagamento || l.dataVencimento;
     if(!dateStr) return;
     const [year, mesNum] = dateStr.split('-').map(Number);
@@ -19240,9 +19242,27 @@ async function dreCarregar(){
   DRE_UI.carregando = false;
   if(currentView==='dre') renderDre();
 }
+/* Natureza do lançamento pela categoria: empréstimos, transferências entre contas e aportes mexem no
+   caixa, mas não são receita nem despesa da operação. Juros e encargos de empréstimo são despesa financeira. */
+function finNatureza(l){
+  const n = normTxt(((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome) || '');
+  if(/juros|encargo|iof/.test(n)) return 'operacao';
+  if(/emprestimo|financiamento/.test(n)) return 'emprestimo';
+  if(/transferencia entre contas/.test(n)) return 'transferencia';
+  if(/recebido socios|aporte/.test(n)) return 'aporte';
+  return 'operacao';
+}
+function finTipoPill(l, texto){
+  const nat = finNatureza(l);
+  if(nat==='emprestimo') return texto ? (l.tipo==='receber' ? 'Empréstimo recebido' : 'Pagamento de empréstimo') : `<span class="pill emprestimo" title="Não é receita nem despesa da operação: não entra no Faturamento nem no resultado do DRE.">${l.tipo==='receber' ? 'Empréstimo recebido' : 'Pagamento de empréstimo'}</span>`;
+  if(nat==='transferencia') return texto ? 'Transferência' : '<span class="pill neutro">Transferência</span>';
+  if(nat==='aporte') return texto ? 'Aporte' : '<span class="pill neutro">Aporte</span>';
+  return texto ? (l.tipo==='receber' ? 'Receita' : 'Despesa') : (l.tipo==='receber' ? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>');
+}
 function dreGrupo(cat, tipo){
   const n = normTxt(cat ? cat.nome : '');
-  if(/transferencia entre contas|emprestimo|recebido socios|aporte/.test(n)) return 'fora';
+  if(/juros|encargo/.test(n) && tipo!=='receber') return 'financeiras';
+  if(/transferencia entre contas|emprestimo|financiamento|recebido socios|aporte/.test(n)) return 'fora';
   if(/retirada/.test(n)) return 'retiradas';
   if(tipo==='receber') return 'receita';
   if(/imposto|tributo|simples nacional|\bdas\b/.test(n)) return 'impostos';
@@ -22976,7 +22996,7 @@ function renderFinFaturamento(container){
   const chartYear = (finFatChartYear && years.includes(finFatChartYear)) ? finFatChartYear : (years[0]||new Date().getFullYear());
   const totalGeral = detailed.reduce((s,r)=>s+r.faturamento,0);
   container.innerHTML = `
-    <p class="section-sub">Receita já recebida (Contas a Receber pagas) do Financeiro interno da Ascentria, mês a mês e por categoria.</p>
+    <p class="section-sub">Receita já recebida (Contas a Receber pagas) do Financeiro interno da Ascentria, mês a mês e por categoria. Empréstimos recebidos, transferências entre contas e aportes não entram aqui, porque não são receita.</p>
     ${detailed.length? `
     <div class="table-wrap"><table class="ps-table fat-table">
       <thead><tr><th>Ano</th><th>Mês</th><th>Categoria</th><th>Faturamento</th><th>Faturamento Total (mês)</th></tr></thead>
@@ -23241,7 +23261,7 @@ function finBuscaHtml(){
           <td>${escapeHtml(catName(l.categoriaId))}</td>
           <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
           <td>${escapeHtml(l.descricao||'—')}</td>
-          <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
+          <td>${finTipoPill(l)}</td>
           <td style="text-align:center">${l.parcelaTotal>1? `${l.parcelaNum} de ${l.parcelaTotal}` : '—'}</td>
           <td style="white-space:nowrap">${l.pagou? `<span class="pill pago">${icon('check','tiny')} ${l.tipo==='receber'?'Recebido':'Pago'} ${formatDateBR(finDataEfetiva(l))}</span>` : (finSituacao(l)==='vencido' ? '<span class="pill despesa">Vencido</span>' : `<span class="pill replay">${l.tipo==='receber'?'A receber':'A pagar'}</span>`)}</td>
           <td style="text-align:right;font-weight:600;white-space:nowrap">${formatBRL(l.pagou? finValorEfetivo(l) : l.valor)}</td>
@@ -23343,7 +23363,7 @@ function renderFinLancamentos(container){
           <td>${escapeHtml((FIN_CATEGORIAS.find(c=>c.id===l.categoriaId)||{}).nome || '—')}</td>
           <td>${escapeHtml(finPagadorNome(l)) || '<span style="color:var(--text-mute)">—</span>'}</td>
           <td>${escapeHtml(l.descricao||'—')}</td>
-          <td>${l.tipo==='receber'? '<span class="pill receita">Receita</span>' : '<span class="pill despesa">Despesa</span>'}</td>
+          <td>${finTipoPill(l)}</td>
           <td>${finAnexosHtml(l, ['documento','comprovante'], ['comprovante'])}</td>
           <td style="text-align:right;white-space:nowrap">${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
           <td class="cf-saldo ${saldo<0?'neg':''}" style="text-align:right">${formatBRL(saldo)}</td>
@@ -23492,7 +23512,7 @@ async function exportFinanceiroPDF(comAnexos){
         <td>${escapeHtml(catName(l.categoriaId))}</td>
         <td>${escapeHtml(finPagadorNome(l)||'—')}</td>
         <td>${escapeHtml(l.descricao||'—')}</td>
-        <td>${l.tipo==='receber'? 'Receita' : 'Despesa'}</td>
+        <td>${finTipoPill(l, true)}</td>
         <td>${l.tipo==='pagar'?'- ':''}${formatBRL(v)}</td>
         <td>${formatBRL(saldo)}</td>
       </tr>`;
