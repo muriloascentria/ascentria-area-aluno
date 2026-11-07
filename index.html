@@ -1011,6 +1011,19 @@
   .fin-ano input.ps-input{width:72px;height:32px;border:0;background:transparent;padding:0 4px;margin:0;font-weight:700;font-size:14px;}
   .fin-nav .cf-months{flex:1;}
   .fin-busca{display:flex;gap:10px;margin:0;flex-wrap:nowrap;align-items:stretch;}
+  .fin-dias{position:relative;flex:0 0 auto;}
+  .fin-dias-btn{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer;height:100%;}
+  .fin-cal{position:absolute;top:calc(100% + 6px);right:0;z-index:60;width:280px;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 12px 30px rgba(0,0,0,.4);padding:12px;display:flex;flex-direction:column;gap:8px;}
+  .fin-cal-cab{display:flex;align-items:center;justify-content:space-between;font-size:13px;text-transform:capitalize;}
+  .fin-cal-sem,.fin-cal-grade{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;}
+  .fin-cal-sem span{font-size:11px;color:var(--text-mute);font-weight:700;}
+  .fin-cal-dia{background:none;border:0;color:var(--text);font:inherit;font-size:13px;padding:7px 0;border-radius:6px;cursor:pointer;font-variant-numeric:tabular-nums;}
+  .fin-cal-dia:hover{background:var(--bg-card);}
+  .fin-cal-dia.hoje{outline:1px solid var(--border);}
+  .fin-cal-dia.dentro{background:var(--accent-soft, rgba(141,145,111,.25));}
+  .fin-cal-dia.ponta{background:var(--accent);color:var(--bg);font-weight:700;}
+  .fin-cal-dica{font-size:11.5px;color:var(--text-mute);line-height:1.4;}
+
   .fin-busca .ps-input{height:40px;margin:0;border-radius:12px;box-sizing:border-box;}
   .fin-busca input.ps-input{flex:1;min-width:0;}
   .fin-busca select.ps-input{width:210px;flex:0 0 210px;}
@@ -4545,7 +4558,8 @@ let finTab = 'receber'; // 'receber' | 'pagar' | 'extrato'
 let finAbertoConta = 'todas'; // filtro por banco nas Contas a Receber / a Pagar
 let finExtratoConta = null; // id da conta bancária cujo extrato está aberto (null = primeira da lista)
 let finView = { year: new Date().getFullYear(), month: new Date().getMonth() };
-let finBusca = { texto:'', periodo:'mes', situacao:'todas' }; // busca no Financeiro: periodo 'mes' | 'ano' | 'todos'; situacao 'todas' | 'pago' | 'aberto' | 'vencido'
+let finBusca = { texto:'', periodo:'mes', situacao:'todas', de:'', ate:'' };
+const FIN_CAL = { aberto:false, mes:null, escolhendo:false }; // busca no Financeiro: periodo 'mes' | 'ano' | 'todos'; situacao 'todas' | 'pago' | 'aberto' | 'vencido'
 let finFatChartYear = null; // ano selecionado no gráfico do Faturamento interno (Financeiro > Faturamento)
 /* IDs de encontros ao vivo (gravações) que a pessoa atualmente logada já marcou como assistidos —
    sempre da própria pessoa (aluno ou equipe interna testando), nunca de outra conta. */
@@ -23221,11 +23235,47 @@ function openTreinamentoModal(courseId){
 }
 /* Busca do Financeiro: procura por cliente/aluno, descrição ou categoria em TODOS os lançamentos
    (pagos, em aberto e futuros), com o período limitado ao mês selecionado, ao ano ou a tudo. */
-function finBuscaAtiva(){ return !!finBusca.texto.trim() || finBusca.situacao!=='todas'; }
+function finBuscaAtiva(){ return !!finBusca.texto.trim() || finBusca.situacao!=='todas' || (finBusca.periodo==='dias' && !!finBusca.de); }
 function finSituacao(l){
   if(l.pagou) return 'pago';
   const hoje = new Date(); const h = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
   return (l.dataVencimento && l.dataVencimento < h) ? 'vencido' : 'aberto';
+}
+/* Filtro "Por dias" do Financeiro: um calendário só, em que o 1º clique marca o dia inicial e o 2º, o final. */
+function finCalHtml(){
+  const hoje = new Date(); const mesAtual = FIN_CAL.mes || (finBusca.de ? finBusca.de.slice(0,7) : `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`);
+  FIN_CAL.mes = mesAtual;
+  const [y,m] = mesAtual.split('-').map(Number);
+  const prim = new Date(y, m-1, 1), dias = new Date(y, m, 0).getDate(), pula = (prim.getDay()+6)%7;
+  const iso = d=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const de = finBusca.de, ate = finBusca.ate || finBusca.de;
+  const hojeIso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+  let cel = '';
+  for(let i=0;i<pula;i++) cel += '<span></span>';
+  for(let d=1; d<=dias; d++){
+    const x = iso(d), dentro = de && x>=de && x<=ate, ponta = x===de || x===ate;
+    cel += `<button type="button" class="fin-cal-dia ${dentro?'dentro':''} ${ponta?'ponta':''} ${x===hojeIso?'hoje':''}" data-fin-cal-dia="${x}">${d}</button>`;
+  }
+  return `<div class="fin-cal" id="fin-cal">
+    <div class="fin-cal-cab"><button type="button" class="btn-mini" data-fin-cal-mes="-1" title="Mês anterior">‹</button><b>${MESES_LONGO[m-1]} de ${y}</b><button type="button" class="btn-mini" data-fin-cal-mes="1" title="Próximo mês">›</button></div>
+    <div class="fin-cal-sem">${['S','T','Q','Q','S','S','D'].map(x=>`<span>${x}</span>`).join('')}</div>
+    <div class="fin-cal-grade">${cel}</div>
+    <div class="fin-cal-dica">${FIN_CAL.escolhendo ? 'Agora clique no dia final.' : 'Clique no dia inicial e depois no dia final. Para um dia só, clique duas vezes no mesmo dia.'}</div>
+  </div>`;
+}
+function finCalBind(){
+  const btn = document.getElementById('fin-dias-btn');
+  if(btn) btn.addEventListener('click', ()=>{ FIN_CAL.aberto = !FIN_CAL.aberto; FIN_CAL.escolhendo = false; renderFinanceiro(); });
+  document.querySelectorAll('[data-fin-cal-mes]').forEach(b=>b.addEventListener('click', ()=>{
+    const [y,m] = FIN_CAL.mes.split('-').map(Number); const d = new Date(y, m-1+Number(b.dataset.finCalMes), 1);
+    FIN_CAL.mes = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; renderFinanceiro();
+  }));
+  document.querySelectorAll('[data-fin-cal-dia]').forEach(b=>b.addEventListener('click', ()=>{
+    const x = b.dataset.finCalDia;
+    if(!FIN_CAL.escolhendo){ finBusca.de = x; finBusca.ate = ''; FIN_CAL.escolhendo = true; }
+    else { if(x < finBusca.de){ finBusca.ate = finBusca.de; finBusca.de = x; } else finBusca.ate = x; FIN_CAL.escolhendo = false; FIN_CAL.aberto = false; }
+    renderFinanceiro();
+  }));
 }
 function finBuscaResultados(){
   const q = normTxt(finBusca.texto).trim();
@@ -23234,6 +23284,7 @@ function finBuscaResultados(){
   const noPeriodo = (l)=>{
     if(finBusca.periodo==='todos') return true;
     const d = l.dataVencimento || '';
+    if(finBusca.periodo==='dias'){ if(!finBusca.de) return true; return d>=finBusca.de && d<=(finBusca.ate||finBusca.de); }
     const [y,m] = d.split('-').map(Number);
     if(finBusca.periodo==='ano') return y===finView.year;
     return y===finView.year && (m-1)===finView.month;
@@ -23249,7 +23300,7 @@ function finBuscaHtml(){
   const catName = (id)=> (FIN_CATEGORIAS.find(c=>c.id===id)||{}).nome || '—';
   const pago = lista.filter(l=>l.pagou), aberto = lista.filter(l=>!l.pagou);
   const soma = (arr, tipo)=> arr.filter(l=>l.tipo===tipo).reduce((s,l)=>s+(l.pagou? finValorEfetivo(l) : l.valor),0);
-  const periodoTxt = finBusca.periodo==='todos' ? 'todos os meses' : (finBusca.periodo==='ano' ? `o ano de ${finView.year}` : `${MESES_LONGO[finView.month]}/${finView.year}`);
+  const periodoTxt = finBusca.periodo==='dias' && finBusca.de ? (finBusca.ate && finBusca.ate!==finBusca.de ? `${formatDateBR(finBusca.de)} a ${formatDateBR(finBusca.ate)}` : formatDateBR(finBusca.de)) : finBusca.periodo==='todos' ? 'todos os meses' : (finBusca.periodo==='ano' ? `o ano de ${finView.year}` : `${MESES_LONGO[finView.month]}/${finView.year}`);
   const sitTxt = {pago:'recebidos/pagos', aberto:'a receber/a pagar', vencido:'vencidos'}[finBusca.situacao] || '';
   return `
     <div class="fin-busca-info">${lista.length} lançamento(s)${sitTxt? ' '+sitTxt : ''}${finBusca.texto.trim()? ` para <strong>"${escapeHtml(finBusca.texto.trim())}"</strong>` : ''} em ${periodoTxt} · Recebido: <strong>${formatBRL(soma(pago,'receber'))}</strong> · A receber: <strong>${formatBRL(soma(aberto,'receber'))}</strong> · Pago: <strong>${formatBRL(soma(pago,'pagar'))}</strong> · A pagar: <strong>${formatBRL(soma(aberto,'pagar'))}</strong></div>
@@ -23394,7 +23445,9 @@ function renderFinLancamentos(container){
         <option value="mes" ${finBusca.periodo==='mes'?'selected':''}>Mês selecionado</option>
         <option value="ano" ${finBusca.periodo==='ano'?'selected':''}>Ano selecionado</option>
         <option value="todos" ${finBusca.periodo==='todos'?'selected':''}>Todos os meses</option>
+        <option value="dias" ${finBusca.periodo==='dias'?'selected':''}>Por dias</option>
       </select>
+      ${finBusca.periodo==='dias' ? `<div class="fin-dias"><button type="button" class="ps-input fin-dias-btn" id="fin-dias-btn">${icon('calendar','tiny')}<span>${finBusca.de ? (finBusca.ate && finBusca.ate!==finBusca.de ? `${formatDateBR(finBusca.de)} a ${formatDateBR(finBusca.ate)}` : formatDateBR(finBusca.de)) : 'Escolher os dias'}</span></button>${FIN_CAL.aberto ? finCalHtml() : ''}</div>` : ''}
       <select class="ps-input" id="fin-busca-situacao" title="Situação">
         <option value="todas" ${finBusca.situacao==='todas'?'selected':''}>Todas as situações</option>
         <option value="pago" ${finBusca.situacao==='pago'?'selected':''}>Recebido / Pago</option>
@@ -23425,10 +23478,11 @@ function renderFinLancamentos(container){
     buscaTimer = setTimeout(()=>{ const pos = buscaEl.selectionStart; renderFinanceiro(); const el = document.getElementById('fin-busca-texto'); if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(err){} } }, 350);
   });
   buscaEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ clearTimeout(buscaTimer); renderFinanceiro(); } });
-  document.getElementById('fin-busca-periodo').addEventListener('change', e=>{ finBusca.periodo = e.target.value; renderFinanceiro(); });
+  document.getElementById('fin-busca-periodo').addEventListener('change', e=>{ finBusca.periodo = e.target.value; FIN_CAL.aberto = finBusca.periodo==='dias' && !finBusca.de; renderFinanceiro(); });
+  finCalBind();
   document.getElementById('fin-busca-situacao').addEventListener('change', e=>{ finBusca.situacao = e.target.value; renderFinanceiro(); });
   const limparEl = document.getElementById('fin-busca-limpar');
-  if(limparEl) limparEl.addEventListener('click', ()=>{ finBusca.texto=''; finBusca.situacao='todas'; renderFinanceiro(); });
+  if(limparEl) limparEl.addEventListener('click', ()=>{ finBusca.texto=''; finBusca.situacao='todas'; finBusca.de=''; finBusca.ate=''; if(finBusca.periodo==='dias') finBusca.periodo='mes'; FIN_CAL.aberto=false; renderFinanceiro(); });
   document.querySelectorAll('[data-finconta]').forEach(btn=>{
     btn.addEventListener('click',()=>{ finExtratoConta = btn.dataset.finconta; renderFinanceiro(); });
   });
