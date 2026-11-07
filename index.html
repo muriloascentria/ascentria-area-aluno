@@ -16761,6 +16761,7 @@ const MC_STATUS = ['Produzindo','Pronto','Postado'];
 const MC_AVAL = [['link','Link'],['data_funil','Data no Funil'],['views','Views'],['shared','Shared'],['saved','Saved'],['likes','Likes'],['views_seg','Views Seguidores'],['views_nao_seg','Views Não Seguidores'],['insights','Insights']];
 /* Materiais da marca: um link (pasta ou arquivo do Drive) para cada item, na tabela marca_ativos. */
 const MC_ATIVOS = [['manual','Manual de Marca da Ascentria'],['timbrado','Papel Timbrado da Ascentria'],['logo_consultorio','Logotipo Consultório Simulado'],['logo_plantao','Logotipo Plantão de Dúvidas'],['logo_mastermind','Logotipo Mastermind'],['logo_treinamento','Logotipo Treinamento de Vendas'],['template_mastermind','Template Apresentação Mastermind']];
+const MC_LINKS = [['site_murilo','Website Murilo Pedroso'],['site_metodo','Website Método Essência'],['site_ascentria','Website Ascentria'],['site_experience','Website Essência Experience'],['esis','eSIS'],['eplat','Essência PLAT']];
 const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, carregando:{}, semeando:{}, fechado:{} };
 function mcSouDono(){ return souMurilo() || (currentUserProfile && currentUserProfile.espelhoDe===GT_MURILO_UID); }
 function mcPode(){ return mcSouDono() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
@@ -16839,12 +16840,13 @@ function renderMarca(){
     ${dono ? `<button type="button" class="btn-outline" id="mc-add">${icon('plus','tiny')} Adicionar conteúdo</button>` : ''}`;
   const aval = `<table class="mc-tab"><thead><tr>${MC_AVAL.map(([,r])=>`<th>${r}</th>`).join('')}</tr></thead>
       <tbody>${(MC.aval||[]).map(a=>`<tr>${MC_AVAL.map(([k])=> k==='link' ? `<td>${String(a.link||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(a.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Ver post</a>` : ''}</td>` : `<td><input class="ps-input mc-av" data-mc-av="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}"></td>`).join('')}</tr>`).join('') || `<tr><td colspan="9" class="mc-vazio">Os conteúdos marcados como "Postado" no funil aparecem aqui com o link.</td></tr>`}</tbody></table>`;
-  const ativos = `<div class="mc-ativos">${MC_ATIVOS.map(([k,rot])=>{
+  const listaLinks = lista => `<div class="mc-ativos">${lista.map(([k,rot])=>{
       const v = (MC.ativos||{})[k]||'';
       return `<div class="mc-ativo"><span class="mc-ativo-rot">${escapeHtml(rot.toUpperCase())}</span>
         ${dono ? `<div class="mc-lnk"><input class="ps-input mc-at" data-mc-at="${k}" value="${escapeAttr(v)}" placeholder="Cole aqui o link do Drive">${mcAbrir(v)}</div>`
                : (v ? `<a class="mc-abrir-txt" href="${escapeAttr(v)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '<span class="mc-vazio">Sem link ainda</span>')}
       </div>`; }).join('')}</div>`;
+  const ativos = listaLinks(MC_ATIVOS), links = listaLinks(MC_LINKS);
   const ideias = `<form class="mc-ideia-form" id="mc-ideia-form"><input class="ps-input" id="mc-ideia" placeholder="Anote uma ideia de conteúdo…"><button type="submit" class="btn-accent">${icon('plus','tiny')}<span>Registrar</span></button></form>
       <ul class="mc-ideias">${(MC.ideias||[]).map(i=>`<li class="${i.usada?'usada':''}"><label><input type="checkbox" data-mc-ideia="${i.id}" ${i.usada?'checked':''}> <span>${escapeHtml(i.texto)}</span></label><small>${tzDataCurta(String(i.criado_em).slice(0,10))}</small><button type="button" class="btn-mini" data-mc-ideia-del="${i.id}" title="Excluir">${icon('x','tiny')}</button></li>`).join('') || '<li class="mc-vazio">Nenhuma ideia registrada.</li>'}</ul>`;
   el.innerHTML = `
@@ -16852,6 +16854,7 @@ function renderMarca(){
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil)}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval) : ''}
     ${mcSecao('ativos', 'MATERIAIS DA MARCA', ativos)}
+    ${mcSecao('links', 'LINKS IMPORTANTES', links)}
     ${dono ? mcSecao('ideias', 'BANCO DE IDEIAS', ideias) : ''}`;
   el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
   el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
