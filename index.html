@@ -16580,6 +16580,8 @@ const FS = { linhas:null, carregando:false, semana:null, aberto:null, salvando:f
 function fsMeuCfg(){ return currentUserRole==='staff' && currentUser ? FS_AREAS[idEfetivo()] || null : null; }
 function fsSouLider(){ return !!fsMeuCfg(); }
 function fsSemana(offset){ const d = gtData(gtHojeISO()); d.setDate(d.getDate() - ((d.getDay()+6)%7) - 7*(offset||0)); return gtISO(d); }
+/* Só as semanas desde que o Fechamento da Semana existe (02/11/2026), no máximo as 6 últimas. */
+function fsSemanas(){ return [0,1,2,3,4,5].map(fsSemana).filter(x=>x>='2026-11-02'); }
 function fsRotSemana(iso){ const d = gtData(iso), f = new Date(d); f.setDate(f.getDate()+4); const dm = x=>String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0'); return dm(d)+' a '+dm(f); }
 function fsQuando(iso){ return iso ? new Date(iso).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}).replace(',', ' às') : ''; }
 async function fsCarregar(forcar){
@@ -16604,11 +16606,11 @@ function fsRenderLider(el){
   const semana = FS.semana || fsSemana(0);
   const linha = (FS.linhas||[]).find(l=>l.semana===semana && l.area===cfg.area && l.user_id===currentUser.id) || null;
   const r = (linha && linha.respostas) || {};
-  const semanas = [0,1,2,3,4,5].map(fsSemana);
+  const semanas = fsSemanas();
   el.innerHTML = `
     <h2 class="section-title" style="margin-top:4px">FECHAMENTO DA SEMANA · ${escapeHtml(cfg.area.toUpperCase())}</h2>
     <p class="section-sub">Preencha na quinta-feira e envie ao Murilo. Ele lê os fechamentos na sexta para a análise do panorama geral. Você pode voltar e completar até o fim da semana.</p>
-    <div class="fs-semanas">${semanas.map(s=>`<button type="button" class="filter-tab ${s===semana?'active':''}" data-fs-semana="${s}">${s===semanas[0]?'Esta semana':fsRotSemana(s)}</button>`).join('')}</div>
+    <div class="fs-semanas" ${semanas.length<2?'hidden':''}>${semanas.map(s=>`<button type="button" class="filter-tab ${s===semana?'active':''}" data-fs-semana="${s}">${s===semanas[0]?'Esta semana':fsRotSemana(s)}</button>`).join('')}</div>
     <div class="fs-status">${linha ? `${icon('check','tiny')} Enviado em ${escapeHtml(fsQuando(linha.enviado_em))}${linha.atualizado_em && linha.atualizado_em!==linha.enviado_em ? ' · atualizado em '+escapeHtml(fsQuando(linha.atualizado_em)) : ''}${linha.lido_em ? ' · lido pelo Murilo' : ''}` : 'Ainda não enviado nesta semana ('+escapeHtml(fsRotSemana(semana))+').'}</div>
     <form class="fs-form" id="fs-form">
       ${cfg.campos.map(([k,rot])=>`<div class="field full"><label for="fs-${k}">${escapeHtml(rot)}</label><textarea class="ps-input" id="fs-${k}" data-fs-campo="${k}" rows="3" placeholder="Escreva aqui. Se não houver nada, escreva 'Nada nesta semana'.">${escapeHtml(r[k]||'')}</textarea></div>`).join('')}
@@ -16636,12 +16638,12 @@ function fsRenderLider(el){
 function fsPainelMuriloHtml(){
   if(FS.linhas===null){ fsCarregar(); return '<div class="fs-painel"><div class="fs-tit">FECHAMENTO DA SEMANA</div><div class="gt-atual-det">Carregando…</div></div>'; }
   const semana = FS.semana || fsSemana(0);
-  const semanas = [0,1,2,3,4,5].map(fsSemana);
+  const semanas = fsSemanas();
   const lideres = Object.entries(FS_AREAS);
   const enviados = lideres.filter(([uid,c])=>fsLinha(uid, semana, c.area)).length;
   return `<div class="fs-painel">
     <div class="fs-cab"><div class="fs-tit">${icon('calendar','tiny')} FECHAMENTO DA SEMANA <span class="fs-conta">${enviados} de ${lideres.length} enviados</span></div>
-      <div class="fs-semanas">${semanas.map(s=>`<button type="button" class="filter-tab ${s===semana?'active':''}" data-fs-semana="${s}">${s===semanas[0]?'Esta semana':fsRotSemana(s)}</button>`).join('')}</div></div>
+      <div class="fs-semanas" ${semanas.length<2?'hidden':''}>${semanas.map(s=>`<button type="button" class="filter-tab ${s===semana?'active':''}" data-fs-semana="${s}">${s===semanas[0]?'Esta semana':fsRotSemana(s)}</button>`).join('')}</div></div>
     <div class="fs-lista">
       ${lideres.map(([uid,c])=>{
         const l = fsLinha(uid, semana, c.area), aberto = FS.aberto===uid+'|'+semana;
