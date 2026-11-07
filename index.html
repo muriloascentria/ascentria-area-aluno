@@ -16504,16 +16504,16 @@ function renderMensagens(){
    linha explicando o que tem em cada uma. É onde a equipe cai ao entrar no sistema. */
 /* ================= GESTÃO DO TIME (só o Murilo) =================
    Funções e responsabilidades de cada pessoa, e a rotina diária, semanal e mensal. As listas saem
-   sozinhas como Tarefas (diárias às 7h, semanais às 8h de segunda, mensais às 9h do dia 1º) e cada
+   sozinhas como Tarefas (diárias às 7h, semanais às 7h de sexta, mensais às 7h do dia 1º) e cada
    item marcado pela pessoa aparece aqui, para acompanhar a evolução de cada um. */
 const GT_MURILO_UID = '8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3';
 function souMurilo(){ return !!(currentUser && currentUser.id===GT_MURILO_UID && currentUserRole==='staff'); }
 const GT = { dados:null, carregando:false, erro:null, pessoa:null, freq:'diaria', editando:false };
 const GT_GRUPOS = ['Segunda-feira','Durante a semana','Sexta-feira','Até o 5º dia útil'];
 const GT_FREQS = [
-  {id:'diaria',  rotulo:'Diárias',     envio:'Chegam de segunda a sexta às 7h.'},
-  {id:'semanal', rotulo:'Semanais',    envio:'Chegam toda segunda-feira às 8h.'},
-  {id:'mensal',  rotulo:'Mensais',     envio:'Chegam todo dia 1º às 9h.'},
+  {id:'diaria',  rotulo:'Diárias',     envio:'Chegam de segunda a sexta às 7h. Às sextas e no dia 1º só vêm os itens marcados para o dia; em feriados não saem.'},
+  {id:'semanal', rotulo:'Semanais',    envio:'Chegam toda sexta-feira às 7h (a financeira da Mariane, na segunda às 7h).'},
+  {id:'mensal',  rotulo:'Mensais',     envio:'Chegam todo dia 1º às 7h (a dos consultores de vendas, no 1º dia útil às 7h).'},
   {id:'demanda', rotulo:'Sob demanda', envio:'Não são enviadas: ficam aqui como referência.'},
 ];
 const GT_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -16708,7 +16708,7 @@ function renderGestaoTime(){
     <div class="gt-topo">
       <div>
         <h2 class="section-title" style="margin-top:4px">Gestão do Time</h2>
-        <p class="section-sub">Funções e rotina de cada pessoa. As listas chegam sozinhas nas Tarefas de cada um: <b>diárias às 7h, de segunda a sexta</b>, <b>semanais às 8h de segunda</b> e <b>mensais às 9h do dia 1º</b>. Toque numa pessoa para ver as tarefas e a evolução.</p>
+        <p class="section-sub">Funções e rotina de cada pessoa. As listas chegam sozinhas nas Tarefas de cada um: <b>diárias às 7h, de segunda a sexta</b>, <b>semanais às 7h de sexta</b> e <b>mensais às 7h do dia 1º</b>. Toque numa pessoa para ver as tarefas e a evolução.</p>
       </div>
       <button type="button" class="btn-outline gt-atualizar" id="gt-atualizar">${icon('check','tiny')} Atualizar</button>
     </div>
