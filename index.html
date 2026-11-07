@@ -3136,13 +3136,14 @@
   .mc-abrir-txt{display:inline-flex;align-items:center;gap:4px;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--text);}
   .mc-txt{display:block;overflow-wrap:anywhere;}
   .mc-vazio{color:var(--text-mute);}
-  #mc-add{align-self:flex-start;display:inline-flex;flex-direction:row;align-items:center;gap:6px;width:auto;white-space:nowrap;}
+  .mc-acoes{display:flex;flex-wrap:wrap;gap:10px;}
+  .mc-acoes .mc-btn{width:200px;height:40px;box-sizing:border-box;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin:0;padding:0 14px;}
+  .mc-acoes .mc-btn.salvo{background:var(--success);border-color:var(--success);}
   tr.mc-esperando td{background:var(--individual-soft);}
   .mc-aviso{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--individual);font-weight:600;}
   .mc-st{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--bg-elev);}
   .mc-st-pronto{color:var(--individual);} .mc-st-postado,.mc-st-publicada{color:var(--success);}
   .mc-pub{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;cursor:pointer;}
-  #mc-add-aula{align-self:flex-start;display:inline-flex;flex-direction:row;align-items:center;gap:6px;width:auto;white-space:nowrap;}
   .mc-ativos{display:flex;flex-direction:column;gap:8px;}
   .mc-ativo{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
   .mc-ativo-rot{font-size:12.5px;font-weight:600;letter-spacing:.03em;}
@@ -16804,7 +16805,7 @@ function mcAulasHtml(dono, mariane){
   const lnk = (a,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}" placeholder="Link do Drive">${mcAbrir(a[k])}</div>`
                                : (String(a[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(a[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
   return `<table class="mc-tab">
-    <colgroup><col style="width:9%"><col style="width:15%"><col style="width:28%"><col style="width:17%"><col style="width:17%"><col style="width:14%"></colgroup>
+    <colgroup><col style="width:13%"><col style="width:14%"><col style="width:25%"><col style="width:17%"><col style="width:17%"><col style="width:14%"></colgroup>
     <thead><tr><th>Data</th><th>Curso</th><th>Aula</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
     <tbody>${lista.map(a=>{
       const esperando = String(a.bruto||'').trim() && !String(a.editado||'').trim();
@@ -16820,10 +16821,24 @@ function mcAulasHtml(dono, mariane){
               : `<span class="mc-st mc-st-${escapeAttr((a.status||'').toLowerCase())}">${escapeHtml(a.status||'')}</span>`}</td>
       </tr>`; }).join('') || `<tr><td colspan="6" class="mc-vazio">Nenhuma aula para edição.</td></tr>`}</tbody>
   </table>
-  ${dono ? `<button type="button" class="btn-outline" id="mc-add-aula">${icon('plus','tiny')} Adicionar aula</button>` : ''}`;
+  ${dono ? `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add-aula">${icon('plus','tiny')}<span>Adicionar aula</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>` : ''}`;
+}
+/* As células salvam sozinhas ao sair do campo; o botão Salvar força o campo aberto a salvar e confirma. */
+const MC_PEND = new Set();
+function mcSalvarBind(el){
+  el.querySelectorAll('[data-mc-salvar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const sp = b.querySelector('span');
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    sp.textContent = 'Salvando…'; b.disabled = true;
+    await new Promise(r=>setTimeout(r, 50));
+    await Promise.all([...MC_PEND]);
+    const alvo = document.querySelector('#view-marca [data-mc-salvar]') ? document.querySelectorAll('#view-marca [data-mc-salvar]') : [];
+    alvo.forEach(x=>{ x.disabled = false; x.classList.add('salvo'); x.querySelector('span').textContent = 'Salvo'; });
+    setTimeout(()=>document.querySelectorAll('#view-marca [data-mc-salvar]').forEach(x=>{ x.classList.remove('salvo'); x.querySelector('span').textContent = 'Salvar'; }), 1800);
+  }));
 }
 function mcAulasBind(el){
-  el.querySelectorAll('.mc-au').forEach(i=>i.addEventListener('change', async ()=>{
+  el.querySelectorAll('.mc-au').forEach(i=>i.addEventListener('change', ()=>{ const pr = (async ()=>{
     const id = Number(i.dataset.mcAu), k = i.dataset.mcK, v = i.value, a = (MC.aulas||[]).find(x=>x.id===id); if(!a) return;
     try{
       let res;
@@ -16835,7 +16850,7 @@ function mcAulasBind(el){
       }
       if(res.error) throw res.error; Object.assign(a, res.data); renderMarca();
     }catch(e){ alert('Não foi possível salvar: '+((e&&e.message)||'')); }
-  }));
+  })(); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
   el.querySelectorAll('[data-mc-pub]').forEach(c=>c.addEventListener('change', async ()=>{
     const id = Number(c.dataset.mcPub), a = (MC.aulas||[]).find(x=>x.id===id);
     const { data, error } = await sb.rpc('marca_aula_publicada', { p_id:id, p_pub:c.checked });
@@ -16915,7 +16930,7 @@ function renderMarca(){
           <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="status">${MC_STATUS.map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="mc-st mc-st-${escapeAttr((r.status||'').toLowerCase())}">${escapeHtml(r.status||'')}</span>`}</td>
         </tr>`; }).join('')}</tbody>
     </table>
-    ${dono ? `<button type="button" class="btn-outline" id="mc-add">${icon('plus','tiny')} Adicionar conteúdo</button>` : ''}`;
+    ${dono ? `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add">${icon('plus','tiny')}<span>Adicionar conteúdo</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>` : ''}`;
   const aval = `<table class="mc-tab"><thead><tr>${MC_AVAL.map(([,r])=>`<th>${r}</th>`).join('')}</tr></thead>
       <tbody>${(MC.aval||[]).map(a=>`<tr>${MC_AVAL.map(([k])=> k==='link' ? `<td>${String(a.link||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(a.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Ver post</a>` : ''}</td>` : `<td><input class="ps-input mc-av" data-mc-av="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}"></td>`).join('')}</tr>`).join('') || `<tr><td colspan="9" class="mc-vazio">Os conteúdos marcados como "Postado" no funil aparecem aqui com o link.</td></tr>`}</tbody></table>`;
   const listaLinks = (lista, ph) => `<div class="mc-ativos">${lista.map(([k,rot])=>{
@@ -16938,7 +16953,8 @@ function renderMarca(){
   el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
   el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
   mcAulasBind(el);
-  el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value)));
+  el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>{ const pr = mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
+  mcSalvarBind(el);
   el.querySelectorAll('.mc-at').forEach(i=>i.addEventListener('change', async ()=>{
     const { error } = await sb.from('marca_ativos').upsert({ chave:i.dataset.mcAt, link:i.value.trim(), atualizado_em:new Date().toISOString() });
     if(error){ alert('Não foi possível salvar: '+error.message); return; }
