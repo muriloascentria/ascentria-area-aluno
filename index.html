@@ -17189,7 +17189,7 @@ function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
   if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
-  if(papel==='editor') return ['equipe','mensagens','conteudo','marca','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
+  if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(['mensagens','marca']);
   if(papel==='me_convidado') return ['me_aulas','me_sessoes','me_metas','me_materiais'];
   return null; // equipe interna: tudo
 }
