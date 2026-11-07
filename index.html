@@ -16802,8 +16802,10 @@ const MC_AVAL = [['link','Link'],['data_funil','Data no Funil'],['views','Views'
 const MC_ATIVOS = [['manual','Manual de Marca da Ascentria'],['timbrado','Papel Timbrado da Ascentria'],['logo_consultorio','Logotipo Consultório Simulado'],['logo_plantao','Logotipo Plantão de Dúvidas'],['logo_mastermind','Logotipo Mastermind'],['logo_treinamento','Logotipo Treinamento de Vendas'],['template_mastermind','Template Apresentação Mastermind']];
 const MC_LINKS = [['site_murilo','WEBSITE MURILO PEDROSO'],['site_metodo','WEBSITE MÉTODO ESSÊNCIA'],['site_ascentria','WEBSITE ASCENTRIA'],['site_experience','WEBSITE ESSÊNCIA EXPERIENCE'],['esis','eSIS'],['eplat','essência PLAT']];
 const MC_CURSOS = ['Pós-Graduação','Método Essência'];
+const MC_GRAV_CURSOS = ['Pós-Graduação','Método Essência','Mentoria'];
+const MC_GRAV_ST = ['Produzindo','Gravando','Em edição','Finalizado'];
 const MC_AULA_ST = ['Produzindo','Pronto','Publicada'];
-const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, aulas:null, carregando:{}, semeando:{}, fechado:{} };
+const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, aulas:null, gravar:null, carregando:{}, semeando:{}, fechado:{} };
 function mcSouDono(){ return souMurilo() || (currentUserProfile && currentUserProfile.espelhoDe===GT_MURILO_UID); }
 const MC_MARIANE = 'b01a4425-1ba8-4703-9c40-3301a0de7249';
 function mcSouMariane(){ return currentUserRole==='staff' && currentUser && idEfetivo()===MC_MARIANE; }
@@ -16827,6 +16829,62 @@ async function mcCarregarSemana(sem){
   }catch(e){ console.error('marca_funil', e); MC.funil[sem] = MC.funil[sem] || []; }
   MC.carregando[sem] = false;
   if(currentView==='marca') renderMarca();
+}
+/* Aulas para gravar (só o Murilo): curso, tema, descrição e status. Ao virar "Finalizado", a aula
+   desce para o Arquivo Aulas Gravadas. Tabela marca_aulas_gravar. */
+async function mcCarregarGravar(){
+  if(MC.carregando.gravar) return; MC.carregando.gravar = true;
+  try{ const { data, error } = await sb.from('marca_aulas_gravar').select('*').order('ordem').order('id'); if(error) throw error; MC.gravar = data || []; }
+  catch(e){ console.error('marca_aulas_gravar', e); MC.gravar = MC.gravar || []; }
+  MC.carregando.gravar = false;
+  if(currentView==='marca') renderMarca();
+}
+function mcGravarHtml(arquivo){
+  const lista = (MC.gravar||[]).filter(a=> arquivo ? a.status==='Finalizado' : a.status!=='Finalizado');
+  if(arquivo) lista.sort((a,b)=>String(b.finalizado_em||'').localeCompare(String(a.finalizado_em||'')));
+  const quando = iso=>iso ? new Date(iso).toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}) : '';
+  return `<table class="mc-tab">
+    <colgroup>${arquivo ? '<col style="width:16%"><col style="width:26%"><col style="width:40%"><col style="width:18%">' : '<col style="width:16%"><col style="width:28%"><col style="width:40%"><col style="width:16%">'}</colgroup>
+    <thead><tr><th>Curso</th><th>Tema</th><th>Descrição</th><th>${arquivo ? 'Finalizada em' : 'Status'}</th></tr></thead>
+    <tbody>${lista.map(a=>`<tr>
+      <td><select class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="curso">${MC_GRAV_CURSOS.map(c=>`<option ${c===a.curso?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td><input class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="tema" value="${escapeAttr(a.tema||'')}" placeholder="Tema da aula"></td>
+      <td><input class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="descricao" value="${escapeAttr(a.descricao||'')}" placeholder="O que a aula precisa cobrir"></td>
+      <td><div class="mc-stcel">${arquivo
+          ? `<span class="mc-data" style="flex:1">${quando(a.finalizado_em)}</span><button type="button" class="mc-del" data-mc-gv-voltar="${a.id}" title="Voltar para Aulas para Gravar">${icon('back','tiny')}</button>`
+          : `<select class="ps-input mc-gv" data-mc-gv="${a.id}" data-mc-k="status">${MC_GRAV_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select>`}<button type="button" class="mc-del" data-mc-gv-del="${a.id}" title="Excluir">${icon('trash','tiny')}</button></div></td>
+    </tr>`).join('') || `<tr><td colspan="4" class="mc-vazio">${arquivo ? 'As aulas marcadas como "Finalizado" aparecem aqui.' : 'Nenhuma aula para gravar. Adicione a primeira.'}</td></tr>`}</tbody>
+  </table>
+  ${arquivo ? '' : `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add-grav">${icon('plus','tiny')}<span>Adicionar aula</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>`}`;
+}
+function mcGravarBind(el){
+  el.querySelectorAll('.mc-gv').forEach(i=>i.addEventListener('change', ()=>{ const pr = (async ()=>{
+    const id = Number(i.dataset.mcGv), k = i.dataset.mcK, a = (MC.gravar||[]).find(x=>x.id===id); if(!a) return;
+    const patch = { [k]: i.value, atualizado_em: new Date().toISOString() };
+    if(k==='status') patch.finalizado_em = i.value==='Finalizado' ? new Date().toISOString() : null;
+    const { data, error } = await sb.from('marca_aulas_gravar').update(patch).eq('id', id).select().single();
+    if(error){ alert('Não foi possível salvar: '+error.message); return; }
+    Object.assign(a, data); if(k==='status') renderMarca();
+  })(); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
+  const add = el.querySelector('#mc-add-grav');
+  if(add) add.addEventListener('click', async ()=>{
+    const { data, error } = await sb.from('marca_aulas_gravar').insert({ ordem: Math.max(0, ...(MC.gravar||[]).map(x=>x.ordem||0)) + 1 }).select().single();
+    if(error){ alert('Não foi possível adicionar: '+error.message); return; }
+    MC.gravar.push(data); renderMarca();
+  });
+  el.querySelectorAll('[data-mc-gv-voltar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id = Number(b.dataset.mcGvVoltar), a = (MC.gravar||[]).find(x=>x.id===id);
+    const { data, error } = await sb.from('marca_aulas_gravar').update({ status:'Em edição', finalizado_em:null, atualizado_em:new Date().toISOString() }).eq('id', id).select().single();
+    if(error){ alert('Não foi possível salvar: '+error.message); return; }
+    if(a) Object.assign(a, data); renderMarca();
+  }));
+  el.querySelectorAll('[data-mc-gv-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(!(await showAppConfirm('Excluir esta aula da lista?', {title:'Excluir', confirmLabel:'Excluir'}))) return;
+    const id = Number(b.dataset.mcGvDel);
+    const { error } = await sb.from('marca_aulas_gravar').delete().eq('id', id);
+    if(error){ alert('Não foi possível excluir: '+error.message); return; }
+    MC.gravar = MC.gravar.filter(x=>x.id!==id); renderMarca();
+  }));
 }
 async function mcCarregarAulas(){
   if(MC.carregando.aulas) return; MC.carregando.aulas = true;
@@ -16930,7 +16988,7 @@ async function mcCarregarExtras(){
 }
 function mcAbrir(url){ const u = String(url||'').trim(); return /^https?:\/\//i.test(u) ? `<a class="mc-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener" title="Abrir">${icon('externallink','tiny')}</a>` : ''; }
 /* Seções recolhíveis no padrão do ePLAT (o mesmo cabeçalho da aba Tarefas e da Visão Geral). */
-const MC_ICONES = { aulas:'film', funil:'chart', aval:'award', ativos:'folder', links:'externallink', ideias:'comment' };
+const MC_ICONES = { gravar:'video', arqgrav:'folder', aulas:'film', funil:'chart', aval:'award', ativos:'folder', links:'externallink', ideias:'comment' };
 function mcSecao(id, titulo, corpo, qtd){
   const aberto = !MC.fechado[id];
   return `<div class="vg-sec-head" data-mc-toggle="${id}">
@@ -16945,6 +17003,7 @@ function renderMarca(){
   if(!mcPode()){ el.innerHTML = '<div class="empty-state">Esta área é do Murilo e do editor de vídeos.</div>'; return; }
   const dono = mcEditaTudo();
   if(MC.aulas===null) mcCarregarAulas();
+  if(dono && MC.gravar===null) mcCarregarGravar();
   if(!dono && mcSouMariane()){
     const prontas = (MC.aulas||[]).filter(a=>a.status==='Pronto').length;
     el.innerHTML = `<p class="section-sub" style="margin-top:0">As aulas com o link em EDITADO estão prontas para subir em Gerenciar Conteúdo. Depois de subir, marque "Publicada".</p>
@@ -16995,6 +17054,8 @@ function renderMarca(){
   el.innerHTML = `
     <p class="section-sub" style="margin-top:0">${dono ? 'Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Postado" com o link do conteúdo, ele desce sozinho para a Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil, `${linhas.length} conteúdo${linhas.length===1?'':'s'}`)}
+    ${dono ? mcSecao('gravar', 'AULAS PARA GRAVAR', MC.gravar===null ? '<div class="gt-atual-det">Carregando…</div>' : mcGravarHtml(false), MC.gravar ? `${MC.gravar.filter(a=>a.status!=='Finalizado').length} em andamento` : null) : ''}
+    ${dono ? mcSecao('arqgrav', 'ARQUIVO AULAS GRAVADAS', MC.gravar===null ? '' : mcGravarHtml(true), MC.gravar ? `${MC.gravar.filter(a=>a.status==='Finalizado').length} gravada${MC.gravar.filter(a=>a.status==='Finalizado').length===1?'':'s'}` : null) : ''}
     ${mcSecao('aulas', 'AULAS PARA EDIÇÃO', MC.aulas===null ? '<div class="gt-atual-det">Carregando…</div>' : mcAulasHtml(dono, false), MC.aulas ? `${MC.aulas.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null)}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval, `${(MC.aval||[]).length} postado${(MC.aval||[]).length===1?'':'s'}`) : ''}
     ${dono ? mcSecao('ativos', 'MATERIAIS DA MARCA', ativos) : ''}
@@ -17006,6 +17067,7 @@ function renderMarca(){
   el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>{ const pr = mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
   mcSalvarBind(el);
   mcExcluirBind(el);
+  mcGravarBind(el);
   el.querySelectorAll('.mc-at').forEach(i=>i.addEventListener('change', async ()=>{
     const { error } = await sb.from('marca_ativos').upsert({ chave:i.dataset.mcAt, link:i.value.trim(), atualizado_em:new Date().toISOString() });
     if(error){ alert('Não foi possível salvar: '+error.message); return; }
