@@ -3155,6 +3155,7 @@
   .gv-lista{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
   .gv-item{display:grid;grid-template-columns:150px minmax(0,1fr) 190px;gap:14px;align-items:start;padding:12px 14px;border-top:1px solid var(--border);border-left:3px solid transparent;}
   .gv-item:first-child{border-top:0;}
+  .gv-item.gv-st-produzindo{border-left-color:var(--text-mute);}
   .gv-item.gv-st-gravando{border-left-color:var(--individual);} .gv-item.gv-st-em-edicao{border-left-color:var(--accent);} .gv-item.gv-st-finalizado{border-left-color:var(--success);}
   .gv-texto{display:flex;flex-direction:column;gap:2px;min-width:0;}
   .gv-auto{width:100%;box-sizing:border-box;resize:none;overflow:hidden;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text);font:inherit;padding:3px 6px;margin:0;line-height:1.45;}
@@ -16820,7 +16821,7 @@ const MC_ATIVOS = [['manual','Manual de Marca da Ascentria'],['timbrado','Papel 
 const MC_LINKS = [['site_murilo','WEBSITE MURILO PEDROSO'],['site_metodo','WEBSITE MÉTODO ESSÊNCIA'],['site_ascentria','WEBSITE ASCENTRIA'],['site_experience','WEBSITE ESSÊNCIA EXPERIENCE'],['esis','eSIS'],['eplat','essência PLAT']];
 const MC_CURSOS = ['Pós-Graduação','Método Essência'];
 const MC_GRAV_CURSOS = ['Pós-Graduação','Método Essência','Mentoria'];
-const MC_GRAV_ST = ['Produzindo','Gravando','Em edição','Finalizado'];
+const MC_GRAV_ST = ['Não iniciado','Produzindo','Gravando','Em edição','Finalizado'];
 const MC_AULA_ST = ['Produzindo','Pronto','Publicada'];
 const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, aulas:null, gravar:null, carregando:{}, semeando:{}, fechado:{} };
 function mcSouDono(){ return souMurilo() || (currentUserProfile && currentUserProfile.espelhoDe===GT_MURILO_UID); }
