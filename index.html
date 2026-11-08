@@ -22305,7 +22305,7 @@ const EMB_GUIA_TAREFAS_1 = `Assistir às aulas abaixo e fazer as respectivas tar
 12. Resumir a aula sobre Dores, Desejos, Medos e Crenças.
 13. TAREFA: Desenhar as Dores, os Desejos, os Medos e as Crenças.
 14. TAREFA: Incluir tudo no Painel do Método.`;
-const EMB_GUIA_TAREFAS_3 = `Assistir às aulas abaixo e fazer as respectivas tarefas, conforme a sequência do painel.
+const EMB_GUIA_TAREFAS_2 = `Assistir às aulas abaixo e fazer as respectivas tarefas, conforme a sequência do painel.
 
 1. Assistir à aula sobre Princípios do Seu Negócio.
 2. Resumir a aula sobre Princípios do Seu Negócio.
@@ -22425,7 +22425,14 @@ Até lá, siga com as tarefas na área de metas do Essência PLAT 💪`},
       'Conseguiu fazer as primeiras tarefas? Se não: não se encontrou no nicho, na persona etc. → pedir à Mari o agendamento com a Sandra (Mentoria de Desenvolvimento). Falta de tempo → ampliar o prazo em 10 dias no ePLAT.',
       'Ouvir os desejos do mentorado, conhecer o negócio e perguntar: qual o maior desafio hoje no seu negócio?',
       'Traçar metas para aumentar o faturamento.',
-      'Depois do encontro: postar as tarefas no ePLAT, avisar no canal de acompanhamento e fazer o handoff para a Mari agendar o Onboarding eSIS.']},
+      'Depois do encontro: postar as tarefas abaixo no ePLAT (prazo: 10 dias), avisar no Acompanhamento do Essência PLAT e fazer o handoff para a Mari agendar o Onboarding eSIS.']},
+    {tipo:'msg', titulo:'Tarefas para postar no ePLAT (prazo: 10 dias)', texto:EMB_GUIA_TAREFAS_2, semNome:true},
+    {tipo:'msg', titulo:'Aviso no Acompanhamento do Essência PLAT', texto:`NOME, as suas novas tarefas já estão na *área de metas* do Essência PLAT ✅
+
+São as aulas e tarefas que combinamos no nosso encontro, na sequência do painel. O prazo é até *DATA*.
+
+Qualquer dúvida, me chama por aqui 😉`},
+    {tipo:'nota', texto:'A partir daqui, os avisos de tarefas vão no Acompanhamento do Essência PLAT, não mais no grupo do WhatsApp.'},
   ]},
   {etapa:'expert', titulo:'Agendamento do Onboarding eSIS', quem:'Mariane (Assistente Administrativa)', quando:'Logo após o Onboarding Expert', itens:[
     {tipo:'msg', titulo:'Mari: convite para o Onboarding eSIS', texto:`Agora que você já fez o seu encontro com o Murilo, vamos dar continuidade à sua jornada na Mentoria Essência com o *onboarding do eSIS*, a nossa plataforma de prontuários eletrônicos.
@@ -22444,10 +22451,9 @@ Se possível, já entre no eSIS antes do encontro para conferir se o acesso est�
   {etapa:'esis', titulo:'Onboarding eSIS', quem:'Responsável pelo eSIS', quando:'Cerca de 10 dias após o Onboarding Expert', itens:[
     {tipo:'acoes', titulo:'Roteiro do encontro', linhas:[
       'Explicar as áreas do eSIS e como usá-las no dia a dia do consultório.',
-      'Ver se fez as tarefas do Onboarding Expert. Se não: nicho, persona etc. → Sandra. Falta de tempo → ampliar o prazo em 10 dias. Dúvidas sobre a profissão → pedir à Mari o agendamento com o Murilo.',
-      'Explicar como segue daqui em diante: acompanhamento quinzenal pela plataforma.',
-      'Depois do encontro: postar as tarefas abaixo no ePLAT (prazo: 10 dias), avisar no canal de acompanhamento e marcar Embarque concluído.']},
-    {tipo:'msg', titulo:'Tarefas para postar no ePLAT (prazo: 10 dias)', texto:EMB_GUIA_TAREFAS_3, semNome:true},
+      'Ver se fez as tarefas do Onboarding Expert (Princípios, Identidade de Valor e A Transformação que Você Gera). Se não: nicho, persona etc. → Sandra. Falta de tempo → ampliar o prazo em 10 dias no ePLAT. Dúvidas sobre a profissão → pedir à Mari o agendamento com o Murilo.',
+      'Explicar como segue daqui em diante: acompanhamento quinzenal pelo Acompanhamento do Essência PLAT.',
+      'Depois do encontro: registrar o combinado no Acompanhamento do Essência PLAT e marcar Embarque concluído.']},
     {tipo:'nota', texto:'15 dias depois, a Viviane (Customer Success) confere o andamento das tarefas combinadas. A partir daí, entra a rotina quinzenal automática da Mentora de Desenvolvimento.'},
   ]},
   {etapa:'dev', titulo:'Se precisar: encontro com a Sandra', quem:'Mariane (Assistente Administrativa)', quando:'Quando um onboarding pedir a Mentoria de Desenvolvimento', itens:[
