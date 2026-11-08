@@ -1326,6 +1326,37 @@
   .emb-vg-btn:hover{border-color:var(--accent);}
   .emb-vg-btn small{font-size:11px;color:var(--text-mute);font-weight:700;}
   .emb-vg-btn.ok{border-color:rgba(60,154,95,.5);color:var(--success,#3c9a5f);}
+  /* Passo a passo do embarque (mensagens para o WhatsApp) */
+  .emb-guia{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);margin:8px 0 18px;}
+  .emb-guia > summary,.emb-guia-passo > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;}
+  .emb-guia > summary::-webkit-details-marker,.emb-guia-passo > summary::-webkit-details-marker{display:none;}
+  .emb-guia > summary{padding:14px 16px;}
+  .emb-guia > summary > span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .emb-guia > summary strong{font-size:13px;text-transform:uppercase;letter-spacing:.4px;}
+  .emb-guia > summary small,.emb-guia-tt small{font-size:11.5px;color:var(--text-mute);}
+  .emb-guia .emb-seta{width:12px;height:12px;transition:transform .2s;flex:0 0 auto;color:var(--text-mute);}
+  .emb-guia[open] > summary > .emb-seta,.emb-guia-passo[open] > summary > .emb-seta{transform:rotate(180deg);}
+  .emb-guia-corpo{display:flex;flex-direction:column;gap:8px;padding:0 12px 12px;}
+  .emb-guia-passo{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;}
+  .emb-guia-passo.atual{border-color:var(--accent);}
+  .emb-guia-passo > summary{padding:10px 12px;}
+  .emb-guia-n{flex:0 0 28px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid var(--border);color:var(--text-dim);}
+  .emb-guia-passo.atual .emb-guia-n{border-color:var(--accent);color:var(--text);}
+  .emb-guia-tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .emb-guia-tt strong{font-size:13px;}
+  .emb-guia-passo > summary em{font-style:normal;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--text);}
+  .emb-guia-itens{display:flex;flex-direction:column;gap:10px;padding:0 12px 12px 50px;}
+  .emb-guia-acoes span,.emb-guia-msg-hd > span{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);}
+  .emb-guia-acoes ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.45;}
+  .emb-guia-nota{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-dim);background:var(--bg-elev);border:1px dashed var(--border);border-radius:10px;padding:8px 10px;}
+  .emb-guia-nota .icon{flex:0 0 auto;margin-top:2px;}
+  .emb-guia-msg{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .emb-guia-msg-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 6px 6px 12px;background:var(--bg-elev);border-bottom:1px solid var(--border);}
+  .emb-guia-copiar{height:32px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px;padding:0 12px;}
+  .emb-guia-copiar.ok{border-color:var(--success,#3c9a5f);color:var(--success,#3c9a5f);}
+  .emb-guia-msg-txt{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;padding:10px 12px;}
+  .emb-guia-msg-txt mark{background:rgba(184,134,59,.22);color:inherit;border-radius:4px;padding:0 3px;font-weight:700;}
+  @media (max-width:560px){ .emb-guia-itens{padding-left:12px;} }
   @media (max-width:560px){ .emb-topo-acoes{align-items:stretch;width:100%;} .emb-etapa.dev{margin-left:12px;} }
 
   .vg-av-wrap{position:relative;display:inline-flex;flex:0 0 auto;}
@@ -22115,6 +22146,7 @@ async function renderEmbarque(){
   const porCol = {}; colunas.forEach(c=>porCol[c.id]=[]);
   lista.forEach(s=>{ const r = embResumo(s.id); porCol[r.concluido ? 'fim' : r.atual.k].push({s, r}); });
   el.innerHTML = `
+    ${embGuiaHtml(null)}
     <div class="vg-sec-head"><h2 class="section-title com-titulo">${icon('compass')} ROTA DE EMBARQUE</h2><span class="qtd">${lista.length}</span></div>
     <p class="section-sub" style="margin-top:4px">Os 30 primeiros dias de cada mentorado, etapa por etapa: do grupo criado aos onboardings. Cada card fica na etapa em que o mentorado está agora e só passa para a coluna seguinte quando o check de passagem da etapa é marcado. Quem já passou do embarque fica em Embarque concluído. Clique no card para abrir o passo a passo.</p>
     ${(()=>{ const velhos = embVelhos(); return velhos.length ? `<div class="emb-aviso">${icon('calendar','tiny')} <span>${velhos.length} mentorado${velhos.length===1?' já passou':'s já passaram'} dos 30 dias e ainda ${velhos.length===1?'está':'estão'} no funil.</span><button type="button" class="btn-outline" id="emb-tirar-velhos">Mover para Embarque concluído</button></div>` : ''; })()}
@@ -22138,6 +22170,7 @@ async function renderEmbarque(){
         </div>`).join('')}
     </div>`;
   /* Roda do mouse em cima das colunas move o quadro para os lados. Nas pontas, a página volta a rolar. */
+  embGuiaBind(el, null);
   const quadro = el.querySelector('.emb-quadro');
   if(quadro){
     if(embScrollX) quadro.scrollLeft = embScrollX;
@@ -22200,6 +22233,7 @@ function embRenderDetalhe(el, s){
         <span class="emb-salvo" id="emb-salvo">Salvo</span>
       </div>
     </div>
+    ${embGuiaHtml(s)}
     <div class="emb-fluxo">
       ${r.fluxo.map((et,i)=>{
         const feita = embEtapaFeita(sid, et); const atual = r.atual && r.atual.chave===et.chave; const iniciada = embEtapaIniciada(sid, et);
@@ -22220,6 +22254,7 @@ function embRenderDetalhe(el, s){
           </div>
         </div>`; }).join('')}
     </div>`;
+  embGuiaBind(el, s);
   el.querySelector('#emb-voltar').addEventListener('click', ()=>{ embAluno = null; renderEmbarque(); });
   el.querySelector('#emb-trocar').addEventListener('change', e=>embAbrir(e.target.value));
   el.querySelector('#emb-fora-btn').addEventListener('click', ()=>{ embMarcarFora(sid, !embFora(sid)); embRenderDetalhe(el, s); });
@@ -22247,6 +22282,242 @@ function embRenderDetalhe(el, s){
     const [chave, ck] = inp.dataset.embCheck.split(':'); const d = embDados(sid); d[chave] = d[chave] || {}; d[chave].checks = d[chave].checks || {};
     d[chave].checks[ck] = inp.checked;
     embSalvar(sid); embRenderDetalhe(el, s);
+  }));
+}
+/* ================= PASSO A PASSO DO EMBARQUE (mensagens prontas para o WhatsApp) =================
+   Fica recolhido acima da Rota de Embarque. Cada passo traz quem faz, quando, o roteiro e as mensagens
+   com botão de copiar. No detalhe de um mentorado, NOME já vem trocado pelo primeiro nome dele e o
+   passo da etapa atual abre sozinho. Os demais marcadores (DATA, HORA, HORÁRIOS, LINK, CÓDIGO,
+   QUEM CONDUZIU) ficam destacados para a equipe preencher antes de enviar. */
+const EMB_GUIA_TAREFAS_1 = `Assistir às aulas abaixo e fazer as respectivas tarefas, conforme a sequência do painel e o que foi orientado no onboarding.
+
+1. Assistir à aula sobre o Módulo SER.
+2. Resumir a aula sobre o Módulo SER.
+3. Assistir à aula sobre O Seu Cliente Ideal.
+4. Resumir a aula sobre O Seu Cliente Ideal.
+5. Assistir à aula sobre Nicho.
+6. Resumir a aula sobre Nicho.
+7. TAREFA: Desenhar o seu Nicho.
+8. Assistir à aula sobre Dados Sociodemográficos.
+9. Resumir a aula sobre Dados Sociodemográficos.
+10. TAREFA: Desenhar os Dados Sociodemográficos.
+11. Assistir à aula sobre Dores, Desejos, Medos e Crenças.
+12. Resumir a aula sobre Dores, Desejos, Medos e Crenças.
+13. TAREFA: Desenhar as Dores, os Desejos, os Medos e as Crenças.
+14. TAREFA: Incluir tudo no Painel do Método.`;
+const EMB_GUIA_TAREFAS_3 = `Assistir às aulas abaixo e fazer as respectivas tarefas, conforme a sequência do painel.
+
+1. Assistir à aula sobre Princípios do Seu Negócio.
+2. Resumir a aula sobre Princípios do Seu Negócio.
+3. TAREFA: Desenhar os Princípios do Seu Negócio.
+4. Assistir à aula sobre Identidade de Valor.
+5. Resumir a aula sobre Identidade de Valor.
+6. TAREFA: Desenhar a sua Identidade de Valor.
+7. Assistir à aula sobre A Transformação que Você Gera.
+8. Resumir a aula sobre A Transformação que Você Gera.
+9. TAREFA: Desenhar A Transformação que Você Gera.
+10. TAREFA: Incluir tudo no Painel do Método.`;
+const EMB_GUIA = [
+  {etapa:'grupo', titulo:'Grupo do WhatsApp', quem:'Consultor de Vendas que fechou a venda', quando:'Logo após a venda', itens:[
+    {tipo:'acoes', titulo:'O que fazer', linhas:[
+      'Criar o grupo do WhatsApp com o nome do mentorado.',
+      'Adicionar Sandra, Carmem, Diego, Murilo, Mariane e Viviane.',
+      'Enviar a mensagem abaixo e marcar na Rota: Grupo criado › Todos inclusos.']},
+    {tipo:'msg', titulo:'Consultor: abertura do grupo', texto:`NOME, que alegria ter você com a gente! 🎉
+
+Criei este grupo para acompanhar a sua jornada na Mentoria Essência. Aqui estão as pessoas do nosso time que vão caminhar ao seu lado.
+
+O Murilo já vai te dar as boas-vindas por aqui.`},
+  ]},
+  {etapa:'mensagens', titulo:'Boas-vindas do Murilo', quem:'Murilo (Expert)', quando:'Logo depois da abertura do grupo', itens:[
+    {tipo:'msg', titulo:'Murilo: boas-vindas e apresentação da Mari', texto:`Olá, NOME! Seja muito bem-vindo(a) à Mentoria Essência! Que honra poder te conduzir nesse processo de transformação pessoal e profissional!
+
+Conte comigo e com o nosso time altamente qualificado, que estará ao seu lado do começo ao fim dessa jornada.
+
+Aos poucos, você vai conhecer cada pessoa do nosso time. Neste primeiro momento, quero te apresentar a Mari, nossa Assistente Administrativa. Ela cuida de toda a parte operacional e administrativa da empresa e vai te orientar nos primeiros passos, incluindo os agendamentos e as orientações iniciais.
+
+Mais uma vez, seja muito bem-vindo(a)! Parabéns pela coragem e, principalmente, por decidir se colocar em primeiro lugar, investindo em si mesmo(a) e fazendo de você a sua prioridade.
+
+Que seja uma jornada de conquistas, descobertas e transformações!`},
+  ]},
+  {etapa:'mensagens', titulo:'Orientações iniciais e agendamento com a Viviane', quem:'Mariane (Assistente Administrativa)', quando:'Em seguida à mensagem do Murilo', itens:[
+    {tipo:'msg', titulo:'Mari: apresentação', texto:`Olá, NOME! Que bom ter você com a gente! 😊
+
+Eu sou a Mari, assistente administrativa da equipe. Comigo ficam os seus agendamentos, acessos e as questões administrativas da Mentoria.`},
+    {tipo:'msg', titulo:'Mari: apresenta a Viviane e pede horário', texto:`Quem vai te acompanhar neste início é a Viviane, a nossa navegadora. Ela vai te apresentar o *Essência PLAT*, a plataforma da Mentoria, e ajudar com as dúvidas iniciais.
+
+Por isso, queremos agendar uma breve reunião de boas-vindas com ela, de até 30 minutos.
+
+Qual destes horários fica melhor para você?
+
+HORÁRIOS
+
+Se nenhum deles funcionar, me conta qual seria melhor para você.`},
+    {tipo:'msg', titulo:'Mari: confirmação do agendamento e formulário', texto:`Perfeito! O seu encontro com a Viviane ficou agendado para *DATA, às HORA*.
+
+Você poderia, por gentileza, preencher este formulário com os seus dados? É rapidinho e nos ajuda a preparar o seu acompanhamento.
+
+🔗 https://ascentria-area-do-aluno.onrender.com/cadastro-cliente.html`},
+    {tipo:'acoes', titulo:'Na Rota', linhas:['Preencher a data do Onboarding ePLAT (com Viviane) e marcar Mensagens iniciais › Agendamento do Onboarding ePLAT realizado.']},
+  ]},
+  {etapa:'eplat', titulo:'Viviane se apresenta', quem:'Viviane (Navegadora / Customer Success)', quando:'1 dia antes do Onboarding ePLAT', itens:[
+    {tipo:'msg', titulo:'Vivi: boas-vindas na véspera', texto:`Oi, NOME! Tudo bem?
+
+Eu sou a Vivi, a sua navegadora na Mentoria Essência. Vou te acompanhar neste início, te apresentando a plataforma e ajudando no que precisar para você dar os primeiros passos com tranquilidade.
+
+É um prazer ter você conosco!
+Nos vemos amanhã, às HORA 😉
+
+O link da reunião chega por aqui amanhã 🤝`},
+    {tipo:'nota', texto:'Se o encontro foi marcado para o mesmo dia, troque “amanhã” por “hoje” e envie logo após o agendamento.'},
+  ]},
+  {etapa:'eplat', titulo:'Onboarding ePLAT', quem:'Viviane (Navegadora / Customer Success)', quando:'10 minutos antes e durante o encontro', itens:[
+    {tipo:'msg', titulo:'Vivi: link e primeiro acesso (10 min antes)', texto:`Oi, NOME! Daqui a pouquinho nos vemos 😊
+
+🔗 Link da reunião: LINK
+
+Para adiantar, já vou deixar o primeiro passo, e te explico tudo na reunião:
+
+1. Acesse: www.mentoriaessencia.online
+2. Clique em *CRIAR CONTA*.
+3. Preencha os seus dados, crie uma senha e informe o código de acesso: *CÓDIGO*
+4. Depois de criar a conta, vá em *LOGIN* e entre com o e-mail e a senha que cadastrou.
+
+⚠️ O e-mail de confirmação pode demorar ou até não chegar. Mesmo assim, você já pode entrar pelo LOGIN com o e-mail e a senha cadastrados.
+
+⚠️ Se aparecer que o código já foi utilizado, não se preocupe: isso pode acontecer mesmo que você ainda não tenha conseguido entrar. Não crie a conta de novo. Vá direto em *LOGIN* e entre com o e-mail e a senha que cadastrou.`},
+    {tipo:'acoes', titulo:'Roteiro do encontro', linhas:[
+      'Confirmar que conseguiu entrar no Essência PLAT.',
+      'Explicar as áreas do ePLAT, as aulas, as tarefas e a área de metas.',
+      'Combinar que a maior parte da comunicação acontece dentro da plataforma. O WhatsApp fica só para avisos rápidos e urgentes.',
+      'Se a pessoa não se encontra no nicho, na persona etc., marcar na Rota: Solicitar Mentoria de Desenvolvimento.',
+      'Avisar que o próximo encontro será com o Murilo, em cerca de 10 dias, depois das primeiras tarefas.']},
+    {tipo:'msg', titulo:'Tarefas para postar no ePLAT (prazo: 10 dias)', texto:EMB_GUIA_TAREFAS_1, semNome:true},
+    {tipo:'msg', titulo:'Vivi: aviso no grupo depois de postar as tarefas', texto:`NOME, as suas primeiras tarefas já estão na *área de metas* do Essência PLAT ✅
+
+É só assistir às aulas e fazer as tarefas na sequência do painel, como conversamos no onboarding. O prazo é até *DATA*.
+
+Qualquer dúvida sobre as tarefas, me chama por lá, na própria plataforma 😉`},
+    {tipo:'acoes', titulo:'Na Rota', linhas:['Marcar Concluído, Tarefas iniciais postadas no ePLAT e Análise postada. Fazer o handoff para a Mari agendar o Onboarding Expert.']},
+  ]},
+  {etapa:'eplat', titulo:'Acesso ao eSIS e agendamento com o Murilo', quem:'Mariane (Assistente Administrativa)', quando:'Logo após o Onboarding ePLAT', itens:[
+    {tipo:'msg', titulo:'Mari: acesso ao eSIS', texto:`NOME, acabamos de enviar o seu acesso ao *eSIS*, o nosso Sistema de Prontuário Eletrônico: www.esis.digital
+
+Pode conferir se o e-mail chegou? Se não estiver na caixa de entrada, dá uma olhadinha no spam 😉`},
+    {tipo:'msg', titulo:'Mari: convite para o Onboarding Expert', texto:`Agora que você já fez o primeiro encontro com a Viviane e conheceu a plataforma e o funcionamento da Mentoria, o próximo passo é um encontro individual com o Murilo, voltado ao onboarding do seu negócio.
+
+A ideia é que ele conheça melhor a sua realidade e as suas necessidades, para direcionar o acompanhamento de forma estratégica e alinhada ao seu momento.
+
+Como esse encontro acontece depois das suas primeiras tarefas no Essência PLAT, separei estes horários:
+
+HORÁRIOS
+
+Qual fica melhor para você?`},
+    {tipo:'nota', texto:'Ofereça horários cerca de 10 dias depois do Onboarding ePLAT, no fim do prazo das tarefas.'},
+    {tipo:'msg', titulo:'Mari: confirmação', texto:`Perfeito! O seu encontro com o Murilo ficou agendado para *DATA, às HORA*.
+
+Até lá, siga com as tarefas na área de metas do Essência PLAT 💪`},
+  ]},
+  {etapa:'expert', titulo:'Onboarding Expert', quem:'Murilo (Expert)', quando:'Cerca de 10 dias após o Onboarding ePLAT', itens:[
+    {tipo:'acoes', titulo:'Roteiro do encontro', linhas:[
+      'Está familiarizado(a) com o Essência PLAT?',
+      'Compreendeu bem o funcionamento da mentoria e do método?',
+      'Conseguiu fazer as primeiras tarefas? Se não: não se encontrou no nicho, na persona etc. → pedir à Mari o agendamento com a Sandra (Mentoria de Desenvolvimento). Falta de tempo → ampliar o prazo em 10 dias no ePLAT.',
+      'Ouvir os desejos do mentorado, conhecer o negócio e perguntar: qual o maior desafio hoje no seu negócio?',
+      'Traçar metas para aumentar o faturamento.',
+      'Depois do encontro: postar as tarefas no ePLAT, avisar no canal de acompanhamento e fazer o handoff para a Mari agendar o Onboarding eSIS.']},
+  ]},
+  {etapa:'expert', titulo:'Agendamento do Onboarding eSIS', quem:'Mariane (Assistente Administrativa)', quando:'Logo após o Onboarding Expert', itens:[
+    {tipo:'msg', titulo:'Mari: convite para o Onboarding eSIS', texto:`Agora que você já fez o seu encontro com o Murilo, vamos dar continuidade à sua jornada na Mentoria Essência com o *onboarding do eSIS*, a nossa plataforma de prontuários eletrônicos.
+
+Você já tem acesso, mas é fundamental te apresentar todas as funcionalidades e mostrar como usar cada uma na prática. O eSIS está totalmente alinhado ao Método Essência e será uma ferramenta importante na estruturação e no desenvolvimento do seu consultório de Enfermagem.
+
+Temos estas disponibilidades:
+
+📅 HORÁRIOS
+
+*Qual delas fica melhor para você?*`},
+    {tipo:'msg', titulo:'Mari: confirmação', texto:`Perfeito! O seu onboarding do eSIS ficou agendado para *DATA, às HORA*.
+
+Se possível, já entre no eSIS antes do encontro para conferir se o acesso está funcionando 😉`},
+  ]},
+  {etapa:'esis', titulo:'Onboarding eSIS', quem:'Responsável pelo eSIS', quando:'Cerca de 10 dias após o Onboarding Expert', itens:[
+    {tipo:'acoes', titulo:'Roteiro do encontro', linhas:[
+      'Explicar as áreas do eSIS e como usá-las no dia a dia do consultório.',
+      'Ver se fez as tarefas do Onboarding Expert. Se não: nicho, persona etc. → Sandra. Falta de tempo → ampliar o prazo em 10 dias. Dúvidas sobre a profissão → pedir à Mari o agendamento com o Murilo.',
+      'Explicar como segue daqui em diante: acompanhamento quinzenal pela plataforma.',
+      'Depois do encontro: postar as tarefas abaixo no ePLAT (prazo: 10 dias), avisar no canal de acompanhamento e marcar Embarque concluído.']},
+    {tipo:'msg', titulo:'Tarefas para postar no ePLAT (prazo: 10 dias)', texto:EMB_GUIA_TAREFAS_3, semNome:true},
+    {tipo:'nota', texto:'15 dias depois, a Viviane (Customer Success) confere o andamento das tarefas combinadas. A partir daí, entra a rotina quinzenal automática da Mentora de Desenvolvimento.'},
+  ]},
+  {etapa:'dev', titulo:'Se precisar: encontro com a Sandra', quem:'Mariane (Assistente Administrativa)', quando:'Quando um onboarding pedir a Mentoria de Desenvolvimento', itens:[
+    {tipo:'msg', titulo:'Mari: convite para a Mentoria de Desenvolvimento', texto:`Olá, NOME! Tudo bem?
+
+No seu encontro com QUEM CONDUZIU, percebemos alguns pontos importantes que merecem uma atenção especial neste momento da sua jornada de desenvolvimento pessoal e profissional.
+
+Por isso, queremos te convidar para um encontro individual de desenvolvimento com a Sandra, a nossa psicanalista e especialista em desenvolvimento humano.
+
+Nesse encontro, ela vai te ajudar a clarear pontos centrais do seu negócio, como o seu nicho, o seu cliente ideal e os seus valores, num espaço de escuta, acolhimento e reflexão. A ideia é reconhecer o que pode estar travando o seu desenvolvimento e fortalecer os recursos para você avançar.
+
+Esse acompanhamento faz parte do cuidado individualizado que oferecemos aos nossos mentorados.
+
+Podemos seguir com o agendamento do seu encontro com a Sandra?`},
+    {tipo:'nota', texto:'Na Rota, a Mentoria de Desenvolvimento aparece logo depois do onboarding que a pediu. Depois dela, a Mari reagenda o onboarding seguinte.'},
+  ]},
+];
+let embGuiaAberto = (()=>{ try{ return localStorage.getItem('eplat_emb_guia')==='1'; }catch(e){ return false; } })();
+const embGuiaPassosAbertos = new Set();
+const EMB_GUIA_MARCAS = /(?<![A-Za-zÀ-ú])(QUEM CONDUZIU|HORÁRIOS|CÓDIGO|DATA|HORA|LINK|NOME)(?![A-Za-zÀ-ú])/g;
+function embGuiaTexto(item, nome){
+  const t = item.texto || '';
+  return (nome && !item.semNome) ? t.replace(/\bNOME\b/g, nome) : t;
+}
+function embGuiaHtml(s){
+  const nome = s ? String(s.name||'').trim().split(/\s+/)[0] : '';
+  const etapaAtual = s ? ((embResumo(s.id).atual||{}).k || '') : '';
+  const cab = s ? `Passo a passo: mensagens para ${escapeHtml(nome)}` : 'Passo a passo: mensagens dos primeiros 30 dias';
+  const sub = s ? 'O nome já está nas mensagens. O passo da etapa atual vem aberto.' : 'Roteiro e mensagens prontas para copiar e colar no WhatsApp.';
+  return `<details class="emb-guia" id="emb-guia" ${embGuiaAberto?'open':''}>
+    <summary>${icon('comment','tiny')}<span><strong>${cab}</strong><small>${sub}</small></span>${icon('down','tiny emb-seta')}</summary>
+    <div class="emb-guia-corpo">
+      ${EMB_GUIA.map((p,i)=>{
+        const aberto = embGuiaPassosAbertos.has(i) || (s && p.etapa===etapaAtual && !embGuiaPassosAbertos.has('x'+i));
+        return `<details class="emb-guia-passo ${s && p.etapa===etapaAtual?'atual':''}" data-emb-guia-passo="${i}" ${aberto?'open':''}>
+          <summary><span class="emb-guia-n">${i+1}</span><span class="emb-guia-tt"><strong>${escapeHtml(p.titulo)}</strong><small>${escapeHtml(p.quem)} · ${escapeHtml(p.quando)}</small></span>${s && p.etapa===etapaAtual?'<em>Etapa atual</em>':''}${icon('down','tiny emb-seta')}</summary>
+          <div class="emb-guia-itens">
+            ${p.itens.map((it,j)=>{
+              if(it.tipo==='acoes') return `<div class="emb-guia-acoes"><span>${escapeHtml(it.titulo)}</span><ul>${it.linhas.map(l=>`<li>${escapeHtml(l)}</li>`).join('')}</ul></div>`;
+              if(it.tipo==='nota') return `<div class="emb-guia-nota">${icon('calendar','tiny')} <span>${escapeHtml(it.texto)}</span></div>`;
+              const txt = escapeHtml(embGuiaTexto(it, nome)).replace(EMB_GUIA_MARCAS, '<mark>$1</mark>');
+              return `<div class="emb-guia-msg">
+                <div class="emb-guia-msg-hd"><span>${escapeHtml(it.titulo)}</span><button type="button" class="btn-outline emb-guia-copiar" data-emb-copiar="${i}:${j}">${icon('copy','tiny')} <span>Copiar</span></button></div>
+                <div class="emb-guia-msg-txt">${txt}</div>
+              </div>`; }).join('')}
+          </div>
+        </details>`; }).join('')}
+    </div>
+  </details>`;
+}
+function embGuiaBind(root, s){
+  const nome = s ? String(s.name||'').trim().split(/\s+/)[0] : '';
+  const g = root.querySelector('#emb-guia');
+  if(g) g.addEventListener('toggle', ()=>{ embGuiaAberto = g.open; try{ localStorage.setItem('eplat_emb_guia', g.open?'1':'0'); }catch(e){} });
+  root.querySelectorAll('[data-emb-guia-passo]').forEach(d=>d.addEventListener('toggle', ()=>{
+    const i = Number(d.dataset.embGuiaPasso);
+    if(d.open){ embGuiaPassosAbertos.add(i); embGuiaPassosAbertos.delete('x'+i); }
+    else { embGuiaPassosAbertos.delete(i); embGuiaPassosAbertos.add('x'+i); }
+  }));
+  root.querySelectorAll('[data-emb-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const [i,j] = b.dataset.embCopiar.split(':').map(Number);
+    const texto = embGuiaTexto(EMB_GUIA[i].itens[j], nome);
+    const lbl = b.querySelector('span');
+    try{ await navigator.clipboard.writeText(texto); }
+    catch(e){
+      const ta = document.createElement('textarea'); ta.value = texto; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } ta.remove();
+    }
+    b.classList.add('ok'); if(lbl) lbl.textContent = 'Copiado';
+    setTimeout(()=>{ b.classList.remove('ok'); if(lbl) lbl.textContent = 'Copiar'; }, 1800);
   }));
 }
 /* Célula da Visão Geral: em que etapa do embarque o mentorado está. */
