@@ -1270,6 +1270,11 @@
   .emb-card-pe{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;}
   .emb-card-pe .icon{width:11px;height:11px;vertical-align:-1px;}
   .emb-tag-lead{display:inline-block;align-self:flex-start;font-size:10px;font-weight:800;letter-spacing:.4px;padding:2px 8px;border-radius:999px;background:rgba(184,134,59,.16);color:#c9962f;border:1px solid rgba(184,134,59,.4);}
+  .emb-tag-contato{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;width:fit-content;max-width:100%;line-height:1.25;margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;padding:4px 9px;border-radius:6px;color:#fff;background:#2563eb;}
+  .emb-tag-contato.breve{background:#d97706;} .emb-tag-contato.hoje,.emb-tag-contato.atrasado{background:#dc2626;}
+  .emb-contato{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px;margin-top:10px;padding:10px 12px;border:1px dashed var(--border);border-radius:10px;}
+  .emb-contato .emb-campo{min-width:150px;} .emb-contato .emb-campo.txt{flex:1;min-width:200px;}
+  .emb-contato-tit{width:100%;font-size:12px;font-weight:700;color:var(--text-dim);display:flex;align-items:center;gap:6px;}
   .emb-lead-info{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:10px;font-size:12px;color:var(--text-dim);}
   .emb-lead-info small{flex-basis:100%;color:var(--text-mute);font-size:11.5px;}
   .emb-vinc{flex-basis:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;max-width:520px;}
@@ -22097,6 +22102,21 @@ function embPessoas(){
   return Array.from(new Set(nomes.length ? nomes : ['Murilo','Mariane','Viviane','Sandra','Diego','Carmem','Adriana']));
 }
 function fmtWhatsLead(t){ const d = String(t||'').replace(/\D/g,''); const n = d.length>11 ? d.slice(-11) : d; return n.length===11 ? `+55 (${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}` : t; }
+/* Tag de contato futuro (ex.: "INICIAR EM 22 DEZEMBRO"), guardada nas etapas como __contato
+   {data, nota}. Aparece no card do quadro; muda de cor quando o dia se aproxima. */
+const EMB_MESES = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+function embContato(sid){ const c = (EMB[sid]||{}).__contato; return c && c.data ? c : null; }
+function embContatoTagHtml(sid){
+  const c = embContato(sid); if(!c) return '';
+  const [y,m,d] = c.data.split('-').map(Number); if(!y||!m||!d) return '';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const dif = Math.round((new Date(y,m-1,d) - hoje)/86400000);
+  const cls = dif<0 ? 'atrasado' : dif===0 ? 'hoje' : dif<=3 ? 'breve' : '';
+  const quando = `${d} ${EMB_MESES[m-1]}${y!==hoje.getFullYear()? ' '+y : ''}`;
+  const txt = `${String(c.nota||'').trim() || 'Contato'} em ${quando}`;
+  const dica = dif<0 ? `Atrasado ${-dif} dia${dif===-1?'':'s'}` : dif===0 ? 'É hoje' : `Faltam ${dif} dia${dif===1?'':'s'}`;
+  return `<span class="emb-tag-contato ${cls}" title="${escapeAttr(dica)}">${icon('calendar','tiny')} ${escapeHtml(txt)}</span>`;
+}
 function embDataBR(iso){ if(!iso) return ''; const [y,m,d] = String(iso).split('-'); return d&&m ? `${d}/${m}` : iso; }
 function embSalvar(sid){
   clearTimeout(embSalvarTimers[sid]);
@@ -22161,6 +22181,7 @@ async function renderEmbarque(){
               return `<div class="emb-card ${embFora(s.id)?'fora':''}" role="button" tabindex="0" data-emb-abrir="${s.id}">
                 ${r.concluido && !embFora(s.id) ? '' : `<button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="${embFora(s.id)?'0':'1'}" title="${embFora(s.id)?'Voltar ao funil':'Mover para Embarque concluído'}">${embFora(s.id)? icon('back','tiny') : icon('check','tiny')}</button>`}
                 <div class="emb-card-top">${initialsAvatar(s.initials,s.color,30,s.avatarUrl)}<div class="emb-card-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30` : `Dia ${dia}`) : 'Sem data de matrícula'}</small></div></div>
+                ${embContatoTagHtml(s.id)}
                 ${s.lead ? `<span class="emb-tag-lead" title="Vendido no CRM. Ainda sem conta no ePLAT">AGUARDANDO CONTA${s.lead.vendedor? ' · '+escapeHtml(String(s.lead.vendedor).split(' ')[0].toUpperCase()) : ''}</span>` : ''}
                 <div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div>
                 <div class="emb-card-pe"><span>${r.feitas}/${r.total} etapas</span>${v.data ? `<span>${icon('calendar','tiny')} ${embDataBR(v.data)}${v.com? ' · '+escapeHtml(v.com) : ''}</span>` : ''}</div>
@@ -22226,6 +22247,13 @@ function embRenderDetalhe(el, s){
           <div class="emb-vinc"><select class="ps-input" id="emb-vinc-sel"><option value="">Vincular a um aluno do ePLAT…</option>${alunosVinc.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select><button type="button" class="btn-accent" id="emb-vinc-btn">Vincular aluno</button></div>
           <small>Assim que a pessoa criar a conta, o ePLAT liga sozinho pelo e-mail, WhatsApp ou CPF. Use o botão só se não ligar.</small>
         </div>` : ''}
+        ${(()=>{ const c = (EMB[sid]||{}).__contato || {}; return `<div class="emb-contato">
+          <div class="emb-contato-tit">${icon('calendar','tiny')} Dia para entrar em contato <small style="font-weight:500">(aparece como tag no card do quadro)</small></div>
+          <label class="emb-campo"><span>Data</span><input class="ps-input" type="date" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
+          <label class="emb-campo txt"><span>O que fazer</span><input class="ps-input" type="text" id="emb-ct-nota" maxlength="40" value="${escapeAttr(c.nota||'')}" placeholder="Ex.: Iniciar"></label>
+          ${c.data ? `<button type="button" class="btn-outline" id="emb-ct-tirar" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">${icon('x','tiny')} Tirar tag</button>` : ''}
+          ${c.data ? embContatoTagHtml(sid) : ''}
+        </div>`; })()}
       </div>
       <div class="emb-topo-acoes">
         <select class="ps-input" id="emb-trocar">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}${m.lead?' (aguardando conta)':''}</option>`).join('')}</select>
@@ -22258,6 +22286,16 @@ function embRenderDetalhe(el, s){
   el.querySelector('#emb-voltar').addEventListener('click', ()=>{ embAluno = null; renderEmbarque(); });
   el.querySelector('#emb-trocar').addEventListener('change', e=>embAbrir(e.target.value));
   el.querySelector('#emb-fora-btn').addEventListener('click', ()=>{ embMarcarFora(sid, !embFora(sid)); embRenderDetalhe(el, s); });
+  const ctSalvar = ()=>{
+    const data = el.querySelector('#emb-ct-data').value, nota = el.querySelector('#emb-ct-nota').value.trim();
+    const d = embDados(sid);
+    if(data) d.__contato = { data, nota }; else delete d.__contato;
+    embSalvar(sid); embRenderDetalhe(el, s);
+  };
+  el.querySelector('#emb-ct-data').addEventListener('change', ctSalvar);
+  el.querySelector('#emb-ct-nota').addEventListener('change', ctSalvar);
+  const ctT = el.querySelector('#emb-ct-tirar');
+  if(ctT) ctT.addEventListener('click', ()=>{ delete embDados(sid).__contato; embSalvar(sid); embRenderDetalhe(el, s); });
   const vb = el.querySelector('#emb-vinc-btn');
   if(vb) vb.addEventListener('click', async ()=>{
     const aluno = el.querySelector('#emb-vinc-sel').value;
