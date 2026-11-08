@@ -18213,6 +18213,12 @@ function openEditVendaModal(id){
     });
   });
   document.getElementById('ev-save').addEventListener('click', ()=>{
+    /* O link da gravação precisa ser o do vídeo (Drive), não da agenda nem da transcrição. */
+    const vidLink = document.getElementById('ev-video').value.trim();
+    if(/calendar\.google\.com|docs\.google\.com\/document/i.test(vidLink)){
+      showAppAlert('Este link não é do vídeo da sessão: é '+(/calendar/i.test(vidLink)?'do Google Agenda':'de um documento (transcrição)')+'. Cole o link do vídeo da gravação, que fica no Google Drive (pasta Meet Recordings de quem organizou a reunião).', {title:'Link da gravação'});
+      return;
+    }
     const dataIso = document.getElementById('ev-data').value;
     const valorTexto = document.getElementById('ev-valor').value.trim();
     v.dataSessao = dataIso || '';
