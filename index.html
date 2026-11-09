@@ -4663,21 +4663,29 @@ async function e27Marcar(campo){
   if(E27){ if(campo==='entrou_em') E27 = null; else E27.visto_em = agora; }
   updateNotifBadge();
 }
+/* Mentorados recebem o convite da comunidade E27 (Mentoria Essência); alunos do Método Essência
+   (tier curso) recebem o da comunidade do Método. O banco devolve qual é em E27.tipo. */
+function e27Metodo(){ return !!E27 && E27.tipo==='metodo'; }
 function e27Abrir(){
   if(!E27 || document.getElementById('e27-modal')) return;
   const nome = primeiroNome((currentUserProfile||{}).name||'');
+  const m = e27Metodo();
   const wrap = document.createElement('div');
   wrap.className = 'app-confirm-backdrop'; wrap.id = 'e27-modal';
   wrap.innerHTML = `
     <div class="app-confirm-card e27-card" role="dialog" aria-labelledby="e27-tit">
       <div class="e27-selo">${icon('users')}</div>
       <h4 id="e27-tit">Boas-vindas à comunidade${nome ? ', '+escapeHtml(nome) : ''}!</h4>
-      <p>Que alegria ter você com a gente na Mentoria Essência. A partir de agora você está <strong>autorizado(a) a entrar na comunidade E27</strong>, o nosso grupo no WhatsApp.</p>
+      ${m ? `<p>Que alegria ter você com a gente no Método Essência. A partir de agora você está <strong>autorizado(a) a entrar na comunidade do Método Essência</strong>, o nosso grupo no WhatsApp.</p>
+      <ul class="e27-lista">
+        <li>${icon('check','tiny')} Networking com enfermeiros e enfermeiras do Método Essência</li>
+        <li>${icon('check','tiny')} Todos os avisos principais do Método Essência direto no seu WhatsApp</li>
+      </ul>` : `<p>Que alegria ter você com a gente na Mentoria Essência. A partir de agora você está <strong>autorizado(a) a entrar na comunidade E27</strong>, o nosso grupo no WhatsApp.</p>
       <ul class="e27-lista">
         <li>${icon('check','tiny')} Networking com enfermeiros e enfermeiras da mentoria</li>
         <li>${icon('check','tiny')} Todos os avisos principais da Mentoria Essência direto no seu WhatsApp</li>
-      </ul>
-      <a class="e27-btn" id="e27-entrar" href="${escapeAttr(E27.link)}" target="_blank" rel="noopener">${icon('comment','tiny')}<span>Entrar na comunidade E27 da Mentoria Essência</span></a>
+      </ul>`}
+      <a class="e27-btn" id="e27-entrar" href="${escapeAttr(E27.link)}" target="_blank" rel="noopener">${icon('comment','tiny')}<span>${m ? 'Entrar na comunidade do Método Essência' : 'Entrar na comunidade E27 da Mentoria Essência'}</span></a>
       <button type="button" class="e27-depois" id="e27-depois">Agora não</button>
     </div>`;
   document.body.appendChild(wrap);
@@ -7094,7 +7102,9 @@ function notifItens(){
     const onde = c ? `na aula "${c.title}"` : 'na Comunidade';
     const nome = x.quem_nome ? x.quem_nome.split(' ')[0] : 'Alguém';
     if(x.motivo==='e27'){
-      itens.push({ tipo:'e27', quando:x.quando, titulo:'Você foi liberado(a) para a comunidade E27 da Mentoria Essência!', sub:'Entre no grupo do WhatsApp para fazer networking e receber os avisos principais da mentoria.', acao: ()=>e27Abrir() });
+      itens.push(e27Metodo()
+        ? { tipo:'e27', quando:x.quando, titulo:'Você foi liberado(a) para a comunidade do Método Essência!', sub:'Entre no grupo do WhatsApp para fazer networking e receber os avisos principais do Método Essência.', pill:'Entrar na comunidade do Método', acao: ()=>e27Abrir() }
+        : { tipo:'e27', quando:x.quando, titulo:'Você foi liberado(a) para a comunidade E27 da Mentoria Essência!', sub:'Entre no grupo do WhatsApp para fazer networking e receber os avisos principais da mentoria.', acao: ()=>e27Abrir() });
       return;
     }
     if(x.motivo==='boasvindas'){
@@ -7159,7 +7169,7 @@ function notifPainelHtml(){
   const itens = notifItens();
   const av = (it)=> it.grupo ? msgGrupoAvatar(34, it.grupo) : it.avatarDe ? msgAvatarDe(it.avatarDe, 34) : `<span class="notif-ic">${icon(it.icone||'bell','tiny')}</span>`;
   return `<div class="notif-hd"><strong>Notificações</strong>${itens.length ? `<span class="msg-badge">${itens.length}</span>` : ''}</div>
-    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='vencidas' ? `<button type="button" class="notif-item notif-bv notif-tv" data-notif="${i}"><span class="notif-ic tv-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts tv-pill">Finalizar tarefas vencidas</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='termo' ? `<button type="button" class="notif-item notif-bv notif-termo" data-notif="${i}"><span class="notif-ic termo-ic">${icon('file','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts termo-pill">Ler e concordar</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">Entrar na comunidade E27</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
+    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='vencidas' ? `<button type="button" class="notif-item notif-bv notif-tv" data-notif="${i}"><span class="notif-ic tv-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts tv-pill">Finalizar tarefas vencidas</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='termo' ? `<button type="button" class="notif-item notif-bv notif-termo" data-notif="${i}"><span class="notif-ic termo-ic">${icon('file','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts termo-pill">Ler e concordar</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">${escapeHtml(it.pill||'Entrar na comunidade E27')}</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
 }
 function notifPainelEl(){
   let p = document.getElementById('notif-painel');
