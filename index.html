@@ -19958,7 +19958,7 @@ function rfPintarCorpo(){
 
 function renderDre(){
   const el = document.getElementById('view-dre'); if(!el) return;
-  if(!drePode()){ el.innerHTML = '<div class="empty-state">Área do CEO e da Head Financeira.</div>'; return; }
+  if(!drePode()){ el.innerHTML = '<div class="empty-state">Área da Direção Geral e da Direção Financeira.</div>'; return; }
   if(DRE_UI.salvos===null){ if(!DRE_UI.carregando) dreCarregar(); el.innerHTML = '<div class="empty-state">Carregando…</div>'; return; }
   const atual = dreMesAtual(), anteriorMes = dreMesAnterior(atual);
   const salvoDe = ym => DRE_UI.salvos.find(r=>String(r.mes).slice(0,7)===ym);
@@ -20135,7 +20135,7 @@ function avGraficoSvg(lista, cor){
 }
 function renderDesempenho(){
   const el = document.getElementById('view-desempenho'); if(!el) return;
-  if(!avPode()){ el.innerHTML = '<div class="empty-state">Área do Head de Vendas e do CEO.</div>'; return; }
+  if(!avPode()){ el.innerHTML = '<div class="empty-state">Área da Direção de Vendas e da Direção Geral.</div>'; return; }
   const todas = Object.values(AVALIACOES).map(r=>{ const a = ANALISE_SESSOES.find(x=>x.id===r.analise_id); return Object.assign({ lead: a ? a.leadNome : '', nota14: avNota14(r) }, r); }).filter(r=>r.nota14!=null);
   const media = (l,k)=>{ const v = l.map(r=>r[k]).filter(x=>x!=null); return v.length ? v.reduce((t,x)=>t+x,0)/v.length : null; };
   const fmt = avFmtNum;
@@ -21645,7 +21645,7 @@ function rdResolverMomento(s, m){
 }
 /* O radar se atualiza sozinho: ao abrir a tela (se os dados tiverem mais de 2 minutos) e a cada 5 minutos com a tela aberta. */
 setInterval(()=>{ if(currentView==='radar' && !document.hidden && RADAR_UI.rows && !RADAR_UI.carregando) radarCarregar(); }, 5*60*1000);
-/* ================= CASOS DO DIA DA SANDRA (rotina diária da Head de Desenvolvimento) =================
+/* ================= CASOS DO DIA DA SANDRA (rotina diária da Direção de Desenvolvimento) =================
    A rotina chega às 7h com dois itens marcados "(abra o Essência PLAT para ver os nomes do dia)". Quando
    a Sandra abre o sistema, os nomes entram no lugar da marca, calculados com o mesmo Radar dos Mentorados:
    · Momentos-Chave: os casos pendentes divididos pelos dias úteis que faltam até sexta (os mais atrasados
@@ -21715,7 +21715,7 @@ const EVENTO_UI = { aba:'premio' };
 function renderEvento(){
   const el = document.getElementById('view-evento');
   if(!el) return;
-  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e da Navegadora.</div>'; return; }
+  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Direção de Desenvolvimento e da Navegadora.</div>'; return; }
   const abas = `
     <h2 class="section-title com-titulo">${icon('award')} Evento Essência Experience</h2>
     <div class="ev-abas" role="tablist">
@@ -21804,7 +21804,7 @@ function mtFinHtml(){
 function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
-  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Head de Desenvolvimento e da Navegadora.</div>'; return; }
+  if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Direção de Desenvolvimento e da Navegadora.</div>'; return; }
   // O NPS não aparece mais aqui (fica em Comunicação), mas a nota entra no alerta de cada mentorado.
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
   if(RADAR_UI.rows===null && !RADAR_UI.carregando && !RADAR_UI.erro){ radarCarregar(); }
