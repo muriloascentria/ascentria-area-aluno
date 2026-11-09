@@ -15119,7 +15119,9 @@ async function msgRevalidar(forcar){
     const chave = msgUI.aberto;
     if(chave && MSG_CONVERSAS[chave]) MSG_CONVERSAS[chave]._completa = false;
     await msgBootstrap();
-    if(chave && msgNaTela() && document.visibilityState==='visible' && msgNaoLidasDaChave(chave)) msgEntrarNaConversa(chave);
+    /* A conversa aberta não é "reaberta" aqui: isso mandava a rolagem para a linha de Não lidas
+       segundos depois de a pessoa voltar à janela, e ela se perdia. Fica onde estava (ou no fim,
+       se estava no fim), e as novas são marcadas como lidas abaixo. */
     if(chave){
       await msgCarregarConversa(chave);
       msgMarcarLidas(chave);
@@ -15213,9 +15215,14 @@ async function msgChegou(m){
     msgMarcarLidas(chave); // a parte síncrona zera o contador antes de desenhar
     renderMensagens();
   } else {
+    const ativo = document.activeElement, eraCaixa = ativo && ativo.id==='msg-texto';
+    const selA = eraCaixa ? ativo.selectionStart : null, selB = eraCaixa ? ativo.selectionEnd : null;
     updateNotifBadge();
     if(msgNaTela()) renderMensagens();
     if(!equipeNoModoAluno()) msgPopup(m);
+    /* Quem estava digitando continua digitando no mesmo lugar. */
+    const voltar = eraCaixa ? document.getElementById('msg-texto') : (ativo && ativo.isConnected ? ativo : null);
+    if(voltar && document.activeElement!==voltar){ voltar.focus(); if(eraCaixa && selA!=null){ try{ voltar.setSelectionRange(selA, selB); }catch(e){} } }
   }
   if(!equipeNoModoAluno()) msgSom();
 }
@@ -16212,9 +16219,19 @@ function msgPopup(m){
   el.querySelector('.msg-popup-x').addEventListener('click', fechar);
   el.querySelector('.msg-popup-abrir').addEventListener('click', ()=>{ fechar(); msgAbrirConversa(chave); });
   const inp = el.querySelector('input'), btn = el.querySelector('.msg-popup-resp .btn-accent');
+  /* O cursor só entra no "Responder" se a pessoa clicou na janelinha. Se ele chegar lá sozinho
+     (redesenho da tela enquanto ela digitava em outra conversa), volta para onde estava, para o
+     Enter não mandar a mensagem para a conversa errada. */
+  el.addEventListener('pointerdown', ()=>{ el._clicou = Date.now(); });
+  inp.addEventListener('focus', e=>{
+    if(el._clicou && Date.now() - el._clicou < 1500) return;
+    const antes = e.relatedTarget;
+    if(antes && antes.isConnected && !el.contains(antes)) antes.focus();
+    else { const ta = document.getElementById('msg-texto'); if(ta) ta.focus(); else inp.blur(); }
+  });
   const responder = async ()=>{ const t = inp.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(chave, t)){ inp.value=''; msgMarcarLidas(chave); fechar(); } else btn.disabled = false; };
   btn.addEventListener('click', responder);
-  inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); responder(); } if(e.key==='Escape') fechar(); });
+  inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(el._clicou) responder(); } if(e.key==='Escape') fechar(); });
   /* Some sozinha em 5 segundos. Com o mouse em cima ou digitando a resposta, espera; ao sair, conta de novo. */
   inp.addEventListener('focus', ()=>clearTimeout(el._timer));
   inp.addEventListener('blur', ()=>{ if(!inp.value.trim() && !el.matches(':hover')) msgPopupTimer(el); });
