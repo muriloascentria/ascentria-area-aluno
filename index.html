@@ -16197,11 +16197,15 @@ function msgPopup(m){
   const responder = async ()=>{ const t = inp.value.trim(); if(!t) return; btn.disabled = true; if(await msgEnviar(chave, t)){ inp.value=''; msgMarcarLidas(chave); fechar(); } else btn.disabled = false; };
   btn.addEventListener('click', responder);
   inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); responder(); } if(e.key==='Escape') fechar(); });
+  /* Some sozinha em 5 segundos. Com o mouse em cima ou digitando a resposta, espera; ao sair, conta de novo. */
   inp.addEventListener('focus', ()=>clearTimeout(el._timer));
+  inp.addEventListener('blur', ()=>{ if(!inp.value.trim() && !el.matches(':hover')) msgPopupTimer(el); });
+  el.addEventListener('mouseenter', ()=>clearTimeout(el._timer));
+  el.addEventListener('mouseleave', ()=>{ if(document.activeElement!==inp || !inp.value.trim()) msgPopupTimer(el); });
   msgBindMaiuscula(inp);
   msgPopupTimer(el);
 }
-function msgPopupTimer(el){ clearTimeout(el._timer); el._timer = setTimeout(()=>{ if(document.activeElement && el.contains(document.activeElement)) { msgPopupTimer(el); return; } el.remove(); }, 25000); }
+function msgPopupTimer(el){ clearTimeout(el._timer); el._timer = setTimeout(()=>{ if(document.activeElement && el.contains(document.activeElement)) { msgPopupTimer(el); return; } el.remove(); }, 5000); }
 /* Fecha a janelinha daquela conversa — chamada sempre que a conversa é aberta/desenhada na tela. */
 function msgFecharPopup(chave){ const c = document.getElementById('msg-popups'); if(!c || !chave) return; const el = c.querySelector(`[data-msg-popup="${chave}"]`); if(el){ clearTimeout(el._timer); el.remove(); } }
 function msgAbrirConversa(chave){
@@ -22153,6 +22157,7 @@ function fmtWhatsLead(t){ const d = String(t||'').replace(/\D/g,''); const n = d
 /* Tag de contato futuro (ex.: "INICIAR EM 22 DEZEMBRO"), guardada nas etapas como __contato
    {data, nota}. Aparece no card do quadro; muda de cor quando o dia se aproxima. */
 const EMB_MESES = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+function embDataOk(v){ const m = /^(\d{4})-\d{2}-\d{2}$/.exec(String(v||'')); return !!m && +m[1] >= 2020 && +m[1] <= 2100; }
 function embContato(sid){ const c = (EMB[sid]||{}).__contato; return c && c.data ? c : null; }
 function embContatoTagHtml(sid){
   const c = embContato(sid); if(!c) return '';
@@ -22276,7 +22281,7 @@ function embRenderDetalhe(el, s){
   const alunosVinc = STUDENTS.filter(x=>x.tier!=='curso').slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
   const campoHtml = (et, [ck, label, tipo])=>{
     const v = ((EMB[sid]||{})[et.chave]||{})[ck] || '';
-    if(tipo==='date') return `<label class="emb-campo"><span>${label}</span><input class="ps-input" type="date" value="${escapeAttr(v)}" data-emb-campo="${et.chave}:${ck}"></label>`;
+    if(tipo==='date') return `<label class="emb-campo"><span>${label}</span><input class="ps-input" type="date" min="2020-01-01" max="2100-12-31" value="${escapeAttr(v)}" data-emb-campo="${et.chave}:${ck}"></label>`;
     return `<label class="emb-campo"><span>${label}</span><input class="ps-input" type="text" list="emb-pessoas" value="${escapeAttr(v)}" placeholder="Em aberto" data-emb-campo="${et.chave}:${ck}"></label>`;
   };
   el.innerHTML = `
@@ -22297,7 +22302,7 @@ function embRenderDetalhe(el, s){
         </div>` : ''}
         ${(()=>{ const c = (EMB[sid]||{}).__contato || {}; return `<div class="emb-contato">
           <div class="emb-contato-tit">${icon('calendar','tiny')} Dia para entrar em contato <small style="font-weight:500">(aparece como tag no card do quadro)</small></div>
-          <label class="emb-campo"><span>Data</span><input class="ps-input" type="date" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
+          <label class="emb-campo"><span>Data</span><input class="ps-input" type="date" min="2020-01-01" max="2100-12-31" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
           <label class="emb-campo txt"><span>O que fazer</span><input class="ps-input" type="text" id="emb-ct-nota" maxlength="40" value="${escapeAttr(c.nota||'')}" placeholder="Ex.: Iniciar"></label>
           ${c.data ? `<button type="button" class="btn-outline" id="emb-ct-tirar" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">${icon('x','tiny')} Tirar tag</button>` : ''}
           ${c.data ? embContatoTagHtml(sid) : ''}
@@ -22340,7 +22345,14 @@ function embRenderDetalhe(el, s){
     if(data) d.__contato = { data, nota }; else delete d.__contato;
     embSalvar(sid); embRenderDetalhe(el, s);
   };
-  el.querySelector('#emb-ct-data').addEventListener('change', ctSalvar);
+  { const ctd = el.querySelector('#emb-ct-data'); let ctPend = false;
+    ctd.addEventListener('change', ()=>{
+      if(ctd.value && !embDataOk(ctd.value)) return;
+      const d = embDados(sid), nota = el.querySelector('#emb-ct-nota').value.trim();
+      if(ctd.value) d.__contato = { data:ctd.value, nota }; else delete d.__contato;
+      embSalvar(sid); ctPend = true;
+    });
+    ctd.addEventListener('blur', ()=>{ if(ctPend){ ctPend = false; embRenderDetalhe(el, s); } }); }
   el.querySelector('#emb-ct-nota').addEventListener('change', ctSalvar);
   const ctT = el.querySelector('#emb-ct-tirar');
   if(ctT) ctT.addEventListener('click', ()=>{ delete embDados(sid).__contato; embSalvar(sid); embRenderDetalhe(el, s); });
@@ -22357,13 +22369,23 @@ function embRenderDetalhe(el, s){
     if(error){ vb.disabled = false; showAppAviso('Não foi possível vincular: '+(error.message||'')); return; }
     await embCarregar(true); embAbrir(aluno);
   });
-  el.querySelectorAll('[data-emb-campo]').forEach(inp=>inp.addEventListener('change', ()=>{
-    const [chave, ck] = inp.dataset.embCampo.split(':'); const d = embDados(sid); d[chave] = d[chave] || {};
-    d[chave][ck] = inp.value.trim();
-    /* Data agendada preenchida já marca "Agendado". */
-    if(ck==='data' && inp.value && (chave==='eplat'||chave==='expert'||chave==='esis'||chave.startsWith('dev_'))){ d[chave].checks = d[chave].checks || {}; d[chave].checks.agendado = true; }
-    embSalvar(sid); embRenderDetalhe(el, s);
-  }));
+  /* Campos de data: enquanto a pessoa digita o ano, o navegador dispara "change" a cada número (0002, 0020,
+     0202...). Só grava quando a data está completa e com ano plausível, e só redesenha a tela quando o
+     campo perde o foco, para o cursor não sair do lugar no meio da digitação. */
+  el.querySelectorAll('[data-emb-campo]').forEach(inp=>{
+    let pendente = false;
+    const aplicar = ()=>{
+      const [chave, ck] = inp.dataset.embCampo.split(':'); const d = embDados(sid); d[chave] = d[chave] || {};
+      d[chave][ck] = inp.value.trim();
+      /* Data agendada preenchida já marca "Agendado". */
+      if(ck==='data' && inp.value && (chave==='eplat'||chave==='expert'||chave==='esis'||chave.startsWith('dev_'))){ d[chave].checks = d[chave].checks || {}; d[chave].checks.agendado = true; }
+      embSalvar(sid);
+    };
+    if(inp.type==='date'){
+      inp.addEventListener('change', ()=>{ if(inp.value && !embDataOk(inp.value)) return; aplicar(); pendente = true; });
+      inp.addEventListener('blur', ()=>{ if(pendente){ pendente = false; embRenderDetalhe(el, s); } });
+    } else inp.addEventListener('change', ()=>{ aplicar(); embRenderDetalhe(el, s); });
+  });
   el.querySelectorAll('[data-emb-check]').forEach(inp=>inp.addEventListener('change', ()=>{
     const [chave, ck] = inp.dataset.embCheck.split(':'); const d = embDados(sid); d[chave] = d[chave] || {}; d[chave].checks = d[chave].checks || {};
     d[chave].checks[ck] = inp.checked;
