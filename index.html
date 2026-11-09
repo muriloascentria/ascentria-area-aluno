@@ -9747,6 +9747,19 @@ function topicFaltando(topic, data){
   (topic.sections||[]).forEach(sec=>{
     if(sectionFilled(sec, data)) return;
     if(sec.type==='fields'){ const v = sectionValue(data, sec); sec.fields.forEach(f=>{ if(!(v[f.key]||'').trim()) out.push(f.label); }); }
+    /* Tabela: diz exatamente quais colunas e em quais linhas falta, senão a pessoa não acha o campo vazio. */
+    else if(sec.type==='table'){
+      const rows = sectionValue(data, sec);
+      if(!rows.length){ out.push(sec.label || 'uma seção'); return; }
+      sec.columns.filter(c=>c.key!=='__label').forEach(c=>{
+        const onde = rows.map((r,i)=>!(String(r[c.key]||'').trim()) ? (r.__label || ('linha '+(i+1))) : null).filter(Boolean);
+        if(onde.length) out.push(`${c.label} (${onde.length===rows.length ? 'todas as linhas' : onde.join(', ')})`);
+      });
+    }
+    else if(sec.type==='swatches'){
+      const vaz = sectionValue(data, sec).filter(v=>!psEhNA(v) && !/^#([0-9a-f]{3}){1,2}$/i.test(String(v||'').replace(/\s+/g,''))).length;
+      out.push(`${sec.label || 'Paleta'} (${vaz} ${vaz===1?'cor vazia':'cores vazias'})`);
+    }
     else out.push(sec.label || 'uma seção');
   });
   return out;
@@ -10112,7 +10125,7 @@ function renderSectionHTML(section, data){
   if(section.type==='swatches'){
     const swVazio = val.some(v=>!String(v||'').trim());
     return `<div class="ps-section">
-      <div class="ps-label-row"><h4 class="ps-h">${section.label}</h4>${swVazio ? `<button type="button" class="ps-nao-tenho" data-nao-tenho-sw="${section.key}" title="Marque se as cores que faltam não se aplicam a você">Não se aplica</button>` : ''}</div>
+      <div class="ps-label-row"><h4 class="ps-h">${section.label}</h4>${swVazio ? `<button type="button" class="ps-nao-tenho" data-nao-tenho-sw="${section.key}" title="Marca como Não se aplica as cores que ficaram vazias">Cores vazias: não se aplica</button>` : ''}</div>
       <div class="ps-swatches">
         ${val.map((v,i)=>{
           const na = psEhNA(v);
@@ -10140,8 +10153,11 @@ function renderSectionHTML(section, data){
         <tbody>
           ${rows.map((row,i)=>{
             /* Linha com alguma coluna vazia: botão "Não se aplica" preenche as vazias de uma vez. */
-            const ntBtn = cols.some(c=>c.key!=='__label' && !String(row[c.key]||'').trim())
-              ? `<button type="button" class="ps-nao-tenho ps-nao-tenho-row" data-nao-tenho-row="${section.key}|${i}" title="Marque se esta linha não se aplica a você">Não se aplica</button>` : '';
+            /* Linha já com algo preenchido: o botão marca só os campos vazios (ex.: Instagram com link, mas sem Arquivos). */
+            const temVazio = cols.some(c=>c.key!=='__label' && !String(row[c.key]||'').trim());
+            const temAlgo = cols.some(c=>c.key!=='__label' && String(row[c.key]||'').trim());
+            const ntBtn = temVazio
+              ? `<button type="button" class="ps-nao-tenho ps-nao-tenho-row" data-nao-tenho-row="${section.key}|${i}" title="${temAlgo ? 'Marca como Não se aplica só os campos que estão vazios nesta linha' : 'Marque se esta linha não se aplica a você'}">${temAlgo ? 'Vazios: não se aplica' : 'Não se aplica'}</button>` : '';
             return `<tr>
             ${section.fixedRows? `<td class="ps-rowlabel">${row.__label}${ntBtn}</td>` : ''}
             ${cols.map(c=>{
@@ -10876,7 +10892,7 @@ function openTopicModal(quadrant, topicId){
         <h3>${topic.title}</h3>
         ${topic.desc? `<p class="desc">${topic.desc}</p>` : ''}
         ${(topic.intro||[]).map(t=>`<div class="topic-note">${t}</div>`).join('')}
-        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : `Salvo — ainda falta preencher: <strong>${escapeHtml(topicFaltando(topic, data).join(', '))}</strong>. Se algum item não se aplica a você, clique em Editar e use o botão "Não se aplica".`}</div>` : ''}
+        ${!editing? `<div class="ps-saved-note">${icon('check','tiny')} ${filled? 'Salvo — clique em Editar para alterar.' : `Salvo — ainda falta preencher: <strong>${escapeHtml(topicFaltando(topic, data).join('; '))}</strong>. Se algum item não se aplica a você, clique em Editar e use os botões "Não se aplica" (nas tabelas, o botão ao lado do nome da linha marca só os campos vazios).`}</div>` : ''}
         <div class="${editing? '' : 'ps-locked'}">
           ${(topic.sections||[]).map(sec=>renderSectionHTML(sec, data)).join('')}
         </div>
