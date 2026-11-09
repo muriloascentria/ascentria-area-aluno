@@ -15073,15 +15073,16 @@ async function msgEspiar(){
   if(!msgSouEquipe() && !msgSouMentorado()) return;
   if(msgRevalidando) return;
   try{
-    const { data, error } = await sb.from('mensagens').select('id').order('id',{ascending:false}).limit(1);
+    /* Função do banco que usa os índices (a consulta direta na tabela custava até meio segundo por pessoa). */
+    const { data, error } = await sb.rpc('mensagens_maior_id');
     if(error) return;
-    const maior = (data && data[0]) ? Number(data[0].id) : 0;
+    const maior = Number(data) || 0;
     /* Primeira passada só toma nota: ainda não há com o que comparar. */
     if(!MSG_MAIOR_ID){ MSG_MAIOR_ID = maior; return; }
     if(maior > MSG_MAIOR_ID) msgRevalidar(true);
   }catch(e){}
 }
-setInterval(msgEspiar, 20000);
+setInterval(msgEspiar, 30000);
 /* Voltar ao app depois de um tempo fora.
    O celular congela a página quando ela sai da frente, e a ligação ao vivo com o servidor cai
    sem avisar ninguém. Ao voltar — pela notificação ou simplesmente trocando de app — a conversa
@@ -15092,7 +15093,8 @@ async function msgRevalidar(forcar){
   if(msgRevalidando) return;
   if(!currentUser) return;
   if(!msgSouEquipe() && !msgSouMentorado()) return;
-  if(!forcar && Date.now() - msgRevalidadoEm < 3000) return;
+  /* Voltar à janela ou ao app não recarrega tudo de novo se a última atualização foi há menos de 20s. */
+  if(!forcar && Date.now() - msgRevalidadoEm < 20000) return;
   msgRevalidando = true; msgRevalidadoEm = Date.now();
   try{
     try{ if(msgUI.canal && sb.removeChannel) sb.removeChannel(msgUI.canal); }catch(e){}
