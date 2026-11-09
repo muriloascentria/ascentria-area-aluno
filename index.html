@@ -2380,6 +2380,9 @@
   .termo-acoes .btn-accent{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;border-radius:10px;background:var(--accent);color:#fff;border:none;font:inherit;font-weight:800;font-size:14.5px;cursor:pointer;}
   .termo-acoes .btn-accent:disabled{opacity:.4;cursor:not-allowed;}
   .termo-erro{color:var(--danger,#d9534f);font-size:13px;margin:8px 0 0;}
+  .termo-assinatura{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);font-size:13.5px;line-height:1.5;}
+  .termo-assinatura .icon{color:var(--success);vertical-align:-2px;}
+  .termo-assinatura code{font-size:12px;word-break:break-all;}
   .e27-card{max-width:440px;text-align:center;border-color:rgba(37,211,102,.45);box-shadow:0 0 0 1px rgba(37,211,102,.15),0 18px 50px rgba(0,0,0,.5),0 0 40px rgba(37,211,102,.12);}
   .e27-card h4{font-size:19px;margin:10px 0 8px;}
   .e27-card p{font-size:14px;line-height:1.55;color:var(--text-dim);margin:0 0 12px;}
@@ -4529,6 +4532,33 @@ function termoTextoHtml(t){
     return `<p>${escapeHtml(x)}</p>`;
   }).join('');
 }
+/* Equipe: abre o documento assinado a partir do link "Documento assinado" nos Registros Internos
+   (https://mentoriaessencia.online/#termo=<id>). Só leitura, com o bloco da assinatura no fim. */
+async function termoVerArquivo(id){
+  if(currentUserRole!=='staff' || !id || document.getElementById('termo-modal')) return;
+  const { data:t, error } = await sb.from('termos_contratacao').select('*').eq('id', id).maybeSingle();
+  if(error || !t){ showAppAlert('Não foi possível abrir o documento assinado.', {title:'Termos de contratação'}); return; }
+  const nome = (t.dados && t.dados.nome) || (PEOPLE[t.student_id]||{}).name || 'Aluno';
+  const wrap = document.createElement('div');
+  wrap.className = 'app-confirm-backdrop'; wrap.id = 'termo-modal';
+  wrap.innerHTML = `
+    <div class="app-confirm-card termo-card" role="dialog" aria-labelledby="termo-tit">
+      <div class="termo-hd">${icon('file')}<h4 id="termo-tit">${escapeHtml(t.titulo)}</h4></div>
+      <p class="termo-aviso">${escapeHtml(nome)} · versão ${escapeHtml(t.versao)} · enviado em ${escapeHtml(tzDataHora(t.enviado_em, true))}</p>
+      <div class="termo-texto">${termoTextoHtml(t.texto)}</div>
+      <div class="termo-assinatura">${t.aceito_em
+        ? `${icon('check','tiny')} <b>Assinado eletronicamente</b> por ${escapeHtml(nome)}${t.dados && t.dados.cpf ? ', CPF '+escapeHtml(t.dados.cpf) : ''}, em ${escapeHtml(tzDataHora(t.aceito_em, true))}, com aceite no Essência PLAT. Código de verificação: <code>${escapeHtml(t.aceito_hash||'')}</code>`
+        : `<b>Ainda não assinado.</b> O termo está no sino do aluno aguardando o aceite.`}</div>
+      <div class="termo-acoes"><button type="button" class="btn-accent" id="termo-fim">Fechar</button></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector('#termo-fim').addEventListener('click', ()=>{ wrap.remove(); if(location.hash.startsWith('#termo=')) history.replaceState(null, '', location.pathname + location.search); });
+}
+document.addEventListener('click', e=>{
+  const a = e.target.closest && e.target.closest('a[href*="#termo="]'); if(!a) return;
+  const id = (a.getAttribute('href').split('#termo=')[1]||'').trim(); if(!id) return;
+  e.preventDefault(); termoVerArquivo(id);
+});
 function termoTituloFrase(t){ return 'Termos e Condições de Contratação do Método Essência'; }
 function termoAbrir(t){
   if(!t || document.getElementById('termo-modal')) return;
@@ -6021,6 +6051,7 @@ async function enterApp(){
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
   goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
   if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); setTimeout(scPreencherCasos, 1500); }
+  if(currentUserRole==='staff' && location.hash.startsWith('#termo=')) setTimeout(()=>termoVerArquivo(location.hash.slice(7)), 600);
   if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
   setTimeout(pwaConvidarInstalar, 2500);
   setTimeout(pushConvidar, 6000);
