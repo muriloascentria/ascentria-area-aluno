@@ -3219,6 +3219,15 @@
   .mc-st{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--bg-elev);}
   .mc-st-pronto{color:var(--individual);} .mc-st-postado,.mc-st-publicada{color:var(--success);}
   .mc-pub{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .mc-pasta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:4px 0 22px;padding:14px 16px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;background:var(--bg-card);}
+  .mc-pasta-tit{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;}
+  .mc-pasta-tit .icon{width:20px;height:20px;color:var(--accent);}
+  .mc-pasta-campo{flex:1;min-width:220px;display:flex;align-items:center;}
+  .mc-pasta-campo .ps-input{width:100%;margin:0;}
+  .mc-pasta-link{flex:1;min-width:0;font-size:13px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mc-pasta-acoes{display:flex;gap:8px;flex-wrap:wrap;}
+  .mc-pasta-acoes button,.mc-pasta-acoes a{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none;}
+  @media (max-width:700px){ .mc-pasta-tit{white-space:normal;} .mc-pasta-acoes{width:100%;} .mc-pasta-acoes>*{flex:1;justify-content:center;} }
   .mc-ativos{display:flex;flex-direction:column;gap:8px;}
   .mc-ativo{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
   .mc-ativo-rot{font-size:12.5px;font-weight:600;letter-spacing:.03em;}
@@ -17064,6 +17073,39 @@ async function mcCarregarExtras(){
   MC.carregando.extras = false;
   if(currentView==='marca') renderMarca();
 }
+/* Pasta do Drive onde o time sobe o conteúdo: link em marca_ativos (chave pasta_upload). Murilo edita e
+   salva; o editor vê o link com Copiar e Acessar (RLS mat_pasta_ver). */
+function mcPastaHtml(dono){
+  const v = String((MC.ativos||{}).pasta_upload||'').trim(), ok = /^https?:\/\//i.test(v);
+  return `<div class="mc-pasta">
+    <div class="mc-pasta-tit">${icon('folder')} Pasta do Drive para subir conteúdo</div>
+    ${dono ? `<div class="mc-pasta-campo"><input class="ps-input" id="mc-pasta-in" value="${escapeAttr(v)}" placeholder="Cole aqui o link da pasta do Drive"></div>`
+           : `<span class="mc-pasta-link" title="${escapeAttr(v)}">${v ? escapeHtml(v) : 'Link ainda não cadastrado'}</span>`}
+    <div class="mc-pasta-acoes">
+      ${dono ? `<button type="button" class="btn-accent" id="mc-pasta-salvar">${icon('check','tiny')} Salvar</button>` : ''}
+      <button type="button" class="btn-outline" id="mc-pasta-copiar" ${ok?'':'disabled'}>${icon('copy','tiny')} Copiar</button>
+      ${ok ? `<a class="btn-outline" href="${escapeAttr(v)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Acessar</a>` : `<button type="button" class="btn-outline" disabled>${icon('externallink','tiny')} Acessar</button>`}
+    </div>
+  </div>`;
+}
+function mcPastaBind(el){
+  const sal = el.querySelector('#mc-pasta-salvar');
+  if(sal) sal.addEventListener('click', async ()=>{
+    const v = el.querySelector('#mc-pasta-in').value.trim();
+    if(v && !/^https?:\/\//i.test(v)){ showAppAlert('Cole um link completo, começando com https://', {title:'Link da pasta'}); return; }
+    sal.disabled = true; sal.innerHTML = `${icon('check','tiny')} Salvando…`;
+    const { error } = await sb.from('marca_ativos').upsert({ chave:'pasta_upload', link:v, atualizado_em:new Date().toISOString() });
+    if(error){ sal.disabled = false; sal.innerHTML = `${icon('check','tiny')} Salvar`; showAppAlert('Não foi possível salvar: '+error.message, {title:'Link da pasta'}); return; }
+    MC.ativos = MC.ativos || {}; MC.ativos.pasta_upload = v; renderMarca();
+    const b = document.getElementById('mc-pasta-salvar'); if(b){ b.innerHTML = `${icon('check','tiny')} Salvo`; setTimeout(()=>{ const c = document.getElementById('mc-pasta-salvar'); if(c) c.innerHTML = `${icon('check','tiny')} Salvar`; }, 1600); }
+  });
+  const cp = el.querySelector('#mc-pasta-copiar');
+  if(cp) cp.addEventListener('click', async ()=>{
+    const v = String((MC.ativos||{}).pasta_upload||'').trim(); if(!v) return;
+    try{ await navigator.clipboard.writeText(v); cp.innerHTML = `${icon('check','tiny')} Copiado`; setTimeout(()=>{ cp.innerHTML = `${icon('copy','tiny')} Copiar`; }, 1600); }
+    catch(e){ showAppAlert(v, {title:'Copie o link'}); }
+  });
+}
 function mcAbrir(url){ const u = String(url||'').trim(); return /^https?:\/\//i.test(u) ? `<a class="mc-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener" title="Abrir">${icon('externallink','tiny')}</a>` : ''; }
 /* Seções recolhíveis no padrão do ePLAT (o mesmo cabeçalho da aba Tarefas e da Visão Geral). */
 const MC_ICONES = { gravar:'video', arqgrav:'folder', aulas:'film', funil:'chart', aval:'award', ativos:'folder', links:'externallink', ideias:'comment' };
@@ -17130,6 +17172,7 @@ function renderMarca(){
       <ul class="mc-ideias">${(MC.ideias||[]).map(i=>`<li class="${i.usada?'usada':''}"><label><input type="checkbox" data-mc-ideia="${i.id}" ${i.usada?'checked':''}> <span>${escapeHtml(i.texto)}</span></label><small>${tzDataCurta(String(i.criado_em).slice(0,10))}</small><button type="button" class="btn-mini" data-mc-ideia-del="${i.id}" title="Excluir">${icon('x','tiny')}</button></li>`).join('') || '<li class="mc-vazio">Nenhuma ideia registrada.</li>'}</ul>`;
   el.innerHTML = `
     <p class="section-sub" style="margin-top:0">${dono ? 'Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Postado" com o link do conteúdo, ele desce sozinho para a Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
+    ${mcPastaHtml(dono)}
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil, `${linhas.length} conteúdo${linhas.length===1?'':'s'}`)}
     ${mcSecao('aulas', 'AULAS PARA EDIÇÃO', MC.aulas===null ? '<div class="gt-atual-det">Carregando…</div>' : mcAulasHtml(dono, false), MC.aulas ? `${MC.aulas.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null)}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval, `${(MC.aval||[]).length} postado${(MC.aval||[]).length===1?'':'s'}`) : ''}
@@ -17139,6 +17182,7 @@ function renderMarca(){
   el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
   el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
   mcAulasBind(el);
+  mcPastaBind(el);
   el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>{ const pr = mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
   mcSalvarBind(el);
   mcExcluirBind(el);
