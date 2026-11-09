@@ -7097,6 +7097,7 @@ function setRoleVendas(){
   permitidas.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'flex'; });
   const grupo = document.getElementById('staff-group-label');
   if(grupo) grupo.style.display = 'flex';
+  document.getElementById('nav-prontuarios').style.display = 'none';
   /* eCRM: consultora vê, editor de vídeos não. */
   document.getElementById('nav-ecrm').style.display = currentUserRole==='vendas' ? 'flex' : 'none';
   document.getElementById('profile-dropdown-label').style.display = 'none';
@@ -17512,6 +17513,9 @@ function equipeViewPode(v){
 /* Acerta o menu lateral da equipe com as mesmas regras do Início (chamado ao trocar de modo e ao abrir o
    Início, porque algumas permissões, como Reuniões, só ficam conhecidas depois de carregar os dados). */
 function navSincronizarEquipe(){
+  /* Papéis restritos (consultora, editor) e as pré-visualizações deles: a barra mostra exatamente o que o papel abre. */
+  const restrito = viewsDoPapel();
+  if(restrito && currentUserRole!=='me_convidado'){ VIEWS_EQUIPE.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = restrito.includes(v) ? 'flex' : 'none'; }); return; }
   /* Fora do modo Equipe Interna (aluno de verdade, ou a equipe vendo como aluno), nenhuma área da equipe aparece. */
   if(currentUserRole!=='staff' || currentRole==='aluno'){ VIEWS_EQUIPE.forEach(v=>{ const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = 'none'; }); return; }
   VIEWS_EQUIPE.forEach(v=>{ if(v==='equipe') return; const el = document.querySelector(`.nav-item[data-view="${v}"]`); if(el) el.style.display = equipeViewPode(v) ? 'flex' : 'none'; });
