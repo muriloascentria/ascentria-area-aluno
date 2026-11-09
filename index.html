@@ -2361,6 +2361,25 @@
   .notif-item.notif-e27 .notif-txt small{white-space:normal;}
   .e27-ic{background:linear-gradient(135deg,#25d366,#128c4a)!important;color:#fff!important;box-shadow:0 0 12px rgba(37,211,102,.6);}
   .e27-pill{background:linear-gradient(135deg,#5fe08f,#1fa855)!important;color:#05290f!important;}
+  .notif-item.notif-termo{border-left-color:var(--accent);}
+  .notif-item.notif-termo .notif-txt small{white-space:normal;}
+  .termo-ic{background:var(--accent)!important;color:#fff!important;}
+  .termo-pill{background:var(--accent)!important;color:#fff!important;}
+  .termo-card{max-width:720px;width:min(720px,94vw);text-align:left;max-height:92vh;display:flex;flex-direction:column;}
+  .termo-hd{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .termo-hd .icon{width:22px;height:22px;color:var(--accent);flex-shrink:0;}
+  .termo-hd h4{margin:0;font-size:16px;line-height:1.3;}
+  .termo-aviso{font-size:13px;color:var(--text-dim);margin:0 0 10px;}
+  .termo-texto{flex:1;min-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.55;background:var(--bg);}
+  .termo-texto h5{font-size:13.5px;margin:16px 0 6px;letter-spacing:.3px;}
+  .termo-texto p{margin:0 0 8px;}
+  .termo-texto .termo-parte{font-weight:600;}
+  .termo-chk{display:flex;gap:8px;align-items:flex-start;margin:12px 0 4px;font-size:14px;font-weight:600;cursor:pointer;}
+  .termo-chk input{margin-top:3px;width:17px;height:17px;flex-shrink:0;}
+  .termo-acoes{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:10px;}
+  .termo-acoes .btn-accent{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;border-radius:10px;background:var(--accent);color:#fff;border:none;font:inherit;font-weight:800;font-size:14.5px;cursor:pointer;}
+  .termo-acoes .btn-accent:disabled{opacity:.4;cursor:not-allowed;}
+  .termo-erro{color:var(--danger,#d9534f);font-size:13px;margin:8px 0 0;}
   .e27-card{max-width:440px;text-align:center;border-color:rgba(37,211,102,.45);box-shadow:0 0 0 1px rgba(37,211,102,.15),0 18px 50px rgba(0,0,0,.5),0 0 40px rgba(37,211,102,.12);}
   .e27-card h4{font-size:19px;margin:10px 0 8px;}
   .e27-card p{font-size:14px;line-height:1.55;color:var(--text-dim);margin:0 0 12px;}
@@ -4491,6 +4510,56 @@ function pendenciasDoSino(){
    aparece até a pessoa responder ("Agora não" guarda visto_em); o aviso do sino fica até ela entrar.
    Quem decide se já está liberado é o banco (comunidade_e27_pendente). */
 let E27 = null;
+/* Termos de contratação enviados pela equipe para o aluno ler e aceitar (tabela termos_contratacao).
+   Pendente aparece no sino; o aceite (botão "Concordo") grava data, hora e o hash do texto aceito. */
+let TERMOS_PEND = [];
+async function termosCarregar(){
+  try{
+    const { data, error } = await sb.from('termos_contratacao').select('id,titulo,texto,versao,enviado_em,aceito_em').eq('student_id', currentUser.id).is('aceito_em', null).order('enviado_em');
+    if(error) throw error;
+    TERMOS_PEND = data || [];
+  }catch(e){ console.error('termos', e); TERMOS_PEND = []; }
+  updateNotifBadge();
+}
+function termoTextoHtml(t){
+  return String(t||'').split(/\n\s*\n/).map((bl,i)=>{
+    const x = bl.trim(); if(!x || i===0) return '';
+    if(/^\d+\.\s+[A-ZÀ-Ú]/.test(x) && x===x.toUpperCase()) return `<h5>${escapeHtml(x)}</h5>`;
+    if(/^CONTRATANTE:/.test(x)) return `<p class="termo-parte">${escapeHtml(x)}</p>`;
+    return `<p>${escapeHtml(x)}</p>`;
+  }).join('');
+}
+function termoTituloFrase(t){ return 'Termos e Condições de Contratação do Método Essência'; }
+function termoAbrir(t){
+  if(!t || document.getElementById('termo-modal')) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'app-confirm-backdrop'; wrap.id = 'termo-modal';
+  wrap.innerHTML = `
+    <div class="app-confirm-card termo-card" role="dialog" aria-labelledby="termo-tit">
+      <div class="termo-hd">${icon('file')}<h4 id="termo-tit">${escapeHtml(t.titulo)}</h4></div>
+      <p class="termo-aviso">Leia com atenção até o final. Ao clicar em <strong>Concordo</strong>, o seu aceite fica registrado com data e hora.</p>
+      <div class="termo-texto" id="termo-texto" tabindex="0">${termoTextoHtml(t.texto)}</div>
+      <label class="termo-chk"><input type="checkbox" id="termo-li"> Li e concordo com os ${escapeHtml(termoTituloFrase(t))}.</label>
+      <div class="termo-acoes">
+        <button type="button" class="e27-depois" id="termo-depois">Ler depois</button>
+        <button type="button" class="btn-accent" id="termo-ok" disabled>${icon('check','tiny')} Concordo</button>
+      </div>
+      <p class="termo-erro" id="termo-erro" hidden></p>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = ()=>wrap.remove();
+  const chk = wrap.querySelector('#termo-li'), ok = wrap.querySelector('#termo-ok');
+  chk.addEventListener('change', ()=>{ ok.disabled = !chk.checked; });
+  wrap.querySelector('#termo-depois').addEventListener('click', fechar);
+  ok.addEventListener('click', async ()=>{
+    ok.disabled = true; ok.innerHTML = `${icon('check','tiny')} Registrando…`;
+    const { data, error } = await sb.rpc('termos_aceitar', { p_id: t.id, p_user_agent: navigator.userAgent });
+    if(error){ const e = wrap.querySelector('#termo-erro'); e.hidden = false; e.textContent = 'Não foi possível registrar o aceite. Tente de novo em instantes.'; ok.disabled = false; ok.innerHTML = `${icon('check','tiny')} Concordo`; return; }
+    TERMOS_PEND = TERMOS_PEND.filter(x=>x.id!==t.id); updateNotifBadge();
+    wrap.querySelector('.termo-card').innerHTML = `<div class="termo-hd">${icon('check')}<h4>Aceite registrado</h4></div><p>Obrigado! O seu aceite dos ${escapeHtml(termoTituloFrase(t))} foi registrado em <strong>${escapeHtml(tzDataHora(data||new Date().toISOString(), true))}</strong>.</p><div class="termo-acoes"><button type="button" class="btn-accent" id="termo-fim">Fechar</button></div>`;
+    wrap.querySelector('#termo-fim').addEventListener('click', fechar);
+  });
+}
 /* Alerta de tarefas vencidas: a Mariane liga, no Painel de Tarefas Vencidas (aba Tarefas), o alerta
    de um membro do time; enquanto estiver ligado e ele tiver tarefa vencida, o sino dele fica vermelho
    com o aviso. Some sozinho quando ele zera as vencidas ou quando a Mariane desliga. */
@@ -5874,6 +5943,7 @@ async function bootstrapData(){
   if(currentUserRole!=='aluno') onda.push(carregarRecadoDia(), tvCarregar());
   if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios(), acessoCarregar());
   else if(msgSouMentorado()) onda.push(msgBootstrap(), e27Carregar());
+  if(currentUserRole==='aluno') onda.push(termosCarregar());
 
   /* Listas que só a equipe interna carrega — o aluno nunca faz estas consultas, então esse conteúdo
      jamais chega ao navegador dele (nem via RLS, nem por não pedir). */
@@ -6911,7 +6981,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0);
+  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0) + (currentRole==='aluno' ? TERMOS_PEND.length : 0);
   if(typeof appBadge==='function') appBadge(pend.length + tf);
   const sinoBtn = document.getElementById('notif-btn');
   const tvOn = currentRole!=='aluno' && typeof tvAtivo==='function' && tvAtivo();
@@ -6985,6 +7055,9 @@ function notifItens(){
     const n = Number(TV_ALERTA.vencidas);
     itens.unshift({ tipo:'vencidas', quando:TV_ALERTA.ativado_em, titulo:`Você tem ${n} tarefa${n>1?'s':''} vencida${n>1?'s':''}`, sub:'A Mariane pediu que você finalize as tarefas em atraso. Abra suas tarefas e conclua as que estão com o prazo vencido.', acao: ()=>{ if(typeof tarefasUI!=='undefined'){ tarefasUI.aba='minhas'; } goTo('tarefas'); } });
   }
+  if(currentRole==='aluno') TERMOS_PEND.forEach(t=>{
+    itens.push({ tipo:'termo', quando:t.enviado_em, titulo:'Leia e concorde com os Termos e Condições de Contratação', sub:'A Ascentria enviou os termos da sua contratação do Método Essência para você ler e confirmar.', acao: ()=>termoAbrir(t) });
+  });
   pendenciasDoSino().forEach(x=>{
     const c = x.course_id && typeof getCourse==='function' ? getCourse(x.course_id) : null;
     const onde = c ? `na aula "${c.title}"` : 'na Comunidade';
@@ -7055,7 +7128,7 @@ function notifPainelHtml(){
   const itens = notifItens();
   const av = (it)=> it.grupo ? msgGrupoAvatar(34, it.grupo) : it.avatarDe ? msgAvatarDe(it.avatarDe, 34) : `<span class="notif-ic">${icon(it.icone||'bell','tiny')}</span>`;
   return `<div class="notif-hd"><strong>Notificações</strong>${itens.length ? `<span class="msg-badge">${itens.length}</span>` : ''}</div>
-    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='vencidas' ? `<button type="button" class="notif-item notif-bv notif-tv" data-notif="${i}"><span class="notif-ic tv-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts tv-pill">Finalizar tarefas vencidas</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">Entrar na comunidade E27</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
+    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='vencidas' ? `<button type="button" class="notif-item notif-bv notif-tv" data-notif="${i}"><span class="notif-ic tv-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts tv-pill">Finalizar tarefas vencidas</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='termo' ? `<button type="button" class="notif-item notif-bv notif-termo" data-notif="${i}"><span class="notif-ic termo-ic">${icon('file','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts termo-pill">Ler e concordar</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">Entrar na comunidade E27</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
 }
 function notifPainelEl(){
   let p = document.getElementById('notif-painel');
