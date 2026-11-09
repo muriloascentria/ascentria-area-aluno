@@ -18441,8 +18441,8 @@ function anDestHtml(){
     return `
       <div class="an-dest">
         <div class="an-dest-hd">
-          <span class="an-dest-pin">${icon('award','tiny')} Destaque fixado</span>
-          <h3>Análise feita por ${escapeHtml(autor||'—')}</h3>
+          <span class="an-dest-pin">${icon('award','tiny')} ${itens.every(d=>/treinamento/i.test(d.titulo||'')) ? 'Treinamento obrigatório' : 'Destaque fixado'}</span>
+          <h3>${itens.every(d=>/treinamento/i.test(d.titulo||'')) ? 'Treinamento com' : 'Análise feita por'} ${escapeHtml(autor||'—')}</h3>
         </div>
         <div class="an-dest-lista">${itens.map(d=>{
           const u = String(d.link||'').trim(); const ok = /^https?:\/\//i.test(u);
