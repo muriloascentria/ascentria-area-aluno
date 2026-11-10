@@ -17391,7 +17391,10 @@ function mcMateriaisHtml(){
   const lnk = (a,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-mt" data-mc-mt="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}" placeholder="Link do Drive">${mcAbrir(a[k])}</div>`
                                : (String(a[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(a[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
   const quem = id=>{ const p = id && (typeof msgQuem==='function' ? msgQuem(id) : null); return p ? p.name.split(' ')[0] : (id===MC_DIEGO ? 'Diego' : id ? 'Murilo' : ''); };
-  return `<table class="mc-tab">
+  /* Fila: bruto enviado e ainda sem o link do editado (o mesmo critério do aviso do funil). */
+  const fila = lista.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length;
+  return `${fila ? `<div class="mc-aviso">${icon('film','tiny')} ${fila} ${fila===1?'material na fila':'materiais na fila'} para edição</div>` : ''}
+  <table class="mc-tab">
     <colgroup><col style="width:11%"><col style="width:17%"><col style="width:18%"><col style="width:16%"><col style="width:16%"><col style="width:9%"><col style="width:13%"></colgroup>
     <thead><tr><th>Data</th><th>Material</th><th>Descrição</th><th>Bruto</th><th>Editado</th><th>Enviado por</th><th>Status</th></tr></thead>
     <tbody>${lista.map(a=>{
@@ -17430,7 +17433,7 @@ function mcMateriaisBind(el){
     MC.materiais.unshift(data); renderMarca();
   });
 }
-function mcMatQtd(){ return MC.materiais ? `${MC.materiais.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null; }
+function mcMatQtd(){ return MC.materiais ? `${MC.materiais.length} material${MC.materiais.length===1?'':'is'}` : null; }
 function mcSecao(id, titulo, corpo, qtd){
   const aberto = !MC.fechado[id];
   return `<div class="vg-sec-head" data-mc-toggle="${id}">
