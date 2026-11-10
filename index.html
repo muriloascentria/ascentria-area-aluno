@@ -3245,7 +3245,11 @@
   tr.mc-esperando td{background:var(--individual-soft);}
   .mc-aviso{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--individual);font-weight:600;}
   .mc-st{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--bg-elev);}
-  .mc-st-pronto{color:var(--individual);} .mc-st-postado,.mc-st-publicada{color:var(--success);}
+  .mc-st-nao-iniciado{color:var(--text-mute);}
+  .mc-rede{font-size:12px;font-weight:700;}
+  .mc-rede-tiktok{color:var(--text-mute);}
+  .mc-sem-ed{color:var(--text-mute);font-size:12px;}
+  .mc-st-pronto{color:var(--individual);} .mc-st-postado,.mc-st-publicada,.mc-st-publicado{color:var(--success);}
   .mc-pub{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;cursor:pointer;}
   .mc-pasta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:4px 0 22px;padding:14px 16px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;background:var(--bg-card);}
   .mc-pasta-tit{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;}
@@ -17116,7 +17120,9 @@ function fsBindMurilo(el){
    "Pronto"). Conteúdo marcado "Publicado" com link entra sozinho na Avaliação de Conteúdo.
    Tabelas marca_funil, marca_ideias e marca_avaliacao. */
 const MC_DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-const MC_STATUS = ['Produzindo','Pronto','Postado'];
+const MC_STATUS = ['Não iniciado','Produzindo','Pronto','Postado'];
+const MC_REDES = ['Instagram','YouTube','TikTok'];
+const MC_MAT_ST = ['Não iniciado','Produzindo','Pronto','Publicado'];
 const MC_AVAL = [['link','Link'],['data_funil','Data no Funil'],['views','Views'],['shared','Shared'],['saved','Saved'],['likes','Likes'],['views_seg','Views Seguidores'],['views_nao_seg','Views Não Seguidores'],['insights','Insights']];
 /* Materiais da marca: um link (pasta ou arquivo do Drive) para cada item, na tabela marca_ativos. */
 const MC_ATIVOS = [['manual','Manual de Marca da Ascentria'],['timbrado','Papel Timbrado da Ascentria'],['logo_consultorio','Logotipo Consultório Simulado'],['logo_plantao','Logotipo Plantão de Dúvidas'],['logo_mastermind','Logotipo Mastermind'],['logo_treinamento','Logotipo Treinamento de Vendas'],['template_mastermind','Template Apresentação Mastermind']];
@@ -17124,12 +17130,16 @@ const MC_LINKS = [['site_murilo','WEBSITE MURILO PEDROSO'],['site_metodo','WEBSI
 const MC_CURSOS = ['Pós-Graduação','Método Essência'];
 const MC_GRAV_CURSOS = ['Pós-Graduação','Método Essência','Mentoria'];
 const MC_GRAV_ST = ['Não iniciado','Produzindo','Gravando','Em edição','Finalizado'];
-const MC_AULA_ST = ['Produzindo','Pronto','Publicada'];
-const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, aulas:null, gravar:null, carregando:{}, semeando:{}, fechado:{} };
+const MC_AULA_ST = ['Não iniciado','Produzindo','Pronto','Publicada'];
+const MC = { semana:null, funil:{}, ideias:null, aval:null, ativos:null, aulas:null, gravar:null, materiais:null, carregando:{}, semeando:{}, fechado:{} };
 function mcSouDono(){ return souMurilo() || (currentUserProfile && currentUserProfile.espelhoDe===GT_MURILO_UID); }
 const MC_MARIANE = 'b01a4425-1ba8-4703-9c40-3301a0de7249';
 function mcSouMariane(){ return currentUserRole==='staff' && currentUser && idEfetivo()===MC_MARIANE; }
-function mcPode(){ return mcSouDono() || mcSouMariane() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
+/* Diego: só a seção Materiais em Vídeo para Edição (sobe o bruto para o editor). */
+const MC_DIEGO = '8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc';
+function mcSouDiego(){ return currentUserRole==='staff' && !!currentUser && idEfetivo()===MC_DIEGO; }
+function mcStCls(st){ return 'mc-st-'+String(st||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-'); }
+function mcPode(){ return mcSouDono() || mcSouMariane() || mcSouDiego() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
 function mcEditaTudo(){ return souMurilo() && currentRole!=='editor'; }
 /* Esta semana e as três seguintes (a semana passada não aparece no topo). */
 function mcSemanas(){ return [0,1,2,3].map(o=>fsSemana(-o)); }
@@ -17250,7 +17260,7 @@ function mcAulasHtml(dono, mariane){
         <td>${lnk(a,'editado',!mariane)}</td>
         <td>${dono ? `<div class="mc-stcel"><select class="ps-input mc-au" data-mc-au="${a.id}" data-mc-k="status">${MC_AULA_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select><button type="button" class="mc-del" data-mc-del="aula:${a.id}" title="Excluir a linha">${icon('trash','tiny')}</button></div>`
               : mariane && (subir || a.status==='Publicada') ? `<label class="mc-pub"><input type="checkbox" data-mc-pub="${a.id}" ${a.status==='Publicada'?'checked':''}> Publicada</label>`
-              : `<span class="mc-st mc-st-${escapeAttr((a.status||'').toLowerCase())}">${escapeHtml(a.status||'')}</span>`}</td>
+              : `<span class="mc-st ${mcStCls(a.status)}">${escapeHtml(a.status||'')}</span>`}</td>
       </tr>`; }).join('') || `<tr><td colspan="6" class="mc-vazio">Nenhuma aula para edição.</td></tr>`}</tbody>
   </table>
   ${dono ? `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add-aula">${icon('plus','tiny')}<span>Adicionar aula</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>` : `<div class="mc-acoes"><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>`}`;
@@ -17260,19 +17270,19 @@ const MC_PEND = new Set();
 function mcExcluirBind(el){
   el.querySelectorAll('[data-mc-del]').forEach(b=>b.addEventListener('click', async ()=>{
     const [tipo, idS] = b.dataset.mcDel.split(':'), id = Number(idS);
-    if(!(await showAppConfirm(tipo==='aula' ? 'Excluir esta aula da lista?' : 'Excluir esta linha do funil?', {title:'Excluir', confirmLabel:'Excluir'}))) return;
-    const { error } = await sb.from(tipo==='aula' ? 'marca_aulas' : 'marca_funil').delete().eq('id', id);
+    if(!(await showAppConfirm(tipo==='aula' ? 'Excluir esta aula da lista?' : tipo==='mat' ? 'Excluir este material da lista?' : 'Excluir esta linha do funil?', {title:'Excluir', confirmLabel:'Excluir'}))) return;
+    const { error } = await sb.from(tipo==='aula' ? 'marca_aulas' : tipo==='mat' ? 'marca_materiais' : 'marca_funil').delete().eq('id', id);
     if(error){ alert('Não foi possível excluir: '+error.message); return; }
     if(tipo==='aula') MC.aulas = (MC.aulas||[]).filter(x=>x.id!==id);
+    else if(tipo==='mat') MC.materiais = (MC.materiais||[]).filter(x=>x.id!==id);
     else Object.keys(MC.funil).forEach(k=>{ MC.funil[k] = (MC.funil[k]||[]).filter(x=>x.id!==id); });
     renderMarca();
   }));
 }
 function mcSalvarBind(el){
   el.querySelectorAll('[data-mc-salvar]').forEach(b=>b.addEventListener('click', async ()=>{
-    const marcar = (txt, salvo, travado)=>document.querySelectorAll('[data-mc-salvar]').forEach(x=>{
-      const sp = x.querySelector('span'); if(sp) sp.textContent = txt; x.disabled = !!travado; x.classList.toggle('salvo', !!salvo);
-    });
+    /* Só o botão clicado muda: cada quadro tem o seu Salvar. */
+    const marcar = (txt, salvo, travado)=>{ const sp = b.querySelector('span'); if(sp) sp.textContent = txt; b.disabled = !!travado; b.classList.toggle('salvo', !!salvo); };
     marcar('Salvando…', false, true);
     if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
     try{
@@ -17291,7 +17301,7 @@ function mcAulasBind(el){
       if(!mcEditaTudo()){ if(k!=='editado') return; res = await sb.rpc('marca_salvar_editado_aula', { p_id:id, p_link:v }); }
       else {
         const patch = { [k]:v, atualizado_em:new Date().toISOString() };
-        if(k==='editado'){ patch.editado_em = patch.atualizado_em; patch.editado_por = currentUser.id; if(v.trim() && a.status==='Produzindo') patch.status = 'Pronto'; }
+        if(k==='editado'){ patch.editado_em = patch.atualizado_em; patch.editado_por = currentUser.id; if(v.trim() && ['Não iniciado','Produzindo'].includes(a.status)) patch.status = 'Pronto'; }
         res = await sb.from('marca_aulas').update(patch).eq('id', id).select().single();
       }
       if(res.error) throw res.error; Object.assign(a, res.data); renderMarca();
@@ -17359,7 +17369,68 @@ function mcPastaBind(el){
 }
 function mcAbrir(url){ const u = String(url||'').trim(); return /^https?:\/\//i.test(u) ? `<a class="mc-abrir" href="${escapeAttr(u)}" target="_blank" rel="noopener" title="Abrir">${icon('externallink','tiny')}</a>` : ''; }
 /* Seções recolhíveis no padrão do ePLAT (o mesmo cabeçalho da aba Tarefas e da Visão Geral). */
-const MC_ICONES = { gravar:'video', arqgrav:'folder', aulas:'film', funil:'chart', aval:'award', ativos:'folder', links:'externallink', ideias:'comment' };
+const MC_ICONES = { materiais:'video', gravar:'video', arqgrav:'folder', aulas:'film', funil:'chart', aval:'award', ativos:'folder', links:'externallink', ideias:'comment' };
+/* Materiais em vídeo para edição (aulas e outros vídeos, diferentes do funil): o Murilo e o Diego
+   sobem o bruto, o editor devolve o editado. Tabela marca_materiais. */
+async function mcCarregarMateriais(){
+  if(MC.carregando.mat) return; MC.carregando.mat = true;
+  try{
+    const d = gtData(gtHojeISO()); d.setDate(d.getDate()-60);
+    const { data, error } = await sb.from('marca_materiais').select('*').or(`status.neq.Publicado,data.gte.${gtISO(d)}`).order('data', {ascending:false}).order('id', {ascending:false});
+    if(error) throw error; MC.materiais = data || [];
+  }catch(e){ console.error('marca_materiais', e); MC.materiais = MC.materiais || []; }
+  MC.carregando.mat = false;
+  if(currentView==='marca') renderMarca();
+}
+function mcMatPodeEnviar(){ return mcEditaTudo() || mcSouDiego(); }
+function mcMateriaisHtml(){
+  if(MC.materiais===null){ mcCarregarMateriais(); return '<div class="gt-atual-det">Carregando…</div>'; }
+  const envia = mcMatPodeEnviar(), editor = !envia;
+  const lista = MC.materiais;
+  const fmt = iso=>iso ? iso.slice(8,10)+'/'+iso.slice(5,7) : '';
+  const lnk = (a,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-mt" data-mc-mt="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}" placeholder="Link do Drive">${mcAbrir(a[k])}</div>`
+                               : (String(a[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(a[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
+  const quem = id=>{ const p = id && (typeof msgQuem==='function' ? msgQuem(id) : null); return p ? p.name.split(' ')[0] : (id===MC_DIEGO ? 'Diego' : id ? 'Murilo' : ''); };
+  return `<table class="mc-tab">
+    <colgroup><col style="width:11%"><col style="width:17%"><col style="width:18%"><col style="width:16%"><col style="width:16%"><col style="width:9%"><col style="width:13%"></colgroup>
+    <thead><tr><th>Data</th><th>Material</th><th>Descrição</th><th>Bruto</th><th>Editado</th><th>Enviado por</th><th>Status</th></tr></thead>
+    <tbody>${lista.map(a=>{
+      const esperando = String(a.bruto||'').trim() && !String(a.editado||'').trim();
+      return `<tr class="${esperando?'mc-esperando':''}">
+        <td>${envia ? `<input type="date" class="ps-input mc-mt" data-mc-mt="${a.id}" data-mc-k="data" value="${escapeAttr(a.data||'')}">` : `<span class="mc-data">${fmt(a.data)}</span>`}</td>
+        <td>${envia ? `<input class="ps-input mc-mt" data-mc-mt="${a.id}" data-mc-k="titulo" value="${escapeAttr(a.titulo||'')}" placeholder="Nome do vídeo">` : `<span class="mc-txt">${escapeHtml(a.titulo||'')}</span>`}</td>
+        <td>${envia ? `<input class="ps-input mc-mt" data-mc-mt="${a.id}" data-mc-k="descricao" value="${escapeAttr(a.descricao||'')}" placeholder="O que fazer na edição">` : `<span class="mc-txt">${escapeHtml(a.descricao||'')}</span>`}</td>
+        <td>${lnk(a,'bruto',envia)}</td>
+        <td>${lnk(a,'editado',true)}</td>
+        <td><span class="mc-txt">${escapeHtml(quem(a.enviado_por))}</span></td>
+        <td>${envia ? `<div class="mc-stcel"><select class="ps-input mc-mt" data-mc-mt="${a.id}" data-mc-k="status">${MC_MAT_ST.map(x=>`<option ${x===a.status?'selected':''}>${x}</option>`).join('')}</select><button type="button" class="mc-del" data-mc-del="mat:${a.id}" title="Excluir a linha">${icon('trash','tiny')}</button></div>`
+              : `<span class="mc-st ${mcStCls(a.status)}">${escapeHtml(a.status||'')}</span>`}</td>
+      </tr>`; }).join('') || `<tr><td colspan="7" class="mc-vazio">Nenhum material para edição.</td></tr>`}</tbody>
+  </table>
+  <div class="mc-acoes">${envia ? `<button type="button" class="btn-outline mc-btn" id="mc-add-mat">${icon('plus','tiny')}<span>Adicionar material</span></button>` : ''}<button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>`;
+}
+function mcMateriaisBind(el){
+  el.querySelectorAll('.mc-mt').forEach(i=>i.addEventListener('change', ()=>{ const pr = (async ()=>{
+    const id = Number(i.dataset.mcMt), k = i.dataset.mcK, v = i.value, a = (MC.materiais||[]).find(x=>x.id===id); if(!a) return;
+    try{
+      let res;
+      if(!mcMatPodeEnviar()){ if(k!=='editado') return; res = await sb.rpc('marca_salvar_editado_material', { p_id:id, p_link:v }); }
+      else {
+        const patch = { [k]:v, atualizado_em:new Date().toISOString() };
+        if(k==='editado'){ patch.editado_em = patch.atualizado_em; patch.editado_por = currentUser.id; if(v.trim() && ['Não iniciado','Produzindo'].includes(a.status)) patch.status = 'Pronto'; }
+        res = await sb.from('marca_materiais').update(patch).eq('id', id).select().single();
+      }
+      if(res.error) throw res.error; Object.assign(a, res.data); renderMarca();
+    }catch(e){ alert('Não foi possível salvar: '+((e&&e.message)||'')); }
+  })(); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
+  const add = el.querySelector('#mc-add-mat');
+  if(add) add.addEventListener('click', async ()=>{
+    const { data, error } = await sb.from('marca_materiais').insert({ data:gtHojeISO(), enviado_por:idEfetivo() }).select().single();
+    if(error){ alert('Não foi possível adicionar: '+error.message); return; }
+    MC.materiais.unshift(data); renderMarca();
+  });
+}
+function mcMatQtd(){ return MC.materiais ? `${MC.materiais.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null; }
 function mcSecao(id, titulo, corpo, qtd){
   const aberto = !MC.fechado[id];
   return `<div class="vg-sec-head" data-mc-toggle="${id}">
@@ -17373,6 +17444,13 @@ function renderMarca(){
   const el = document.getElementById('view-marca'); if(!el) return;
   if(!mcPode()){ el.innerHTML = '<div class="empty-state">Esta área é do Murilo e do editor de vídeos.</div>'; return; }
   const dono = mcEditaTudo();
+  if(!dono && mcSouDiego()){
+    el.innerHTML = `<p class="section-sub" style="margin-top:0">Suba aqui os vídeos para o editor: cole em BRUTO o link da pasta do Drive. Quando ele terminar, o link do vídeo pronto aparece em EDITADO.</p>
+      ${mcSecao('materiais', 'MATERIAIS EM VÍDEO PARA EDIÇÃO', mcMateriaisHtml(), mcMatQtd())}`;
+    el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
+    mcMateriaisBind(el); mcSalvarBind(el); mcExcluirBind(el);
+    return;
+  }
   if(MC.aulas===null) mcCarregarAulas();
   if(!dono && mcSouMariane()){
     const prontas = (MC.aulas||[]).filter(a=>a.status==='Pronto').length;
@@ -17386,8 +17464,8 @@ function renderMarca(){
   let sem = MC.semana && semanas.includes(MC.semana) ? MC.semana : semanas[0];
   if(MC.funil[sem]===undefined){ el.innerHTML = '<div class="empty-state">Carregando o funil…</div>'; mcCarregarSemana(sem); return; }
   if(MC.ativos===null) mcCarregarExtras();
-  const linhas = (MC.funil[sem] || []).slice().sort((a,b)=>(a.data||mcDataISO(sem,a.dia)).localeCompare(b.data||mcDataISO(sem,b.dia)) || (a.ordem-b.ordem) || (a.id-b.id));
-  const paraEditar = linhas.filter(r=>String(r.bruto||'').trim() && !String(r.editado||'').trim()).length;
+  const linhas = (MC.funil[sem] || []).filter(r=>mcSouDono() || r.rede!=='TikTok').slice().sort((a,b)=>(a.data||mcDataISO(sem,a.dia)).localeCompare(b.data||mcDataISO(sem,b.dia)) || (a.ordem-b.ordem) || (a.id-b.id));
+  const paraEditar = linhas.filter(r=>r.rede!=='TikTok' && String(r.bruto||'').trim() && !String(r.editado||'').trim()).length;
   const txt = (r,k,ph)=> dono ? `<input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${escapeAttr(ph||'')}">` : `<span class="mc-txt">${escapeHtml(r[k]||'')}</span>`;
   const lnk = (r,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${k==='link'?'Link do post':'Link do Drive'}">${mcAbrir(r[k])}</div>`
                                 : (String(r[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(r[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
@@ -17395,18 +17473,21 @@ function renderMarca(){
     <div class="fs-semanas">${semanas.map((x,n)=>`<button type="button" class="filter-tab ${x===sem?'active':''}" data-mc-sem="${x}">${n===0?'ESTA SEMANA':fsRotSemana(x)}</button>`).join('')}</div>
     ${paraEditar ? `<div class="mc-aviso">${icon('film','tiny')} ${paraEditar} ${paraEditar===1?'vídeo esperando':'vídeos esperando'} edição nesta semana</div>` : ''}
     <table class="mc-tab">
-      <colgroup><col style="width:10%"><col style="width:8%"><col style="width:12%"><col style="width:11%"><col style="width:14%"><col style="width:7%"><col style="width:12%"><col style="width:12%"><col style="width:14%"></colgroup>
-      <thead><tr><th>Data</th><th>Dia</th><th>Link do Conteúdo</th><th>Objetivo</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
+      <colgroup><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:13%"><col style="width:7%"><col style="width:11%"><col style="width:11%"><col style="width:11%"></colgroup>
+      <thead><tr><th>Data</th><th>Dia</th><th>Rede</th><th>Link do Conteúdo</th><th>Objetivo</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
       <tbody>${linhas.map(r=>{
-        const esperando = String(r.bruto||'').trim() && !String(r.editado||'').trim();
+        const tiktok = r.rede==='TikTok';
+        const esperando = !tiktok && String(r.bruto||'').trim() && !String(r.editado||'').trim();
+        const semEd = `<span class="mc-sem-ed" title="TikTok não passa pela edição">sem edição</span>`;
         return `<tr class="${esperando?'mc-esperando':''}">
           <td>${dono ? `<input type="date" class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="data" value="${escapeAttr(r.data || mcDataISO(sem, r.dia))}">` : `<span class="mc-data">${mcData(sem, r.dia, r.data)}</span>`}</td>
           <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="dia">${MC_DIAS.map(d=>`<option ${d===r.dia?'selected':''}>${d}</option>`).join('')}</select>` : `<b>${escapeHtml(r.dia)}</b>`}</td>
+          <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="rede">${MC_REDES.map(x=>`<option ${x===(r.rede||'Instagram')?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="mc-rede">${escapeHtml(r.rede||'Instagram')}</span>`}</td>
           <td>${lnk(r,'link',dono)}</td>
           <td>${txt(r,'objetivo','Consciência')}</td><td>${txt(r,'descricao')}</td><td>${txt(r,'formato','Reels…')}</td>
-          <td>${lnk(r,'bruto',dono)}</td>
-          <td>${lnk(r,'editado',true)}</td>
-          <td>${dono ? `<div class="mc-stcel"><select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="status">${MC_STATUS.map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select><button type="button" class="mc-del" data-mc-del="funil:${r.id}" title="Excluir a linha">${icon('trash','tiny')}</button></div>` : `<span class="mc-st mc-st-${escapeAttr((r.status||'').toLowerCase())}">${escapeHtml(r.status||'')}</span>`}</td>
+          <td>${tiktok ? semEd : lnk(r,'bruto',dono)}</td>
+          <td>${tiktok ? semEd : lnk(r,'editado',true)}</td>
+          <td>${dono ? `<div class="mc-stcel"><select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="status">${MC_STATUS.map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select><button type="button" class="mc-del" data-mc-del="funil:${r.id}" title="Excluir a linha">${icon('trash','tiny')}</button></div>` : `<span class="mc-st ${mcStCls(r.status)}">${escapeHtml(r.status||'')}</span>`}</td>
         </tr>`; }).join('')}</tbody>
     </table>
     ${dono ? `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add">${icon('plus','tiny')}<span>Adicionar conteúdo</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>` : `<div class="mc-acoes"><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>`}`;
@@ -17426,6 +17507,7 @@ function renderMarca(){
     ${mcPastaHtml(dono)}
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil, `${linhas.length} conteúdo${linhas.length===1?'':'s'}`)}
     ${mcSecao('aulas', 'AULAS PARA EDIÇÃO', MC.aulas===null ? '<div class="gt-atual-det">Carregando…</div>' : mcAulasHtml(dono, false), MC.aulas ? `${MC.aulas.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null)}
+    ${mcSecao('materiais', 'MATERIAIS EM VÍDEO PARA EDIÇÃO', mcMateriaisHtml(), mcMatQtd())}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval, `${(MC.aval||[]).length} postado${(MC.aval||[]).length===1?'':'s'}`) : ''}
     ${dono ? mcSecao('ativos', 'MATERIAIS DA MARCA', ativos) : ''}
     ${dono ? mcSecao('links', 'LINKS IMPORTANTES', links) : ''}
@@ -17433,6 +17515,7 @@ function renderMarca(){
   el.querySelectorAll('[data-mc-toggle]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.mcToggle; MC.fechado[k] = !MC.fechado[k]; renderMarca(); }));
   el.querySelectorAll('[data-mc-sem]').forEach(b=>b.addEventListener('click', ()=>{ MC.semana = b.dataset.mcSem; renderMarca(); }));
   mcAulasBind(el);
+  mcMateriaisBind(el);
   mcPastaBind(el);
   el.querySelectorAll('.mc-in').forEach(i=>i.addEventListener('change', ()=>{ const pr = mcSalvar(sem, Number(i.dataset.mcId), i.dataset.mcK, i.value); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
   mcSalvarBind(el);
@@ -17480,7 +17563,7 @@ async function mcSalvar(sem, id, k, v){
     const patch = { [k]: v, atualizado_em: new Date().toISOString() };
     if(k==='data' && v){ const d = gtData(v); patch.dia = MC_DIAS[(d.getDay()+6)%7]; const seg = new Date(d); seg.setDate(seg.getDate()-((d.getDay()+6)%7)); patch.semana = gtISO(seg); }
     if(k==='dia'){ const base = gtData(r.semana || sem); base.setDate(base.getDate()+MC_DIAS.indexOf(v)); patch.data = gtISO(base); }
-    if(k==='editado'){ patch.editado_em = new Date().toISOString(); patch.editado_por = currentUser.id; if(v.trim() && r.status==='Produzindo') patch.status = 'Pronto'; }
+    if(k==='editado'){ patch.editado_em = new Date().toISOString(); patch.editado_por = currentUser.id; if(v.trim() && ['Não iniciado','Produzindo'].includes(r.status)) patch.status = 'Pronto'; }
     if(k==='status' && v==='Postado' && !r.publicado_em) patch.publicado_em = new Date().toISOString();
     const { data, error } = await sb.from('marca_funil').update(patch).eq('id', id).select().single();
     if(error) throw error;
@@ -17498,7 +17581,7 @@ async function mcSalvar(sem, id, k, v){
         if(av) MC.aval.unshift(av);
       }
     }
-    if(['status','editado','bruto','link','dia','data'].includes(k)) renderMarca();
+    if(['status','editado','bruto','link','dia','data','rede'].includes(k)) renderMarca();
   }catch(e){ console.error('marca', e); alert('Não foi possível salvar: '+((e&&e.message)||'')); }
 }
 function renderGestaoTime(){
