@@ -258,6 +258,12 @@
     margin-bottom:2px;width:100%;text-align:left;
   }
   .nav-item:hover{background:var(--bg-card);color:var(--text);}
+  .msg-bol{min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--danger,#d9534f);color:#fff;font-size:11px;font-weight:700;line-height:19px;text-align:center;box-sizing:border-box;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-sidebar,var(--bg));}
+  .nav-item > .msg-bol{margin-left:auto;}
+  #menu-btn{position:relative;}
+  #menu-btn > .msg-bol{position:absolute;top:-3px;right:-5px;}
+  .equipe-card{position:relative;}
+  .equipe-card > .msg-bol{position:absolute;top:12px;right:12px;min-width:24px;height:24px;line-height:24px;font-size:12.5px;border-radius:12px;}
   .nav-item.active{background:var(--accent-soft);color:var(--accent-2);font-weight:700;}
   .nav-item.active .icon{stroke:var(--accent-2);}
   .nav-item.individual.active{background:var(--individual-soft);color:var(--individual);}
@@ -7020,8 +7026,12 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + tarefasNaoLidas().length + msgConversasNaoLidas() + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (msgSouMentorado() ? msgConversasNaoLidas() : 0) + (currentRole==='aluno' ? TERMOS_PEND.length : 0);
-  if(typeof appBadge==='function') appBadge(pend.length + tf);
+  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + tarefasNaoLidas().length + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (currentRole==='aluno' ? TERMOS_PEND.length : 0);
+  /* Mensagens não entram mais no sininho: o número aparece na bolinha do menu lateral e do Início (msgBolinhas).
+     O ícone do app continua somando as conversas por ler, para avisar fora da plataforma. */
+  const msgConv = msgSouMentorado() ? Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length : currentRole!=='aluno' ? msgConversasNaoLidas() : 0;
+  if(typeof appBadge==='function') appBadge(pend.length + tf + msgConv);
+  msgBolinhas();
   const sinoBtn = document.getElementById('notif-btn');
   const tvOn = currentRole!=='aluno' && typeof tvAtivo==='function' && tvAtivo();
   if(sinoBtn){ sinoBtn.classList.toggle('tv-brilho', tvOn); sinoBtn.classList.toggle('bv-brilho', !tvOn && pend.some(x=>x.motivo==='boasvindas' || x.motivo==='e27')); }
@@ -7072,7 +7082,7 @@ function notifItens(){
       itens.push({ tipo:'gtarefa', icone:'check', quando:t.criadoEm, titulo:`Tarefa para você no grupo ${g ? g.nome : ''}`, sub:t.texto + (t.prazo ? ` · até ${tzDataCurta(t.prazo)}` : ''), acao: ()=>{ msgUI.gtfAberto = t.grupoId; msgAbrirConversa(msgChaveGrupo(t.grupoId)); } });
     });
   }
-  if(equipe || msgSouMentorado()){
+  if(false){ /* mensagens saíram do sininho: ver msgBolinhas() */
     const porPessoa = {};
     MSG_NAO_LIDAS.forEach(n=>{ porPessoa[n.de] = (porPessoa[n.de]||0)+1; });
     Object.keys(porPessoa).forEach(id=>{
@@ -14942,6 +14952,27 @@ function msgConversasNaoLidas(){
        + msgGruposVisiveis().filter(g=>g.naoLidas).length
        + (msgPodeAcomp() ? Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length : 0);
 }
+/* Bolinha com o número de mensagens não lidas no item Mensagens / Acompanhamento do menu lateral,
+   no botão de menu do celular e no atalho Mensagens do Início da equipe. */
+function msgBolinhas(){
+  let n = 0;
+  try{
+    if(msgSouMentorado()) n = Object.values(MSG_ACOMP).reduce((t,a)=>t+(a.naoLidas||0),0);
+    else if(currentRole!=='aluno') n = msgTotalNaoLidas();
+  }catch(e){ n = 0; }
+  const txt = n>99 ? '99+' : String(n);
+  const por = (el)=>{
+    if(!el) return;
+    let b = el.querySelector(':scope > .msg-bol');
+    if(!n){ if(b) b.remove(); return; }
+    if(!b){ b = document.createElement('span'); b.className = 'msg-bol'; el.appendChild(b); }
+    b.textContent = txt; b.title = n===1 ? '1 mensagem não lida' : n+' mensagens não lidas';
+  };
+  por(document.getElementById('nav-mensagens'));
+  por(document.getElementById('nav-acompanhamento'));
+  por(document.getElementById('menu-btn'));
+  document.querySelectorAll('[data-equipe-go="mensagens"]').forEach(por);
+}
 function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + msgGruposVisiveis().reduce((s,g)=>s+(g.naoLidas||0),0) + (msgPodeAcomp() ? Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0) : 0); }
 function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgQuem(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
 function msgAvatarDe(id, tam){ const p = msgQuem(id); return p ? initialsAvatar(p.initials||'', p.color||'#8d916f', tam, p.avatarUrl||null) : msgGrupoAvatar(tam); }
@@ -17765,6 +17796,7 @@ function renderEquipe(){
           <span class="equipe-desc">${escapeHtml(a.desc)}</span>${a.view==='reunioes' ? reuBadgeHtml() : ''}${a.view==='politicas' ? polBadgeHtml() : ''}
         </button>`; }).join('')}
     </div>`;
+  msgBolinhas();
   reuPreparar();
   polPreparar();
   anivEquipeLigar(document.getElementById('view-equipe'));
