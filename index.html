@@ -17506,7 +17506,6 @@ function renderMarca(){
     <p class="section-sub" style="margin-top:0">${dono ? 'Cole em BRUTO o link da pasta do Drive com o que foi gravado: o editor vê na hora e, quando terminar, cola o link em EDITADO e o conteúdo vira "Pronto". Ao marcar "Postado" com o link do conteúdo, ele desce sozinho para a Avaliação de Conteúdo.' : 'Os vídeos para editar aparecem com a pasta BRUTO preenchida. Abra a pasta, baixe, edite e cole em EDITADO o link da pasta com o vídeo pronto.'}</p>
     ${mcPastaHtml(dono)}
     ${mcSecao('funil', 'FUNIL DE CONTEÚDO', funil, `${linhas.length} conteúdo${linhas.length===1?'':'s'}`)}
-    ${mcSecao('aulas', 'AULAS PARA EDIÇÃO', MC.aulas===null ? '<div class="gt-atual-det">Carregando…</div>' : mcAulasHtml(dono, false), MC.aulas ? `${MC.aulas.filter(a=>String(a.bruto||'').trim() && !String(a.editado||'').trim()).length} para editar` : null)}
     ${mcSecao('materiais', 'MATERIAIS EM VÍDEO PARA EDIÇÃO', mcMateriaisHtml(), mcMatQtd())}
     ${dono ? mcSecao('aval', 'AVALIAÇÃO DE CONTEÚDO', aval, `${(MC.aval||[]).length} postado${(MC.aval||[]).length===1?'':'s'}`) : ''}
     ${dono ? mcSecao('ativos', 'MATERIAIS DA MARCA', ativos) : ''}
