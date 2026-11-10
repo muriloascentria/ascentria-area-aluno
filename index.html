@@ -12470,6 +12470,66 @@ function goalAulasHtml(ids, s){
 }
 /* Editar uma tarefa do checklist (que aparece em Minhas Metas do mentorado) sem precisar apagar e
    recriar: descrição, responsável, prazo, status, observações e aulas de apoio, tudo numa janela. */
+/* Editar um registro de contato (Registro de Contatos da Área Interna). Se ele já foi para Minhas
+   Sessões 1:1 do aluno, a sessão vinculada é atualizada junto (data, resumo, links e responsável). */
+function openContatoEditModal(s, c){
+  const tipos = [['meet','Reunião no Google Meet'],['presencial','Reunião Presencial'],['whatsapp','Contato por WhatsApp'],['plat','Mensagem no Plat']];
+  const tipoAtual = c.tipo || 'meet';
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-body form-modal">
+      <div class="cat">Registro de Contatos</div>
+      <h3>Editar registro de contato</h3>
+      <div class="te-grid">
+        <div class="field"><label>Tipo de contato</label><select class="ps-input" id="ce-tipo">${tipos.map(([v,l])=>`<option value="${v}" ${tipoAtual===v?'selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="field"><label>Data</label><input class="ps-input" type="text" id="ce-data" value="${escapeAttr(c.data||'')}" placeholder="Ex.: 25/08/2026"></div>
+        <div class="field"><label>Responsável</label><select class="ps-input" id="ce-resp">${selectOpts(RESPONSAVEL_CONTATO_OPTS.includes(c.responsavel) || !c.responsavel ? RESPONSAVEL_CONTATO_OPTS : [c.responsavel, ...RESPONSAVEL_CONTATO_OPTS], c.responsavel||'')}</select></div>
+      </div>
+      <div class="field full" data-ce-meet><label>Link da gravação</label><input class="ps-input" type="text" id="ce-grav" value="${escapeAttr(c.linkGravacao||'')}" placeholder="https://..."></div>
+      <div class="field full" data-ce-meet><label>Link da transcrição</label><input class="ps-input" type="text" id="ce-transc" value="${escapeAttr(c.linkTranscricao||'')}" placeholder="https://..."></div>
+      <div class="field full"><label>Resumo</label><textarea class="ps-input" id="ce-resumo" rows="6">${escapeHtml(c.resumo||'')}</textarea></div>
+      ${c.syncedToSessions ? `<small class="ae-dica">Este registro está em Minhas Sessões 1:1 do aluno: a sessão de lá também será atualizada.</small>` : ''}
+      <div class="modal-actions">
+        <button class="btn-accent" id="ce-save">Salvar alterações</button>
+        <button class="btn-outline" id="ce-cancel">Cancelar</button>
+      </div>
+    </div>`;
+  modalReturnTo = null;
+  modalCloseGuard = null;
+  document.getElementById('modal-backdrop').classList.add('open');
+  const tipoSel = document.getElementById('ce-tipo');
+  const ajusta = ()=>{ const meet = tipoSel.value==='meet'; document.querySelectorAll('[data-ce-meet]').forEach(el=>{ el.hidden = !meet; }); };
+  tipoSel.addEventListener('change', ajusta); ajusta();
+  document.getElementById('ce-cancel').addEventListener('click', closeModal);
+  document.getElementById('ce-save').addEventListener('click', async ()=>{
+    const data = document.getElementById('ce-data').value.trim();
+    const responsavel = document.getElementById('ce-resp').value.trim();
+    const resumo = document.getElementById('ce-resumo').value.trim();
+    if(!data || !responsavel || !resumo){ alert('Preencha a data, o responsável e o resumo.'); return; }
+    const tipo = tipoSel.value;
+    const linkGravacao = tipo==='meet' ? document.getElementById('ce-grav').value.trim() : '';
+    const linkTranscricao = tipo==='meet' ? document.getElementById('ce-transc').value.trim() : '';
+    const btn = document.getElementById('ce-save'); btn.disabled = true; btn.textContent = 'Salvando…';
+    try{
+      const { error } = await sb.from('contatos').update({ data, tipo, responsavel, resumo, link_gravacao: linkGravacao||null, link_transcricao: linkTranscricao||null }).eq('id', c.id);
+      if(error) throw error;
+      if(c.syncedToSessions && c.sessionId){
+        const campos = { title:'Encontro registrado — '+data, date:data, notes:resumo, link_gravacao: linkGravacao||null, link_transcricao: linkTranscricao||null, responsavel: responsavel||null };
+        const { error: e2 } = await sb.from('sessions').update(campos).eq('id', c.sessionId);
+        if(e2) throw e2;
+        const sess = (s.sessions||[]).find(x=>x.id==c.sessionId);
+        if(sess) Object.assign(sess, { title:campos.title, date:data, notes:resumo, linkGravacao, linkTranscricao, responsavel });
+      }
+      Object.assign(c, { data, tipo, responsavel, resumo, linkGravacao, linkTranscricao });
+      closeModal();
+      renderInterno();
+    }catch(e){
+      console.error('editar contato', e);
+      btn.disabled = false; btn.textContent = 'Salvar alterações';
+      alert('Não foi possível salvar as alterações. Tente de novo em instantes.');
+    }
+  });
+  document.getElementById('ce-resumo').focus();
+}
 function openTarefaEditModal(s, t){
   const sel = new Set(t.aulas||[]);
   document.getElementById('modal').innerHTML = `
@@ -12972,7 +13032,7 @@ function renderInterno(){
               <td style="white-space:nowrap">${c.syncedToSessions
                 ? `<span class="sync-ok">${icon('tick')} Em Minhas Sessões</span> <button class="btn-mini" data-unsync-session="${c.id}" title="Remover de Minhas Sessões 1:1">${icon('x','tiny')} Remover</button>`
                 : `<button class="btn-mini" data-sync-session="${c.id}">${icon('upload')} Adicionar às Sessões</button>`}</td>
-              <td><button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
+              <td style="white-space:nowrap"><button class="btn-mini" data-edit-contato="${c.id}" title="Editar registro">${icon('edit','tiny')}</button> <button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
             </tr>
           `).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
         </tbody>
@@ -13326,6 +13386,12 @@ function renderInterno(){
       c.syncedToSessions = false;
       c.sessionId = null;
       renderInterno();
+    });
+  });
+  document.querySelectorAll('[data-edit-contato]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const c = s.contatos.find(x=>x.id==btn.dataset.editContato);
+      if(c) openContatoEditModal(s, c);
     });
   });
   document.querySelectorAll('[data-del-contato]').forEach(btn=>{
