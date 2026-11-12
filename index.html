@@ -18713,7 +18713,7 @@ function analiseLinkCell(url, rotulo){
   if(!u) return '<span style="color:var(--text-mute)">—</span>';
   if(/^https?:\/\//i.test(u)) return `<a class="link-btn" href="${escapeAttr(u)}" target="_blank" rel="noopener">${icon('externallink','tiny')} ${escapeHtml(rotulo)}</a>`;
   /* Texto digitado no lugar do link ("Subindo", "Venda no Evento Presencial"...) vira botão apagado, do mesmo tamanho. */
-  if(/^subindo/i.test(u)) return `<span class="link-btn an-subindo" title="${escapeAttr(rotulo)} ainda subindo">${icon('upload','tiny')} Subindo</span>`;
+  if(/^subindo/i.test(u)) return rotulo==='Análise' ? `<span class="link-btn an-subindo" title="Análise ainda não enviada">${icon('upload','tiny')} Subir análise</span>` : `<span class="link-btn an-subindo" title="${escapeAttr(rotulo)} ainda subindo">${icon('upload','tiny')} Subindo</span>`;
   return `<span class="link-btn an-subindo an-texto" title="${escapeAttr(u)}">${escapeHtml(u)}</span>`;
 }
 /* Data da venda em ISO (dd/mm/aaaa da planilha); sem data, usa a data de criação da linha. */
@@ -18973,7 +18973,7 @@ function renderAnalise(){
           <td><span class="an-lead"><button type="button" class="an-lead-link" data-an-ir-venda="${escapeAttr(a.vendaSessaoId||'')}" data-an-ir-nome="${escapeAttr(a.leadNome||'')}" title="Abrir no Registro de Sessões 1:1">${escapeHtml(a.leadNome||'—')}</button></span><span class="an-sub">${escapeHtml(a.dataVenda||'sem data')}${a.vendaSessaoId? '' : ' · <span class="an-manual">manual</span>'}</span>${anTagAvHtml(a)}</td>
           <td><div class="an-links">
             ${(a.linkVideo||'').trim()? analiseLinkCell(a.linkVideo,'Vídeo') : `<span class="link-btn an-subindo" title="Vídeo ainda subindo">${icon('upload','tiny')} Subindo</span>`}
-            ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : `<span class="link-btn an-subindo" title="Análise ainda subindo">${icon('upload','tiny')} Subindo</span>`}
+            ${(a.linkAnalise||'').trim()? analiseLinkCell(a.linkAnalise,'Análise') : `<span class="link-btn an-subindo" title="Análise ainda não enviada">${icon('upload','tiny')} Subir análise</span>`}
           </div></td>
           ${ANALISE_VENDEDORAS.map(v=>`<td class="an-col-mark">${analiseMarkHtml(a,v)}</td>`).join('')}
           <td class="vendas-actions-cell">
