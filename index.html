@@ -7249,7 +7249,7 @@ window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 2
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
 /* Áreas desativadas no ePLAT (11/11/2026): ficam ocultas no menu, no Início e no sininho, e o goTo não abre.
    Os dados continuam no banco. Para reativar uma área, basta tirá-la desta lista. */
-const AREAS_DESATIVADAS = new Set(['tarefas','reunioes','politicas','treinamento','gestaotime']);
+const AREAS_DESATIVADAS = new Set([]);   // reativadas em 12/11/2026 (antes: 'tarefas','reunioes','politicas','treinamento','gestaotime')
 function areaAtiva(v){ return !AREAS_DESATIVADAS.has(v); }
 const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','marca','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
@@ -14910,7 +14910,7 @@ function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 /* Mensagens só entre alunos e time (11/11/2026): as conversas internas da equipe (pessoa a pessoa) e os grupos
    ficam desativados; continua só o Acompanhamento de cada aluno com a equipe. Para reativar, false. */
-const MSG_SO_ALUNOS = true;
+const MSG_SO_ALUNOS = false;   // reativado em 12/11/2026
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 /* Mentorado (aluno da mentoria, não do curso gravado): tem a janela "Acompanhamento" com a equipe. */
 /* Aluno com Acompanhamento (conversa com a equipe): mentorados e, desde 05/10/2026, também os alunos do Método. */
