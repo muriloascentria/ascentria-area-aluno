@@ -4615,7 +4615,7 @@ async function tvCarregar(){
   if(!TV_TIMER) TV_TIMER = setInterval(tvCarregar, 5*60*1000);
   if(typeof updateNotifBadge==='function') updateNotifBadge();
 }
-function tvAtivo(){ return !!(TV_ALERTA && TV_ALERTA.ativo && Number(TV_ALERTA.vencidas)>0); }
+function tvAtivo(){ return areaAtiva('tarefas') && !!(TV_ALERTA && TV_ALERTA.ativo && Number(TV_ALERTA.vencidas)>0); }
 function tvSouMariane(){ return !!(currentUser && (currentUser.id===TV_MARIANE || currentUser.id==='7e570000-0000-4000-8000-0000000000ae')); }
 async function tvPainelCarregar(){
   if(TV_UI.carregando) return; TV_UI.carregando = true;
@@ -7030,7 +7030,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + tarefasNaoLidas().length + gtfMinhasAbertas().length + (typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (currentRole==='aluno' ? TERMOS_PEND.length : 0);
+  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + (areaAtiva('tarefas') ? tarefasNaoLidas().length : 0) + gtfMinhasAbertas().length + (areaAtiva('politicas') && typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (currentRole==='aluno' ? TERMOS_PEND.length : 0);
   /* Mensagens não entram mais no sininho: o número aparece na bolinha do menu lateral e do Início (msgBolinhas).
      O ícone do app continua somando as conversas por ler, para avisar fora da plataforma. */
   const msgConv = msgSouMentorado() ? Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length : currentRole!=='aluno' ? msgConversasNaoLidas() : 0;
@@ -7068,13 +7068,13 @@ function notifItens(){
   const itens = [];
   const eu = currentUser ? currentUser.id : null;
   const equipe = currentRole!=='aluno';
-  if(equipe && typeof tarefasNaoLidas==='function'){
+  if(equipe && areaAtiva('tarefas') && typeof tarefasNaoLidas==='function'){
     tarefasNaoLidas().forEach(n=>{
       const t = (typeof TAREFAS!=='undefined' ? TAREFAS : []).find(x=>x.id===n.tarefaId);
       itens.push({ tipo:'tarefa', icone:'check', quando:n.createdAt, titulo:n.texto||'Aviso de tarefa', sub: t ? t.titulo : 'Tarefas', acao: ()=>notifAbrirTarefa(n) });
     });
   }
-  if(equipe && typeof polPendentesMeus==='function'){
+  if(equipe && areaAtiva('politicas') && typeof polPendentesMeus==='function'){
     polPreparar();
     polPendentesMeus().forEach(d=>{
       itens.push({ tipo:'politica', icone:'file', quando:d.updated_at||d.created_at, titulo:`${d.tipo==='politica'?'Política':'Fluxo de trabalho'} em revisão aguarda você`, sub:d.titulo, acao: ()=>{ POL_UI.aberta = String(d.id); POL_UI.form = null; POL_UI.editando = null; goTo('politicas'); } });
@@ -7247,6 +7247,10 @@ window.addEventListener('resize', ajustarTituloTopo);
 window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 250));
 
 /* Telas que são só da equipe interna: no modo "Aluno" nenhuma delas abre. */
+/* Áreas desativadas no ePLAT (11/11/2026): ficam ocultas no menu, no Início e no sininho, e o goTo não abre.
+   Os dados continuam no banco. Para reativar uma área, basta tirá-la desta lista. */
+const AREAS_DESATIVADAS = new Set(['tarefas','reunioes','politicas','treinamento','gestaotime']);
+function areaAtiva(v){ return !AREAS_DESATIVADAS.has(v); }
 const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','marca','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
@@ -7477,6 +7481,7 @@ function goTo(view){
      do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
   { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = currentUserRole==='me_convidado' ? 'me_aulas' : 'equipe'; }
+  if(!areaAtiva(view)) view = 'equipe';
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo() && !fsSouLider()) view = 'equipe';
@@ -12982,7 +12987,7 @@ function renderInterno(){
               <td><span class="resp-pill">${t.responsavel}</span></td>
               <td>${t.prazo}</td>
               <td><button class="status-pill ${statusClass(t.status)}" data-check="${t.id}">${t.status}</button></td>
-              <td style="white-space:nowrap"><button class="btn-mini" data-task-equipe="${t.id}" title="Criar tarefa para a equipe a partir deste item">${icon('plus','tiny')} Tarefa p/ equipe</button></td>
+              <td style="white-space:nowrap">${areaAtiva('tarefas') ? `<button class="btn-mini" data-task-equipe="${t.id}" title="Criar tarefa para a equipe a partir deste item">${icon('plus','tiny')} Tarefa p/ equipe</button>` : ''}</td>
               <td style="white-space:nowrap"><button class="btn-mini" data-edit-task="${t.id}" title="Editar tarefa">${icon('edit')}</button> <button class="btn-mini danger" data-del-task="${t.id}" title="Excluir tarefa">${icon('trash')}</button></td>
             </tr>
           `).join('')}
@@ -17831,6 +17836,7 @@ const EQUIPE_ATALHOS = [
 ];
 /* Quem pode ver cada área da equipe (vale para o menu lateral e para o Início). */
 function equipeViewPode(v){
+  if(!areaAtiva(v)) return false;
   const permitidas = viewsDoPapel();
   if(permitidas && !permitidas.includes(v)) return false;
   if(staffBloqueios().has(v)) return false;
@@ -17859,8 +17865,8 @@ function navSincronizarEquipe(){
 function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
-  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []);
-  if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(['mensagens','marca']);
+  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []).filter(areaAtiva);
+  if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(['mensagens','marca']).filter(areaAtiva);
   if(papel==='me_convidado') return ['me_aulas','me_sessoes','me_metas','me_materiais'];
   return null; // equipe interna: tudo
 }
