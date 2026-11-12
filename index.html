@@ -7030,7 +7030,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + (areaAtiva('tarefas') ? tarefasNaoLidas().length : 0) + gtfMinhasAbertas().length + (areaAtiva('politicas') && typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (currentRole==='aluno' ? TERMOS_PEND.length : 0);
+  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + (areaAtiva('tarefas') ? tarefasNaoLidas().length : 0) + (MSG_SO_ALUNOS ? 0 : gtfMinhasAbertas().length) + (areaAtiva('politicas') && typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (currentRole==='aluno' ? TERMOS_PEND.length : 0);
   /* Mensagens não entram mais no sininho: o número aparece na bolinha do menu lateral e do Início (msgBolinhas).
      O ícone do app continua somando as conversas por ler, para avisar fora da plataforma. */
   const msgConv = msgSouMentorado() ? Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length : currentRole!=='aluno' ? msgConversasNaoLidas() : 0;
@@ -7080,7 +7080,7 @@ function notifItens(){
       itens.push({ tipo:'politica', icone:'file', quando:d.updated_at||d.created_at, titulo:`${d.tipo==='politica'?'Política':'Fluxo de trabalho'} em revisão aguarda você`, sub:d.titulo, acao: ()=>{ POL_UI.aberta = String(d.id); POL_UI.form = null; POL_UI.editando = null; goTo('politicas'); } });
     });
   }
-  if(equipe){
+  if(equipe && !MSG_SO_ALUNOS){
     gtfMinhasAbertas().forEach(t=>{
       const g = msgGrupo(t.grupoId);
       itens.push({ tipo:'gtarefa', icone:'check', quando:t.criadoEm, titulo:`Tarefa para você no grupo ${g ? g.nome : ''}`, sub:t.texto + (t.prazo ? ` · até ${tzDataCurta(t.prazo)}` : ''), acao: ()=>{ msgUI.gtfAberto = t.grupoId; msgAbrirConversa(msgChaveGrupo(t.grupoId)); } });
@@ -13961,6 +13961,7 @@ async function carregarTarefasNotifs(){
 /* Chamado no bootstrap (equipe + sino). As tarefas em si só vêm quando a tela abre. */
 async function tarefasBootstrap(){
   await carregarTarefasEquipe();
+  if(!areaAtiva('tarefas')) return;   // área desativada: não gera alertas nem carrega avisos de tarefas
   if(!tarefasSouMembro()) return;
   const meu = tarefasMeuMembro();
   TAREFAS_ACESSO_ANTERIOR = meu ? meu.ultimoAcessoEm : null;
