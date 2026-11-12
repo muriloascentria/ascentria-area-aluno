@@ -14907,6 +14907,9 @@ function msgBindMaiuscula(campo){
 }
 function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
+/* Mensagens só entre alunos e time (11/11/2026): as conversas internas da equipe (pessoa a pessoa) e os grupos
+   ficam desativados; continua só o Acompanhamento de cada aluno com a equipe. Para reativar, false. */
+const MSG_SO_ALUNOS = true;
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 /* Mentorado (aluno da mentoria, não do curso gravado): tem a janela "Acompanhamento" com a equipe. */
 /* Aluno com Acompanhamento (conversa com a equipe): mentorados e, desde 05/10/2026, também os alunos do Método. */
@@ -14944,7 +14947,7 @@ function msgEhGrupo(chave){ return typeof chave==='string' && chave.startsWith('
 /* Perfil CS (Customer Success): os grupos internos da gestão não aparecem nas Mensagens. */
 const CS_GRUPOS_OCULTOS = ['TIME INTERNO','SÓCIOS','SOCIOS','GESTÃO DE CRISE','GESTAO DE CRISE','VENDAS','FINANCEIRO'];
 function msgGruposVisiveis(){
-  if(msgModoEditor()) return [];
+  if(MSG_SO_ALUNOS || msgModoEditor()) return [];
   if(msgModoConsultora()) return MSG_GRUPOS.filter(g=>String(g.nome||'').trim().toUpperCase()==='VENDAS');
   const cs = (typeof PREVIEW_CS!=='undefined' && PREVIEW_CS) || (typeof STAFF_BLOQUEIOS!=='undefined' && STAFF_BLOQUEIOS.size>0);
   return cs ? MSG_GRUPOS.filter(g=>!CS_GRUPOS_OCULTOS.includes(String(g.nome||'').trim().toUpperCase())) : MSG_GRUPOS;
@@ -14957,7 +14960,7 @@ function msgSouAdminGrupos(){ return currentUserRole==='staff' && typeof tarefas
    mensagens. Quem recebe 100 mensagens da mesma pessoa vê 1 aviso daquela pessoa, igual ao que
    já aparece na lista do sininho (um item por pessoa, grupo ou Acompanhamento). */
 function msgConversasNaoLidas(){
-  return new Set(MSG_NAO_LIDAS.map(m=>m.de)).size
+  return (MSG_SO_ALUNOS ? 0 : new Set(MSG_NAO_LIDAS.map(m=>m.de)).size)
        + msgGruposVisiveis().filter(g=>g.naoLidas).length
        + (msgPodeAcomp() ? Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length : 0);
 }
@@ -14982,7 +14985,7 @@ function msgBolinhas(){
   por(document.getElementById('menu-btn'));
   document.querySelectorAll('[data-equipe-go="mensagens"]').forEach(por);
 }
-function msgTotalNaoLidas(){ return MSG_NAO_LIDAS.length + msgGruposVisiveis().reduce((s,g)=>s+(g.naoLidas||0),0) + (msgPodeAcomp() ? Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0) : 0); }
+function msgTotalNaoLidas(){ return (MSG_SO_ALUNOS ? 0 : MSG_NAO_LIDAS.length) + msgGruposVisiveis().reduce((s,g)=>s+(g.naoLidas||0),0) + (msgPodeAcomp() ? Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0) : 0); }
 function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgQuem(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
 function msgAvatarDe(id, tam){ const p = msgQuem(id); return p ? initialsAvatar(p.initials||'', p.color||'#8d916f', tam, p.avatarUrl||null) : msgGrupoAvatar(tam); }
 async function msgCarregarAcomp(){
@@ -15425,6 +15428,7 @@ async function msgLimparConversa(chave){
 }
 function msgEnviadaEmOutraAba(m){ if(msgGuardar(m) && msgNaTela() && msgUI.aberto===msgChave(m)) renderMensagens(); }
 async function msgChegou(m){
+  if(MSG_SO_ALUNOS && !m.alunoId) return;
   if(!msgGuardar(m)) return;
   const chave = msgChave(m);
   const conversaAberta = msgNaTela() && msgUI.aberto===chave && document.visibilityState==='visible';
@@ -16407,6 +16411,7 @@ function msgPopupContainer(){
    "Não lidas" no topo da lista — três avisos para a mesma coisa viram estorvo. */
 const msgPopupCabe = ()=> !(window.matchMedia('(pointer:coarse)').matches || window.innerWidth<=880);
 function msgPopup(m){
+  if(MSG_SO_ALUNOS && !m.alunoId) return;
   if(!msgPopupCabe()) return;
   const p = msgQuem(m.de); if(!p) return;
   const g = m.grupoId ? msgGrupo(m.grupoId) : null; if(m.grupoId && !g) return;
@@ -16597,7 +16602,8 @@ function renderMensagens(){
   const q = normTxt(msgUI.busca).trim();
   const eu = msgEu();
   const admin = msgSouAdminGrupos();
-  const pessoas = MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
+  const pessoas = MSG_SO_ALUNOS ? [] : MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
+  if(MSG_SO_ALUNOS && !solo && msgUI.aberto && !msgAcompDaChave(msgUI.aberto)) msgUI.aberto = null;
   const grupos = msgGruposVisiveis().filter(g=>!q || normTxt(g.nome).includes(q));
   const mentorados = (!solo && msgPodeAcomp()) ? msgMentorados().filter(s=>!q || normTxt(s.name).includes(q)) : [];
   const ultima = (chave)=>{ const l = MSG_CONVERSAS[chave]||[]; return l.length ? l[l.length-1] : null; };
@@ -16687,8 +16693,8 @@ function renderMensagens(){
   const semNada = !todos.length;
   const secoesLista = [
     naoLidas.length ? secao(`Não lidas <b class="msg-secao-n">${naoLidas.length}</b>`) + naoLidas.map(itemHtml).join('') : '',
-    (gruposOrd.length || admin) ? secao('Grupos', btnNovoGrupo) : '',
-    lidos(itensGrupos).map(itemHtml).join('') || ((admin && !q && !gruposOrd.length) ? '<div class="tf-vazio" style="padding:8px 12px">Nenhum grupo ainda.</div>' : ''),
+    (gruposOrd.length || (admin && !MSG_SO_ALUNOS)) ? secao('Grupos', btnNovoGrupo) : '',
+    lidos(itensGrupos).map(itemHtml).join('') || ((admin && !MSG_SO_ALUNOS && !q && !gruposOrd.length) ? '<div class="tf-vazio" style="padding:8px 12px">Nenhum grupo ainda.</div>' : ''),
     (gruposOrd.length || admin) && lidos(itensPessoas).length ? secao('Pessoas') : '',
     lidos(itensPessoas).map(itemHtml).join(''),
     lidos(itensMentorados).filter(i=>!i.curso).length ? secao('Acompanhamento · mentorados') : '',
@@ -16702,7 +16708,7 @@ function renderMensagens(){
     <div class="msg-wrap ${solo?'msg-solo':''}" style="--msg-fonte:${msgUI.fonte}px">
       ${solo ? '' : `<aside class="msg-lista ${chave?'com-conversa':''}">
         <div class="msg-lista-hd">
-          <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="Buscar pessoa ou grupo…">
+          <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="${MSG_SO_ALUNOS ? 'Buscar aluno ou mentorado…' : 'Buscar pessoa ou grupo…'}">
           <button type="button" class="msg-config-btn ${msgUI.configAberta?'ativo':''}" id="msg-config-btn" title="Configurações das mensagens">${icon('gear')}</button>
         </div>
         <div class="msg-config" id="msg-config" ${msgUI.configAberta?'':'hidden'}>
@@ -16774,6 +16780,7 @@ function renderMensagens(){
             <button type="button" class="btn-accent" id="msg-grav-enviar">${icon('reply','tiny')} Enviar áudio</button>
             <span class="msg-grav-st" id="msg-grav-status" hidden></span>
           </div>`
+        : MSG_SO_ALUNOS ? `<div class="msg-vazio">${icon('comment')}<p>Escolha um aluno ou mentorado para conversar.</p><small>O acompanhamento de cada aluno fica visível para toda a equipe, e quem receber vê a mensagem na hora, em qualquer tela.</small></div>`
         : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${msgGruposVisiveis().length ? ', um grupo' : ''}${mentorados.length ? ' ou um mentorado' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe, e o acompanhamento de cada mentorado (visível para toda a equipe). Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
       </section>
     </div>`;
@@ -17813,7 +17820,7 @@ function gtBindEdicao(el, freq){
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
   {view:'comunicacao',desc:'Recado do dia para a equipe, checkpoint quinzenal, envio coletivo e NPS dos alunos.'},
-  {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
+  {view:'mensagens',  desc:'Acompanhamento de cada aluno e mentorado com a equipe, em tempo real.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'embarque',   desc:'Os 30 primeiros dias de cada mentorado: grupo, mensagens iniciais, onboardings e mentorias de desenvolvimento.'},
@@ -17849,6 +17856,7 @@ function equipeViewPode(v){
   if(v==='reunioes') return reuPodeAbrir();
   if(v==='politicas') return polPodeAbrir();
   if(v==='marca') return mcPode();
+  if(v==='mensagens' && MSG_SO_ALUNOS) return msgPodeAcomp();
   return true;
 }
 /* Acerta o menu lateral da equipe com as mesmas regras do Início (chamado ao trocar de modo e ao abrir o
@@ -17865,8 +17873,8 @@ function navSincronizarEquipe(){
 function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
-  if(papel==='vendas') return ['equipe','mensagens','vendas','analise','treinamento','reunioes','politicas'].concat(tarefasSouMembro()? ['tarefas'] : []).filter(areaAtiva);
-  if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(['mensagens','marca']).filter(areaAtiva);
+  if(papel==='vendas') return ['equipe'].concat(MSG_SO_ALUNOS ? [] : ['mensagens']).concat(['vendas','analise','treinamento','reunioes','politicas']).concat(tarefasSouMembro()? ['tarefas'] : []).filter(areaAtiva);
+  if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(MSG_SO_ALUNOS ? [] : ['mensagens']).concat(['marca']).filter(areaAtiva);
   if(papel==='me_convidado') return ['me_aulas','me_sessoes','me_metas','me_materiais'];
   return null; // equipe interna: tudo
 }
