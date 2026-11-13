@@ -6078,6 +6078,7 @@ async function enterApp(){
   goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
   if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); setTimeout(scPreencherCasos, 1500); }
   if(currentUserRole==='staff' && location.hash.startsWith('#termo=')) setTimeout(()=>termoVerArquivo(location.hash.slice(7)), 600);
+  setTimeout(aulaDoLinkAbrir, 900);
   if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
   setTimeout(pwaConvidarInstalar, 2500);
   setTimeout(pushConvidar, 6000);
@@ -8147,6 +8148,28 @@ function bindRowScrollers(){
     updateBtns();
   });
 }
+/* Link direto para uma aula: https://mentoriaessencia.online/#aula=<id da aula>. Quem abre o link entra
+   no Essência PLAT (faz login se precisar) e a aula abre sozinha na tela de Aulas. Serve para PDFs e
+   mensagens apontarem para a aula certa, em vez da plataforma antiga. */
+function aulaLinkDireto(id){ return 'https://mentoriaessencia.online/#aula=' + encodeURIComponent(id); }
+function aulaDoLinkGuardar(){
+  const m = /^#aula=([^&]+)/.exec(location.hash||'');
+  if(m){ try{ sessionStorage.setItem('aula_link', decodeURIComponent(m[1])); }catch(e){} }
+}
+function aulaDoLinkAbrir(){
+  let id = null;
+  const m = /^#aula=([^&]+)/.exec(location.hash||'');
+  if(m) id = decodeURIComponent(m[1]);
+  if(!id){ try{ id = sessionStorage.getItem('aula_link'); }catch(e){} }
+  if(!id) return;
+  try{ sessionStorage.removeItem('aula_link'); }catch(e){}
+  if(/^#aula=/.test(location.hash||'')) history.replaceState(null, '', location.pathname + location.search);
+  if(!getCourse(id)){ showAppAviso('Não encontramos esta aula. Ela pode ter mudado de lugar: procure pelo nome em Aulas.', 'Aula não encontrada'); return; }
+  if(currentUserRole==='aluno' && typeof goTo==='function') goTo('aulas');
+  openCourseModal(id);
+}
+aulaDoLinkGuardar();
+window.addEventListener('hashchange', ()=>{ if(/^#aula=/.test(location.hash||'') && currentUser) aulaDoLinkAbrir(); });
 function openCourseModal(id){
   const c = getCourse(id);
   const s = getStudent(currentStudentId);
@@ -8184,6 +8207,7 @@ function openCourseModal(id){
       <div class="modal-actions">
         ${s? `<button class="btn-accent ${done?'done':''}" id="modal-toggle-done">${done? icon('check')+' Concluída' : 'Marcar como assistida'}</button>` : ''}
         ${(c.videoLink && !yt)? `<a class="btn-outline" href="${c.videoLink}" target="_blank" rel="noopener">${icon('video')} Assistir no link</a>` : ''}
+        ${currentUserRole==='staff' ? `<button class="btn-outline" id="modal-copiar-link" title="Link direto desta aula, para usar em PDFs e mensagens">${icon('copy')} Copiar link da aula</button>` : ''}
         <button class="btn-outline" id="modal-close-2">Fechar</button>
       </div>
       ${exigeWatch? `<div class="watch-gate" id="watch-gate"></div>` : ''}
@@ -8202,6 +8226,12 @@ function openCourseModal(id){
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('modal-close').addEventListener('click',closeModal);
   document.getElementById('modal-close-2').addEventListener('click',closeModal);
+  const cpLink = document.getElementById('modal-copiar-link');
+  if(cpLink) cpLink.addEventListener('click', async ()=>{
+    const url = aulaLinkDireto(id);
+    try{ await navigator.clipboard.writeText(url); cpLink.innerHTML = `${icon('check')} Link copiado`; }
+    catch(e){ prompt('Copie o link da aula:', url); }
+  });
   if(s){
     const doneBtn = document.getElementById('modal-toggle-done');
     const gateEl = document.getElementById('watch-gate');
