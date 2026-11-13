@@ -304,7 +304,9 @@
   .me-logo .me-logo-claro{display:none;}
   [data-theme="light"] .me-logo .me-logo-claro{display:block;} [data-theme="light"] .me-logo .me-logo-escuro{display:none;}
   .mej-etapa-enc::before{display:none;}
-  .mej-ponto.mej-ponto-vazio{background:var(--accent);box-shadow:0 0 0 4px var(--bg);}
+  /* Encontro ao vivo: sem bolinha; a linha da etapa 1 sobe, faz uma curva e entra no quadro. */
+  .mej-ponto-espaco{flex-shrink:0;width:36px;}
+  .mej-etapa-enc::after{content:'';position:absolute;left:17px;top:50%;bottom:0;width:35px;border-left:2px solid var(--border);border-top:2px solid var(--border);border-top-left-radius:16px;box-sizing:border-box;pointer-events:none;}
   .mej-corpo.mej-corpo-enc{padding:0;border:none;background:none;}
   .mej-encontro{display:flex;align-items:center;gap:14px;margin:0;padding:14px 16px;border:1px solid color-mix(in srgb, var(--accent) 45%, var(--border));border-radius:var(--radius);background:color-mix(in srgb, var(--accent) 10%, var(--bg-card));box-sizing:border-box;}
   .mej-enc-ic{flex-shrink:0;width:42px;height:42px;border-radius:12px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;}
@@ -354,7 +356,7 @@
   .mej-txt{width:100%;margin-top:8px;resize:vertical;min-height:96px;font-size:13.5px;line-height:1.5;box-sizing:border-box;}
   .mej-sub{margin:6px 0 0 30px;padding:0;font-size:12.5px;}
   .mej-sub li{margin:2px 0;}
-  @media (max-width:600px){ .mej-etapa{gap:10px;} .mej-ponto{width:30px;height:30px;font-size:13px;} .mej-etapa::before{left:14px;top:32px;} }
+  @media (max-width:600px){ .mej-etapa{gap:10px;} .mej-ponto{width:30px;height:30px;font-size:13px;} .mej-etapa::before{left:14px;top:32px;} .mej-ponto-espaco{width:30px;} .mej-etapa-enc::after{left:14px;width:26px;} }
   .me-aula{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:14px 16px;margin-bottom:12px;}
   .me-aula-top{display:flex;align-items:flex-start;gap:12px;}
   .me-aula-num{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:rgba(184,134,47,.16);color:#c9973c;}
@@ -11663,7 +11665,7 @@ function renderMeJornada(){
   };
   el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
     <div class="mej-linha">
-      <section class="mej-etapa mej-etapa-enc"><div class="mej-ponto mej-ponto-vazio"></div><div class="mej-corpo mej-corpo-enc">${mejEncontroHtml()}</div></section>${ME_JORNADA.map((e,i)=>`
+      <section class="mej-etapa mej-etapa-enc"><div class="mej-ponto-espaco"></div><div class="mej-corpo mej-corpo-enc">${mejEncontroHtml()}</div></section>${ME_JORNADA.map((e,i)=>`
       <section class="mej-etapa">
         <div class="mej-ponto">${i+1}</div>
         <div class="mej-corpo">
