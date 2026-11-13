@@ -303,6 +303,15 @@
   .me-logo img{display:block;width:100%;max-width:420px;height:auto;}
   .me-logo .me-logo-claro{display:none;}
   [data-theme="light"] .me-logo .me-logo-claro{display:block;} [data-theme="light"] .me-logo .me-logo-escuro{display:none;}
+  .mej-encontro{display:flex;align-items:center;gap:14px;max-width:760px;margin:14px auto 18px;padding:14px 16px;border:1px solid color-mix(in srgb, var(--accent) 45%, var(--border));border-radius:var(--radius);background:color-mix(in srgb, var(--accent) 10%, var(--bg-card));box-sizing:border-box;}
+  .mej-enc-ic{flex-shrink:0;width:42px;height:42px;border-radius:12px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;}
+  .mej-enc-ic .icon{width:22px;height:22px;}
+  .mej-enc-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .mej-enc-txt small{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);}
+  .mej-enc-txt b{font-size:15.5px;}
+  .mej-enc-txt span{font-size:12.5px;color:var(--text-mute);}
+  .mej-enc-btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;padding:8px 14px;font-size:12.5px;white-space:nowrap;flex-shrink:0;}
+  @media (max-width:600px){ .mej-encontro{flex-wrap:wrap;} .mej-enc-btn{width:100%;} }
   .mej-linha{position:relative;max-width:760px;margin:18px auto 0;padding-left:8px;}
   .mej-etapa{position:relative;display:flex;gap:16px;padding-bottom:22px;}
   .mej-etapa::before{content:'';position:absolute;left:17px;top:38px;bottom:0;width:2px;background:var(--border);}
@@ -321,11 +330,21 @@
   .mej-cad{display:inline-flex;color:var(--text-mute);}
   .mej-aberto .mej-item-h .icon{color:var(--accent);}
   .mej-salvo{margin-left:auto;font-size:11.5px;color:var(--text-mute);}
-  .mej-acesse{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12.5px;}
+  .mej-acesse{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;text-align:center;gap:6px;padding:7px 14px;font-size:12.5px;line-height:1.2;}
+  .mej-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:5px 12px;font-size:12px;line-height:1.2;}
+  .mej-salvo + .mej-btn{margin-left:8px;}
+  .mej-barra{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;}
+  .mej-barra button{border:1px solid var(--border);background:var(--bg-card);color:var(--text);border-radius:6px;padding:3px 9px;font-size:12.5px;min-width:30px;cursor:pointer;}
+  .mej-barra button:hover{border-color:var(--accent);}
+  .mej-editor{min-height:110px;margin-top:6px;outline:none;overflow-wrap:anywhere;}
+  .mej-editor:empty::before{content:attr(data-placeholder);color:var(--text-mute);}
+  .mej-editor ul,.mej-lido ul,.mej-editor ol,.mej-lido ol{margin:4px 0 4px 20px;padding:0;}
+  .mej-editor p,.mej-lido p{margin:0 0 6px;}
+  .mej-lido{margin-top:8px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--bg-card);font-size:13.5px;line-height:1.55;overflow-wrap:anywhere;}
   .mej-txt{width:100%;margin-top:8px;resize:vertical;min-height:96px;font-size:13.5px;line-height:1.5;box-sizing:border-box;}
-  .mej-sub{margin:6px 0 0 30px;padding:0;font-size:12.5px;columns:2;}
+  .mej-sub{margin:6px 0 0 30px;padding:0;font-size:12.5px;}
   .mej-sub li{margin:2px 0;}
-  @media (max-width:600px){ .mej-etapa{gap:10px;} .mej-ponto{width:30px;height:30px;font-size:13px;} .mej-etapa::before{left:14px;top:32px;} .mej-sub{columns:1;} }
+  @media (max-width:600px){ .mej-etapa{gap:10px;} .mej-ponto{width:30px;height:30px;font-size:13px;} .mej-etapa::before{left:14px;top:32px;} }
   .me-aula{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:14px 16px;margin-bottom:12px;}
   .me-aula-top{display:flex;align-items:flex-start;gap:12px;}
   .me-aula-num{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:rgba(184,134,47,.16);color:#c9973c;}
@@ -11521,7 +11540,28 @@ const ME_JORNADA = [
     { n:'Treinamento de vendas' }, { n:'Análise de vendas' }, { n:'Contrato' } ] },
   { t:'Gestão da Mentoria', itens:[ { n:'O Embarque do mentorado' }, { n:'ePLAT' }, { n:'eSIS' }, { n:'Acompanhamento e Renovação' } ] },
 ];
-const MEJ = { resp:{}, carregando:{} };
+const MEJ = { resp:{}, carregando:{}, editando:{} };
+/* Texto com formatação mínima (negrito, itálico, sublinhado e tópicos): guarda só essas marcações. */
+function mejLimpar(html){
+  const ok = { B:'b', STRONG:'b', I:'i', EM:'i', U:'u', UL:'ul', OL:'ol', LI:'li', BR:'br', P:'p', DIV:'p' };
+  const tpl = document.createElement('template'); tpl.innerHTML = String(html||'');
+  const walk = (node)=>{
+    let out = '';
+    node.childNodes.forEach(n=>{
+      if(n.nodeType===3){ out += escapeHtml(n.textContent); return; }
+      if(n.nodeType!==1 || /^(SCRIPT|STYLE|IFRAME|OBJECT)$/.test(n.tagName)) return;
+      const tag = ok[n.tagName];
+      const dentro = walk(n);
+      if(!tag){ out += dentro; return; }
+      if(tag==='br'){ out += '<br>'; return; }
+      out += `<${tag}>${dentro}</${tag}>`;
+    });
+    return out;
+  };
+  return walk(tpl.content).replace(/<p><\/p>/g,'').trim();
+}
+/* Texto antigo salvo sem formatação: vira parágrafos com quebras de linha. */
+function mejHtml(t){ const x = String(t||''); return /<(b|i|u|ul|ol|li|p|br)\b/i.test(x) ? mejLimpar(x) : escapeHtml(x).replace(/\n/g,'<br>'); }
 async function meJornadaCarregar(sid){
   if(MEJ.carregando[sid]) return; MEJ.carregando[sid] = true;
   const { data, error } = await sb.from('me_jornada_respostas').select('chave,texto,atualizado_em').eq('aluno_id', sid);
@@ -11529,6 +11569,37 @@ async function meJornadaCarregar(sid){
   MEJ.resp[sid] = {}; (data||[]).forEach(r=>{ MEJ.resp[sid][r.chave] = r; });
   MEJ.carregando[sid] = false;
   if(currentView==='me_jornada') renderMeJornada();
+}
+/* Próximo encontro ao vivo do Mentores Essência: toda quinta-feira, às 19h (horário de Brasília).
+   Durante o encontro (até as 21h) continua mostrando o de hoje. O botão adiciona na Agenda Google
+   como evento semanal de quinta. */
+const MEJ_ENCONTRO = { dia:4, hora:19, duracaoH:2, titulo:'Encontro ao vivo | Mentores Essência' };
+function mejProximoEncontro(){
+  const agoraBR = new Date(Date.now() - 3*3600e3);            // relógio de Brasília (UTC-3)
+  const d = new Date(Date.UTC(agoraBR.getUTCFullYear(), agoraBR.getUTCMonth(), agoraBR.getUTCDate()));
+  let falta = (MEJ_ENCONTRO.dia - d.getUTCDay() + 7) % 7;
+  if(falta===0 && agoraBR.getUTCHours() >= MEJ_ENCONTRO.hora + MEJ_ENCONTRO.duracaoH) falta = 7;
+  d.setUTCDate(d.getUTCDate() + falta);
+  return { data:d, hoje: falta===0 };
+}
+function mejEncontroHtml(){
+  const { data, hoje } = mejProximoEncontro();
+  const dd = String(data.getUTCDate()).padStart(2,'0'), mm = String(data.getUTCMonth()+1).padStart(2,'0'), yy = data.getUTCFullYear();
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const h = String(MEJ_ENCONTRO.hora).padStart(2,'0'), hf = String(MEJ_ENCONTRO.hora + MEJ_ENCONTRO.duracaoH).padStart(2,'0');
+  const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + '&text=' + encodeURIComponent(MEJ_ENCONTRO.titulo)
+    + '&dates=' + `${yy}${mm}${dd}T${h}0000/${yy}${mm}${dd}T${hf}0000`
+    + '&ctz=' + encodeURIComponent('America/Sao_Paulo')
+    + '&recur=' + encodeURIComponent('RRULE:FREQ=WEEKLY;BYDAY=TH')
+    + '&details=' + encodeURIComponent('Encontro ao vivo semanal do Mentores Essência, toda quinta-feira às 19h.');
+  return `<div class="mej-encontro">
+    <div class="mej-enc-ic">${icon('calendar')}</div>
+    <div class="mej-enc-txt"><small>Próximo encontro ao vivo</small>
+      <b>${hoje ? 'Hoje' : 'Quinta-feira'}, ${data.getUTCDate()} de ${meses[data.getUTCMonth()]}, às 19h</b>
+      <span>Toda quinta-feira, às 19h (horário de Brasília)</span></div>
+    <a class="btn-outline mej-enc-btn" href="${gcal}" target="_blank" rel="noopener">Adicionar na Agenda Google</a>
+  </div>`;
 }
 function renderMeJornada(){
   const el = document.getElementById('view-me_jornada'); if(!el) return;
@@ -11541,19 +11612,33 @@ function renderMeJornada(){
   const item = (it)=>{
     if(it.campo){
       const r = resp[it.campo];
+      const tem = !!(r && String(r.texto||'').replace(/<[^>]+>/g,'').trim());
+      const editando = MEJ.editando[it.campo] || !tem;
       return `<div class="mej-item mej-aberto mej-campo">
-        <div class="mej-item-h">${icon('edit','tiny')}<b>${escapeHtml(it.n)}</b><small class="mej-salvo" data-mej-salvo="${it.campo}">${r && r.texto ? 'Salvo' : ''}</small></div>
-        <textarea class="ps-input mej-txt" rows="5" data-mej-campo="${it.campo}" placeholder="${escapeAttr(it.dica)}">${escapeHtml(r ? r.texto : '')}</textarea>
+        <div class="mej-item-h">${icon('edit','tiny')}<b>${escapeHtml(it.n)}</b>
+          <small class="mej-salvo" data-mej-salvo="${it.campo}">${!editando ? 'Salvo' : ''}</small>
+          ${editando ? `<button type="button" class="btn-accent mej-btn" data-mej-salvar="${it.campo}"><span>Salvar</span></button>`
+                     : `<button type="button" class="btn-outline mej-btn" data-mej-editar="${it.campo}"><span>Editar</span></button>`}
+        </div>
+        ${editando ? `<div class="mej-barra" data-mej-barra="${it.campo}">
+            <button type="button" data-cmd="bold" title="Negrito"><b>N</b></button>
+            <button type="button" data-cmd="italic" title="Itálico"><i>I</i></button>
+            <button type="button" data-cmd="underline" title="Sublinhado"><u>S</u></button>
+            <button type="button" data-cmd="insertUnorderedList" title="Tópicos">&bull; Tópicos</button>
+          </div>
+          <div class="ps-input mej-txt mej-editor" contenteditable="true" data-mej-campo="${it.campo}" data-placeholder="${escapeAttr(it.dica)}">${tem ? mejHtml(r.texto) : ''}</div>`
+          : `<div class="mej-lido">${mejHtml(r.texto)}</div>`}
       </div>`;
     }
     if(it.material){
       return `<div class="mej-item mej-aberto"><div class="mej-item-h">${icon('file','tiny')}<b>${escapeHtml(it.n)}</b>
-        <button type="button" class="btn-accent mej-acesse" data-mej-material="${escapeAttr(it.material)}">${icon('externallink','tiny')} Acesse aqui</button></div></div>`;
+        <button type="button" class="btn-accent mej-acesse" data-mej-material="${escapeAttr(it.material)}">Acesse aqui</button></div></div>`;
     }
     return `<div class="mej-item mej-travado"><div class="mej-item-h">${cad}<span>${escapeHtml(it.n)}</span></div>
       ${it.sub ? `<ul class="mej-sub">${it.sub.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}</div>`;
   };
   el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+    ${mejEncontroHtml()}
     <p class="section-sub" style="text-align:center">A sua jornada no Mentores Essência, etapa por etapa. Os itens com cadeado serão liberados com materiais e estruturas ao longo do programa.</p>
     <div class="mej-linha">${ME_JORNADA.map((e,i)=>`
       <section class="mej-etapa">
@@ -11564,21 +11649,30 @@ function renderMeJornada(){
         </div>
       </section>`).join('')}
     </div>`;
-  el.querySelectorAll('[data-mej-campo]').forEach(t=>{
-    let timer = null;
-    const salvar = async ()=>{
-      clearTimeout(timer);
-      const k = t.dataset.mejCampo, v = t.value;
-      const tag = el.querySelector(`[data-mej-salvo="${k}"]`);
-      if(resp[k] && resp[k].texto===v) return;
-      if(tag) tag.textContent = 'Salvando…';
-      const { data, error } = await sb.from('me_jornada_respostas').upsert({ aluno_id:sid, chave:k, texto:v, atualizado_em:new Date().toISOString(), atualizado_por:currentUser.id }, { onConflict:'aluno_id,chave' }).select('chave,texto,atualizado_em').single();
-      if(error){ if(tag) tag.textContent = 'Não salvou, tente de novo'; console.error('me_jornada salvar', error); return; }
-      resp[k] = data; if(tag) tag.textContent = 'Salvo';
-    };
-    t.addEventListener('input', ()=>{ clearTimeout(timer); const tag = el.querySelector(`[data-mej-salvo="${t.dataset.mejCampo}"]`); if(tag) tag.textContent = 'Editando…'; timer = setTimeout(salvar, 1500); });
-    t.addEventListener('blur', salvar);
+  el.querySelectorAll('[data-mej-barra] [data-cmd]').forEach(btn=>{
+    btn.addEventListener('mousedown', e=>e.preventDefault());   // mantém a seleção no texto
+    btn.addEventListener('click', ()=>{
+      const ed = el.querySelector(`.mej-editor[data-mej-campo="${btn.closest('[data-mej-barra]').dataset.mejBarra}"]`);
+      if(ed) ed.focus();
+      document.execCommand(btn.dataset.cmd, false, null);
+    });
   });
+  el.querySelectorAll('.mej-editor').forEach(ed=>{
+    ed.addEventListener('paste', e=>{ e.preventDefault(); const t = (e.clipboardData||window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
+  });
+  el.querySelectorAll('[data-mej-editar]').forEach(b=>b.addEventListener('click', ()=>{
+    MEJ.editando[b.dataset.mejEditar] = true; renderMeJornada();
+    const ed = el.querySelector(`.mej-editor[data-mej-campo="${b.dataset.mejEditar}"]`); if(ed){ ed.focus(); }
+  }));
+  el.querySelectorAll('[data-mej-salvar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const k = b.dataset.mejSalvar;
+    const ed = el.querySelector(`.mej-editor[data-mej-campo="${k}"]`); if(!ed) return;
+    const v = mejLimpar(ed.innerHTML);
+    b.disabled = true; b.querySelector('span').textContent = 'Salvando…';
+    const { data, error } = await sb.from('me_jornada_respostas').upsert({ aluno_id:sid, chave:k, texto:v, atualizado_em:new Date().toISOString(), atualizado_por:currentUser.id }, { onConflict:'aluno_id,chave' }).select('chave,texto,atualizado_em').single();
+    if(error){ console.error('me_jornada salvar', error); b.disabled = false; b.querySelector('span').textContent = 'Salvar'; showAppAviso('Não foi possível salvar. Tente de novo em instantes.'); return; }
+    resp[k] = data; MEJ.editando[k] = false; renderMeJornada();
+  }));
   el.querySelectorAll('[data-mej-material]').forEach(b=>b.addEventListener('click', async ()=>{
     if(ME.materiais===null) await meCarregarMateriais();
     const alvo = b.dataset.mejMaterial;
