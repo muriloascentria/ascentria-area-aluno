@@ -303,6 +303,29 @@
   .me-logo img{display:block;width:100%;max-width:420px;height:auto;}
   .me-logo .me-logo-claro{display:none;}
   [data-theme="light"] .me-logo .me-logo-claro{display:block;} [data-theme="light"] .me-logo .me-logo-escuro{display:none;}
+  .mej-linha{position:relative;max-width:760px;margin:18px auto 0;padding-left:8px;}
+  .mej-etapa{position:relative;display:flex;gap:16px;padding-bottom:22px;}
+  .mej-etapa::before{content:'';position:absolute;left:17px;top:38px;bottom:0;width:2px;background:var(--border);}
+  .mej-etapa:last-child::before{display:none;}
+  .mej-ponto{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 0 4px var(--bg);z-index:1;}
+  .mej-corpo{flex:1;min-width:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:12px 14px;}
+  .mej-etapa-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .mej-etapa-h h3{margin:0;font-size:15px;letter-spacing:.4px;text-transform:uppercase;}
+  .mej-breve{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--accent);background:color-mix(in srgb, var(--accent) 14%, transparent);border-radius:20px;padding:3px 10px;}
+  .mej-breve .icon{width:12px;height:12px;}
+  .mej-itens{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .mej-item{border-radius:var(--radius-sm);padding:8px 10px;background:var(--bg);}
+  .mej-item-h{display:flex;align-items:center;gap:8px;font-size:13.5px;}
+  .mej-item-h .icon{width:14px;height:14px;flex-shrink:0;}
+  .mej-travado{color:var(--text-mute);}
+  .mej-cad{display:inline-flex;color:var(--text-mute);}
+  .mej-aberto .mej-item-h .icon{color:var(--accent);}
+  .mej-salvo{margin-left:auto;font-size:11.5px;color:var(--text-mute);}
+  .mej-acesse{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12.5px;}
+  .mej-txt{width:100%;margin-top:8px;resize:vertical;min-height:96px;font-size:13.5px;line-height:1.5;box-sizing:border-box;}
+  .mej-sub{margin:6px 0 0 30px;padding:0;font-size:12.5px;columns:2;}
+  .mej-sub li{margin:2px 0;}
+  @media (max-width:600px){ .mej-etapa{gap:10px;} .mej-ponto{width:30px;height:30px;font-size:13px;} .mej-etapa::before{left:14px;top:32px;} .mej-sub{columns:1;} }
   .me-aula{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:14px 16px;margin-bottom:12px;}
   .me-aula-top{display:flex;align-items:flex-start;gap:12px;}
   .me-aula-num{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:rgba(184,134,47,.16);color:#c9973c;}
@@ -3588,6 +3611,7 @@
     </a>
 
     <div class="nav-group-label nav-group-mentores" id="nav-group-mentores" style="display:none">Mentores Essência</div>
+    <button class="nav-item mentores" data-view="me_jornada" style="display:none"></button>
     <button class="nav-item mentores" data-view="me_aulas" style="display:none"></button>
     <button class="nav-item mentores" data-view="me_sessoes" style="display:none"></button>
     <button class="nav-item mentores" data-view="me_metas" style="display:none"></button>
@@ -3682,6 +3706,7 @@
       <div class="view" id="view-painel"></div>
       <div class="view" id="view-sessoes"></div>
       <div class="view" id="view-metas"></div>
+      <div class="view" id="view-me_jornada"></div>
       <div class="view" id="view-me_aulas"></div>
       <div class="view" id="view-me_sessoes"></div>
       <div class="view" id="view-me_metas"></div>
@@ -3783,7 +3808,7 @@ const NAV_LABELS = {
   agenda:['calendar','Agenda ao Vivo'], materiais:['folder','Materiais'],
   dashboard:['chart','Dashboard'], painel:['compass','Painel do Método'], planner:['calendar','ePLANNER'],
   sessoes:['video','Minhas Sessões 1:1'], metas:['target','Minhas Metas'],
-  me_aulas:['film','Aulas'], me_sessoes:['video','Minhas Sessões 1:1'], me_metas:['target','Minhas Metas'], me_materiais:['folder','Materiais'],
+  me_jornada:['compass','Jornada do Mentor'], me_aulas:['film','Aulas'], me_sessoes:['video','Minhas Sessões 1:1'], me_metas:['target','Minhas Metas'], me_materiais:['folder','Materiais'],
   interno:['lock','Acompanhamento Interno'],
   conteudo:['upload','Gerenciar Conteúdo'],
   marca:['image','Conteúdo e Marca'],
@@ -3808,7 +3833,7 @@ const NAV_LABELS = {
   acompanhamento:['comment','Acompanhamento'],
 };
 const BADGE = {
-  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', me_materiais:'mentores', interno:'restrict', embarque:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', radarfin:'restrict', reunioes:'restrict', politicas:'restrict', marca:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
+  dashboard:'shared', painel:'shared', planner:'shared', sessoes:'individual', metas:'individual', me_jornada:'mentores', me_aulas:'mentores', me_sessoes:'mentores', me_metas:'mentores', me_materiais:'mentores', interno:'restrict', embarque:'restrict', conteudo:'restrict', visaogeral:'restrict', vendas:'restrict', clientes:'restrict', treinamento:'restrict', gestaotime:'restrict', radar:'restrict', desempenho:'restrict', dre:'restrict', radarfin:'restrict', reunioes:'restrict', politicas:'restrict', marca:'restrict', analise:'restrict', financeiro:'restrict', equipe:'restrict', tarefas:'restrict', mensagens:'restrict', comunicacao:'restrict',
 };
 const BADGE_TEXT = { shared:'Meu Método', individual:'Minha Área', restrict:'Acesso Restrito', mentores:'Mentores Essência' };
 
@@ -7453,7 +7478,7 @@ function setRole(role){
   updateNotifBadge();
   if(role==='aluno' && VIEWS_EQUIPE.includes(currentView)){ goTo(isCursoView ? 'aulas' : 'inicio'); }
   if(role==='aluno' && isCursoView && ['ranking','painel','planner','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
-  if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','planner','sessoes','metas','me_aulas','me_sessoes','me_metas','me_materiais'].includes(currentView)){ goTo('equipe'); }
+  if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','planner','sessoes','metas','me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'].includes(currentView)){ goTo('equipe'); }
   meAtualizarMenu();
   ptAjustarToggle();
 }
@@ -7526,8 +7551,8 @@ function renderCurrentView(){
                sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
                vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, radarfin:renderRadarFin, treinamento:renderTreinamento, gestaotime:renderGestaoTime, marca:renderMarca, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
                comunicacao:renderComunicacao, embarque:renderEmbarque, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens,
-               me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas, me_materiais:renderMeMateriais};
-  const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno','me_aulas','me_sessoes','me_metas','me_materiais'];
+               me_jornada:renderMeJornada, me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas, me_materiais:renderMeMateriais};
+  const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno','me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'];
   meAtualizarMenu();
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
@@ -11385,7 +11410,7 @@ function meAtualizarMenu(){
   const ok = meLiberado();
   const lbl = document.getElementById('nav-group-mentores'); if(lbl) lbl.style.display = ok ? 'flex' : 'none';
   document.querySelectorAll('.nav-item.mentores').forEach(b=>{ b.style.display = ok ? 'flex' : 'none'; });
-  if(!ok && ['me_aulas','me_sessoes','me_metas','me_materiais'].includes(currentView) && currentRole==='aluno') setTimeout(()=>goTo('inicio'), 0);
+  if(!ok && ['me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'].includes(currentView) && currentRole==='aluno') setTimeout(()=>goTo('inicio'), 0);
   if(ok) setTimeout(meBoasVindasTalvez, 600);
 }
 /* Boas-vindas do Mentores Essência: aparece uma vez para o aluno liberado (a própria conta, não a equipe
@@ -11471,6 +11496,96 @@ async function meCarregarAluno(sid, forcar){
   if(currentView==='interno') renderInterno();
 }
 function meDataTxt(iso){ return iso ? prazoIsoParaTexto(String(iso).slice(0,10)) : ''; }
+/* Jornada do Mentor (Mentores Essência): linha do tempo das etapas do programa. Cada etapa traz a tag
+   "Aula disponível em breve"; os itens com cadeado ainda não foram liberados (material e estrutura virão
+   depois). Em Produto, o mentor preenche Dores/Desejos/Medos/Crenças, Transformação e Oferta (tabela
+   me_jornada_respostas). Em Vendas, o Roteiro de Vendas abre o material publicado em Materiais. */
+const ME_JORNADA = [
+  { t:'Abertura', itens:[] },
+  { t:'Produto', itens:[
+    { n:'Dores, Desejos, Medos e Crenças', campo:'dores', dica:'Quais são as dores, os desejos, os medos e as crenças do seu cliente ideal?' },
+    { n:'Transformação', campo:'transformacao', dica:'Qual transformação você gera na vida do seu cliente? De onde ele sai e aonde chega com você?' },
+    { n:'Oferta', campo:'oferta', dica:'Como é a sua oferta: o que entrega, em quanto tempo, o formato e o valor?' } ] },
+  { t:'Conteúdo', itens:[
+    { n:'Roteiro de conteúdos baseado nas dores, desejos, medos e crenças' },
+    { n:'Histórias, bastidores, prova de transformação (clínico)' },
+    { n:'Conteúdo de demanda' },
+    { n:'Calendário de conteúdo' } ] },
+  { t:'Captação de Leads', itens:[
+    { n:'Formatos de captação', sub:['Formato 1','Formato 2','Formato 3','Formato 4','Formato 5','Formato 6'] },
+    { n:'Automação' } ] },
+  { t:'eCRM', itens:[ { n:'Funil' }, { n:'Cadência' }, { n:'Autentique' } ] },
+  { t:'Agendamento', itens:[ { n:'Qualificação' }, { n:'Confirmação' } ] },
+  { t:'Vendas', itens:[
+    { n:'Roteiro de vendas', material:'roteiro de vendas' },
+    { n:'Treinamento de vendas' }, { n:'Análise de vendas' }, { n:'Contrato' } ] },
+  { t:'Gestão da Mentoria', itens:[ { n:'O Embarque do mentorado' }, { n:'ePLAT' }, { n:'eSIS' }, { n:'Acompanhamento e Renovação' } ] },
+];
+const MEJ = { resp:{}, carregando:{} };
+async function meJornadaCarregar(sid){
+  if(MEJ.carregando[sid]) return; MEJ.carregando[sid] = true;
+  const { data, error } = await sb.from('me_jornada_respostas').select('chave,texto,atualizado_em').eq('aluno_id', sid);
+  if(error) console.error('me_jornada', error);
+  MEJ.resp[sid] = {}; (data||[]).forEach(r=>{ MEJ.resp[sid][r.chave] = r; });
+  MEJ.carregando[sid] = false;
+  if(currentView==='me_jornada') renderMeJornada();
+}
+function renderMeJornada(){
+  const el = document.getElementById('view-me_jornada'); if(!el) return;
+  const sid = currentStudentId;
+  if(!sid){ el.innerHTML = meLogoHtml()+'<div class="empty-state">Escolha um mentor para ver a jornada.</div>'; return; }
+  if(!MEJ.resp[sid]){ meJornadaCarregar(sid); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando a jornada…</div>'; return; }
+  if(ME.materiais===null) meCarregarMateriais();
+  const resp = MEJ.resp[sid];
+  const cad = `<span class="mej-cad" title="Disponível em breve">${icon('lock','tiny')}</span>`;
+  const item = (it)=>{
+    if(it.campo){
+      const r = resp[it.campo];
+      return `<div class="mej-item mej-aberto mej-campo">
+        <div class="mej-item-h">${icon('edit','tiny')}<b>${escapeHtml(it.n)}</b><small class="mej-salvo" data-mej-salvo="${it.campo}">${r && r.texto ? 'Salvo' : ''}</small></div>
+        <textarea class="ps-input mej-txt" rows="5" data-mej-campo="${it.campo}" placeholder="${escapeAttr(it.dica)}">${escapeHtml(r ? r.texto : '')}</textarea>
+      </div>`;
+    }
+    if(it.material){
+      return `<div class="mej-item mej-aberto"><div class="mej-item-h">${icon('file','tiny')}<b>${escapeHtml(it.n)}</b>
+        <button type="button" class="btn-accent mej-acesse" data-mej-material="${escapeAttr(it.material)}">${icon('externallink','tiny')} Acesse aqui</button></div></div>`;
+    }
+    return `<div class="mej-item mej-travado"><div class="mej-item-h">${cad}<span>${escapeHtml(it.n)}</span></div>
+      ${it.sub ? `<ul class="mej-sub">${it.sub.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}</div>`;
+  };
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+    <p class="section-sub" style="text-align:center">A sua jornada no Mentores Essência, etapa por etapa. Os itens com cadeado serão liberados com materiais e estruturas ao longo do programa.</p>
+    <div class="mej-linha">${ME_JORNADA.map((e,i)=>`
+      <section class="mej-etapa">
+        <div class="mej-ponto">${i+1}</div>
+        <div class="mej-corpo">
+          <div class="mej-etapa-h"><h3>${escapeHtml(e.t)}</h3><span class="mej-breve">${icon('calendar','tiny')} Aula disponível em breve</span></div>
+          ${e.itens.length ? `<div class="mej-itens">${e.itens.map(item).join('')}</div>` : ''}
+        </div>
+      </section>`).join('')}
+    </div>`;
+  el.querySelectorAll('[data-mej-campo]').forEach(t=>{
+    let timer = null;
+    const salvar = async ()=>{
+      clearTimeout(timer);
+      const k = t.dataset.mejCampo, v = t.value;
+      const tag = el.querySelector(`[data-mej-salvo="${k}"]`);
+      if(resp[k] && resp[k].texto===v) return;
+      if(tag) tag.textContent = 'Salvando…';
+      const { data, error } = await sb.from('me_jornada_respostas').upsert({ aluno_id:sid, chave:k, texto:v, atualizado_em:new Date().toISOString(), atualizado_por:currentUser.id }, { onConflict:'aluno_id,chave' }).select('chave,texto,atualizado_em').single();
+      if(error){ if(tag) tag.textContent = 'Não salvou, tente de novo'; console.error('me_jornada salvar', error); return; }
+      resp[k] = data; if(tag) tag.textContent = 'Salvo';
+    };
+    t.addEventListener('input', ()=>{ clearTimeout(timer); const tag = el.querySelector(`[data-mej-salvo="${t.dataset.mejCampo}"]`); if(tag) tag.textContent = 'Editando…'; timer = setTimeout(salvar, 1500); });
+    t.addEventListener('blur', salvar);
+  });
+  el.querySelectorAll('[data-mej-material]').forEach(b=>b.addEventListener('click', async ()=>{
+    if(ME.materiais===null) await meCarregarMateriais();
+    const alvo = b.dataset.mejMaterial;
+    const m = (ME.materiais||[]).find(x=>normTxt(x.titulo).includes(normTxt(alvo)));
+    if(m) meMatAbrir(m.id); else showAppAviso('O roteiro de vendas ainda não foi publicado em Materiais.');
+  }));
+}
 function renderMeAulas(){
   const el = document.getElementById('view-me_aulas'); if(!el) return;
   if(ME.aulas===null){ meCarregarAulas(); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando as aulas…</div>'; return; }
@@ -17914,7 +18029,7 @@ function viewsDoPapel(){
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
   if(papel==='vendas') return ['equipe'].concat(MSG_SO_ALUNOS ? [] : ['mensagens']).concat(['vendas','analise','treinamento','reunioes','politicas']).concat(tarefasSouMembro()? ['tarefas'] : []).filter(areaAtiva);
   if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(MSG_SO_ALUNOS ? [] : ['mensagens']).concat(['marca']).filter(areaAtiva);
-  if(papel==='me_convidado') return ['me_aulas','me_sessoes','me_metas','me_materiais'];
+  if(papel==='me_convidado') return ['me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'];
   return null; // equipe interna: tudo
 }
 function renderEquipe(){
