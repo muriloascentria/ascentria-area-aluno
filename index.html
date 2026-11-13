@@ -303,7 +303,10 @@
   .me-logo img{display:block;width:100%;max-width:420px;height:auto;}
   .me-logo .me-logo-claro{display:none;}
   [data-theme="light"] .me-logo .me-logo-claro{display:block;} [data-theme="light"] .me-logo .me-logo-escuro{display:none;}
-  .mej-encontro{display:flex;align-items:center;gap:14px;max-width:760px;margin:14px auto 18px;padding:14px 16px;border:1px solid color-mix(in srgb, var(--accent) 45%, var(--border));border-radius:var(--radius);background:color-mix(in srgb, var(--accent) 10%, var(--bg-card));box-sizing:border-box;}
+  .mej-etapa-enc::before{display:none;}
+  .mej-ponto.mej-ponto-vazio{background:var(--accent);box-shadow:0 0 0 4px var(--bg);}
+  .mej-corpo.mej-corpo-enc{padding:0;border:none;background:none;}
+  .mej-encontro{display:flex;align-items:center;gap:14px;margin:0;padding:14px 16px;border:1px solid color-mix(in srgb, var(--accent) 45%, var(--border));border-radius:var(--radius);background:color-mix(in srgb, var(--accent) 10%, var(--bg-card));box-sizing:border-box;}
   .mej-enc-ic{flex-shrink:0;width:42px;height:42px;border-radius:12px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;}
   .mej-enc-ic .icon{width:22px;height:22px;}
   .mej-enc-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
@@ -313,9 +316,10 @@
   .mej-enc-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;text-align:center;height:40px;padding:0 16px;box-sizing:border-box;font-size:13px;font-weight:600;line-height:1;white-space:nowrap;border-radius:10px;border:1px solid transparent;flex:1 1 0;min-width:0;}
   .mej-enc-btn.btn-outline{border-color:color-mix(in srgb, var(--text) 22%, transparent);}
   .mej-enc-btn .icon{width:15px;height:15px;flex-shrink:0;}
-  .mej-enc-acoes{display:flex;gap:8px;flex-shrink:0;width:340px;max-width:100%;}
-  @media (max-width:860px){ .mej-encontro{flex-wrap:wrap;} .mej-enc-acoes{width:100%;} }
-  @media (max-width:360px){ .mej-enc-acoes{flex-direction:column;} .mej-enc-btn{flex:none;width:100%;} }
+  .mej-enc-acoes{display:flex;gap:8px;flex-shrink:0;}
+  .mej-enc-acoes .mej-enc-btn{flex:none;width:158px;padding:0 10px;}
+  @media (max-width:860px){ .mej-encontro{flex-wrap:wrap;} .mej-enc-acoes{width:100%;} .mej-enc-acoes .mej-enc-btn{flex:1 1 0;width:auto;} }
+  @media (max-width:480px){ .mej-enc-acoes{flex-direction:column;} .mej-enc-acoes .mej-enc-btn{flex:none;width:100%;} }
   @media (max-width:600px){ .mej-enc-btn{padding:0 10px;font-size:12.5px;} }
   .mej-linha{position:relative;max-width:760px;margin:18px auto 0;padding-left:8px;}
   .mej-etapa{position:relative;display:flex;gap:16px;padding-bottom:22px;}
@@ -11612,8 +11616,8 @@ function mejEncontroHtml(){
   return `<div class="mej-encontro">
     <div class="mej-enc-ic">${icon('calendar')}</div>
     <div class="mej-enc-txt"><small>Próximo encontro ao vivo</small>
-      <b>${hoje ? 'Hoje' : 'Quinta-feira'}, ${data.getUTCDate()} de ${meses[data.getUTCMonth()]}, às 19h</b>
-      <span>Toda quinta-feira, às 19h (horário de Brasília)</span></div>
+      <b>${hoje ? 'Hoje' : 'Quinta-feira'}, ${data.getUTCDate()} de ${meses[data.getUTCMonth()]}</b>
+      <span>Às 19h (horário de Brasília) · toda quinta-feira</span></div>
     <div class="mej-enc-acoes">
       ${MEJ_ENCONTRO.meet ? `<a class="btn-accent mej-enc-btn" href="${escapeAttr(MEJ_ENCONTRO.meet)}" target="_blank" rel="noopener">${icon('video','tiny')}<span>Entrar no Meet</span></a>` : ''}
       <a class="btn-outline mej-enc-btn" href="${gcal}" target="_blank" rel="noopener">${icon('calendar','tiny')}<span>Adicionar à agenda</span></a>
@@ -11658,9 +11662,8 @@ function renderMeJornada(){
       ${it.sub ? `<ul class="mej-sub">${it.sub.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}</div>`;
   };
   el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
-    ${mejEncontroHtml()}
-    <p class="section-sub" style="text-align:center">A sua jornada no Mentores Essência, etapa por etapa. Os itens com cadeado serão liberados com materiais e estruturas ao longo do programa.</p>
-    <div class="mej-linha">${ME_JORNADA.map((e,i)=>`
+    <div class="mej-linha">
+      <section class="mej-etapa mej-etapa-enc"><div class="mej-ponto mej-ponto-vazio"></div><div class="mej-corpo mej-corpo-enc">${mejEncontroHtml()}</div></section>${ME_JORNADA.map((e,i)=>`
       <section class="mej-etapa">
         <div class="mej-ponto">${i+1}</div>
         <div class="mej-corpo">
