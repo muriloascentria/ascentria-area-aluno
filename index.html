@@ -5671,8 +5671,16 @@ function isBonusView(){
 }
 /* Regra do Bônus: só os encontros da mentoria de terça (2) e sexta (5) ficam liberados. */
 const BONUS_DIAS_LIBERADOS = [2,5];
+/* Perfil "Pós-graduação + Aulas ao vivo" (tier curso, pos + bonus): vê toda a Agenda ao Vivo da mentoria,
+   os próximos encontros e as gravações anteriores, sem o limite de terça e sexta do Método + Bônus. */
+function isPosVivoView(){
+  const s = getStudent(currentStudentId);
+  if(s) return s.tier==='curso' && !!s.bonus && !!s.pos;
+  return !!(currentUserProfile && currentUserProfile.tier==='curso' && currentUserProfile.bonus && currentUserProfile.pos);
+}
 function liveSessionLiberadaBonus(l){
   if(l.studentId!=null) return true;
+  if(isPosVivoView()) return true;
   const [y,m,d] = String(l._eventDate||'').split('-').map(Number);
   if(!y) return false;
   return BONUS_DIAS_LIBERADOS.includes(new Date(y, m-1, d).getDay());
@@ -9464,7 +9472,7 @@ function renderAgenda(){
   const visible = LIVE_SESSIONS.filter(l=>{
     if(l.studentId!=null) return l.studentId===currentStudentId;
     if(currentRole==='staff') return true;
-    if(bonusView) return l.audience==='mentorado'; // Método + Bônus vê a agenda da mentoria (com cadeado fora de terça/sexta)
+    if(bonusView) return l.audience==='mentorado'; // Método + Bônus vê a agenda da mentoria (com cadeado fora de terça/sexta); Pós + Aulas ao vivo vê tudo
     return l.audience===getViewingTier();
   });
   /* Ordena sempre pela data (e horário, quando informado) — não pela ordem em que foram cadastrados —
@@ -23110,7 +23118,7 @@ function renderVisaoGeral(){
           <option value="curso">Método (curso gravado)</option>
           <option value="curso_bonus">Método + Bônus (curso + encontros de terça e sexta)</option>
           <option value="curso_pos">Pós-graduação (curso gravado)</option>
-          <option value="curso_pos_vivo">Pós-graduação + Aulas ao vivo (curso + encontros de terça e sexta)</option>
+          <option value="curso_pos_vivo">Pós-graduação + Aulas ao vivo (curso + Agenda ao Vivo e gravações anteriores)</option>
         </select>
       </div>
       <div class="field full"><label>Identificação (opcional)</label><input class="ps-input" type="text" id="new-code-label" placeholder="Ex.: nome de quem vai usar, ou turma"></div>
