@@ -4964,7 +4964,7 @@ function nomeAlunoTag(id){
 }
 function alunoSelectOpts(current){
   return `<option value="">— Sem aluno vinculado —</option>` +
-    alunosParaVinculo().map(s=>`<option value="${s.id}" ${current===s.id?'selected':''}>${escapeHtml(s.name)}${s.tier==='curso'? (s.pos? (s.bonus? ' (Pós-graduação + Aulas ao vivo)' : ' (Pós-graduação)') : (s.bonus? ' (Método + Bônus)' : ' (Curso)')) : ''}</option>`).join('');
+    alunosParaVinculo().map(s=>`<option value="${s.id}" ${current===s.id?'selected':''}>${escapeHtml(s.name)}${s.tier==='curso'? (s.pos? ' (Pós-graduação)' : (s.bonus? ' (Método + Bônus)' : ' (Curso)')) : ''}</option>`).join('');
 }
 /* Sugestões de aluno por semelhança de nome — só SUGERE; quem confirma é a pessoa. Os nomes de lead
    no registro de vendas são descritivos ("Enfermeira Fulana e esposo"), então casar sozinho erraria. */
@@ -5666,17 +5666,17 @@ function actingAuthorId(){
 /* Perfil "Método + Bônus" de quem está sendo visto (própria conta ou aluno selecionado pela equipe). */
 function isBonusView(){
   const s = getStudent(currentStudentId);
-  if(s) return s.tier==='curso' && !!s.bonus;
-  return !!(currentUserProfile && currentUserProfile.tier==='curso' && currentUserProfile.bonus);
+  if(s) return s.tier==='curso' && (!!s.bonus || !!s.pos);
+  return !!(currentUserProfile && currentUserProfile.tier==='curso' && (currentUserProfile.bonus || currentUserProfile.pos));
 }
 /* Regra do Bônus: só os encontros da mentoria de terça (2) e sexta (5) ficam liberados. */
 const BONUS_DIAS_LIBERADOS = [2,5];
-/* Perfil "Pós-graduação + Aulas ao vivo" (tier curso, pos + bonus): vê toda a Agenda ao Vivo da mentoria,
+/* Perfil "Pós-graduação" (tier curso + pos): além das aulas da pós, vê toda a Agenda ao Vivo da mentoria,
    os próximos encontros e as gravações anteriores, sem o limite de terça e sexta do Método + Bônus. */
 function isPosVivoView(){
   const s = getStudent(currentStudentId);
-  if(s) return s.tier==='curso' && !!s.bonus && !!s.pos;
-  return !!(currentUserProfile && currentUserProfile.tier==='curso' && currentUserProfile.bonus && currentUserProfile.pos);
+  if(s) return s.tier==='curso' && !!s.pos;
+  return !!(currentUserProfile && currentUserProfile.tier==='curso' && currentUserProfile.pos);
 }
 function liveSessionLiberadaBonus(l){
   if(l.studentId!=null) return true;
@@ -5687,12 +5687,12 @@ function liveSessionLiberadaBonus(l){
 }
 function tierLabel(s){
   if(!s) return '';
-  if(s.tier==='curso') return s.pos ? (s.bonus ? 'Pós-graduação + Aulas ao vivo' : 'Pós-graduação') : (s.bonus ? 'Método + Bônus' : 'Método');
+  if(s.tier==='curso') return s.pos ? 'Pós-graduação' : (s.bonus ? 'Método + Bônus' : 'Método');
   return s.pos ? 'Pós-graduação + Mentoria' : 'Mentoria';
 }
 /* Perfil "Pós-graduação + Mentoria": acesso completo de mentorado (tier 'mentorado') com profiles.pos = true.
-   Perfil "Pós-graduação": mesmo acesso do Método (curso gravado, tier 'curso'), só muda o nome do perfil
-   e do produto (profiles.pos = true). */
+   Perfil "Pós-graduação": curso gravado da pós (tier 'curso', profiles.pos = true) mais a Agenda ao Vivo
+   completa e as gravações anteriores (ver isBonusView / isPosVivoView). */
 function produtoAluno(s){ return s && s.tier==='curso' ? (s.pos ? 'Pós-graduação' : 'Método Essência') : (s && s.pos ? 'Mentoria Essência + Pós-graduação' : 'Mentoria Essência'); }
 function getViewingTier(){
   // No modo "Equipe Interna" (currentRole==='staff'), a equipe não está vendo como um aluno específico —
@@ -6514,7 +6514,7 @@ function generateAccessCodeString(tier, bonus, pos){
   const abc = accessCodeAlphabet();
   let rand = '';
   for(let i=0;i<6;i++) rand += abc[Math.floor(Math.random()*abc.length)];
-  return (tier==='curso' ? (pos ? (bonus ? 'POSVIVO-' : 'POS-') : (bonus ? 'BONUS-' : 'METODO-')) : (pos ? 'POSMENTOR-' : 'MENTOR-')) + rand;
+  return (tier==='curso' ? (pos ? 'POS-' : (bonus ? 'BONUS-' : 'METODO-')) : (pos ? 'POSMENTOR-' : 'MENTOR-')) + rand;
 }
 /* Gera e grava um código novo, tentando de novo em caso (raríssimo) de colisão com um já existente. */
 async function syncAccessCodeGenerate(tier, label, bonus, pos){
@@ -9472,7 +9472,7 @@ function renderAgenda(){
   const visible = LIVE_SESSIONS.filter(l=>{
     if(l.studentId!=null) return l.studentId===currentStudentId;
     if(currentRole==='staff') return true;
-    if(bonusView) return l.audience==='mentorado'; // Método + Bônus vê a agenda da mentoria (com cadeado fora de terça/sexta); Pós + Aulas ao vivo vê tudo
+    if(bonusView) return l.audience==='mentorado'; // Método + Bônus vê a agenda da mentoria (com cadeado fora de terça/sexta); Pós-graduação vê tudo
     return l.audience===getViewingTier();
   });
   /* Ordena sempre pela data (e horário, quando informado) — não pela ordem em que foram cadastrados —
@@ -12136,7 +12136,7 @@ function exportAcompanhamentoPDF(s){
         <div>
           <div class="cat">Acompanhamento completo do mentorado</div>
           <h1>${escapeHtml(s.name)}</h1>
-          <div class="cat" style="text-transform:none">${escapeHtml((s.tier==='curso'? (s.pos? (s.bonus? 'Pós-graduação + Aulas ao vivo' : 'Pós-graduação') : (s.bonus? 'Curso Gravado + Bônus' : 'Curso Gravado')) : 'Mentoria Método Essência'))} · Documento gerado em ${geradoEm}</div>
+          <div class="cat" style="text-transform:none">${escapeHtml((s.tier==='curso'? (s.pos? 'Pós-graduação' : (s.bonus? 'Curso Gravado + Bônus' : 'Curso Gravado')) : 'Mentoria Método Essência'))} · Documento gerado em ${geradoEm}</div>
         </div>
       </div>
 
@@ -12931,7 +12931,7 @@ function renderInterno(){
   /* Seletor de mentorado (no lugar da lista que ficava no menu da foto): ordem alfabética, com foto,
      e uma busca por nome pra achar rápido. Escolher abre o acompanhamento da pessoa aqui mesmo. */
   const alunosOrdenados = STUDENTS.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-  const tierLabel = (st)=> st.tier==='curso' ? (st.pos? (st.bonus? 'Pós-graduação + Aulas ao vivo' : 'Pós-graduação') : (st.bonus? 'Método + Bônus' : 'Método')) : (st.pos? 'Pós-graduação + Mentoria' : 'Mentoria');
+  const tierLabel = (st)=> st.tier==='curso' ? (st.pos? 'Pós-graduação' : (st.bonus? 'Método + Bônus' : 'Método')) : (st.pos? 'Pós-graduação + Mentoria' : 'Mentoria');
   const alunoPickerHtml = `
     <div class="aluno-picker" id="aluno-picker">
       <button type="button" class="aluno-picker-btn" id="aluno-picker-btn" aria-expanded="false">
@@ -20762,14 +20762,13 @@ async function acessoReativar(s){
   showAppAviso(`O acesso de ${s.name} foi reativado.`, 'Acesso reativado');
 }
 function tierSelectHtml(s){
-  const atual = s.tier==='curso' ? (s.pos ? (s.bonus ? 'curso_pos_vivo' : 'curso_pos') : (s.bonus ? 'curso_bonus' : 'curso')) : (s.pos ? 'mentorado_pos' : 'mentorado');
+  const atual = s.tier==='curso' ? (s.pos ? 'curso_pos' : (s.bonus ? 'curso_bonus' : 'curso')) : (s.pos ? 'mentorado_pos' : 'mentorado');
   return `<select class="ps-input" style="padding:6px 8px;font-size:12px" data-tier-select="${s.id}">
     <option value="mentorado" ${atual==='mentorado'?'selected':''}>Mentorado</option>
     <option value="mentorado_pos" ${atual==='mentorado_pos'?'selected':''}>Pós-graduação + Mentoria</option>
     <option value="curso" ${atual==='curso'?'selected':''}>Método (curso)</option>
     <option value="curso_bonus" ${atual==='curso_bonus'?'selected':''}>Método + Bônus</option>
     <option value="curso_pos" ${atual==='curso_pos'?'selected':''}>Pós-graduação</option>
-    <option value="curso_pos_vivo" ${atual==='curso_pos_vivo'?'selected':''}>Pós-graduação + Aulas ao vivo</option>
   </select>${acessoCelulaHtml(s)}`;
 }
 function bindTierSelects(root, afterChange){
@@ -20780,8 +20779,8 @@ function bindTierSelects(root, afterChange){
       const s = getStudent(sel.dataset.tierSelect);
       if(!s) return;
       s.tier = (sel.value==='mentorado' || sel.value==='mentorado_pos') ? 'mentorado' : 'curso';
-      s.bonus = sel.value==='curso_bonus' || sel.value==='curso_pos_vivo';
-      s.pos = sel.value==='curso_pos' || sel.value==='curso_pos_vivo' || sel.value==='mentorado_pos';
+      s.bonus = sel.value==='curso_bonus';
+      s.pos = sel.value==='curso_pos' || sel.value==='mentorado_pos';
       syncStudentTierUpdate(s.id, s.tier, s.bonus, s.pos);
       afterChange();
     });
@@ -23117,8 +23116,7 @@ function renderVisaoGeral(){
           <option value="mentorado_pos">Pós-graduação + Mentoria (acesso completo da mentoria)</option>
           <option value="curso">Método (curso gravado)</option>
           <option value="curso_bonus">Método + Bônus (curso + encontros de terça e sexta)</option>
-          <option value="curso_pos">Pós-graduação (curso gravado)</option>
-          <option value="curso_pos_vivo">Pós-graduação + Aulas ao vivo (curso + Agenda ao Vivo e gravações anteriores)</option>
+          <option value="curso_pos">Pós-graduação (curso da pós + Agenda ao Vivo e gravações anteriores)</option>
         </select>
       </div>
       <div class="field full"><label>Identificação (opcional)</label><input class="ps-input" type="text" id="new-code-label" placeholder="Ex.: nome de quem vai usar, ou turma"></div>
@@ -23161,8 +23159,8 @@ function renderVisaoGeral(){
   document.getElementById('gen-code-btn').addEventListener('click', async ()=>{
     const escolha = document.getElementById('new-code-tier').value;
     const tier = (escolha==='mentorado' || escolha==='mentorado_pos') ? 'mentorado' : 'curso';
-    const bonus = escolha==='curso_bonus' || escolha==='curso_pos_vivo';
-    const pos = escolha==='curso_pos' || escolha==='curso_pos_vivo' || escolha==='mentorado_pos';
+    const bonus = escolha==='curso_bonus';
+    const pos = escolha==='curso_pos' || escolha==='mentorado_pos';
     const label = document.getElementById('new-code-label').value.trim();
     const btn = document.getElementById('gen-code-btn');
     btn.disabled = true;
