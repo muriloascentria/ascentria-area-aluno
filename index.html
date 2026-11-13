@@ -259,7 +259,7 @@
   }
   .nav-item:hover{background:var(--bg-card);color:var(--text);}
   .msg-bol{min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--danger,#d9534f);color:#fff;font-size:11px;font-weight:700;line-height:19px;text-align:center;box-sizing:border-box;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-sidebar,var(--bg));}
-  .nav-item > .msg-bol{margin-left:auto;}
+  .nav-item > .msg-bol{margin-left:-2px;}
   #menu-btn{position:relative;}
   #menu-btn > .msg-bol{position:absolute;top:-3px;right:-5px;}
   .equipe-card{position:relative;}
@@ -14991,8 +14991,8 @@ function msgBolinhas(){
   };
   por(document.getElementById('nav-mensagens'));
   por(document.getElementById('nav-acompanhamento'));
-  por(document.getElementById('menu-btn'));
-  document.querySelectorAll('[data-equipe-go="mensagens"]').forEach(por);
+  /* A bolinha fica só ao lado do item no menu lateral: tira as que existiam no botão do menu e no card do Início. */
+  document.querySelectorAll('#menu-btn > .msg-bol, [data-equipe-go="mensagens"] > .msg-bol').forEach(x=>x.remove());
 }
 function msgTotalNaoLidas(){ return (MSG_SO_ALUNOS ? 0 : MSG_NAO_LIDAS.length) + msgGruposVisiveis().reduce((s,g)=>s+(g.naoLidas||0),0) + (msgPodeAcomp() ? Object.values(MSG_ACOMP).reduce((s,a)=>s+(a.naoLidas||0),0) : 0); }
 function msgNomeDe(id){ if(id===msgEu()) return 'Você'; const p = msgQuem(id); return p ? p.name.split(' ')[0] : 'Alguém'; }
