@@ -4314,6 +4314,9 @@ const QUADRANTS = [
           adicionando mais linhas depois; cada linha nova já sugere o próximo dia da semana em sequência. */
        seedRows:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
        cycleColumn:'__label', cycleValues:['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'],
+       /* Nem todo dia tem conteúdo: linha totalmente vazia não conta. Basta 1 dia completo, e todo dia
+          começado precisa estar completo (todas as colunas). */
+       linhasVaziasOk:true,
        /* Quando o Status vira "Publicado" e há um link preenchido, o link sobe sozinho para a lista de
           Avaliação de Conteúdo (só o link — o resto continua para preencher manualmente como já era). */
        autoPublish:{statusKey:'status', publishedValue:'Publicado', linkKey:'link', targetTopicId:'avaliacao', targetKey:'avaliacao', flagKey:'__avaliacaoLinked', dataKey:'dataFunil'}},
@@ -9913,7 +9916,11 @@ function sectionFilled(section, data){
      basta preencher uma célula em uma linha (ex.: só marcar o Status de um dia no Funil de
      Conteúdo). "__label" é o rótulo automático da linha (dia da semana, nome da ação fixa) e não
      conta como coluna real, senão uma tabela recém-semeada já apareceria com algo "preenchido". */
-  if(section.type==='table') return val.length>0 && val.every(row=>section.columns.every(c=>c.key==='__label' || (row[c.key]||'').trim()!==''));
+  if(section.type==='table'){
+    const reais = section.columns.filter(c=>c.key!=='__label');
+    const rows = section.linhasVaziasOk ? val.filter(row=>reais.some(c=>String(row[c.key]||'').trim()!=='')) : val;
+    return rows.length>0 && rows.every(row=>reais.every(c=>String(row[c.key]||'').trim()!==''));
+  }
   /* Fluxo de caixa é contínuo por natureza (sempre dá pra lançar o próximo mês) — como nas listas,
      conta como "preenchido" a partir do primeiro lançamento REAL (com descrição ou valor), não exige
      todos os meses do ano. Uma linha recém-adicionada mas ainda vazia (clicou em "Adicionar
@@ -9976,8 +9983,10 @@ function topicFaltando(topic, data){
     if(sec.type==='fields'){ const v = sectionValue(data, sec); sec.fields.forEach(f=>{ if(!(v[f.key]||'').trim()) out.push(f.label); }); }
     /* Tabela: diz exatamente quais colunas e em quais linhas falta, senão a pessoa não acha o campo vazio. */
     else if(sec.type==='table'){
-      const rows = sectionValue(data, sec);
-      if(!rows.length){ out.push(sec.label || 'uma seção'); return; }
+      const reaisCols = sec.columns.filter(c=>c.key!=='__label');
+      let rows = sectionValue(data, sec);
+      if(sec.linhasVaziasOk) rows = rows.filter(r=>reaisCols.some(c=>String(r[c.key]||'').trim()!==''));
+      if(!rows.length){ out.push(sec.linhasVaziasOk ? `${sec.label || 'a tabela'}: preencha pelo menos 1 dia completo` : (sec.label || 'uma seção')); return; }
       sec.columns.filter(c=>c.key!=='__label').forEach(c=>{
         const onde = rows.map((r,i)=>!(String(r[c.key]||'').trim()) ? (r.__label || ('linha '+(i+1))) : null).filter(Boolean);
         if(onde.length) out.push(`${c.label} (${onde.length===rows.length ? 'todas as linhas' : onde.join(', ')})`);
