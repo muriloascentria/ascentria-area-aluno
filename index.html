@@ -730,6 +730,9 @@
   .dp-lista{list-style:none;padding:0;margin:4px 0 4px;display:flex;flex-direction:column;gap:6px;}
   .dp-lista li{display:flex;align-items:center;gap:6px;font-size:13.5px;}
   .dp-lista small{color:var(--text-mute);}
+  .dp-lista li{align-items:flex-start;}
+  .dp-lista .dp-falta{color:var(--warning,#e0a040);}
+  .dp-dica{font-size:12.5px;color:var(--text-mute);margin:6px 0 0;}
   #dp-abrir{display:inline-flex;align-items:center;gap:6px;}
   .dp-hint{display:flex;align-items:center;gap:4px;margin-top:3px;font-size:11.5px;color:var(--warning, #d9a441);font-weight:600;}
   .rf-kpis .kpi-tile small{display:block;margin-top:4px;font-size:11.5px;color:var(--text-mute);}
@@ -9815,14 +9818,21 @@ function dashPainelIncoerencias(s){
   });
   return out;
 }
-function dashPainelAvisoBloqueio(faltam, voltar){
+/* O que exatamente falta em cada quadro do Painel (ex.: "Paleta de Cores (2 cores vazias)", "Link (Substack)"),
+   para o aluno achar o campo vazio em vez de achar que já preencheu tudo. */
+function dashPainelDetalhe(s, a){
+  try{ const f = topicFaltando(a.t, getTopicData(s.id, a.t.id)); return f.length ? f.slice(0,4).join('; ') + (f.length>4 ? ` e mais ${f.length-4}` : '') : ''; }catch(e){ return ''; }
+}
+function dashPainelAvisoBloqueio(faltam, voltar, s){
+  s = s || getStudent(currentStudentId);
   const wrap = document.createElement('div');
   wrap.className = 'app-confirm-backdrop';
   wrap.innerHTML = `
     <div class="app-confirm-card">
       <h4>Antes, preencha o Painel do Método</h4>
       <p>Esta tarefa só pode ser marcada depois que ${faltam.length>1 ? 'estes quadros estiverem preenchidos' : 'este quadro estiver preenchido'} no Painel do Método:</p>
-      <ul class="dp-lista">${faltam.map(a=>`<li>${icon(a.q.icon,'tiny')} <b>${escapeHtml(a.t.title)}</b> <small>${escapeHtml(a.q.title)}</small></li>`).join('')}</ul>
+      <ul class="dp-lista">${faltam.map(a=>{ const d = s ? dashPainelDetalhe(s, a) : ''; return `<li>${icon(a.q.icon,'tiny')} <span><b>${escapeHtml(a.t.title)}</b> <small>${escapeHtml(a.q.title)}</small>${d ? `<br><small class="dp-falta">Falta: ${escapeHtml(d)}</small>` : ''}</span></li>`; }).join('')}</ul>
+      <p class="dp-dica">Se algum item não se aplica a você, use o botão <b>"não se aplica"</b> dentro do quadro no Painel.</p>
       <div class="app-confirm-actions"><button type="button" class="btn-outline" id="dp-fechar">Agora não</button><button type="button" class="btn-accent" id="dp-abrir">${icon('compass','tiny')} Abrir no Painel</button></div>
     </div>`;
   document.body.appendChild(wrap);
@@ -9860,7 +9870,7 @@ function openModuleChecklist(modId, hlIdx){
             return `
             <div class="mod-check-item ${state[idx]?'done':''}" data-idx="${idx}">
               <span class="box">${state[idx]? icon('tick') : ''}</span>
-              <span class="txt">${label}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx]) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>escapeHtml(a.t.title)).join(', ')}</small>` : ''; })()}</span>
+              <span class="txt">${label}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx]) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
               ${linkedCourse? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
             </div>`;
           }).join('')}
@@ -9880,7 +9890,7 @@ function openModuleChecklist(modId, hlIdx){
         const idx = +el.dataset.idx;
         if(!state[idx]){
           const faltam = dashPainelFaltando(s, modId, idx);
-          if(faltam.length){ dashPainelAvisoBloqueio(faltam); return; }
+          if(faltam.length){ dashPainelAvisoBloqueio(faltam, null, s); return; }
         }
         state[idx] = !state[idx];
         s.moduleProgress[modId] = state.filter(Boolean).length;
