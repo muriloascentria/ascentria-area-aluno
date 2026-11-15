@@ -2908,6 +2908,14 @@
   .pol-st-construcao{color:var(--text-mute);border-style:dashed;}
   .pol-link-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 11px;border-radius:12px;border:1px solid var(--accent);color:var(--accent);background:transparent;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;}
   .pol-link-btn:hover,.pol-link-btn:focus-visible{background:var(--accent);color:#fff;}
+  .pol-sec-tit{font-size:15px;font-weight:700;margin:26px 0 4px;display:flex;align-items:center;gap:6px;}
+  .pol-aprov-data{font-size:14px;margin:0 0 8px;}
+  .pol-aprov-lista{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;}
+  .pol-aprov-pessoa{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:12px;border:1px solid var(--success);color:var(--success);white-space:nowrap;}
+  .pol-aprov-resp{list-style:none;margin:0;padding:0;font-size:13px;}
+  .pol-aprov-resp li{padding:3px 0;}
+  .pol-aprov-checks{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 0 6px;}
+  .pol-aprov-checks label{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;}
   .pol-socios{display:flex;flex-wrap:wrap;gap:4px;}
   .pol-socio{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px dashed var(--border);color:var(--text-mute);white-space:nowrap;}
   .pol-socio.concordo{border-style:solid;border-color:var(--success);color:var(--success);}
@@ -19409,6 +19417,21 @@ function polPendentesMeus(){ try{ return (POL_UI.docs||[]).filter(polDevoRevisar
 function polBadgeHtml(){ const n = polPendentesMeus().length; return n ? `<span class="reu-badge">${n} ${n===1?'documento aguarda':'documentos aguardam'} sua revisão</span>` : ''; }
 function polSocioNome(id){ const p = PEOPLE[id]; return p ? p.name.split(' ')[0] : 'Sócio'; }
 function polStatusPill(d){ return `<span class="pol-st pol-st-${d.status}">${POL_STATUS[d.status]||d.status}</span>`; }
+/* Aprovação: data e quem aprovou (sócios e demais participantes da reunião). */
+function polDataBr(iso){ if(!iso) return ''; const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
+function polPessoaNome(id){ const p = PEOPLE[id]; return p ? p.name : 'Pessoa'; }
+function polEquipeInterna(){ return Object.values(PEOPLE).filter(p=>['staff','vendas','editor'].includes(p.role) && !p.contaTeste && !p.espelhoDe).sort((a,b)=> (REU_SOCIOS.indexOf(b.id)>-1) - (REU_SOCIOS.indexOf(a.id)>-1) || a.name.localeCompare(b.name,'pt-BR')); }
+function polAprovacaoHtml(d){
+  const aprov = (d.aprovada_por||[]);
+  const rs = polRespostasDoc(d).slice().sort((a,b)=>String(a.updated_at||a.created_at).localeCompare(String(b.updated_at||b.created_at)));
+  return `<div class="pol-bloco">
+    <h4>Aprovação</h4>
+    <p class="pol-aprov-data">${d.aprovada_em ? `Aprovada em <b>${polDataBr(d.aprovada_em)}</b>` : '<span class="muted">Data de aprovação não registrada.</span>'}</p>
+    ${aprov.length ? `<div class="muted" style="font-size:12px;margin-bottom:4px">Aprovaram</div><div class="pol-aprov-lista">${aprov.map(id=>`<span class="pol-aprov-pessoa">${icon('tick','tiny')} ${escapeHtml(polPessoaNome(id))}</span>`).join('')}</div>` : ''}
+    ${rs.length ? `<div class="muted" style="font-size:12px;margin-bottom:4px">Revisão dos sócios${d.rodada>1 ? ` (${d.rodada}ª rodada)` : ''}</div><ul class="pol-aprov-resp">${rs.map(r=>`<li>${r.tipo==='concordo' ? icon('tick','tiny') : icon('edit','tiny')} <b>${escapeHtml(polPessoaNome(r.user_id))}</b> ${r.tipo==='concordo' ? 'concordou' : 'revisou com anotações'} <span class="muted">· ${escapeHtml(polDataBr((r.updated_at||r.created_at||'').slice(0,10)))}</span></li>`).join('')}</ul>` : ''}
+    ${!aprov.length && !rs.length && polSocio() ? '<p class="muted" style="font-size:12px;margin:0">Registre quem aprovou em "Editar título, link e situação".</p>' : ''}
+  </div>`;
+}
 function polSociosHtml(d){
   if(d.status!=='revisao') return '<span class="muted">—</span>';
   const rs = polRespostasDoc(d);
@@ -19422,7 +19445,8 @@ function renderPoliticas(){
   if(d){ el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Políticas Internas</h2>${polDetalheHtml(d)}`; polDetalheBind(el, d); return; }
   POL_UI.aberta = null;
   const pend = polPendentesMeus();
-  const lista = POL_UI.docs.filter(x=>x.tipo==='politica').sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
+  const listaDev = POL_UI.docs.filter(x=>x.tipo==='politica' && x.status==='construcao').sort((a,b)=> (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
+  const lista = POL_UI.docs.filter(x=>x.tipo==='politica' && x.status!=='construcao').sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
   /* A coluna de revisão dos sócios só aparece enquanto houver política em aprovação. */
   const temRevisao = lista.some(x=>x.status==='revisao');
   el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Políticas Internas</h2>
@@ -19437,6 +19461,12 @@ function renderPoliticas(){
         <td>${reuUrlOk(x.link) ? `<a class="pol-link-btn" href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>${icon('externallink','tiny')} Abrir</a>` : '<span class="muted">—</span>'}</td>
         ${temRevisao ? `<td>${polSociosHtml(x)}</td>` : ''}
       </tr>`; }).join('')}</tbody></table></div>` : `<div class="empty-state">Nenhuma política cadastrada ainda.</div>`}
+    ${listaDev.length ? `<h3 class="pol-sec-tit">${icon('edit','tiny')} Políticas Internas e Manuais em Desenvolvimento</h3>
+    <div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Responsável</th><th>Link</th></tr></thead><tbody>${listaDev.map(x=>`<tr data-pol-abrir="${x.id}">
+        <td><b>${escapeHtml(x.titulo)}</b></td>
+        <td>${x.responsavel ? escapeHtml(x.responsavel) : '<span class="muted">—</span>'}</td>
+        <td>${reuUrlOk(x.link) ? `<a class="pol-link-btn" href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>${icon('externallink','tiny')} Abrir</a>` : '<span class="muted">—</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>` : ''}
     ${polSocio() ? `<div class="pol-novo"><button type="button" class="btn-accent" id="pol-novo">${icon('plus','tiny')} Adicionar política</button></div>` : ''}`;
   el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
   el.querySelectorAll('[data-pol-abrir]').forEach(t=>t.addEventListener('click', ()=>{ POL_UI.aberta = t.dataset.polAbrir; POL_UI.form = null; POL_UI.editando = null; renderPoliticas(); window.scrollTo(0,0); }));
@@ -19465,7 +19495,7 @@ function polDetalheHtml(d){
   return `<div class="pol-det">
     <button type="button" class="link-btn" id="pol-voltar">${icon('back','tiny')} Voltar para a lista</button>
     <div class="pol-det-hd">
-      <div><span class="pol-tipo">${ehPol ? 'Política' : 'Fluxo de trabalho'}</span><h3>${escapeHtml(d.titulo)}</h3>${polStatusPill(d)}${d.status==='revisao' && d.rodada>1 ? ` <span class="muted">· ${d.rodada}ª rodada de revisão</span>` : ''}</div>
+      <div><span class="pol-tipo">${ehPol ? 'Política' : 'Fluxo de trabalho'}</span><h3>${escapeHtml(d.titulo)}</h3>${polStatusPill(d)}${d.status==='revisao' && d.rodada>1 ? ` <span class="muted">· ${d.rodada}ª rodada de revisão</span>` : ''}${d.responsavel ? ` <span class="muted">· Responsável: ${escapeHtml(d.responsavel)}</span>` : ''}</div>
       ${reuUrlOk(d.link) ? `<a class="btn-accent pol-abrir-doc" href="${escapeAttr(d.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir documento</a>` : ''}
     </div>
     ${d.status==='revisao' ? `
@@ -19505,6 +19535,7 @@ function polDetalheHtml(d){
         <h4>Respostas ${polSocio() ? 'dos outros sócios' : 'dos sócios'}</h4>
         ${(polSocio() ? outros : rs).length ? (polSocio() ? outros : rs).map(r=>polRespostaHtml(r, d)).join('') : '<p class="muted">Ninguém respondeu ainda.</p>'}
       </div>` : ''}
+    ${d.status==='vigente' ? polAprovacaoHtml(d) : ''}
     ${polSocio() ? `<div class="pol-bloco pol-gestao">
       <h4>Gestão do documento</h4>
       <div class="pol-acoes">
@@ -19545,7 +19576,7 @@ function polDetalheBind(el, d){
     Object.assign(d, campos); updateNotifBadge(); re(); return true;
   };
   const ed = el.querySelector('#pol-editar'); if(ed) ed.addEventListener('click', ()=>polDocForm(d));
-  const en = el.querySelector('#pol-encerrar'); if(en) en.addEventListener('click', async ()=>{ if(await showAppConfirm(`Encerrar a revisão de "${d.titulo}"? O documento passa a constar como Vigente e sai da pendência de todos os sócios.`, {title:'Encerrar revisão', confirmLabel:'Encerrar', cancelLabel:'Cancelar'})) atualizaDoc({ status:'vigente' }); });
+  const en = el.querySelector('#pol-encerrar'); if(en) en.addEventListener('click', async ()=>{ if(await showAppConfirm(`Encerrar a revisão de "${d.titulo}"? O documento passa a constar como Vigente e sai da pendência de todos os sócios.`, {title:'Encerrar revisão', confirmLabel:'Encerrar', cancelLabel:'Cancelar'})){ const hoje = new Date(); const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`; atualizaDoc({ status:'vigente', aprovada_em: iso, aprovada_por: polRespostasDoc(d).filter(r=>r.tipo==='concordo').map(r=>r.user_id) }); } });
   const rv = el.querySelector('#pol-revisar'); if(rv) rv.addEventListener('click', async ()=>{ if(await showAppConfirm(`Colocar "${d.titulo}" em revisão? Cada sócio vai receber a pendência para revisar ou concordar.`, {title:'Colocar em revisão', confirmLabel:'Colocar em revisão', cancelLabel:'Cancelar'})) atualizaDoc({ status:'revisao', rodada:(d.rodada||1) + (polRespostasDoc(d).length ? 1 : 0) }); });
   const rm = el.querySelector('#pol-remover'); if(rm) rm.addEventListener('click', async ()=>{ if(await showAppConfirm(`Tirar "${d.titulo}" da lista? O arquivo no Drive não é apagado.`, {title:'Tirar da lista', confirmLabel:'Tirar', cancelLabel:'Cancelar'})){ if(await atualizaDoc({ ativo:false })){ POL_UI.docs = POL_UI.docs.filter(x=>x!==d); POL_UI.aberta = null; re(); } } });
 }
@@ -19560,7 +19591,13 @@ function polDocForm(d){
       <label class="ps-label">Link do documento</label>
       <input class="ps-input" id="pdf-link" value="${escapeAttr(r.link)}" placeholder="https://drive.google.com/...">
       <label class="ps-label">Situação</label>
-      <select class="ps-input" id="pdf-status">${Object.entries(POL_STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?'selected':''}>${v}${k==='revisao'?' (pede a revisão dos sócios)':''}</option>`).join('')}</select>
+      <select class="ps-input" id="pdf-status">${Object.entries(POL_STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?'selected':''}>${v}${k==='revisao'?' (pede a revisão dos sócios)':''}${k==='construcao'?' (lista de documentos em desenvolvimento)':''}</option>`).join('')}</select>
+      <label class="ps-label">Responsável</label>
+      <input class="ps-input" id="pdf-resp" value="${escapeAttr(r.responsavel||'')}" placeholder="Quem está desenvolvendo o documento">
+      <label class="ps-label">Aprovada em</label>
+      <input class="ps-input" type="date" id="pdf-aprov-em" value="${escapeAttr(r.aprovada_em||'')}">
+      <label class="ps-label">Aprovada por (sócios e participantes da reunião)</label>
+      <div class="pol-aprov-checks">${polEquipeInterna().map(p=>`<label><input type="checkbox" data-pdf-aprov="${p.id}" ${(r.aprovada_por||[]).includes(p.id)?'checked':''}> ${escapeHtml(p.name)}</label>`).join('')}</div>
       <div class="modal-actions an-dest-form-acoes">
         <button type="button" class="btn-accent" id="pdf-salvar">${icon('check','tiny')} Salvar</button>
         <button type="button" class="btn-outline" id="pdf-cancelar">Cancelar</button>
@@ -19570,7 +19607,7 @@ function polDocForm(d){
   md.querySelector('#pdf-cancelar').addEventListener('click', closeModal);
   md.querySelector('#pdf-salvar').addEventListener('click', async (e)=>{
     const v = id=>md.querySelector(id).value.trim();
-    const linha = { tipo:'politica', titulo:v('#pdf-titulo'), link:v('#pdf-link'), status:v('#pdf-status'), updated_at:new Date().toISOString() };
+    const linha = { tipo:'politica', titulo:v('#pdf-titulo'), link:v('#pdf-link'), status:v('#pdf-status'), responsavel:v('#pdf-resp')||null, aprovada_em:v('#pdf-aprov-em')||null, aprovada_por:[...md.querySelectorAll('[data-pdf-aprov]:checked')].map(c=>c.dataset.pdfAprov), updated_at:new Date().toISOString() };
     if(!linha.titulo){ md.querySelector('#pdf-titulo').focus(); return; }
     if(d && linha.status==='revisao' && d.status!=='revisao' && polRespostasDoc(d).length) linha.rodada = (d.rodada||1)+1;
     e.currentTarget.disabled = true;
