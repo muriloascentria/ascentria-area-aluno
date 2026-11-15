@@ -2908,7 +2908,7 @@
   .pol-st-construcao{color:var(--text-mute);border-style:dashed;}
   .pol-link-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 11px;border-radius:12px;border:1px solid var(--accent);color:var(--accent);background:transparent;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;}
   .pol-link-btn:hover,.pol-link-btn:focus-visible{background:var(--accent);color:#fff;}
-  .pol-sec-tit{font-size:15px;font-weight:700;margin:26px 0 4px;display:flex;align-items:center;gap:6px;}
+  .pol-sec-dev .vg-sec-head.com-sec-head{margin-top:34px;}
   .pol-aprov-data{font-size:14px;margin:0 0 8px;}
   .pol-aprov-lista{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;}
   .pol-aprov-pessoa{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:12px;border:1px solid var(--success);color:var(--success);white-space:nowrap;}
@@ -19416,6 +19416,15 @@ function polDevoRevisar(d){ return polSocio() && d.status==='revisao' && !polMin
 function polPendentesMeus(){ try{ return (POL_UI.docs||[]).filter(polDevoRevisar); }catch(e){ return []; } }
 function polBadgeHtml(){ const n = polPendentesMeus().length; return n ? `<span class="reu-badge">${n} ${n===1?'documento aguarda':'documentos aguardam'} sua revisão</span>` : ''; }
 function polSocioNome(id){ const p = PEOPLE[id]; return p ? p.name.split(' ')[0] : 'Sócio'; }
+/* Seções recolhíveis das Políticas Internas (lembradas neste navegador), no padrão da Comunicação. */
+const POL_RECOLHIDOS = (()=>{ try{ return JSON.parse(localStorage.getItem('ascentria-pol-recolhidos')||'{}')||{}; }catch(e){ return {}; } })();
+function polSecHead(chave, titulo){
+  const f = !!POL_RECOLHIDOS[chave];
+  return `<div class="vg-sec-head com-sec-head" data-pol-recolher="${chave}">
+      <h2 class="section-title com-titulo">${titulo}</h2>
+      <button type="button" class="vg-sec-toggle ${f?'fechado':''}">${icon('down')} ${f?'Expandir':'Recolher'}</button>
+    </div>`;
+}
 function polStatusPill(d){ return `<span class="pol-st pol-st-${d.status}">${POL_STATUS[d.status]||d.status}</span>`; }
 /* Aprovação: data e quem aprovou (sócios e demais participantes da reunião). */
 function polDataBr(iso){ if(!iso) return ''; const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
@@ -19449,8 +19458,8 @@ function renderPoliticas(){
   const lista = POL_UI.docs.filter(x=>x.tipo==='politica' && x.status!=='construcao').sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
   /* A coluna de revisão dos sócios só aparece enquanto houver política em aprovação. */
   const temRevisao = lista.some(x=>x.status==='revisao');
-  el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Políticas Internas</h2>
-    <p class="section-sub" style="margin-top:-6px">As políticas internas da Ascentria, com o link de cada documento. Os procedimentos operacionais padrão (POPs) ficam dentro de cada política. ${polSocio() ? 'Os que estão <b>Em revisão</b> aguardam a resposta de cada sócio: revisar com anotações ou concordar.' : 'Clique num documento para abrir.'}</p>
+  el.innerHTML = `${polSecHead('vigentes', icon('file')+' Políticas Internas Vigentes')}
+    <div ${POL_RECOLHIDOS.vigentes?'hidden':''}>
     ${pend.length ? `<div class="pol-alerta">${icon('bell','tiny')} <span><b>${pend.length} ${pend.length===1?'documento aguarda':'documentos aguardam'} a sua revisão:</b> ${pend.map(x=>`<button type="button" class="link-btn" data-pol-abrir="${x.id}">${escapeHtml(x.titulo)}</button>`).join(', ')}</span></div>` : ''}
     ${POL_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="pol-tentar">Tentar de novo</button></div>' : ''}
     ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Situação</th><th>Link</th>${temRevisao ? '<th>Revisão dos sócios</th>' : ''}</tr></thead><tbody>${lista.map(x=>{
@@ -19461,13 +19470,15 @@ function renderPoliticas(){
         <td>${reuUrlOk(x.link) ? `<a class="pol-link-btn" href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>${icon('externallink','tiny')} Abrir</a>` : '<span class="muted">—</span>'}</td>
         ${temRevisao ? `<td>${polSociosHtml(x)}</td>` : ''}
       </tr>`; }).join('')}</tbody></table></div>` : `<div class="empty-state">Nenhuma política cadastrada ainda.</div>`}
-    ${listaDev.length ? `<h3 class="pol-sec-tit">${icon('edit','tiny')} Políticas Internas e Manuais em Desenvolvimento</h3>
-    <div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Responsável</th><th>Link</th></tr></thead><tbody>${listaDev.map(x=>`<tr data-pol-abrir="${x.id}">
+    </div>
+    ${listaDev.length ? `<div class="pol-sec-dev">${polSecHead('dev', icon('edit')+' Materiais em Desenvolvimento')}
+    <div ${POL_RECOLHIDOS.dev?'hidden':''}><div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Responsável</th><th>Link</th></tr></thead><tbody>${listaDev.map(x=>`<tr data-pol-abrir="${x.id}">
         <td><b>${escapeHtml(x.titulo)}</b></td>
         <td>${x.responsavel ? escapeHtml(x.responsavel) : '<span class="muted">—</span>'}</td>
         <td>${reuUrlOk(x.link) ? `<a class="pol-link-btn" href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>${icon('externallink','tiny')} Abrir</a>` : '<span class="muted">—</span>'}</td>
-      </tr>`).join('')}</tbody></table></div>` : ''}
+      </tr>`).join('')}</tbody></table></div></div></div>` : ''}
     ${polSocio() ? `<div class="pol-novo"><button type="button" class="btn-accent" id="pol-novo">${icon('plus','tiny')} Adicionar política</button></div>` : ''}`;
+  el.querySelectorAll('[data-pol-recolher]').forEach(h=>h.addEventListener('click', ()=>{ const k = h.dataset.polRecolher; POL_RECOLHIDOS[k] = !POL_RECOLHIDOS[k]; try{ localStorage.setItem('ascentria-pol-recolhidos', JSON.stringify(POL_RECOLHIDOS)); }catch(e){} renderPoliticas(); }));
   el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
   el.querySelectorAll('[data-pol-abrir]').forEach(t=>t.addEventListener('click', ()=>{ POL_UI.aberta = t.dataset.polAbrir; POL_UI.form = null; POL_UI.editando = null; renderPoliticas(); window.scrollTo(0,0); }));
   const tt = el.querySelector('#pol-tentar'); if(tt) tt.addEventListener('click', ()=>{ POL_UI.docs = null; renderPoliticas(); });
