@@ -2906,6 +2906,8 @@
   .pol-st-vigente{color:var(--success);border-color:var(--success);}
   .pol-st-revisao{color:#fff;background:var(--danger);border-color:var(--danger);}
   .pol-st-construcao{color:var(--text-mute);border-style:dashed;}
+  .pol-link-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 11px;border-radius:12px;border:1px solid var(--accent);color:var(--accent);background:transparent;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;}
+  .pol-link-btn:hover,.pol-link-btn:focus-visible{background:var(--accent);color:#fff;}
   .pol-socios{display:flex;flex-wrap:wrap;gap:4px;}
   .pol-socio{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px dashed var(--border);color:var(--text-mute);white-space:nowrap;}
   .pol-socio.concordo{border-style:solid;border-color:var(--success);color:var(--success);}
@@ -19421,17 +19423,19 @@ function renderPoliticas(){
   POL_UI.aberta = null;
   const pend = polPendentesMeus();
   const lista = POL_UI.docs.filter(x=>x.tipo==='politica').sort((a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR'));
+  /* A coluna de revisão dos sócios só aparece enquanto houver política em aprovação. */
+  const temRevisao = lista.some(x=>x.status==='revisao');
   el.innerHTML = `<h2 class="section-title com-titulo">${icon('file')} Políticas Internas</h2>
     <p class="section-sub" style="margin-top:-6px">As políticas internas da Ascentria, com o link de cada documento. Os procedimentos operacionais padrão (POPs) ficam dentro de cada política. ${polSocio() ? 'Os que estão <b>Em revisão</b> aguardam a resposta de cada sócio: revisar com anotações ou concordar.' : 'Clique num documento para abrir.'}</p>
     ${pend.length ? `<div class="pol-alerta">${icon('bell','tiny')} <span><b>${pend.length} ${pend.length===1?'documento aguarda':'documentos aguardam'} a sua revisão:</b> ${pend.map(x=>`<button type="button" class="link-btn" data-pol-abrir="${x.id}">${escapeHtml(x.titulo)}</button>`).join(', ')}</span></div>` : ''}
     ${POL_UI.erro ? '<div class="empty-state">Não consegui carregar agora. <button type="button" class="btn-outline" id="pol-tentar">Tentar de novo</button></div>' : ''}
-    ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Situação</th><th>Link</th><th>Revisão dos sócios</th></tr></thead><tbody>${lista.map(x=>{
+    ${lista.length ? `<div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Situação</th><th>Link</th>${temRevisao ? '<th>Revisão dos sócios</th>' : ''}</tr></thead><tbody>${lista.map(x=>{
       const minha = polDevoRevisar(x);
       return `<tr data-pol-abrir="${x.id}" class="${minha?'reu-pend':''}">
         <td><b>${escapeHtml(x.titulo)}</b>${minha?'<div class="reu-mini-alerta">Aguardando a sua revisão</div>':''}</td>
         <td>${polStatusPill(x)}</td>
-        <td>${reuUrlOk(x.link) ? `<a href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>Abrir</a>` : '<span class="muted">—</span>'}</td>
-        <td>${polSociosHtml(x)}</td>
+        <td>${reuUrlOk(x.link) ? `<a class="pol-link-btn" href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>${icon('externallink','tiny')} Abrir</a>` : '<span class="muted">—</span>'}</td>
+        ${temRevisao ? `<td>${polSociosHtml(x)}</td>` : ''}
       </tr>`; }).join('')}</tbody></table></div>` : `<div class="empty-state">Nenhuma política cadastrada ainda.</div>`}
     ${polSocio() ? `<div class="pol-novo"><button type="button" class="btn-accent" id="pol-novo">${icon('plus','tiny')} Adicionar política</button></div>` : ''}`;
   el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
