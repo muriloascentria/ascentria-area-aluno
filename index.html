@@ -19476,8 +19476,7 @@ function renderPoliticas(){
         <td><b>${escapeHtml(x.titulo)}</b></td>
         <td>${x.responsavel ? escapeHtml(x.responsavel) : '<span class="muted">—</span>'}</td>
         <td>${reuUrlOk(x.link) ? `<a class="pol-link-btn" href="${escapeAttr(x.link)}" target="_blank" rel="noopener" data-stop>${icon('externallink','tiny')} Abrir</a>` : '<span class="muted">—</span>'}</td>
-      </tr>`).join('')}</tbody></table></div></div></div>` : ''}
-    ${polSocio() ? `<div class="pol-novo"><button type="button" class="btn-accent" id="pol-novo">${icon('plus','tiny')} Adicionar política</button></div>` : ''}`;
+      </tr>`).join('')}</tbody></table></div></div></div>` : ''}`;
   el.querySelectorAll('[data-pol-recolher]').forEach(h=>h.addEventListener('click', ()=>{ const k = h.dataset.polRecolher; POL_RECOLHIDOS[k] = !POL_RECOLHIDOS[k]; try{ localStorage.setItem('ascentria-pol-recolhidos', JSON.stringify(POL_RECOLHIDOS)); }catch(e){} renderPoliticas(); }));
   el.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click', e=>e.stopPropagation()));
   el.querySelectorAll('[data-pol-abrir]').forEach(t=>t.addEventListener('click', ()=>{ POL_UI.aberta = t.dataset.polAbrir; POL_UI.form = null; POL_UI.editando = null; renderPoliticas(); window.scrollTo(0,0); }));
