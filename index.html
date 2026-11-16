@@ -258,12 +258,12 @@
     margin-bottom:2px;width:100%;text-align:left;
   }
   .nav-item:hover{background:var(--bg-card);color:var(--text);}
-  .msg-bol{min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--danger,#d9534f);color:#fff;font-size:11px;font-weight:700;line-height:19px;text-align:center;box-sizing:border-box;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-sidebar,var(--bg));}
+  .msg-bol{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--danger,#d9534f);color:#fff;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;text-align:center;box-sizing:border-box;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-sidebar,var(--bg));}
   .nav-item > .msg-bol{margin-left:-2px;}
   #menu-btn{position:relative;}
   #menu-btn > .msg-bol{position:absolute;top:-3px;right:-5px;}
   .equipe-card{position:relative;}
-  .equipe-card > .msg-bol{position:absolute;top:12px;right:12px;min-width:24px;height:24px;line-height:24px;font-size:12.5px;border-radius:12px;}
+  .equipe-card > .msg-bol{position:absolute;top:12px;right:12px;min-width:24px;height:24px;line-height:1;font-size:12.5px;border-radius:12px;}
   .nav-item.active{background:var(--accent-soft);color:var(--accent-2);font-weight:700;}
   .nav-item.active .icon{stroke:var(--accent-2);}
   .nav-item.individual.active{background:var(--individual-soft);color:var(--individual);}
@@ -2930,6 +2930,8 @@
   .pol-tipo{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--accent);}
   .pol-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
   .pol-bloco h4{margin:0 0 10px;font-size:14px;}
+  .pol-bloco p{font-size:13px;line-height:1.5;margin:0 0 6px;}
+  .pol-bloco .pol-aprov-data{font-size:13px;}
   .pol-minha{border-color:var(--accent);}
   .pol-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .pol-op{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--bg-elev);}
@@ -7023,7 +7025,11 @@ function setupNav(){
     const view = btn.dataset.view;
     const [ic,label] = NAV_LABELS[view];
     btn.innerHTML = `${icon(ic)}<span>${label}</span>`;
-    btn.addEventListener('click',()=>goTo(view));
+    btn.addEventListener('click',()=>{
+      /* Clicar em Políticas Internas no menu sempre volta para a lista, mesmo com um documento aberto. */
+      if(view==='politicas' && typeof POL_UI!=='undefined'){ POL_UI.aberta = null; POL_UI.form = null; POL_UI.editando = null; }
+      goTo(view);
+    });
   });
   document.getElementById('logout-btn').innerHTML = `${icon('logout')}<span>Sair</span>`;
   document.getElementById('logout-btn').addEventListener('click', async ()=>{
