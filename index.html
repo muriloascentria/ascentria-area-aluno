@@ -7537,6 +7537,7 @@ function setRole(role){
   document.getElementById('role-consultora').style.display = podePrever ? '' : 'none';
   document.getElementById('role-editor').style.display = podePrever ? '' : 'none';
   document.getElementById('role-cs').style.display = podePrever ? '' : 'none';
+  { const bEq = document.querySelector('#role-toggle [data-role="staff"]'); if(bEq) bEq.textContent = (currentUser && currentUser.id===CONSULTORA_PREVIEW_UIDS[0]) ? 'Murilo' : 'Equipe'; }
   document.querySelectorAll('#role-toggle [data-role]').forEach(b=>{
     const active = b.dataset.role===botaoAtivo;
     b.classList.toggle('active', active);
