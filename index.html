@@ -2679,8 +2679,8 @@
   .rd-legenda{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-top:16px;}
   .rd-msgs{margin-top:22px;}
   .rd-msgs-hd{font-size:12px;letter-spacing:.06em;color:var(--text-mute);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
-  .rd-msgs-aviso{font-size:12.5px;line-height:1.5;background:var(--surface-2,rgba(0,0,0,.03));border-left:3px solid var(--accent,#b8860b);padding:8px 12px;border-radius:6px;margin:0 0 10px;}
-  .rd-msg-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface,#fff);}
+  .rd-msgs-aviso{font-size:12.5px;line-height:1.5;background:var(--bg-elev);border-left:3px solid var(--accent,#b8860b);padding:8px 12px;border-radius:6px;margin:0 0 10px;}
+  .rd-msg-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--bg-card);}
   .rd-msg-tit{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-weight:600;font-size:13.5px;}
   .rd-msg-quando{font-size:12px;color:var(--text-mute);margin:2px 0 8px;}
   .rd-msg-txt{white-space:pre-wrap;font-size:13px;line-height:1.55;margin:0;}
@@ -12090,7 +12090,13 @@ function renderMetas(){
         </div>
       </div>
     `).join('')}
+    ${currentUserRole==='staff' && minhas.some(t=>t.status!=='Concluída') ? `<div class="rd-msgs">
+      <div class="rd-msgs-hd">${icon('comment')} <strong>MENSAGEM PADRONIZADA · METAS PENDENTES</strong></div>
+      <p class="rd-msgs-aviso"><strong>Primeiro, envie pelo Mensagens do ePLAT.</strong> Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp. Só a equipe vê este quadro.</p>
+      ${rdMsgCardHtml(RD_MSGS_PADRAO.find(m=>m.id==='metas'), (s.name||'').trim().split(/\s+/)[0])}
+    </div>` : ''}
   `;
+  rdMsgBindCopiar(document.getElementById('view-metas'), (s.name||'').trim().split(/\s+/)[0]);
   document.querySelectorAll('#view-metas [data-goal-aula]').forEach(btn=>{
     btn.addEventListener('click',()=>openCourseModal(btn.dataset.goalAula));
   });
@@ -22616,12 +22622,24 @@ function rdMsgsPadraoHtml(){
   return `<div class="rd-msgs">
     <div class="rd-msgs-hd">${icon('comment')} <strong>MENSAGENS PADRONIZADAS</strong></div>
     <p class="rd-msgs-aviso"><strong>Primeiro, envie pelo Mensagens do ePLAT</strong> (botão Conversa no card do mentorado). Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp. Troque {NOME} pelo primeiro nome do mentorado.</p>
-    ${RD_MSGS_PADRAO.map(m=>`<div class="rd-msg-card">
+    ${RD_MSGS_PADRAO.map(m=>rdMsgCardHtml(m)).join('')}
+  </div>`;
+}
+/* Um cartão de mensagem padronizada. Com nome, o {NOME} já vem trocado pelo primeiro nome do mentorado. */
+function rdMsgTexto(m, nome){ return nome ? m.texto.replace(/\{NOME\}/g, nome) : m.texto; }
+function rdMsgCardHtml(m, nome){
+  return `<div class="rd-msg-card">
       <div class="rd-msg-tit"><span>${escapeHtml(m.titulo)}</span><button type="button" class="btn-mini" data-rd-msg-copiar="${m.id}">${icon('copy','tiny')} Copiar</button></div>
       <div class="rd-msg-quando">${escapeHtml(m.quando)}</div>
-      <p class="rd-msg-txt">${escapeHtml(m.texto)}</p>
-    </div>`).join('')}
-  </div>`;
+      <p class="rd-msg-txt">${escapeHtml(rdMsgTexto(m, nome))}</p>
+    </div>`;
+}
+function rdMsgBindCopiar(root, nome){
+  root.querySelectorAll('[data-rd-msg-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const m = RD_MSGS_PADRAO.find(x=>x.id===b.dataset.rdMsgCopiar); if(!m) return;
+    try{ await navigator.clipboard.writeText(rdMsgTexto(m, nome)); b.innerHTML = icon('check','tiny')+' Copiada'; setTimeout(()=>{ b.innerHTML = icon('copy','tiny')+' Copiar'; }, 1800); }
+    catch(e){ alert('Não consegui copiar. Selecione o texto e copie manualmente.'); }
+  }));
 }
 function renderRadar(){
   const el = document.getElementById('view-radar');
@@ -22724,11 +22742,7 @@ function renderRadar(){
   document.getElementById('rd-atualizar').addEventListener('click', ()=>{ RADAR_UI.rows = null; renderRadar(); });
   bindBuscaInput('rd-busca', v=>{ RADAR_UI.busca = v; }, renderRadar);
   el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
-  el.querySelectorAll('[data-rd-msg-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
-    const m = RD_MSGS_PADRAO.find(x=>x.id===b.dataset.rdMsgCopiar); if(!m) return;
-    try{ await navigator.clipboard.writeText(m.texto); b.innerHTML = icon('check','tiny')+' Copiada'; setTimeout(()=>{ b.innerHTML = icon('copy','tiny')+' Copiar'; }, 1800); }
-    catch(e){ alert('Não consegui copiar. Selecione o texto e copie manualmente.'); }
-  }));
+  rdMsgBindCopiar(el);
   el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
   el.querySelectorAll('[data-rd-espera-ok]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = b.dataset.rdEsperaOk; b.disabled = true;
@@ -23539,7 +23553,7 @@ function renderVisaoGeral(){
     <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-mentorados" value="${escapeAttr(vgBusca.mentorados)}" placeholder="Buscar mentorado pelo nome…">${vgBusca.mentorados.trim()? `<button type="button" class="btn-outline" data-vg-limpar="mentorados">${icon('x','tiny')} Limpar</button>` : ''}</div>
     <div class="table-wrap">
       <table class="check-table vg-table">
-        <thead><tr><th>Aluno</th><th>Progresso</th><th>Meta pendente</th><th>Dias restantes</th><th>Estágio</th><th>Rota de Embarque</th><th>Acesso</th><th></th></tr></thead>
+        <thead><tr><th>Aluno</th><th>Progresso</th><th>Meta</th><th>Dias restantes</th><th>Estágio</th><th>Rota de Embarque</th><th>Acesso</th><th></th></tr></thead>
         <tbody>
           ${mentorados.map(s=>{
             const pct = overallProgress(s);
@@ -23558,7 +23572,7 @@ function renderVisaoGeral(){
                   <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
                   <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
                 </td>
-                <td style="min-width:96px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}">Meta pendente</button>` : '<span style="color:var(--text-mute)">Tudo em dia</span>'}</td>
+                <td style="min-width:96px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}" title="Abrir as metas deste mentorado">Pendentes</button>` : '<span style="color:var(--text-mute)">Em dia</span>'}</td>
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
                 <td style="min-width:150px">${embCelulaVG(s)}</td>
