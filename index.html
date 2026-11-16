@@ -2688,6 +2688,49 @@
   .rd-motivos{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px;}
   .rd-motivos li{font-size:12px;line-height:1.3;padding:4px 9px;border-radius:999px;background:var(--individual-soft);color:var(--text);}
   .rd-motivos li.rd-m2{background:var(--danger-soft);}
+  .ind-card{border:1px solid var(--border);border-radius:var(--radius);background:linear-gradient(135deg,var(--bg-card),var(--bg-elev));padding:26px 22px;text-align:center;margin-bottom:18px;}
+  .ind-logo{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .ind-logo img{max-width:320px;width:100%;height:auto;border-radius:12px;}
+  .ind-logo-marca{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--text-mute);}
+  .ind-logo-nome{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:40px;line-height:1.1;color:var(--text);}
+  .ind-logo-sub{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);margin-top:6px;}
+  .ind-intro{max-width:520px;margin:14px auto 0;color:var(--text-dim,var(--text-mute));font-size:13.5px;line-height:1.55;}
+  .ind-progresso{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:16px 18px;margin-bottom:18px;}
+  .ind-prog-topo{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;}
+  .ind-num{font-size:34px;font-weight:700;line-height:1;}
+  .ind-num-lbl{font-size:12px;color:var(--text-mute);margin-top:2px;}
+  .ind-falta{font-size:12.5px;color:var(--text-mute);margin:12px 0 0;}
+  .ind-barra-wrap{position:relative;margin:6px 0 2px;}
+  .ind-barra{position:relative;height:10px;border-radius:999px;background:var(--bg-elev);overflow:visible;border:1px solid var(--border);}
+  .ind-barra-fill{height:100%;border-radius:999px;background:var(--accent);transition:width .4s;}
+  .ind-barra-fill.elite{background:linear-gradient(90deg,#c9a227,#f3d57a,#c9a227);}
+  .ind-marco{position:absolute;top:-3px;width:2px;height:14px;background:var(--text-mute);transform:translateX(-1px);}
+  .ind-marcos{position:relative;height:18px;margin-top:6px;font-size:11px;color:var(--text-mute);}
+  .ind-marcos span{position:absolute;white-space:nowrap;transform:translateX(-50%);display:inline-flex;align-items:center;gap:3px;}
+  .ind-marcos span:first-child{transform:none;}
+  .ind-marcos span.meio{transform:translateX(calc(-100% + 1px));padding-right:4px;}
+  .ind-marcos span.fim{right:0;transform:none;color:#c9a227;}
+  .ind-marcos .icon{width:12px;height:12px;}
+  .ind-selo{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:999px;border:1px solid var(--border);color:var(--text-mute);white-space:nowrap;}
+  .ind-selo.grande{font-size:13px;padding:6px 14px;}
+  .ind-selo.embaixador{color:var(--accent);border-color:var(--accent);background:rgba(141,145,111,.12);}
+  .ind-selo.elite{color:#5a4300;background:linear-gradient(135deg,#f3d57a,#c9a227);border-color:#c9a227;}
+  .ind-selo.elite .icon{color:#5a4300;}
+  .ind-selo.grande .icon{width:18px;height:18px;}
+  .ind-ouro{color:#c9a227 !important;}
+  .ind-lista{display:flex;flex-direction:column;gap:8px;}
+  .ind-item{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--bg-card);}
+  .ind-item small{display:block;font-size:11.5px;color:var(--text-mute);}
+  .ind-av{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-elev);}
+  .ind-gestao-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
+  .ind-g-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:14px;}
+  .ind-g-topo{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .ind-g-nome{flex:1;min-width:0;}
+  .ind-g-nome strong{display:block;font-size:13.5px;}
+  .ind-g-nome small{font-size:11.5px;color:var(--text-mute);}
+  .ind-g-itens{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}
+  .ind-g-itens li{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;border-top:1px solid var(--border);padding-top:6px;}
+  .ind-g-itens small{color:var(--text-mute);font-size:11px;}
   .rd-motivos li.rd-m0{background:rgba(47,158,90,.14);color:#2f9e5a;}
   .rd-metas-link{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
   .vg-cobr{font-size:10.5px;color:#2f9e5a;margin-top:2px;white-space:nowrap;display:flex;align-items:center;gap:3px;}
@@ -3697,6 +3740,7 @@
     <div class="nav-group-label" id="nav-group-individual">Minha Área</div>
     <button class="nav-item individual" data-view="sessoes"></button>
     <button class="nav-item individual" data-view="metas"></button>
+    <button class="nav-item individual" data-view="indicacao"></button>
     <button class="nav-item individual" id="nav-acompanhamento" data-view="acompanhamento"></button>
     <a class="nav-item individual" id="nav-prontuarios" href="https://esis.digital" target="_blank" rel="noopener">
       <svg class="icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
@@ -3719,6 +3763,7 @@
     <button class="nav-item restrict" id="nav-interno" data-view="interno" style="display:none"></button>
     <button class="nav-item restrict" id="nav-embarque" data-view="embarque" style="display:none"></button>
     <button class="nav-item restrict" id="nav-radar" data-view="radar" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-indicacoes" data-view="indicacoes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-evento" data-view="evento" style="display:none"></button>
     <button class="nav-item restrict" id="nav-reunioes" data-view="reunioes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-politicas" data-view="politicas" style="display:none"></button>
@@ -3814,6 +3859,8 @@
       <div class="view" id="view-treinamento"></div>
       <div class="view" id="view-gestaotime"></div>
       <div class="view" id="view-radar"></div>
+      <div class="view" id="view-indicacoes"></div>
+      <div class="view" id="view-indicacao"></div>
       <div class="view" id="view-evento"></div>
       <div class="view" id="view-planner"></div>
       <div class="view" id="view-desempenho"></div>
@@ -3867,6 +3914,7 @@ const ICONS = {
   bell:'<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
   award:'<circle cx="12" cy="8" r="5"/><path d="M8.5 12.5L7 21l5-2.5L17 21l-1.5-8.5"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a2 2 0 0 0 0 4h3M16 6h3a2 2 0 0 1 0 4h-3"/><path d="M12 13v4M9 21h6M10 17h4v4h-4z"/>',
   lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   back:'<path d="M15 6l-6 6 6 6"/>',
   chart:'<path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2 20h20"/>',
@@ -3913,6 +3961,7 @@ const NAV_LABELS = {
   treinamento:['play','Treinamento Time'],
   gestaotime:['target','Gestão do Time'],
   radar:['radar','Radar dos Mentorados'],
+  indicacoes:['gift','Gestão do Programa de Indicação'], indicacao:['gift','Programa de Indicação'],
   evento:['award','Evento Essência Experience'],
   desempenho:['chart','Desempenho das Consultoras'],
   dre:['money','DRE'], radarfin:['radar','Radar Financeiro'],
@@ -7393,7 +7442,7 @@ window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 2
    Os dados continuam no banco. Para reativar uma área, basta tirá-la desta lista. */
 const AREAS_DESATIVADAS = new Set([]);   // reativadas em 12/11/2026 (antes: 'tarefas','reunioes','politicas','treinamento','gestaotime')
 function areaAtiva(v){ return !AREAS_DESATIVADAS.has(v); }
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','evento','reunioes','politicas','conteudo','marca','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','indicacoes','evento','reunioes','politicas','conteudo','marca','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -7518,6 +7567,7 @@ function setRole(role){
   document.getElementById('nav-treinamento').style.display = staffNav ? 'flex' : 'none';
   document.getElementById('nav-gestaotime').style.display = (staffNav && (souMurilo() || fsSouLider())) ? 'flex' : 'none';
   document.getElementById('nav-radar').style.display = (staffNav && radarPode()) ? 'flex' : 'none';
+  document.getElementById('nav-indicacoes').style.display = (staffNav && indPodeGerir()) ? 'flex' : 'none';
   document.getElementById('nav-evento').style.display = (staffNav && radarPode()) ? 'flex' : 'none';
   /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
@@ -7587,7 +7637,7 @@ function setRole(role){
   updateNotifBadge();
   if(role==='aluno' && VIEWS_EQUIPE.includes(currentView)){ goTo(isCursoView ? 'aulas' : 'inicio'); }
   if(role==='aluno' && isCursoView && ['ranking','planner','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
-  if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','planner','sessoes','metas','me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'].includes(currentView)){ goTo('equipe'); }
+  if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','planner','sessoes','metas','indicacao','me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'].includes(currentView)){ goTo('equipe'); }
   meAtualizarMenu();
   ptAjustarToggle();
 }
@@ -7657,7 +7707,7 @@ function goTo(view){
 function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
-               sessoes:renderSessoes, metas:renderMetas, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
+               sessoes:renderSessoes, metas:renderMetas, indicacao:renderIndicacao, indicacoes:renderIndicacoes, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
                vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, radarfin:renderRadarFin, treinamento:renderTreinamento, gestaotime:renderGestaoTime, marca:renderMarca, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
                comunicacao:renderComunicacao, embarque:renderEmbarque, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens,
                me_jornada:renderMeJornada, me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas, me_materiais:renderMeMateriais};
@@ -18456,6 +18506,7 @@ const EQUIPE_ATALHOS = [
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
   {view:'embarque',   desc:'Os 30 primeiros dias de cada mentorado: grupo, mensagens iniciais, onboardings e mentorias de desenvolvimento.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
+  {view:'indicacoes', desc:'Quem indicou quem para a Mentoria, o progresso de cada um e os níveis Embaixador e Elite.'},
   {view:'evento',     desc:'Prêmio Essência Experience e as inscrições do evento, com os links para quem não tem acesso ao PLAT.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
   {view:'politicas',  desc:'Políticas internas da Ascentria, com os POPs de cada área, os links e a revisão dos sócios nos documentos em revisão.'},
@@ -18481,6 +18532,7 @@ function equipeViewPode(v){
   if(v==='tarefas') return tarefasSouMembro();
   if(v==='gestaotime') return souMurilo() || fsSouLider();
   if(v==='radar' || v==='evento') return radarPode();
+  if(v==='indicacoes') return indPodeGerir();
   if(v==='desempenho') return avPode();
   if(v==='dre') return drePode();
   if(v==='radarfin') return rfPode();
@@ -22505,6 +22557,141 @@ const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-b
 const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
 const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
 const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, resolvidos:{} };
+/* ================= PROGRAMA DE INDICAÇÃO =================
+   O aluno vê só as próprias indicações (RLS: indicador_id = ele). A gestão (Murilo, Diego, Carmem, Sandra,
+   Mariane e Viviane) vincula quem indicou quem e acompanha o nível de cada um.
+   Níveis: 2 indicações = Embaixador; 3 ou mais = Elite (troféu dourado). */
+const IND_GESTORES = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc','3ac4f0c3-4db3-4f98-b9b8-c021da4db519','a29026ae-d252-4456-bb26-eec09ba778c4','b01a4425-1ba8-4703-9c40-3301a0de7249','e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'];
+const IND_EMBAIXADOR = 2, IND_ELITE = 3;
+const IND_UI = { rows:null, carregando:false, erro:false, busca:'', alunoSel:'' };
+function indPodeGerir(){ return currentUserRole==='staff' && !!currentUser && IND_GESTORES.includes(idEfetivo()); }
+async function indCarregar(){
+  if(IND_UI.carregando) return; IND_UI.carregando = true;
+  try{
+    const { data, error } = await sb.from('indicacoes').select('*').order('data_indicacao',{ascending:true}).order('id');
+    if(error) throw error;
+    IND_UI.rows = data || []; IND_UI.erro = false;
+  }catch(e){ console.error('indicacoes', e); IND_UI.erro = true; IND_UI.rows = IND_UI.rows || []; }
+  IND_UI.carregando = false;
+  if(currentView==='indicacao') renderIndicacao();
+  if(currentView==='indicacoes') renderIndicacoes();
+}
+function indNivel(n){
+  if(n>=IND_ELITE) return { chave:'elite', nome:'Elite', txt:'Você chegou ao nível máximo do programa.' };
+  if(n>=IND_EMBAIXADOR) return { chave:'embaixador', nome:'Embaixador', txt:`Falta${IND_ELITE-n>1?'m':''} ${IND_ELITE-n} indicação${IND_ELITE-n>1?'ões':''} para o nível Elite.` };
+  return { chave:'inicio', nome: n ? 'Indicador' : 'Comece a indicar', txt:`Falta${IND_EMBAIXADOR-n>1?'m':''} ${IND_EMBAIXADOR-n} indicação${IND_EMBAIXADOR-n>1?'ões':''} para o nível Embaixador.` };
+}
+function indSeloHtml(n, grande){
+  const nv = indNivel(n);
+  if(nv.chave==='elite') return `<span class="ind-selo elite ${grande?'grande':''}">${icon('trophy', grande?'':'tiny')} Elite</span>`;
+  if(nv.chave==='embaixador') return `<span class="ind-selo embaixador ${grande?'grande':''}">Embaixador</span>`;
+  return `<span class="ind-selo ${grande?'grande':''}">${escapeHtml(nv.nome)}</span>`;
+}
+function indBarraHtml(n){
+  const max = IND_ELITE; const pct = Math.min(100, Math.round(Math.min(n,max)/max*100));
+  return `<div class="ind-barra-wrap">
+    <div class="ind-barra"><div class="ind-barra-fill ${n>=IND_ELITE?'elite':''}" style="width:${pct}%"></div>
+      <span class="ind-marco" style="left:${Math.round(IND_EMBAIXADOR/max*100)}%"></span></div>
+    <div class="ind-marcos"><span style="left:0">0</span><span class="meio" style="left:${Math.round(IND_EMBAIXADOR/max*100)}%">${IND_EMBAIXADOR} Embaixador</span><span class="fim">${IND_ELITE}+ ${icon('trophy','tiny')} Elite</span></div>
+  </div>`;
+}
+function indLogoHtml(){
+  return `<div class="ind-logo"><span class="ind-logo-marca">Mentoria</span><span class="ind-logo-nome">Essência</span><span class="ind-logo-sub">Programa de Indicação</span></div>`;
+}
+function renderIndicacao(){
+  const el = document.getElementById('view-indicacao'); if(!el) return;
+  const s = getStudent(currentStudentId) || currentUserProfile;
+  if(IND_UI.rows===null && !IND_UI.carregando){ indCarregar(); }
+  const minhas = (IND_UI.rows||[]).filter(r=>s && r.indicador_id===s.id);
+  const n = minhas.length; const nv = indNivel(n);
+  el.innerHTML = `
+    <div class="ind-card">
+      ${indLogoHtml()}
+      <p class="ind-intro">Indique colegas para a Mentoria Essência. Cada pessoa que entrar na mentoria por sua indicação conta no seu progresso.</p>
+    </div>
+    <h2 class="section-title">Progresso de indicações</h2>
+    <div class="ind-progresso">
+      <div class="ind-prog-topo"><div><div class="ind-num">${n}</div><div class="ind-num-lbl">indicaç${n===1?'ão':'ões'} na mentoria</div></div>${indSeloHtml(n, true)}</div>
+      ${indBarraHtml(n)}
+      <p class="ind-falta">${escapeHtml(nv.txt)}</p>
+    </div>
+    <h2 class="section-title">Pessoas que entraram por sua indicação</h2>
+    ${IND_UI.rows===null ? '<div class="empty-state">Carregando…</div>' : minhas.length ? `<div class="ind-lista">${minhas.map(r=>{ const p = r.indicado_id ? (getStudent(r.indicado_id) || PEOPLE[r.indicado_id]) : null;
+      return `<div class="ind-item">${p ? initialsAvatar(p.initials||'', p.color||'#8d916f', 32, p.avatarUrl||null) : `<span class="ind-av">${icon('users','tiny')}</span>`}<div><strong>${escapeHtml(r.indicado_nome)}</strong><small>Na Mentoria Essência desde ${escapeHtml(tzDataCurta(r.data_indicacao))}</small></div></div>`; }).join('')}</div>`
+      : '<div class="empty-state">Ainda não há ninguém vinculado à sua indicação. Quando alguém que você indicou entrar na Mentoria Essência, o nome aparece aqui.</div>'}
+  `;
+}
+function renderIndicacoes(){
+  const el = document.getElementById('view-indicacoes'); if(!el) return;
+  if(!indPodeGerir()){ el.innerHTML = '<div class="empty-state">Esta área é da gestão do Programa de Indicação.</div>'; return; }
+  if(IND_UI.rows===null && !IND_UI.carregando){ indCarregar(); }
+  if(IND_UI.rows===null){ el.innerHTML = '<div class="empty-state">Carregando…</div>'; return; }
+  const alunos = STUDENTS.filter(x=>!acessoCancelado(x.id)).slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  const porInd = {}; IND_UI.rows.forEach(r=>{ (porInd[r.indicador_id] = porInd[r.indicador_id] || []).push(r); });
+  const q = normTxt(IND_UI.busca).trim();
+  const grupos = Object.keys(porInd).map(id=>({ id, s:getStudent(id) || PEOPLE[id], lista:porInd[id] }))
+    .filter(g=>!q || normTxt((g.s&&g.s.name)||'').includes(q) || g.lista.some(r=>normTxt(r.indicado_nome).includes(q)))
+    .sort((a,b)=>b.lista.length-a.lista.length || String((a.s||{}).name||'').localeCompare(String((b.s||{}).name||''),'pt-BR'));
+  const tot = IND_UI.rows.length, nInd = Object.keys(porInd).length;
+  const nEmb = Object.values(porInd).filter(l=>l.length>=IND_EMBAIXADOR && l.length<IND_ELITE).length, nEl = Object.values(porInd).filter(l=>l.length>=IND_ELITE).length;
+  const opts = (sel)=>alunos.map(a=>`<option value="${a.id}" ${sel===a.id?'selected':''}>${escapeHtml(a.name)}</option>`).join('');
+  el.innerHTML = `
+    <p class="section-sub" style="margin-top:0">Vincule quem indicou cada aluno que entrou na Mentoria Essência. O aluno vê no menu "Programa de Indicação" só as indicações dele. ${IND_EMBAIXADOR} indicações = Embaixador; ${IND_ELITE} ou mais = Elite.</p>
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Indicações</div><div class="value">${tot}</div></div>
+      <div class="kpi-tile"><div class="label">Alunos que indicaram</div><div class="value">${nInd}</div></div>
+      <div class="kpi-tile"><div class="label">Embaixadores</div><div class="value">${nEmb}</div></div>
+      <div class="kpi-tile"><div class="label">Elite</div><div class="value ind-ouro">${nEl}</div></div>
+    </div>
+    <h2 class="section-title">${icon('plus')} Vincular indicação</h2>
+    <div class="add-form">
+      <div class="field"><label>Quem indicou *</label><select class="ps-input" id="ind-indicador"><option value="">Escolha o aluno…</option>${opts(IND_UI.alunoSel)}</select></div>
+      <div class="field"><label>Quem foi indicado (aluno no ePLAT)</label><select class="ps-input" id="ind-indicado"><option value="">Escolha o aluno…</option>${opts('')}</select></div>
+      <div class="field"><label>Ou o nome (se ainda não tem conta)</label><input class="ps-input" type="text" id="ind-nome" placeholder="Nome completo"></div>
+      <div class="field"><label>Data em que entrou na mentoria</label><input class="ps-input" type="date" id="ind-data" value="${new Date(Date.now()-3*3600000).toISOString().slice(0,10)}"></div>
+      <div class="field full"><label>Observação (opcional)</label><input class="ps-input" type="text" id="ind-obs" placeholder="Ex.: indicou pelo Instagram, colega de trabalho…"></div>
+      <div class="actions"><button class="btn-accent" id="ind-add">${icon('plus')} Vincular</button></div>
+    </div>
+    <h2 class="section-title">${icon('users')} Indicadores</h2>
+    <div class="busca-bar larga"><input class="ps-input" type="text" id="ind-busca" value="${escapeAttr(IND_UI.busca)}" placeholder="Buscar por quem indicou ou por quem foi indicado…"></div>
+    <div class="ind-gestao-lista">
+      ${grupos.map(g=>`<div class="ind-g-card">
+        <div class="ind-g-topo">
+          ${g.s ? initialsAvatar(g.s.initials||'', g.s.color||'#8d916f', 34, g.s.avatarUrl||null) : ''}
+          <div class="ind-g-nome"><strong>${escapeHtml((g.s&&g.s.name)||'Aluno removido')}</strong><small>${g.lista.length} indicaç${g.lista.length===1?'ão':'ões'}</small></div>
+          ${indSeloHtml(g.lista.length)}
+        </div>
+        ${indBarraHtml(g.lista.length)}
+        <ul class="ind-g-itens">${g.lista.map(r=>{ const quem = r.criado_por && PEOPLE[r.criado_por] ? PEOPLE[r.criado_por].name.split(' ')[0] : '';
+          return `<li><span><b>${escapeHtml(r.indicado_nome)}</b> <small>${escapeHtml(tzDataCurta(r.data_indicacao))}${r.indicado_id ? '' : ' · sem conta no ePLAT'}${r.observacao ? ' · '+escapeHtml(r.observacao) : ''}${quem ? ' · vinculado por '+escapeHtml(quem) : ''}</small></span><button type="button" class="btn-mini danger" data-ind-del="${r.id}" title="Remover esta indicação">${icon('trash','tiny')}</button></li>`; }).join('')}</ul>
+      </div>`).join('') || `<div class="empty-state">${q ? 'Ninguém com esse nome.' : 'Nenhuma indicação vinculada ainda.'}</div>`}
+    </div>`;
+  bindBuscaInput('ind-busca', v=>{ IND_UI.busca = v; }, renderIndicacoes);
+  document.getElementById('ind-indicador').addEventListener('change', e=>{ IND_UI.alunoSel = e.target.value; });
+  document.getElementById('ind-add').addEventListener('click', async (e)=>{
+    const ind = document.getElementById('ind-indicador').value;
+    const sid = document.getElementById('ind-indicado').value;
+    const nome = sid ? (getStudent(sid)||{}).name : document.getElementById('ind-nome').value.trim();
+    const data = document.getElementById('ind-data').value || null;
+    const obs = document.getElementById('ind-obs').value.trim() || null;
+    if(!ind){ alert('Escolha quem indicou.'); return; }
+    if(!nome){ alert('Escolha o aluno indicado ou escreva o nome.'); return; }
+    if(sid && sid===ind){ alert('A pessoa não pode indicar a si mesma.'); return; }
+    if(sid && IND_UI.rows.some(r=>r.indicador_id===ind && r.indicado_id===sid)){ alert('Essa indicação já está vinculada.'); return; }
+    const b = e.currentTarget; b.disabled = true;
+    const { data:row, error } = await sb.from('indicacoes').insert({ indicador_id:ind, indicado_id:sid||null, indicado_nome:nome, data_indicacao:data, observacao:obs, criado_por:currentUser.id }).select().single();
+    b.disabled = false;
+    if(error){ alert('Não foi possível vincular: '+(error.message||'')); return; }
+    IND_UI.rows.push(row); IND_UI.alunoSel = ind; renderIndicacoes();
+  });
+  el.querySelectorAll('[data-ind-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const r = IND_UI.rows.find(x=>String(x.id)===b.dataset.indDel); if(!r) return;
+    if(!(await showAppConfirm(`Remover a indicação de ${r.indicado_nome}? O progresso de quem indicou diminui.`, {title:'Remover indicação', confirmLabel:'Remover'}))) return;
+    const { error } = await sb.from('indicacoes').delete().eq('id', r.id);
+    if(error){ alert('Não foi possível remover: '+(error.message||'')); return; }
+    IND_UI.rows = IND_UI.rows.filter(x=>x.id!==r.id); renderIndicacoes();
+  }));
+}
 function radarPode(){
   return currentUserRole==='staff' && !!currentUser && RADAR_UIDS.includes(idEfetivo());
 }
