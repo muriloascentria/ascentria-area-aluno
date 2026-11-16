@@ -13391,20 +13391,27 @@ function cobBind(s){
     renderInterno();
   }));
 }
+/* Aluno com acesso cancelado não aparece no Acompanhamento Interno (nem no seletor). Só abre se a equipe
+   escolher "Abrir acompanhamento" na linha dele, na Visão Geral, para consultar o histórico. */
+let INT_VER_CANCELADO = null;
 function renderInterno(){
+  if(acessoCancelado(currentStudentId) && INT_VER_CANCELADO!==currentStudentId){
+    const outro = STUDENTS.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).find(x=>!acessoCancelado(x.id));
+    if(outro) currentStudentId = outro.id;
+  }
   const s = getStudent(currentStudentId);
   if(s && AE_UI.sid!==s.id) intAeCarregar(s.id);
   const d = s.diagnostico;
   const aberto = getInternoAberto();
   /* Seletor de mentorado (no lugar da lista que ficava no menu da foto): ordem alfabética, com foto,
      e uma busca por nome pra achar rápido. Escolher abre o acompanhamento da pessoa aqui mesmo. */
-  const alunosOrdenados = STUDENTS.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  const alunosOrdenados = STUDENTS.filter(x=>!acessoCancelado(x.id)).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
   const tierLabel = (st)=> st.tier==='curso' ? (st.pos? 'Pós-graduação' : (st.bonus? 'Método + Bônus' : 'Método')) : (st.pos? 'Pós-graduação + Mentoria' : 'Mentoria');
   const alunoPickerHtml = `
     <div class="aluno-picker" id="aluno-picker">
       <button type="button" class="aluno-picker-btn" id="aluno-picker-btn" aria-expanded="false">
         ${initialsAvatar(s.initials, s.color, 36, s.avatarUrl)}
-        <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${tierLabel(s)} · ${alunosOrdenados.length} aluno${alunosOrdenados.length===1?'':'s'} — clique para trocar</small></span>
+        <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${acessoCancelado(s.id) ? 'ACESSO CANCELADO · só consulta · ' : ''}${tierLabel(s)} · ${alunosOrdenados.length} aluno${alunosOrdenados.length===1?'':'s'} — clique para trocar</small></span>
         ${icon('down')}
       </button>
       <div class="aluno-picker-menu" id="aluno-picker-menu" hidden>
@@ -23035,6 +23042,7 @@ async function obSalvar(campo, valor){
 function abrirAcompanhamento(sid){
   if(!getStudent(sid)) return;
   if(document.getElementById('modal-backdrop').classList.contains('open')) reallyCloseModal();
+  INT_VER_CANCELADO = acessoCancelado(sid) ? sid : null;
   currentStudentId = sid;
   panelQuadrantId = null;
   if(typeof novaTarefaAulas!=='undefined') novaTarefaAulas.clear();
