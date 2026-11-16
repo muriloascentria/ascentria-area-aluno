@@ -18206,7 +18206,8 @@ function renderMarca(){
     </table>
     ${dono ? `<div class="mc-acoes"><button type="button" class="btn-outline mc-btn" id="mc-add">${icon('plus','tiny')}<span>Adicionar conteúdo</span></button><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>` : `<div class="mc-acoes"><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>`}`;
   const aval = `<table class="mc-tab"><thead><tr>${MC_AVAL.map(([,r])=>`<th>${r}</th>`).join('')}</tr></thead>
-      <tbody>${(MC.aval||[]).map(a=>`<tr>${MC_AVAL.map(([k])=> k==='link' ? `<td>${String(a.link||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(a.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Ver post</a>` : ''}</td>` : `<td><input class="ps-input mc-av" data-mc-av="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}"></td>`).join('')}</tr>`).join('') || `<tr><td colspan="9" class="mc-vazio">Os conteúdos marcados como "Postado" no funil aparecem aqui com o link.</td></tr>`}</tbody></table>`;
+      <tbody>${(MC.aval||[]).map(a=>`<tr>${MC_AVAL.map(([k])=> k==='link' ? `<td>${String(a.link||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(a.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Ver post</a>` : ''}</td>` : `<td><input class="ps-input mc-av" data-mc-av="${a.id}" data-mc-k="${k}" value="${escapeAttr(a[k]||'')}"></td>`).join('')}</tr>`).join('') || `<tr><td colspan="9" class="mc-vazio">Os conteúdos marcados como "Postado" no funil aparecem aqui com o link.</td></tr>`}</tbody></table>
+    ${(MC.aval||[]).length ? `<div class="mc-acoes"><button type="button" class="btn-accent mc-btn" data-mc-salvar>${icon('check','tiny')}<span>Salvar</span></button></div>` : ''}`;
   const listaLinks = (lista, ph) => `<div class="mc-ativos">${lista.map(([k,rot])=>{
       const v = (MC.ativos||{})[k]||'';
       return `<div class="mc-ativo"><span class="mc-ativo-rot">${escapeHtml(lista===MC_ATIVOS ? rot.toUpperCase() : rot)}</span>
@@ -18260,10 +18261,10 @@ function renderMarca(){
     const id = Number(b.dataset.mcIdeiaDel); await sb.from('marca_ideias').delete().eq('id', id);
     MC.ideias = MC.ideias.filter(x=>x.id!==id); renderMarca();
   }));
-  el.querySelectorAll('.mc-av').forEach(i=>i.addEventListener('change', async ()=>{
+  el.querySelectorAll('.mc-av').forEach(i=>i.addEventListener('change', ()=>{ const pr = (async ()=>{
     const id = Number(i.dataset.mcAv); const { error } = await sb.from('marca_avaliacao').update({ [i.dataset.mcK]: i.value }).eq('id', id);
     if(error) alert('Não foi possível salvar: '+error.message); else { const a = MC.aval.find(x=>x.id===id); if(a) a[i.dataset.mcK] = i.value; }
-  }));
+  })(); MC_PEND.add(pr); pr.finally(()=>MC_PEND.delete(pr)); }));
 }
 async function mcSalvar(sem, id, k, v){
   const r = (MC.funil[sem]||[]).find(x=>x.id===id); if(!r) return;
