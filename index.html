@@ -4984,6 +4984,7 @@ let MATERIALS = []; // populado em runtime a partir do Supabase (ver bootstrapDa
 /* ================= STATE ================= */
 let currentStudentId = null;
 /* Conta com direito ao botão "Visualização Consultora" (modo que imita o que as vendedoras veem). */
+const PREVIA_PAPEIS_VISIVEL = false;
 const CONSULTORA_PREVIEW_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3']; // Murilo
 /* Equipe interna de verdade E fora do modo "Visualização Consultora": é o que libera os poderes que
    as vendedoras não têm (dados do lead, vínculo com aluno, excluir análise, anexos do financeiro). */
@@ -7530,7 +7531,9 @@ function setRole(role){
   currentRole = role;
   document.getElementById('role-toggle').style.display = currentUserRole==='staff' ? 'flex' : 'none';
   setTimeout(ajustarTituloTopo, 0);
-  const podePrever = currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id);
+  /* Pedido do Murilo (16/11): no seletor do topo ficam só Aluno e Equipe. As prévias de Consultora, Editor e
+     Navegadora continuam no código; para voltar a mostrar, troque PREVIA_PAPEIS_VISIVEL para true. */
+  const podePrever = PREVIA_PAPEIS_VISIVEL && currentUserRole==='staff' && currentUser && CONSULTORA_PREVIEW_UIDS.includes(currentUser.id);
   document.getElementById('role-consultora').style.display = podePrever ? '' : 'none';
   document.getElementById('role-editor').style.display = podePrever ? '' : 'none';
   document.getElementById('role-cs').style.display = podePrever ? '' : 'none';
