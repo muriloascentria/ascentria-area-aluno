@@ -17849,8 +17849,8 @@ function mcSouDiego(){ return currentUserRole==='staff' && !!currentUser && idEf
 function mcStCls(st){ return 'mc-st-'+String(st||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-'); }
 function mcPode(){ return mcSouDono() || mcSouMariane() || mcSouDiego() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
 function mcEditaTudo(){ return souMurilo() && currentRole!=='editor'; }
-/* Esta semana e as três seguintes (a semana passada não aparece no topo). */
-function mcSemanas(){ return [0,1,2,3].map(o=>fsSemana(-o)); }
+/* Semana passada (para subir o link e avaliar), esta semana e as três seguintes. */
+function mcSemanas(){ return [-1,0,1,2,3].map(o=>fsSemana(-o)); }
 function mcDataISO(sem, dia){ const d = gtData(sem); d.setDate(d.getDate()+Math.max(0, MC_DIAS.indexOf(dia))); return gtISO(d); }
 function mcData(sem, dia, iso){ const x = iso || mcDataISO(sem, dia); return x.slice(8,10)+'/'+x.slice(5,7); }
 async function mcCarregarSemana(sem){
@@ -18172,7 +18172,7 @@ function renderMarca(){
     return;
   }
   const semanas = mcSemanas();
-  let sem = MC.semana && semanas.includes(MC.semana) ? MC.semana : semanas[0];
+  let sem = MC.semana && semanas.includes(MC.semana) ? MC.semana : fsSemana(0);
   if(MC.funil[sem]===undefined){ el.innerHTML = '<div class="empty-state">Carregando o funil…</div>'; mcCarregarSemana(sem); return; }
   if(MC.ativos===null) mcCarregarExtras();
   const linhas = (MC.funil[sem] || []).filter(r=>mcSouDono() || r.rede!=='TikTok').slice().sort((a,b)=>(a.data||mcDataISO(sem,a.dia)).localeCompare(b.data||mcDataISO(sem,b.dia)) || (a.ordem-b.ordem) || (a.id-b.id));
@@ -18181,7 +18181,7 @@ function renderMarca(){
   const lnk = (r,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${k==='link'?'Link do post':'Link do Drive'}">${mcAbrir(r[k])}</div>`
                                 : (String(r[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(r[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
   const funil = `
-    <div class="fs-semanas">${semanas.map((x,n)=>`<button type="button" class="filter-tab ${x===sem?'active':''}" data-mc-sem="${x}">${n===0?'ESTA SEMANA':fsRotSemana(x)}</button>`).join('')}</div>
+    <div class="fs-semanas">${semanas.map((x,n)=>`<button type="button" class="filter-tab ${x===sem?'active':''}" data-mc-sem="${x}">${x===fsSemana(0)?'ESTA SEMANA':x===fsSemana(1)?'SEMANA PASSADA':fsRotSemana(x)}</button>`).join('')}</div>
     ${paraEditar ? `<div class="mc-aviso">${icon('film','tiny')} ${paraEditar} ${paraEditar===1?'vídeo esperando':'vídeos esperando'} edição nesta semana</div>` : ''}
     <table class="mc-tab">
       <colgroup><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:13%"><col style="width:7%"><col style="width:11%"><col style="width:11%"><col style="width:11%"></colgroup>
