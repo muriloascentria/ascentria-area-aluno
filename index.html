@@ -18286,8 +18286,8 @@ async function mcSalvar(sem, id, k, v){
       MC.funil[sem] = (MC.funil[sem]||[]).filter(x=>x.id!==id);
       if(MC.funil[data.semana]) MC.funil[data.semana].push(data);
     }
-    /* Postado com link do conteúdo: desce uma vez para a Avaliação de Conteúdo. */
-    if(r.status==='Postado' && String(r.link||'').trim()){
+    /* Postado com link do conteúdo: desce uma vez para a Avaliação de Conteúdo. Só Instagram (YouTube e TikTok ainda não são avaliados). */
+    if(r.status==='Postado' && String(r.link||'').trim() && (r.rede||'Instagram')==='Instagram'){
       if(MC.aval===null) await mcCarregarExtras();
       if(!(MC.aval||[]).some(a=>a.funil_id===r.id || String(a.link).trim()===String(r.link).trim())){
         const { data: av } = await sb.from('marca_avaliacao').insert({ link:String(r.link).trim(), data_funil:mcData(sem, r.dia, r.data), funil_id:r.id }).select().single();
