@@ -13357,10 +13357,11 @@ function renderInterno(){
     <p class="section-sub" style="margin-top:0">Qualquer pessoa da equipe que teve contato com o mentorado — reunião no Google Meet, reunião presencial, contato por WhatsApp ou mensagem no Plat — pode registrar aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Data</th><th>Tipo</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Data</th><th>Tipo</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th></tr></thead>
         <tbody id="contatos-tbody">
           ${s.contatos.map(c=>`
             <tr>
+              <td style="white-space:nowrap"><button class="btn-mini" data-edit-contato="${c.id}" title="Editar registro (link, resumo, data)">${icon('edit','tiny')}</button> <button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
               <td style="white-space:nowrap">${c.data}</td>
               <td style="white-space:nowrap">${contatoTipoLabel(c)}</td>
               <td><span class="resp-pill">${escapeHtml(c.responsavel)}</span></td>
@@ -13370,7 +13371,6 @@ function renderInterno(){
               <td style="white-space:nowrap">${c.syncedToSessions
                 ? `<span class="sync-ok">${icon('tick')} Em Minhas Sessões</span> <button class="btn-mini" data-unsync-session="${c.id}" title="Remover de Minhas Sessões 1:1">${icon('x','tiny')} Remover</button>`
                 : `<button class="btn-mini" data-sync-session="${c.id}">${icon('upload')} Adicionar às Sessões</button>`}</td>
-              <td style="white-space:nowrap"><button class="btn-mini" data-edit-contato="${c.id}" title="Editar registro">${icon('edit','tiny')}</button> <button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
             </tr>
           `).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
         </tbody>
