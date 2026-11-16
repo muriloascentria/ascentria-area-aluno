@@ -12074,6 +12074,17 @@ function meConteudoBind(){
 }
 
 /* ================= VIEW: METAS (individual, fruto do acompanhamento interno) ================= */
+/* Meta pendente = meta do mentorado não concluída com o prazo já vencido (ou marcada como Atrasada).
+   Quando a equipe muda o prazo para uma data futura, ela volta a ficar "em dia". Prazo vazio ou "—" não vence. */
+function metaVencida(t){
+  if(!t || t.responsavel!=='Mentorado' || t.status==='Concluída') return false;
+  if(t.status==='Atrasada') return true;
+  const m = String(t.prazo||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(!m) return false;
+  const prazoISO = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
+  return prazoISO < hojeISO;
+}
 function renderMetas(){
   const s = getStudent(currentStudentId);
   const minhas = s.checklist.filter(t=>t.responsavel==='Mentorado');
@@ -12090,7 +12101,7 @@ function renderMetas(){
         </div>
       </div>
     `).join('')}
-    ${currentUserRole==='staff' && minhas.some(t=>t.status!=='Concluída') ? `<div class="rd-msgs">
+    ${currentUserRole==='staff' && minhas.some(metaVencida) ? `<div class="rd-msgs">
       <div class="rd-msgs-hd">${icon('comment')} <strong>MENSAGEM PADRONIZADA · METAS PENDENTES</strong></div>
       <p class="rd-msgs-aviso"><strong>Primeiro, envie pelo Mensagens do ePLAT.</strong> Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp. Só a equipe vê este quadro.</p>
       ${rdMsgCardHtml(RD_MSGS_PADRAO.find(m=>m.id==='metas'), (s.name||'').trim().split(/\s+/)[0])}
@@ -22816,7 +22827,7 @@ function aeSituacao(s, salvo){
   const estagioPlataforma = estagioMentoria(mesPrograma(s)).label;
   const atual = (salvo && salvo.estagio_atual) || estagioPlataforma;
   const alinhamento = esperado===null ? 'Verificar prazo' : (atual===esperado ? 'Alinhado' : 'Revisar');
-  const metaPendente = !!s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+  const metaPendente = !!s.checklist.find(metaVencida);
   const sugerida = atual==='Fechamento' ? 'ALTA — fechamento/revisão final'
     : dias <= 90 ? 'ALTA — concluir competências críticas'
     : metaPendente ? 'ATENÇÃO — meta pendente' : 'ACOMPANHAR';
@@ -23557,7 +23568,7 @@ function renderVisaoGeral(){
         <tbody>
           ${mentorados.map(s=>{
             const pct = overallProgress(s);
-            const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+            const nextTask = s.checklist.find(metaVencida);
             const dias = diasRestantes(s);
             const estagio = estagioMentoria(mesPrograma(s));
             return `
