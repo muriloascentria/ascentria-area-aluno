@@ -19430,6 +19430,16 @@ function polStatusPill(d){ return `<span class="pol-st pol-st-${d.status}">${POL
 function polDataBr(iso){ if(!iso) return ''; const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
 function polPessoaNome(id){ const p = PEOPLE[id]; return p ? p.name : 'Pessoa'; }
 function polEquipeInterna(){ return Object.values(PEOPLE).filter(p=>['staff','vendas','editor'].includes(p.role) && !p.contaTeste && !p.espelhoDe).sort((a,b)=> (REU_SOCIOS.indexOf(b.id)>-1) - (REU_SOCIOS.indexOf(a.id)>-1) || a.name.localeCompare(b.name,'pt-BR')); }
+/* Histórico: respostas das rodadas anteriores, com as anotações de quem revisou. */
+function polHistoricoHtml(d){
+  const ant = (POL_UI.resp||[]).filter(r=>String(r.doc_id)===String(d.id) && r.rodada < (d.rodada||1));
+  if(!ant.length) return '';
+  const rodadas = [...new Set(ant.map(r=>r.rodada))].sort((a,b)=>b-a);
+  return `<div class="pol-bloco">
+    <h4>Revisões anteriores</h4>
+    ${rodadas.map(n=>`<div class="muted" style="font-size:12px;margin:6px 0 4px">${n}ª rodada</div>${ant.filter(r=>r.rodada===n).sort((a,b)=>String(a.updated_at||a.created_at).localeCompare(String(b.updated_at||b.created_at))).map(r=>polRespostaHtml(r, d)).join('')}`).join('')}
+  </div>`;
+}
 function polAprovacaoHtml(d){
   const aprov = (d.aprovada_por||[]);
   const rs = polRespostasDoc(d).slice().sort((a,b)=>String(a.updated_at||a.created_at).localeCompare(String(b.updated_at||b.created_at)));
@@ -19546,6 +19556,7 @@ function polDetalheHtml(d){
         ${(polSocio() ? outros : rs).length ? (polSocio() ? outros : rs).map(r=>polRespostaHtml(r, d)).join('') : '<p class="muted">Ninguém respondeu ainda.</p>'}
       </div>` : ''}
     ${d.status==='vigente' ? polAprovacaoHtml(d) : ''}
+    ${polHistoricoHtml(d)}
     ${polSocio() ? `<div class="pol-bloco pol-gestao">
       <h4>Gestão do documento</h4>
       <div class="pol-acoes">
