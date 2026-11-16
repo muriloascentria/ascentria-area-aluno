@@ -2644,6 +2644,8 @@
   .rd-mom-ok .icon{color:#2f9e5a !important;width:12px !important;height:12px !important;}
   .rd-mom-seta{margin-left:auto;display:inline-flex;}
   .rd-mom-tudo{border-color:rgba(47,158,90,.35);}
+  .int-tag-mc{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:rgba(141,145,111,.14);border:1px solid rgba(141,145,111,.4);padding:2px 8px;border-radius:999px;}
+  .int-tag-mc .icon{width:12px;height:12px;}
   .rd-mom-aluno{padding:8px 0;border-top:1px solid var(--border);}
   .rd-mom-aluno:first-of-type{border-top:0;}
   .rd-mom-nome{font-weight:600;font-size:13px !important;text-transform:uppercase;letter-spacing:0;line-height:1.3;}
@@ -13271,15 +13273,6 @@ function cobBind(s){
     renderInterno();
   }));
 }
-/* Histórico dos Momentos-Chave (Acompanhamento Interno): carregado sob demanda, por mentorado. */
-const INT_MOM_HIST = {};
-function intMomHist(sid){
-  if(INT_MOM_HIST[sid] !== undefined) return INT_MOM_HIST[sid];
-  INT_MOM_HIST[sid] = null;
-  sb.from('radar_momentos_resolvidos').select('chave,texto_momento,analise,resolvido_por,resolvido_em').eq('student_id', sid).order('resolvido_em',{ascending:false})
-    .then(({data, error})=>{ INT_MOM_HIST[sid] = error ? [] : (data||[]); if(error) console.error('intMomHist', error); if(currentView==='interno' && currentStudentId===sid) renderInterno(); });
-  return null;
-}
 function renderInterno(){
   const s = getStudent(currentStudentId);
   if(s && AE_UI.sid!==s.id) intAeCarregar(s.id);
@@ -13497,8 +13490,10 @@ function renderInterno(){
             <tr>
               <td style="white-space:nowrap">${escapeHtml(r.data||'—')}</td>
               <td><span class="resp-pill">${escapeHtml(r.autorNome||'—')}</span></td>
-              <td style="white-space:nowrap">${intEncontroData(s, intVk(r)) || '<span style="color:var(--text-mute)">—</span>'}</td>
-              <td style="min-width:280px">${linkify(r.texto).replace(/\n/g,'<br>')}</td>
+              ${(()=>{ const PFX = 'Momento-chave (Radar): '; const mc = String(r.texto||'').startsWith(PFX); const enc = intEncontroData(s, intVk(r));
+                const tag = `<span class="int-tag-mc">${icon('calendar','tiny')} Resolução de momento-chave</span>`;
+                return `<td style="white-space:nowrap">${mc ? (enc ? enc+'<br>'+tag : tag) : (enc || '<span style="color:var(--text-mute)">—</span>')}</td>
+              <td style="min-width:280px">${linkify(mc ? String(r.texto).slice(PFX.length) : r.texto).replace(/\n/g,'<br>')}</td>`; })()}
               <td style="white-space:nowrap"><button class="btn-mini" data-rec-encontro="${r.id}" title="${intVk(r)?'Trocar o encontro vinculado':'Vincular a um encontro'}">${icon('calendar','tiny')} ${r.contatoId?'Trocar':'Vincular'}</button> <button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
             </tr>
           `).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum registro interno ainda.</td></tr>`}
@@ -13518,22 +13513,6 @@ function renderInterno(){
       ${intAnaliseHtml(s)}
       ${intCompetenciasHtml(s)}
     </div>
-    ${(()=>{ const h = intMomHist(s.id); return `${intHead('momhist', 'calendar', 'Histórico dos Momentos-Chave', h ? h.length : null)}
-    ${intBody('momhist')}
-      <p class="section-sub" style="margin-top:0">Cada momento-chave resolvido no Radar dos Mentorados fica registrado aqui: a data, o momento, quem resolveu e o que foi registrado.</p>
-      <div class="table-wrap">
-        <table class="check-table">
-          <thead><tr><th>Data</th><th>Momento</th><th>Resolvido por</th><th>O que registrou</th></tr></thead>
-          <tbody>${h===null ? `<tr><td colspan="4" style="color:var(--text-mute)">Carregando…</td></tr>`
-            : h.map(r=>`<tr>
-              <td style="white-space:nowrap">${r.resolvido_em ? escapeHtml(tzDataHora(r.resolvido_em, true)) : '—'}</td>
-              <td style="min-width:180px">${escapeHtml(r.texto_momento || r.chave || '—')}</td>
-              <td><span class="resp-pill">${escapeHtml(r.resolvido_por && PEOPLE[r.resolvido_por] ? PEOPLE[r.resolvido_por].name : '—')}</span></td>
-              <td style="min-width:260px">${r.analise ? linkify(r.analise).replace(/\n/g,'<br>') : '<span style="color:var(--text-mute)">—</span>'}</td>
-            </tr>`).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum momento-chave resolvido ainda.</td></tr>`}</tbody>
-        </table>
-      </div>
-    </div>`; })()}
     ${s.mentorEssencia ? `${intHead('mentores', 'award', 'Mentores Essência', null)}
     ${intBody('mentores')}${meInternoHtml(s)}</div>` : ''}
   `;
@@ -22485,7 +22464,6 @@ function rdResolverMomento(s, m){
         r.id = await syncInternalRecordInsert(s.id, r);
         (s.registrosInternos = s.registrosInternos || []).unshift(r);
         const { data, error } = await sb.from('radar_momentos_resolvidos').insert({ student_id:s.id, chave:m.chave, texto_momento:m.txt, analise, record_id:r.id, resolvido_por:currentUser.id }).select('student_id,chave,resolvido_por,resolvido_em').single();
-        delete INT_MOM_HIST[s.id];
         if(error) throw error;
         RADAR_UI.resolvidos[s.id+'|'+m.chave] = data || { student_id:s.id, chave:m.chave, resolvido_por:currentUser.id, resolvido_em:new Date().toISOString() };
         reallyCloseModal(); renderRadar();
