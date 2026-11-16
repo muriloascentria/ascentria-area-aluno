@@ -2032,6 +2032,9 @@
   .check-table th{text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--text-mute);padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg-elev);white-space:nowrap;}
   .check-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
   .check-table tr:last-child td{border-bottom:none;}
+  /* Ações do Registro de Contatos: ficam presas à direita, visíveis em qualquer largura de tela mesmo com a tabela rolando. */
+  .check-table .ct-acoes{position:sticky;right:0;z-index:1;white-space:nowrap;background:var(--bg-card);box-shadow:-8px 0 8px -6px rgba(0,0,0,.35);}
+  .check-table th.ct-acoes{background:var(--bg-elev);}
   /* Visão Geral: com muitas colunas a tabela fica mais larga que a tela e o botão "Abrir" (última
      coluna) saía do campo de visão, mesmo diminuindo o zoom. Agora essa coluna fica grudada na borda
      direita — a tabela rola por baixo dela e o botão continua sempre visível. */
@@ -13357,11 +13360,10 @@ function renderInterno(){
     <p class="section-sub" style="margin-top:0">Qualquer pessoa da equipe que teve contato com o mentorado — reunião no Google Meet, reunião presencial, contato por WhatsApp ou mensagem no Plat — pode registrar aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th></th><th>Data</th><th>Tipo</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th></tr></thead>
+        <thead><tr><th>Data</th><th>Tipo</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th class="ct-acoes"></th></tr></thead>
         <tbody id="contatos-tbody">
           ${s.contatos.map(c=>`
             <tr>
-              <td style="white-space:nowrap"><button class="btn-mini" data-edit-contato="${c.id}" title="Editar registro (link, resumo, data)">${icon('edit','tiny')}</button> <button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
               <td style="white-space:nowrap">${c.data}</td>
               <td style="white-space:nowrap">${contatoTipoLabel(c)}</td>
               <td><span class="resp-pill">${escapeHtml(c.responsavel)}</span></td>
@@ -13371,6 +13373,7 @@ function renderInterno(){
               <td style="white-space:nowrap">${c.syncedToSessions
                 ? `<span class="sync-ok">${icon('tick')} Em Minhas Sessões</span> <button class="btn-mini" data-unsync-session="${c.id}" title="Remover de Minhas Sessões 1:1">${icon('x','tiny')} Remover</button>`
                 : `<button class="btn-mini" data-sync-session="${c.id}">${icon('upload')} Adicionar às Sessões</button>`}</td>
+              <td class="ct-acoes"><button class="btn-mini" data-edit-contato="${c.id}" title="Editar registro (link, resumo, data)">${icon('edit','tiny')}</button> <button class="btn-mini danger" data-del-contato="${c.id}" title="Excluir registro">${icon('trash','tiny')}</button></td>
             </tr>
           `).join('') || `<tr><td colspan="8" style="color:var(--text-mute)">Nenhum registro ainda.</td></tr>`}
         </tbody>
