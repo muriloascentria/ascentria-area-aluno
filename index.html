@@ -17851,6 +17851,8 @@ function mcStCls(st){ return 'mc-st-'+String(st||'').toLowerCase().normalize('NF
 function mcPode(){ return mcSouDono() || mcSouMariane() || mcSouDiego() || currentUserRole==='editor' || (currentUserRole==='staff' && currentRole==='editor' && souMurilo()); }
 function mcEditaTudo(){ return souMurilo() && currentRole!=='editor'; }
 /* Semana passada (para subir o link e avaliar), esta semana e as três seguintes. */
+/* Sem edição de vídeo: TikTok e Carrossel do Instagram. Reels do Instagram e YouTube passam pela edição. */
+function mcSemEdicao(r){ return r.rede==='TikTok' || ((r.rede||'Instagram')==='Instagram' && /carross/i.test(String(r.formato||''))); }
 function mcSemanas(){ return [-1,0,1,2,3].map(o=>fsSemana(-o)); }
 function mcDataISO(sem, dia){ const d = gtData(sem); d.setDate(d.getDate()+Math.max(0, MC_DIAS.indexOf(dia))); return gtISO(d); }
 function mcData(sem, dia, iso){ const x = iso || mcDataISO(sem, dia); return x.slice(8,10)+'/'+x.slice(5,7); }
@@ -18177,7 +18179,7 @@ function renderMarca(){
   if(MC.funil[sem]===undefined){ el.innerHTML = '<div class="empty-state">Carregando o funil…</div>'; mcCarregarSemana(sem); return; }
   if(MC.ativos===null) mcCarregarExtras();
   const linhas = (MC.funil[sem] || []).filter(r=>mcSouDono() || r.rede!=='TikTok').slice().sort((a,b)=>(a.data||mcDataISO(sem,a.dia)).localeCompare(b.data||mcDataISO(sem,b.dia)) || (a.ordem-b.ordem) || (a.id-b.id));
-  const paraEditar = linhas.filter(r=>r.rede!=='TikTok' && String(r.bruto||'').trim() && !String(r.editado||'').trim()).length;
+  const paraEditar = linhas.filter(r=>!mcSemEdicao(r) && String(r.bruto||'').trim() && !String(r.editado||'').trim()).length;
   const txt = (r,k,ph)=> dono ? `<input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${escapeAttr(ph||'')}">` : `<span class="mc-txt">${escapeHtml(r[k]||'')}</span>`;
   const lnk = (r,k,pode)=> pode ? `<div class="mc-lnk"><input class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="${k}" value="${escapeAttr(r[k]||'')}" placeholder="${k==='link'?'Link do post':'Link do Drive'}">${mcAbrir(r[k])}</div>`
                                 : (String(r[k]||'').trim() ? `<a class="mc-abrir-txt" href="${escapeAttr(String(r[k]).trim())}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir</a>` : '');
@@ -18188,9 +18190,9 @@ function renderMarca(){
       <colgroup><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:13%"><col style="width:7%"><col style="width:11%"><col style="width:11%"><col style="width:11%"></colgroup>
       <thead><tr><th>Data</th><th>Dia</th><th>Rede</th><th>Link do Conteúdo</th><th>Objetivo</th><th>Descrição</th><th>Formato</th><th>Bruto</th><th>Editado</th><th>Status</th></tr></thead>
       <tbody>${linhas.map(r=>{
-        const tiktok = r.rede==='TikTok';
+        const tiktok = mcSemEdicao(r);
         const esperando = !tiktok && String(r.bruto||'').trim() && !String(r.editado||'').trim();
-        const semEd = `<span class="mc-sem-ed" title="TikTok não passa pela edição">sem edição</span>`;
+        const semEd = `<span class="mc-sem-ed" title="${escapeAttr(r.rede==='TikTok' ? 'TikTok não passa pela edição' : 'Carrossel não passa pela edição')}">sem edição</span>`;
         return `<tr class="${esperando?'mc-esperando':''}">
           <td>${dono ? `<input type="date" class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="data" value="${escapeAttr(r.data || mcDataISO(sem, r.dia))}">` : `<span class="mc-data">${mcData(sem, r.dia, r.data)}</span>`}</td>
           <td>${dono ? `<select class="ps-input mc-in" data-mc-id="${r.id}" data-mc-k="dia">${MC_DIAS.map(d=>`<option ${d===r.dia?'selected':''}>${d}</option>`).join('')}</select>` : `<b>${escapeHtml(r.dia)}</b>`}</td>
