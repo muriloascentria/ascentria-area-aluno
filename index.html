@@ -23002,7 +23002,7 @@ async function renderEmbarque(){
           <div class="emb-col-body" ${c.id==='fim' && !embFimAberto?'hidden':''}>
             ${porCol[c.id].map(({s,r})=>{ const dia = embDia(s); const v = r.atual ? ((EMB[s.id]||{})[r.atual.chave]||{}) : {};
               return `<div class="emb-card ${embFora(s.id)?'fora':''}" role="button" tabindex="0" data-emb-abrir="${s.id}">
-                ${r.concluido && !embFora(s.id) ? '' : `<button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="${embFora(s.id)?'0':'1'}" title="${embFora(s.id)?'Voltar ao funil':'Mover para Embarque concluído'}">${embFora(s.id)? icon('back','tiny') : icon('check','tiny')}</button>`}
+                ${/* Concluir o embarque só por dentro do card (botão no detalhe); por fora fica só o "Voltar ao funil". */ embFora(s.id) ? `<button type="button" class="emb-card-x" data-emb-fora="${s.id}" data-emb-fora-v="0" title="Voltar ao funil">${icon('back','tiny')}</button>` : ''}
                 <div class="emb-card-top">${initialsAvatar(s.initials,s.color,30,s.avatarUrl)}<div class="emb-card-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30` : `Dia ${dia}`) : 'Sem data de matrícula'}</small></div></div>
                 ${embContatoTagHtml(s.id)}
                 ${s.lead ? `<span class="emb-tag-lead" title="Vendido no CRM${s.lead.vendedor? ' por '+escapeAttr(String(s.lead.vendedor).split(' ')[0]) : ''}. Ainda sem conta no ePLAT">AGUARDANDO CONTA</span>` : ''}
