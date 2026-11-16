@@ -2669,6 +2669,13 @@
   .rd-dado strong{font-size:12.5px;font-weight:600;word-break:break-word;}
   .rd-dado-vermelho{border-color:var(--danger);} .rd-dado-amarelo{border-color:var(--individual);}
   .rd-legenda{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-top:16px;}
+  .rd-msgs{margin-top:22px;}
+  .rd-msgs-hd{font-size:12px;letter-spacing:.06em;color:var(--text-mute);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .rd-msgs-aviso{font-size:12.5px;line-height:1.5;background:var(--surface-2,rgba(0,0,0,.03));border-left:3px solid var(--accent,#b8860b);padding:8px 12px;border-radius:6px;margin:0 0 10px;}
+  .rd-msg-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface,#fff);}
+  .rd-msg-tit{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-weight:600;font-size:13.5px;}
+  .rd-msg-quando{font-size:12px;color:var(--text-mute);margin:2px 0 8px;}
+  .rd-msg-txt{white-space:pre-wrap;font-size:13px;line-height:1.55;margin:0;}
   .gtf-btn b{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--bg-elev);border:1px solid var(--border);font-size:10.5px;}
   .gtf-btn.alerta b{background:var(--danger);border-color:var(--danger);color:#fff;}
   .gtf-btn.ativo{border-color:var(--accent);}
@@ -22575,6 +22582,32 @@ function mtFinHtml(){
       falta: caixa>=alvo ? '<b>Meta de caixa batida</b>' : `Faltam <b>${formatBRL(alvo-caixa)}</b>` });
   return mtCardHtml('Metas do Financeiro', 'atualizadas com o Financeiro', blocos);
 }
+/* Mensagens padronizadas do Radar: textos prontos para a equipe copiar. {NOME} vira o primeiro nome do mentorado. */
+const RD_MSGS_PADRAO = [
+  { id:'metas', titulo:'Metas pendentes', quando:'Quando o mentorado tem metas atrasadas ou paradas em Minhas Metas.',
+    texto:`Oi, {NOME}! Tudo bem?
+
+Passei aqui para olhar o seu andamento e vi que você tem metas pendentes em Minhas Metas, no ePLAT.
+
+Sei que a rotina aperta, e é exatamente por isso que estou te chamando: quero te ajudar a destravar, não te cobrar.
+
+Me conta: o que está pegando para avançar nessas metas agora? É tempo, alguma dúvida na execução ou alguma meta que precisa ser ajustada para a sua realidade?
+
+Me responde por aqui com a meta e onde travou, que a gente define juntos o próximo passo e, se for o caso, um novo prazo.
+
+Conta comigo!` }
+];
+function rdMsgsPadraoHtml(){
+  return `<div class="rd-msgs">
+    <div class="rd-msgs-hd">${icon('comment')} <strong>MENSAGENS PADRONIZADAS</strong></div>
+    <p class="rd-msgs-aviso"><strong>Primeiro, envie pelo Mensagens do ePLAT</strong> (botão Conversa no card do mentorado). Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp. Troque {NOME} pelo primeiro nome do mentorado.</p>
+    ${RD_MSGS_PADRAO.map(m=>`<div class="rd-msg-card">
+      <div class="rd-msg-tit"><span>${escapeHtml(m.titulo)}</span><button type="button" class="btn-mini" data-rd-msg-copiar="${m.id}">${icon('copy','tiny')} Copiar</button></div>
+      <div class="rd-msg-quando">${escapeHtml(m.quando)}</div>
+      <p class="rd-msg-txt">${escapeHtml(m.texto)}</p>
+    </div>`).join('')}
+  </div>`;
+}
 function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
@@ -22669,12 +22702,18 @@ function renderRadar(){
           </div>` : ''}
         </div>`; }).join('') || `<div class="empty-state">${lista.length ? 'Ninguém nesse filtro.' : 'Nenhum mentorado ainda.'}</div>`}
     </div>
+    ${rdMsgsPadraoHtml()}
     <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', pagamento em atraso':''} ou nota de 0 a 6 no último NPS (amarelo com 7 ou 8). Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal há 14 dias (o checkpoint automático não conta) e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
   el.querySelectorAll('[data-rd-filtro]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.filtro = RADAR_UI.filtro===b.dataset.rdFiltro ? 'todos' : b.dataset.rdFiltro; renderRadar(); }));
   const lim = document.getElementById('rd-limpar'); if(lim) lim.addEventListener('click', ()=>{ RADAR_UI.filtro = 'todos'; RADAR_UI.busca = ''; renderRadar(); });
   document.getElementById('rd-atualizar').addEventListener('click', ()=>{ RADAR_UI.rows = null; renderRadar(); });
   bindBuscaInput('rd-busca', v=>{ RADAR_UI.busca = v; }, renderRadar);
   el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
+  el.querySelectorAll('[data-rd-msg-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const m = RD_MSGS_PADRAO.find(x=>x.id===b.dataset.rdMsgCopiar); if(!m) return;
+    try{ await navigator.clipboard.writeText(m.texto); b.innerHTML = icon('check','tiny')+' Copiada'; setTimeout(()=>{ b.innerHTML = icon('copy','tiny')+' Copiar'; }, 1800); }
+    catch(e){ alert('Não consegui copiar. Selecione o texto e copie manualmente.'); }
+  }));
   el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
   el.querySelectorAll('[data-rd-espera-ok]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = b.dataset.rdEsperaOk; b.disabled = true;
