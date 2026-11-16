@@ -7464,7 +7464,8 @@ const PT_CHAVE = 'ascentria-sessao-murilo';
 const PT_NOMES = { aluno:'Teste Aluno', diego:'Teste Diego', carmem:'Teste Carmem', sandra:'Teste Sandra', mariane:'Teste Mariane', viviane:'Teste Viviane', adriana:'Teste Adriana', editor:'Teste Editor', cs:'Teste Viviane', consultora:'Teste Adriana', staff:'sua conta' };
 /* Ordem do botão lá de cima: aluno, você, cada pessoa da equipe (numa conta de teste paralela, com o
    mesmo acesso dela) e, por último, o editor. */
-const PT_PERFIS = [['aluno','Aluno'],['staff','Murilo'],['diego','Diego'],['carmem','Carmem'],['sandra','Sandra'],['mariane','Mariane'],['viviane','Viviane'],['adriana','Adriana'],['editor','Editor']];
+/* Pedido do Murilo (16/11): só Aluno e Murilo. As contas de teste espelho da equipe foram excluídas. */
+const PT_PERFIS = [['aluno','Aluno'],['staff','Murilo']];
 /* Quem a conta de teste espelha: as áreas pessoais (Radar, DRE, Desempenho...) seguem essa pessoa. */
 function idEfetivo(){ return (currentUserProfile && currentUserProfile.espelhoDe) || (currentUser && currentUser.id) || null; }
 function ptSessaoMurilo(){ try{ return JSON.parse(localStorage.getItem(PT_CHAVE)||'null'); }catch(e){ return null; } }
