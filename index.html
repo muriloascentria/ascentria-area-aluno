@@ -2929,7 +2929,10 @@
   .pol-minha>p.muted{font-size:12.5px;}
   .pol-tipo{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--accent);}
   .pol-bloco{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
-  .pol-bloco h4{margin:0 0 10px;font-size:14px;}
+  .pol-bloco h4{margin:0 0 10px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
+  .pol-bloco h4 .muted{text-transform:none;letter-spacing:0;font-weight:600;}
+  .pol-resp-form{border-color:var(--accent);}
+  .pol-resp-form .pol-minha > .pol-resp-hd{margin-bottom:6px;}
   .pol-bloco p{font-size:13px;line-height:1.5;margin:0 0 6px;}
   .pol-bloco .pol-aprov-data{font-size:13px;}
   .pol-minha{border-color:var(--accent);}
@@ -19483,7 +19486,31 @@ function polPediramRevisao(d){
   if(!rs.some(r=>r.tipo==='revisei')) return [];
   return polParticipantes(d, n+1);
 }
-function polRodadasHtml(d){
+function polFormHtml(d, f, minha, ehPol){
+  return `      <div class="pol-minha">
+        <div class="pol-resp-hd"><b>${escapeHtml(polSocioNome(idEfetivo()))}</b> <span class="muted">sua resposta</span></div>
+        <p class="muted" style="margin-top:-4px">Leia o documento e escolha uma opção. Ao salvar, ${ehPol?'esta política':'este fluxo'} sai da sua lista de pendências.</p>
+        <div class="pol-opcoes">
+          <label class="pol-op ${f.tipo==='revisei'?'on':''}"><input type="radio" name="pol-tipo" value="revisei" ${f.tipo==='revisei'?'checked':''}><span><b>Revisei</b><small>Fiz a revisão e deixo anotações sobre trechos do documento.</small></span></label>
+          <label class="pol-op ${f.tipo==='concordo'?'on':''}"><input type="radio" name="pol-tipo" value="concordo" ${f.tipo==='concordo'?'checked':''}><span><b>Concordo ${ehPol?'com a política':'com o fluxo de trabalho'}</b><small>Li e estou de acordo com o texto como está.</small></span></label>
+        </div>
+        ${f.tipo==='revisei' ? `
+        <div class="pol-anot">
+          <div class="pol-anot-tit">Anotações ao longo do documento</div>
+          ${f.notas.map((n,i)=>`<div class="pol-anot-linha">
+            <input class="ps-input" data-pol-trecho="${i}" value="${escapeAttr(n.trecho)}" placeholder="Trecho ou item (ex.: 4.2)">
+            <textarea class="ps-input" data-pol-texto="${i}" rows="2" placeholder="Sua anotação sobre esse trecho">${escapeHtml(n.texto)}</textarea>
+            ${f.notas.length>1 ? `<button type="button" class="btn-mini icon-only danger" data-pol-nota-del="${i}" title="Tirar esta anotação">${icon('trash','tiny')}</button>` : ''}
+          </div>`).join('')}
+          <button type="button" class="link-btn pol-anot-add" id="pol-nota-add">${icon('plus','tiny')} Adicionar outra anotação</button>
+        </div>` : ''}
+        <div class="pol-acoes">
+          <button type="button" class="btn-accent" id="pol-salvar" ${f.tipo?'':'disabled'}>${icon('check','tiny')} Salvar resposta</button>
+          ${minha ? '<button type="button" class="btn-outline" id="pol-cancelar">Cancelar</button>' : ''}
+        </div>
+      </div>`;
+}
+function polRodadasHtml(d, formHtml){
   const ultima = d.rodada||1;
   const todas = (POL_UI.resp||[]).filter(r=>String(r.doc_id)===String(d.id));
   if(!todas.length && d.status!=='revisao') return '';
@@ -19499,7 +19526,9 @@ function polRodadasHtml(d){
     html += `<div class="pol-bloco">
       <h4>${n}ª rodada de revisão <span class="muted">(${resp} de ${ids.length} responderam${atual ? ' · em andamento' : ''})</span></h4>
       ${ids.map(id=>{ const r = rs.find(x=>x.user_id===id);
-        if(r) return polRespostaHtml(r, d) + (atual && polSocio() && (id===eu || (currentUser && id===currentUser.id)) && POL_UI.editando!==d.id ? `<button type="button" class="link-btn" id="pol-alterar" style="margin:-2px 0 8px">${icon('edit','tiny')} Alterar a minha resposta</button>` : '');
+        const souEu = id===eu || (currentUser && id===currentUser.id);
+        if(atual && souEu && formHtml) return `<div class="pol-resp pol-resp-form">${formHtml}</div>`;
+        if(r) return polRespostaHtml(r, d) + (atual && polSocio() && souEu && !formHtml ? `<button type="button" class="link-btn" id="pol-alterar" style="margin:-2px 0 8px">${icon('edit','tiny')} Alterar a minha resposta</button>` : '');
         return `<div class="pol-resp pend"><div class="pol-resp-hd">○ <b>${escapeHtml(polSocioNome(id))}</b> <span class="muted">${atual ? 'aguardando resposta' : 'não respondeu'}</span></div></div>`; }).join('')}
     </div>`;
   }
@@ -19594,31 +19623,7 @@ function polDetalheHtml(d){
       <div><span class="pol-tipo">${ehPol ? 'Política' : 'Fluxo de trabalho'}</span><h3>${escapeHtml(d.titulo)}</h3>${polStatusPill(d)}${d.status==='revisao' && d.rodada>1 ? ` <span class="muted">· ${d.rodada}ª rodada de revisão</span>` : ''}${d.responsavel ? ` <span class="muted">· Responsável: ${escapeHtml(d.responsavel)}</span>` : ''}</div>
       ${reuUrlOk(d.link) ? `<a class="btn-accent pol-abrir-doc" href="${escapeAttr(d.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir documento</a>` : ''}
     </div>
-    ${d.status==='revisao' ? `
-      ${editandoMinha ? `
-      <div class="pol-bloco pol-minha">
-        <h4>A sua resposta</h4>
-        <p class="muted" style="margin-top:-4px">Leia o documento e escolha uma opção. Ao salvar, ${ehPol?'esta política':'este fluxo'} sai da sua lista de pendências.</p>
-        <div class="pol-opcoes">
-          <label class="pol-op ${f.tipo==='revisei'?'on':''}"><input type="radio" name="pol-tipo" value="revisei" ${f.tipo==='revisei'?'checked':''}><span><b>Revisei</b><small>Fiz a revisão e deixo anotações sobre trechos do documento.</small></span></label>
-          <label class="pol-op ${f.tipo==='concordo'?'on':''}"><input type="radio" name="pol-tipo" value="concordo" ${f.tipo==='concordo'?'checked':''}><span><b>Concordo ${ehPol?'com a política':'com o fluxo de trabalho'}</b><small>Li e estou de acordo com o texto como está.</small></span></label>
-        </div>
-        ${f.tipo==='revisei' ? `
-        <div class="pol-anot">
-          <div class="pol-anot-tit">Anotações ao longo do documento</div>
-          ${f.notas.map((n,i)=>`<div class="pol-anot-linha">
-            <input class="ps-input" data-pol-trecho="${i}" value="${escapeAttr(n.trecho)}" placeholder="Trecho ou item (ex.: 4.2)">
-            <textarea class="ps-input" data-pol-texto="${i}" rows="2" placeholder="Sua anotação sobre esse trecho">${escapeHtml(n.texto)}</textarea>
-            ${f.notas.length>1 ? `<button type="button" class="btn-mini icon-only danger" data-pol-nota-del="${i}" title="Tirar esta anotação">${icon('trash','tiny')}</button>` : ''}
-          </div>`).join('')}
-          <button type="button" class="link-btn pol-anot-add" id="pol-nota-add">${icon('plus','tiny')} Adicionar outra anotação</button>
-        </div>` : ''}
-        <div class="pol-acoes">
-          <button type="button" class="btn-accent" id="pol-salvar" ${f.tipo?'':'disabled'}>${icon('check','tiny')} Salvar resposta</button>
-          ${minha ? '<button type="button" class="btn-outline" id="pol-cancelar">Cancelar</button>' : ''}
-        </div>
-      </div>` : ''}` : ''}
-    ${polRodadasHtml(d)}
+    ${polRodadasHtml(d, editandoMinha ? polFormHtml(d, f, minha, ehPol) : '')}
     ${d.status==='vigente' ? polAprovacaoHtml(d) : ''}
     ${polSocio() ? `<div class="pol-bloco pol-gestao">
       <h4>Gestão do documento</h4>
