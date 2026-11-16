@@ -2644,6 +2644,12 @@
   .rd-mom-ok .icon{color:#2f9e5a !important;width:12px !important;height:12px !important;}
   .rd-mom-seta{margin-left:auto;display:inline-flex;}
   .rd-mom-tudo{border-color:rgba(47,158,90,.35);}
+  .mod-check-item.travado{opacity:.5;cursor:not-allowed;}
+  .mod-check-item.travado .box{display:inline-flex;align-items:center;justify-content:center;}
+  .dp-onde{display:block;margin-top:3px;font-size:11.5px;color:var(--text-mute);line-height:1.4;}
+  .dp-onde .icon{display:inline-block !important;width:12px;height:12px;vertical-align:-2px;margin-right:2px;}
+  .dp-onde b{color:var(--text-dim,var(--text));font-weight:600;}
+  .dp-onde-ir{background:none;border:0;padding:0;margin-left:4px;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:11.5px;}
   .int-tag-mc{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:rgba(141,145,111,.14);border:1px solid rgba(141,145,111,.4);padding:2px 8px;border-radius:999px;}
   .int-tag-mc .icon{width:12px;height:12px;}
   .rd-mom-aluno{padding:8px 0;border-top:1px solid var(--border);}
@@ -5837,6 +5843,7 @@ function mapProfileRow(p){
     pos: !!p.pos,
     /* Aluno do curso com TODAS as aulas liberadas de uma vez (sem o bloqueio sequencial) — a equipe liga na Visão Geral. */
     aulasLiberadas: !!p.aulas_liberadas,
+    libAte: (p.lib_ate===null || p.lib_ate===undefined) ? null : Number(p.lib_ate),
     mentorEssencia: !!p.mentor_essencia,
     meBoasVindasEm: p.me_boas_vindas_em || null,
     genero: p.genero || null,
@@ -7518,10 +7525,11 @@ function setRole(role){
      tier de quem está sendo visto — a própria conta, ou o mentorado selecionado pela equipe interna. */
   const viewingTier = getViewingTier();
   const isCursoView = role==='aluno' && viewingTier==='curso';
-  ['ranking','painel','planner','sessoes','metas'].forEach(v=>{
+  ['ranking','planner','sessoes','metas'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
     if(el) el.style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   });
+  { const pel = document.querySelector('.nav-item[data-view="painel"]'); if(pel) pel.style.display = role==='aluno' ? 'flex' : 'none'; }
   /* Dashboard (progresso no Método, item a item) e Acompanhamento (mensagens com a equipe) são liberados também pro aluno do Curso Gravado. */
   ['inicio','aulas','comunidade','dashboard','acompanhamento'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
@@ -7564,7 +7572,7 @@ function setRole(role){
   renderProfile();
   updateNotifBadge();
   if(role==='aluno' && VIEWS_EQUIPE.includes(currentView)){ goTo(isCursoView ? 'aulas' : 'inicio'); }
-  if(role==='aluno' && isCursoView && ['ranking','painel','planner','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
+  if(role==='aluno' && isCursoView && ['ranking','planner','sessoes','metas'].includes(currentView)){ goTo('inicio'); }
   if(role==='staff' && ['inicio','aulas','comunidade','ranking','agenda','materiais','dashboard','painel','planner','sessoes','metas','me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'].includes(currentView)){ goTo('equipe'); }
   meAtualizarMenu();
   ptAjustarToggle();
@@ -8143,7 +8151,7 @@ function courseTileHtml(c){
       <div class="course-info">
         <div class="cat">${c.cat}</div>
         <div class="title">${c.title}</div>
-        <div class="meta">${locked? `Assista ${MIN_WATCH_PCT}% da aula anterior e marque como assistida para liberar` : c.duration}</div>
+        <div class="meta">${locked? 'Abre quando você concluir as 3 etapas liberadas agora' : c.duration}</div>
       </div>
     </button>`;
 }
@@ -8151,7 +8159,7 @@ function bindCourseTiles(){
   document.querySelectorAll('.course-tile').forEach(el=>{
     el.addEventListener('click',()=>{
       if(el.dataset.locked){
-        alert('Esta aula ainda está bloqueada. Assista pelo menos '+MIN_WATCH_PCT+'% da aula anterior e marque-a como assistida para liberá-la.');
+        alert(LIB_MSG_TRAVADA);
         return;
       }
       openCourseModal(el.dataset.id);
@@ -8170,19 +8178,89 @@ function orderedCourseCats(){
 function orderedCourseIds(){
   return orderedCourseCats().flatMap(cat=>COURSES.filter(c=>c.cat===cat).map(c=>c.id));
 }
-/* Só vale pra aluno do curso gravado (tier 'curso') — a mentoria completa continua com todas as aulas
-   sempre abertas, como já era. A primeira aula da sequência nunca fica travada; as seguintes só liberam
-   depois que a pessoa marcar a anterior como assistida (courseProgress 100%). */
-function isLessonLocked(courseId, student){
-  if(currentRole==='staff') return false; // equipe interna nunca é bloqueada por aulas travadas
-  if(!student || student.tier!=='curso') return false;
-  if(student.aulasLiberadas) return false; // liberação total dada pela equipe
-  const order = orderedCourseIds();
-  const idx = order.indexOf(courseId);
-  if(idx<=0) return false;
-  const prevId = order[idx-1];
-  return (student.courseProgress[prevId]||0) !== 100;
+/* ================= LIBERAÇÃO EM BLOCOS DE 3 =================
+   Vale para todos os alunos (Mentoria, Método e Pós). A trilha é a sequência de "passos" do Dashboard:
+   cada passo começa num item "Assistir aula ..." e leva junto o resumo e as tarefas que vêm logo depois.
+   O aluno tem 3 passos liberados por vez; quando os 3 ficam completos (aula, resumo e tarefa), abrem os
+   próximos 3. Na primeira vez, o bloco começa logo depois do ponto mais avançado onde o aluno parou
+   (aula assistida ou item marcado) e os passos anteriores ficam abertos para ele completar.
+   O total liberado fica em profiles.lib_ate. A equipe nunca é bloqueada, e "Liberadas" na Visão Geral
+   continua abrindo tudo para um aluno específico. As aulas "| REC" acompanham a aula principal. */
+const LIB_BLOCO = 3;
+let LIB_CACHE = null;
+function libPassos(){
+  const chave = COURSES.length + ':' + MODULES.length;
+  if(LIB_CACHE && LIB_CACHE.chave===chave) return LIB_CACHE;
+  const passos = [];
+  MODULES.forEach(m=>{
+    (MODULE_CHECKLIST[m.id]||[]).forEach((label, i)=>{
+      const assistir = /^assistir\s+aula\b/i.test(String(label).trim());
+      const ult = passos[passos.length-1];
+      if(assistir || !ult || ult.modId!==m.id){
+        const c = assistir ? checklistLinkedCourse(label, m.name) : null;
+        passos.push({ modId:m.id, idxs:[], courseId: c ? c.id : null });
+      }
+      passos[passos.length-1].idxs.push(i);
+    });
+  });
+  const porCurso = {}, porItem = {};
+  passos.forEach((p,k)=>{ if(p.courseId && porCurso[p.courseId]===undefined) porCurso[p.courseId] = k; p.idxs.forEach(i=>{ porItem[p.modId+':'+i] = k; }); });
+  /* Aula sem item no Dashboard: "| REC" segue a principal; as demais seguem a aula anterior da Biblioteca. */
+  let anterior = 0;
+  orderedCourseIds().forEach(id=>{
+    if(porCurso[id]!==undefined){ anterior = porCurso[id]; return; }
+    const c = getCourse(id); const base = c ? String(c.title).replace(/\s*\|\s*REC\s*$/i,'').trim() : '';
+    const principal = c && base!==c.title ? COURSES.find(x=>x.cat===c.cat && x.title.trim()===base) : null;
+    porCurso[id] = principal && porCurso[principal.id]!==undefined ? porCurso[principal.id] : anterior;
+  });
+  LIB_CACHE = { chave, passos, porCurso, porItem };
+  return LIB_CACHE;
 }
+function libPassoFeito(s, p){
+  let st = []; try{ st = getModuleChecklistState(s.id, p.modId) || []; }catch(e){}
+  return p.idxs.every(i=>!!st[i]);
+}
+function libPassoTocado(s, p){
+  let st = []; try{ st = getModuleChecklistState(s.id, p.modId) || []; }catch(e){}
+  return p.idxs.some(i=>!!st[i]) || (p.courseId && (s.courseProgress||{})[p.courseId]===100);
+}
+const LIB_SALVANDO = {};
+/* Quantos passos estão liberados para o aluno (Infinity = tudo). Avança o bloco quando os 3 atuais estão
+   completos e, na conta do próprio aluno, grava o novo total. */
+function libAte(s){
+  if(!s) return Infinity;
+  if(s.aulasLiberadas) return Infinity;
+  const L = libPassos(); const N = L.passos.length;
+  let ate = s.libAte;
+  if(ate===null || ate===undefined || isNaN(ate)){
+    let F = -1; L.passos.forEach((p,k)=>{ if(libPassoTocado(s, p)) F = k; });
+    ate = F + 1 + LIB_BLOCO;
+  }
+  ate = Math.max(LIB_BLOCO, ate);
+  while(ate < N && L.passos.slice(ate-LIB_BLOCO, ate).every(p=>libPassoFeito(s, p))) ate += LIB_BLOCO;
+  ate = Math.min(ate, N);
+  if(ate!==s.libAte && currentUser && currentUser.id===s.id && currentRole==='aluno' && !LIB_SALVANDO[s.id]){
+    s.libAte = ate; LIB_SALVANDO[s.id] = true;
+    sb.from('profiles').update({ lib_ate: ate }).eq('id', s.id).then(({error})=>{ LIB_SALVANDO[s.id] = false; if(error) console.error('lib_ate', error); });
+  }
+  return ate;
+}
+function libBloqueadoAtivo(){ return currentRole!=='staff'; }
+function isLessonLocked(courseId, student){
+  if(!libBloqueadoAtivo()) return false; // equipe interna nunca é bloqueada
+  if(!student || student.aulasLiberadas) return false;
+  const L = libPassos(); const k = L.porCurso[courseId];
+  if(k===undefined) return false;
+  return k >= libAte(student);
+}
+function isItemLocked(modId, idx, student){
+  if(!libBloqueadoAtivo()) return false;
+  if(!student || student.aulasLiberadas) return false;
+  const k = libPassos().porItem[modId+':'+idx];
+  if(k===undefined) return false;
+  return k >= libAte(student);
+}
+const LIB_MSG_TRAVADA = 'Esta etapa ainda está bloqueada. As aulas abrem de 3 em 3: conclua as 3 liberadas agora (aula, resumo e tarefa no Dashboard) e as próximas 3 abrem automaticamente.';
 /* Busca da aba Aulas: acha pelo título da aula ou pelo nome de qualquer material anexado a ela
    (parte do nome basta; ignora maiúsculas e acentos). */
 function aulaCombina(c, q){
@@ -8290,7 +8368,7 @@ function openCourseModal(id){
   /* Segurança extra: mesmo que algo chame openCourseModal fora do clique no card (ex.: um link "sobre
      esta aula" antigo em cache), uma aula travada pro aluno do curso nunca abre. */
   if(isLessonLocked(id, s)){
-    alert('Esta aula ainda está bloqueada. Assista pelo menos '+MIN_WATCH_PCT+'% da aula anterior e marque-a como assistida para liberá-la.');
+    alert(LIB_MSG_TRAVADA);
     return;
   }
   const pct = s ? (s.courseProgress[id]||0) : 0;
@@ -8379,6 +8457,7 @@ function openCourseModal(id){
       syncCourseProgress(s.id, id, s.courseProgress[id], s.courseWatch? s.courseWatch[id] : null);
       /* Dá o check automático no item correspondente do Dashboard (e desfaz, se o aluno desmarcar). */
       syncChecklistFromCourse(s, c, marcandoComoAssistida);
+      libAte(s);
       closeModal();
       renderCurrentView();
     });
@@ -9720,7 +9799,7 @@ function renderMateriais(){
 function renderDashboard(){
   /* Aluno do Curso Gravado (Método) tem o Dashboard, mas não o Painel do Método — o botão ganha cadeado
      e, se abrir, renderPainel mostra a tela de bloqueio. */
-  const painelBloqueado = currentRole==='aluno' && getViewingTier()==='curso';
+  const painelBloqueado = false; // Painel do Método liberado também para o Método (curso gravado)
   const s = getStudent(currentStudentId);
   const overall = overallProgress(s);
   document.getElementById('view-dashboard').innerHTML = `
@@ -9839,6 +9918,22 @@ const DASH_PAINEL = {
   transformar:{7:['agendamento'], 10:['registro'], 13:['orientacoes'], 20:['avaliacao-jornada']},
   gerenciar:  {9:['contratos'], 12:['politicas','pops'], 18:['prescricoes'], 21:['laudos'], 30:['precificacao'], 33:['rotina']},
 };
+/* Onde cada TAREFA do Dashboard é registrada no Painel do Método (número do item no módulo, contando de 1).
+   Tarefa sem quadro próprio mostra que é feita fora do Painel. */
+const DASH_TAREFA_PAINEL = {
+  ser:        {7:'persona', 10:'persona', 13:'persona', 14:'persona', 17:'mvv', 20:'mvv', 23:'mvv', 24:'mvv', 29:'identidade', 32:'identidade', 35:'identidade', 38:'identidade', 41:'identidade', 42:'identidade'},
+  conectar:   {6:'paginas', 7:'paginas', 8:'paginas', 9:'paginas', 10:'paginas', 11:'paginas', 21:'funil', 26:'avaliacao', 51:'parceiros', 52:'projetos', 53:'parceiros', 61:'parceiros', 62:'projetos'},
+  transformar:{7:'agendamento', 10:'registro', 13:'orientacoes', 20:'avaliacao-jornada'},
+  gerenciar:  {3:'registro', 9:'contratos', 12:'politicas', 18:'prescricoes', 21:'laudos', 24:'financeiro', 30:'precificacao', 33:'rotina'},
+};
+function dashTarefaPainelHtml(modId, idx, label){
+  if(!/^TAREFA/i.test(String(label||'').trim())) return '';
+  const topId = (DASH_TAREFA_PAINEL[modId]||{})[idx+1];
+  const a = topId ? painelAcharTopico(topId) : null;
+  if(!a) return `<small class="dp-onde">${icon('compass','tiny')} Tarefa prática, feita fora do Painel do Método.</small>`;
+  const extra = (modId==='gerenciar' && idx+1===12) ? ' e POPs' : '';
+  return `<small class="dp-onde">${icon('compass','tiny')} No Painel do Método: <b>${escapeHtml(a.q.title)} › ${escapeHtml(a.t.title)}${extra}</b> <button type="button" class="dp-onde-ir" data-dp-ir="${escapeAttr(topId)}">abrir</button></small>`;
+}
 function painelAcharTopico(topicId){
   for(const q of QUADRANTS){ const i = q.topics.findIndex(t=>t.id===topicId); if(i>=0) return { q, t:q.topics[i], i }; }
   return null;
@@ -9917,11 +10012,12 @@ function openModuleChecklist(modId, hlIdx){
         <div class="mod-check-list">
           ${items.map((label,idx)=>{
             const linkedCourse = checklistLinkedCourse(label, mod.name);
+            const trav = !state[idx] && isItemLocked(modId, idx, s);
             return `
-            <div class="mod-check-item ${state[idx]?'done':''}" data-idx="${idx}">
-              <span class="box">${state[idx]? icon('tick') : ''}</span>
-              <span class="txt">${label}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx]) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
-              ${linkedCourse? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
+            <div class="mod-check-item ${state[idx]?'done':''} ${trav?'travado':''}" data-idx="${idx}" ${trav?'data-travado="1"':''}>
+              <span class="box">${state[idx]? icon('tick') : trav ? icon('lock','tiny') : ''}</span>
+              <span class="txt">${label}${trav ? '' : dashTarefaPainelHtml(modId, idx, label)}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx] || trav) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
+              ${linkedCourse && !trav ? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
             </div>`;
           }).join('')}
         </div>
@@ -9935,9 +10031,15 @@ function openModuleChecklist(modId, hlIdx){
         openCourseModal(btn.dataset.openCourseItem);
       });
     });
+    modalEl.querySelectorAll('[data-dp-ir]').forEach(b=>b.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const a = painelAcharTopico(b.dataset.dpIr); if(!a) return;
+      reallyCloseModal(); panelQuadrantId = a.q.id; goTo('painel'); setTimeout(()=>openTopicModal(a.q, a.t.id), 60);
+    }));
     document.querySelectorAll('.mod-check-item').forEach(el=>{
       el.addEventListener('click',()=>{
         const idx = +el.dataset.idx;
+        if(el.dataset.travado){ alert(LIB_MSG_TRAVADA); return; }
         if(!state[idx]){
           const faltam = dashPainelFaltando(s, modId, idx);
           if(faltam.length){ dashPainelAvisoBloqueio(faltam, null, s); return; }
@@ -9946,6 +10048,7 @@ function openModuleChecklist(modId, hlIdx){
         s.moduleProgress[modId] = state.filter(Boolean).length;
         syncModuleChecklist(s.id, modId, idx, state[idx]);
         syncModuleProgress(s.id, modId, s.moduleProgress[modId]);
+        libAte(s);
         renderModalBody();
         renderDashboard();
       });
@@ -10071,7 +10174,7 @@ function quadrantFilledCount(q,s){
 function renderPainel(){
   const s = getStudent(currentStudentId);
   const el = document.getElementById('view-painel');
-  if(currentRole==='aluno' && getViewingTier()==='curso'){
+  if(false){
     el.innerHTML = `
       <div class="locked-view">
         <div class="locked-icon">${icon('lock')}</div>
@@ -12839,7 +12942,7 @@ function goalAulasHtml(ids, s){
   return `<div class="goal-aulas-label">${temA && temC ? 'Aulas e atividades que vão ajudar na tarefa:' : temA ? 'Atividades que vão ajudar na tarefa:' : 'Aulas que vão ajudar na tarefa:'}</div><div class="goal-aulas">${itens.map(({c,a})=>{
     if(c){
       const locked = isLessonLocked(c.id, s);
-      return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada — conclua a anterior':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
+      return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada: abre quando as 3 etapas liberadas forem concluídas':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
     }
     let feito = false; try{ feito = !!(getModuleChecklistState(s.id, a.modId)||[])[a.idx]; }catch(e){}
     return `<button type="button" class="goal-aula ativ ${feito?'feito':''}" data-goal-ativ="${escapeAttr(a.id)}" title="Abrir no Dashboard (módulo ${escapeAttr(a.modNome)})">${icon(feito?'tick':'check','tiny')} ${escapeHtml(a.label)}</button>`;
@@ -23615,7 +23718,7 @@ function renderVisaoGeral(){
     </div>
     </div>
 
-    ${cursoSec('curso','film','Alunos do Curso Gravado', cursoTodos, cursoAlunos, 'Buscar aluno do Método pelo nome…', 'Sem mentoria individual — só acesso às Aulas (liberadas uma a uma, conforme vai assistindo) e a uma comunidade própria, separada da dos mentorados.', 'Nenhum aluno do curso ainda.')}
+    ${cursoSec('curso','film','Alunos do Curso Gravado', cursoTodos, cursoAlunos, 'Buscar aluno do Método pelo nome…', 'Sem mentoria individual: Aulas, Dashboard e Painel do Método (aulas liberadas de 3 em 3, como para todos os alunos) e uma comunidade própria, separada da dos mentorados.', 'Nenhum aluno do curso ainda.')}
 
     ${cursoSec('pos','award','Alunos da Pós-graduação', posTodos, posAlunos, 'Buscar aluno da Pós-graduação pelo nome…', 'Alunos da Pós-graduação, com acesso às aulas gravadas da pós. O campo "Acesso" muda o perfil da pessoa.', 'Nenhum aluno da Pós-graduação ainda.')}
 
