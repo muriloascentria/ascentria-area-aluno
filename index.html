@@ -2639,6 +2639,11 @@
   .rd-momentos-hd{display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:2px;}
   .rd-momentos-hd .icon{width:16px;height:16px;color:var(--accent);}
   .rd-momentos-hd strong{letter-spacing:.08em;}
+  .rd-mom-toggle{background:none;border:0;padding:0;margin:0;width:100%;text-align:left;cursor:pointer;color:inherit;font:inherit;font-size:13.5px;flex-wrap:wrap;}
+  .rd-mom-ok{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:#2f9e5a;background:rgba(47,158,90,.12);border:1px solid rgba(47,158,90,.35);padding:2px 8px;border-radius:999px;}
+  .rd-mom-ok .icon{color:#2f9e5a !important;width:12px !important;height:12px !important;}
+  .rd-mom-seta{margin-left:auto;display:inline-flex;}
+  .rd-mom-tudo{border-color:rgba(47,158,90,.35);}
   .rd-mom-aluno{padding:8px 0;border-top:1px solid var(--border);}
   .rd-mom-aluno:first-of-type{border-top:0;}
   .rd-mom-nome{font-weight:600;font-size:13px !important;text-transform:uppercase;letter-spacing:0;line-height:1.3;}
@@ -5875,15 +5880,22 @@ function mapProfileRow(p){
    respostas dos diagnósticos, lançamentos financeiros) vinham cortadas, e o que estava salvo
    parecia ter sumido da tela. Aqui a leitura é feita em páginas até acabar. */
 async function lerTudo(tabela, monta){
+  /* Primeira página já traz o total; as demais saem todas ao mesmo tempo (antes iam uma esperando a
+     outra, e uma tabela de 4 mil linhas custava 4 idas e voltas em fila no carregamento). */
   const PAG = 1000;
-  const linhas = [];
-  for(let de = 0; de < 100000; de += PAG){
-    let q = sb.from(tabela).select('*');
-    if(monta) q = monta(q);
-    const { data, error } = await q.range(de, de + PAG - 1);
-    if(error){ console.error('lerTudo '+tabela, error); break; }
-    if(data && data.length) linhas.push(...data);
-    if(!data || data.length < PAG) break;
+  const pedir = (de, contar)=>{ let q = sb.from(tabela).select('*', contar ? {count:'exact'} : undefined); if(monta) q = monta(q); return q.range(de, de + PAG - 1); };
+  const { data, error, count } = await pedir(0, true);
+  if(error){ console.error('lerTudo '+tabela, error); return []; }
+  const linhas = (data||[]).slice();
+  if(!data || data.length < PAG) return linhas;
+  const total = Math.min(Number(count)||0, 100000);
+  const resto = [];
+  for(let de = PAG; de < total; de += PAG) resto.push(pedir(de, false));
+  const pags = await Promise.all(resto);
+  for(const r of pags){ if(r.error){ console.error('lerTudo '+tabela, r.error); continue; } if(r.data) linhas.push(...r.data); }
+  /* Se o total não veio (ou cresceu no meio do caminho), completa em sequência como antes. */
+  for(let de = Math.max(PAG, Math.ceil(total/PAG)*PAG); linhas.length >= de && de < 100000; de += PAG){
+    const r = await pedir(de, false); if(r.error || !r.data || !r.data.length) break; linhas.push(...r.data); if(r.data.length < PAG) break;
   }
   return linhas;
 }
@@ -13259,6 +13271,15 @@ function cobBind(s){
     renderInterno();
   }));
 }
+/* Histórico dos Momentos-Chave (Acompanhamento Interno): carregado sob demanda, por mentorado. */
+const INT_MOM_HIST = {};
+function intMomHist(sid){
+  if(INT_MOM_HIST[sid] !== undefined) return INT_MOM_HIST[sid];
+  INT_MOM_HIST[sid] = null;
+  sb.from('radar_momentos_resolvidos').select('chave,texto_momento,analise,resolvido_por,resolvido_em').eq('student_id', sid).order('resolvido_em',{ascending:false})
+    .then(({data, error})=>{ INT_MOM_HIST[sid] = error ? [] : (data||[]); if(error) console.error('intMomHist', error); if(currentView==='interno' && currentStudentId===sid) renderInterno(); });
+  return null;
+}
 function renderInterno(){
   const s = getStudent(currentStudentId);
   if(s && AE_UI.sid!==s.id) intAeCarregar(s.id);
@@ -13497,6 +13518,22 @@ function renderInterno(){
       ${intAnaliseHtml(s)}
       ${intCompetenciasHtml(s)}
     </div>
+    ${(()=>{ const h = intMomHist(s.id); return `${intHead('momhist', 'calendar', 'Histórico dos Momentos-Chave', h ? h.length : null)}
+    ${intBody('momhist')}
+      <p class="section-sub" style="margin-top:0">Cada momento-chave resolvido no Radar dos Mentorados fica registrado aqui: a data, o momento, quem resolveu e o que foi registrado.</p>
+      <div class="table-wrap">
+        <table class="check-table">
+          <thead><tr><th>Data</th><th>Momento</th><th>Resolvido por</th><th>O que registrou</th></tr></thead>
+          <tbody>${h===null ? `<tr><td colspan="4" style="color:var(--text-mute)">Carregando…</td></tr>`
+            : h.map(r=>`<tr>
+              <td style="white-space:nowrap">${r.resolvido_em ? escapeHtml(tzDataHora(r.resolvido_em, true)) : '—'}</td>
+              <td style="min-width:180px">${escapeHtml(r.texto_momento || r.chave || '—')}</td>
+              <td><span class="resp-pill">${escapeHtml(r.resolvido_por && PEOPLE[r.resolvido_por] ? PEOPLE[r.resolvido_por].name : '—')}</span></td>
+              <td style="min-width:260px">${r.analise ? linkify(r.analise).replace(/\n/g,'<br>') : '<span style="color:var(--text-mute)">—</span>'}</td>
+            </tr>`).join('') || `<tr><td colspan="4" style="color:var(--text-mute)">Nenhum momento-chave resolvido ainda.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`; })()}
     ${s.mentorEssencia ? `${intHead('mentores', 'award', 'Mentores Essência', null)}
     ${intBody('mentores')}${meInternoHtml(s)}</div>` : ''}
   `;
@@ -22448,6 +22485,7 @@ function rdResolverMomento(s, m){
         r.id = await syncInternalRecordInsert(s.id, r);
         (s.registrosInternos = s.registrosInternos || []).unshift(r);
         const { data, error } = await sb.from('radar_momentos_resolvidos').insert({ student_id:s.id, chave:m.chave, texto_momento:m.txt, analise, record_id:r.id, resolvido_por:currentUser.id }).select('student_id,chave,resolvido_por,resolvido_em').single();
+        delete INT_MOM_HIST[s.id];
         if(error) throw error;
         RADAR_UI.resolvidos[s.id+'|'+m.chave] = data || { student_id:s.id, chave:m.chave, resolvido_por:currentUser.id, resolvido_em:new Date().toISOString() };
         reallyCloseModal(); renderRadar();
@@ -22693,10 +22731,12 @@ function renderRadar(){
       ${tile('verde','Em dia', qtd(0), 'Mostrar só os mentorados em verde')}
       ${tile('semacao','Sem próxima ação', semAcao, 'Mentorados sem próxima ação registrada no acompanhamento')}
     </div>
-    ${momentos.length ? `
-    <div class="rd-momentos">
-      <div class="rd-momentos-hd">${icon('calendar')} <strong>MOMENTOS-CHAVE DOS PRÓXIMOS DIAS</strong></div>
-      ${rdMomentosAgrupados(momentos).map(g=>`<div class="rd-mom-aluno">
+    ${momentos.length ? (()=>{ const todosRes = momentos.every(m=>RADAR_UI.resolvidos[m.s.id+'|'+m.chave]); const fechado = todosRes && !RADAR_UI.momAberto; return `
+    <div class="rd-momentos ${todosRes?'rd-mom-tudo':''}">
+      ${todosRes
+        ? `<button type="button" class="rd-momentos-hd rd-mom-toggle" id="rd-mom-toggle" aria-expanded="${!fechado}">${icon('calendar')} <strong>MOMENTOS-CHAVE DOS PRÓXIMOS DIAS</strong><span class="rd-mom-ok">${icon('check','tiny')} Todos resolvidos</span><span class="rd-mom-seta">${icon(fechado?'down':'up','tiny')}</span></button>`
+        : `<div class="rd-momentos-hd">${icon('calendar')} <strong>MOMENTOS-CHAVE DOS PRÓXIMOS DIAS</strong></div>`}
+      ${fechado ? '' : rdMomentosAgrupados(momentos).map(g=>`<div class="rd-mom-aluno">
         <button type="button" class="vg-nome-btn rd-mom-nome" data-rd-acomp="${g.s.id}">${escapeHtml(g.s.name)}</button>
         <ul class="rd-mom-lista">${g.itens.map(m=>{ const res = RADAR_UI.resolvidos[g.s.id+'|'+m.chave];
           const quem = res && res.resolvido_por && PEOPLE[res.resolvido_por] ? PEOPLE[res.resolvido_por].name.split(' ')[0] : '';
@@ -22704,7 +22744,7 @@ function renderRadar(){
             ? `<span class="rd-mom-res" title="${escapeAttr(res.resolvido_em ? tzDataHora(res.resolvido_em, true) : '')}">${icon('check','tiny')} RESOLVIDO${quem? ' POR '+escapeHtml(quem.toUpperCase()) : ''}</span>`
             : `<button type="button" class="btn-mini rd-mom-btn" data-rd-resolver="${g.s.id}" data-rd-chave="${escapeAttr(m.chave)}">${icon('check','tiny')} RESOLVER</button>`}</li>`; }).join('')}</ul>
       </div>`).join('')}
-    </div>` : ''}
+    </div>`; })() : ''}
     <div class="busca-bar larga" style="margin-top:14px">
       <input class="ps-input" type="text" id="rd-busca" value="${escapeAttr(RADAR_UI.busca)}" placeholder="Buscar mentorado pelo nome…">
       ${f!=='todos' || RADAR_UI.busca.trim() ? `<button type="button" class="btn-outline" id="rd-limpar">${icon('x','tiny')} Mostrar todos</button>` : ''}
@@ -22754,6 +22794,7 @@ function renderRadar(){
   bindBuscaInput('rd-busca', v=>{ RADAR_UI.busca = v; }, renderRadar);
   el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
   rdMsgBindCopiar(el);
+  const momT = document.getElementById('rd-mom-toggle'); if(momT) momT.addEventListener('click', ()=>{ RADAR_UI.momAberto = !RADAR_UI.momAberto; renderRadar(); });
   el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
   el.querySelectorAll('[data-rd-espera-ok]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = b.dataset.rdEsperaOk; b.disabled = true;
