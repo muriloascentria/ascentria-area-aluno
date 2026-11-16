@@ -2649,6 +2649,13 @@
   .dp-onde{display:block;margin-top:3px;font-size:11.5px;color:var(--text-mute);line-height:1.4;}
   .dp-onde .icon{display:inline-block !important;width:12px;height:12px;vertical-align:-2px;margin-right:2px;}
   .dp-onde b{color:var(--text-dim,var(--text));font-weight:600;}
+  .metas-envio{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px;}
+  .metas-envio-btn{display:inline-flex;align-items:center;gap:6px;}
+  .metas-envio-btn.inativo{background:var(--danger,#c0392b) !important;border-color:var(--danger,#c0392b) !important;color:#fff !important;}
+  .metas-envio-btn.enviado{background:#2f9e5a !important;border-color:#2f9e5a !important;color:#fff !important;}
+  .metas-envio-wa{display:inline-flex;align-items:center;gap:6px;text-decoration:none;}
+  .metas-envio-sit{flex-basis:100%;font-size:11.5px;color:var(--text-mute);}
+  .metas-envio-sit.inativo{color:var(--danger,#c0392b);}
   .apoio-lim{display:block;font-size:10.5px;color:var(--text-mute);margin-top:2px;}
   .dp-onde-ir{background:none;border:0;padding:0;margin-left:4px;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:11.5px;}
   .int-tag-mc{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:rgba(141,145,111,.14);border:1px solid rgba(141,145,111,.4);padding:2px 8px;border-radius:999px;}
@@ -12208,6 +12215,58 @@ function metaVencida(t){
   const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
   return prazoISO < hojeISO;
 }
+/* Envio direto da mensagem de metas pendentes pelo Mensagens do ePLAT (Acompanhamento do aluno).
+   "Respondente" = o aluno escreveu no Mensagens nos últimos 30 dias. Se não for, o botão fica vermelho e,
+   ao clicar, a equipe é orientada a mandar pelo WhatsApp (pode enviar pelo ePLAT mesmo assim). */
+const METAS_ENVIO = {};
+function metasEnvioInfo(sid){
+  if(METAS_ENVIO[sid] !== undefined) return METAS_ENVIO[sid];
+  METAS_ENVIO[sid] = null;
+  sb.from('mensagens').select('created_at').eq('aluno_id', sid).eq('de', sid).order('created_at',{ascending:false}).limit(1)
+    .then(({data, error})=>{
+      const ult = !error && data && data[0] ? data[0].created_at : null;
+      const dias = ult ? Math.floor((Date.now()-new Date(ult).getTime())/86400000) : null;
+      METAS_ENVIO[sid] = { ult, dias, ativo: dias!==null && dias<=30 };
+      if(currentView==='metas' && currentStudentId===sid) renderMetas();
+    });
+  return null;
+}
+function metasWhatsLink(s, texto){
+  const tel = String((s.cadastro||{}).telefone||'').replace(/\D/g,'');
+  if(tel.length<10) return '';
+  return 'https://wa.me/'+(tel.startsWith('55') ? tel : '55'+tel)+'?text='+encodeURIComponent(texto);
+}
+function metasEnvioHtml(s){
+  const inf = metasEnvioInfo(s.id);
+  const m = RD_MSGS_PADRAO.find(x=>x.id==='metas'); const texto = rdMsgTexto(m, (s.name||'').trim().split(/\s+/)[0]);
+  const wa = metasWhatsLink(s, texto);
+  const sit = inf===null ? 'Verificando se o aluno responde no Mensagens…'
+    : inf.ativo ? `Responde no Mensagens do ePLAT (última mensagem dele ${inf.dias===0 ? 'hoje' : 'há '+inf.dias+' dia'+(inf.dias>1?'s':'')}).`
+    : inf.ult ? `Não responde no Mensagens do ePLAT há ${inf.dias} dias. Recomendamos o WhatsApp.` : 'Nunca escreveu no Mensagens do ePLAT. Recomendamos o WhatsApp.';
+  return `<div class="metas-envio">
+    <button type="button" class="btn-accent metas-envio-btn ${inf && !inf.ativo ? 'inativo' : ''}" id="metas-enviar-eplat" ${inf===null?'disabled':''}>${icon('comment','tiny')} Enviar pelo Mensagens do ePLAT</button>
+    ${wa ? `<a class="btn-outline metas-envio-wa" href="${escapeAttr(wa)}" target="_blank" rel="noopener">${icon('send','tiny')} Abrir no WhatsApp</a>` : ''}
+    <small class="metas-envio-sit ${inf && !inf.ativo ? 'inativo' : ''}">${escapeHtml(sit)}</small>
+  </div>`;
+}
+function metasEnvioBind(s){
+  const b = document.getElementById('metas-enviar-eplat'); if(!b) return;
+  b.addEventListener('click', async ()=>{
+    const inf = METAS_ENVIO[s.id]; if(!inf) return;
+    const m = RD_MSGS_PADRAO.find(x=>x.id==='metas'); const texto = rdMsgTexto(m, (s.name||'').trim().split(/\s+/)[0]);
+    if(!inf.ativo){
+      const ok = await showAppConfirm(`${s.name.split(' ')[0]} ${inf.ult ? 'não responde no Mensagens do ePLAT há '+inf.dias+' dias' : 'nunca escreveu no Mensagens do ePLAT'}. Recomendamos enviar pelo WhatsApp, para a mensagem chegar de verdade. Quer enviar pelo ePLAT mesmo assim?`, { title:'Recomendamos o WhatsApp', confirmLabel:'Enviar pelo ePLAT mesmo assim', cancelLabel:'Vou pelo WhatsApp' });
+      if(!ok) return;
+    } else {
+      const ok = await showAppConfirm(`A mensagem padrão de metas pendentes vai agora para o Acompanhamento de ${s.name.split(' ')[0]} no Mensagens do ePLAT, em seu nome.`, { title:'Enviar mensagem?', confirmLabel:'Enviar', cancelLabel:'Cancelar' });
+      if(!ok) return;
+    }
+    b.disabled = true; b.textContent = 'Enviando…';
+    const enviado = await msgEnviar(msgChaveAcomp(s.id), texto);
+    if(enviado){ b.innerHTML = icon('check','tiny')+' Enviada no Mensagens do ePLAT'; b.classList.add('enviado'); }
+    else { b.disabled = false; b.innerHTML = icon('comment','tiny')+' Enviar pelo Mensagens do ePLAT'; }
+  });
+}
 function renderMetas(){
   const s = getStudent(currentStudentId);
   const minhas = s.checklist.filter(t=>t.responsavel==='Mentorado');
@@ -12228,9 +12287,11 @@ function renderMetas(){
       <div class="rd-msgs-hd">${icon('comment')} <strong>MENSAGEM PADRONIZADA · METAS PENDENTES</strong></div>
       <p class="rd-msgs-aviso"><strong>Primeiro, envie pelo Mensagens do ePLAT.</strong> Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp. Só a equipe vê este quadro.</p>
       ${rdMsgCardHtml(RD_MSGS_PADRAO.find(m=>m.id==='metas'), (s.name||'').trim().split(/\s+/)[0])}
+      ${metasEnvioHtml(s)}
     </div>` : ''}
   `;
   rdMsgBindCopiar(document.getElementById('view-metas'), (s.name||'').trim().split(/\s+/)[0]);
+  metasEnvioBind(s);
   document.querySelectorAll('#view-metas [data-goal-aula]').forEach(btn=>{
     btn.addEventListener('click',()=>openCourseModal(btn.dataset.goalAula));
   });
