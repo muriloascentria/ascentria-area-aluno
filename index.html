@@ -258,7 +258,7 @@
     margin-bottom:2px;width:100%;text-align:left;
   }
   .nav-item:hover{background:var(--bg-card);color:var(--text);}
-  .msg-bol{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--danger,#d9534f);color:#fff;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;text-align:center;box-sizing:border-box;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-sidebar,var(--bg));}
+  .msg-bol{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--danger,#d9534f);color:#fff;font-size:11px;font-weight:700;line-height:1;font-family:Arial,Helvetica,sans-serif;font-variant-numeric:tabular-nums;text-box:trim-both cap alphabetic;text-align:center;box-sizing:border-box;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-sidebar,var(--bg));}
   .nav-item > .msg-bol{margin-left:-2px;}
   #menu-btn{position:relative;}
   #menu-btn > .msg-bol{position:absolute;top:-3px;right:-5px;}
@@ -15274,22 +15274,55 @@ function msgConversasNaoLidas(){
 }
 /* Bolinha com o número de mensagens não lidas no item Mensagens / Acompanhamento do menu lateral,
    no botão de menu do celular e no atalho Mensagens do Início da equipe. */
+function pendenciasPorArea(nMsg){
+  const out = {};
+  const add = (v, k, um, varios)=>{ if(!k) return; out[v] = out[v] || { n:0, partes:[] }; out[v].n += k; out[v].partes.push(k===1 ? um : `${k} ${varios}`); };
+  try{ if(areaAtiva('tarefas')){ add('tarefas', tarefasNaoLidas().length, '1 aviso de tarefa não lido', 'avisos de tarefas não lidos'); if(tvAtivo()) add('tarefas', Number(TV_ALERTA.vencidas)||0, '1 tarefa vencida', 'tarefas vencidas'); } }catch(e){}
+  try{ add('mensagens', nMsg||0, '1 mensagem não lida', 'mensagens não lidas'); if(!MSG_SO_ALUNOS) add('mensagens', gtfMinhasAbertas().length, '1 tarefa para você nos grupos', 'tarefas para você nos grupos'); }catch(e){}
+  try{ if(areaAtiva('reunioes') && typeof reuPendentesMeus==='function') add('reunioes', reuPendentesMeus(), '1 ata aguarda sua concordância', 'atas aguardam sua concordância'); }catch(e){}
+  try{ if(areaAtiva('politicas') && typeof polPendentesMeus==='function') add('politicas', polPendentesMeus().length, '1 documento aguarda sua revisão', 'documentos aguardam sua revisão'); }catch(e){}
+  try{ add('comunidade', pendenciasDoSino().length, '1 pendência na Comunidade', 'pendências na Comunidade'); }catch(e){}
+  return out;
+}
 function msgBolinhas(){
   let n = 0;
   try{
     if(msgSouMentorado()) n = Object.values(MSG_ACOMP).reduce((t,a)=>t+(a.naoLidas||0),0);
     else if(currentRole!=='aluno') n = msgTotalNaoLidas();
   }catch(e){ n = 0; }
+  let nMsg = n;
+  /* Tarefas dos grupos de mensagens também contam na bolinha de Mensagens. */
+  try{ if(currentRole!=='aluno' && !MSG_SO_ALUNOS && !msgSouMentorado()) n += gtfMinhasAbertas().length; }catch(e){}
   const txt = n>99 ? '99+' : String(n);
   const por = (el)=>{
     if(!el) return;
     let b = el.querySelector(':scope > .msg-bol');
     if(!n){ if(b) b.remove(); return; }
     if(!b){ b = document.createElement('span'); b.className = 'msg-bol'; el.appendChild(b); }
-    b.textContent = txt; b.title = n===1 ? '1 mensagem não lida' : n+' mensagens não lidas';
+    b.textContent = txt; b.title = n===nMsg ? (n===1 ? '1 mensagem não lida' : n+' mensagens não lidas') : (nMsg+' não lidas · '+(n-nMsg)+' tarefas nos grupos');
   };
   por(document.getElementById('nav-mensagens'));
   por(document.getElementById('nav-acompanhamento'));
+  /* Toda área com algo por fazer ganha a bolinha vermelha com o número no menu lateral e, no
+     Início, a tarja vermelha no card (o mesmo padrão das Políticas). */
+  const pend = currentRole!=='aluno' ? pendenciasPorArea(nMsg) : {};
+  ['tarefas','mensagens','reunioes','politicas','comunidade'].forEach(v=>{
+    const k = (pend[v] && pend[v].n) || 0;
+    if(v!=='mensagens'){
+      const el = document.querySelector(`.nav-item[data-view="${v}"]`);
+      if(el){
+        let b = el.querySelector(':scope > .msg-bol');
+        if(!k){ if(b) b.remove(); }
+        else { if(!b){ b = document.createElement('span'); b.className = 'msg-bol'; el.appendChild(b); } b.textContent = k>99 ? '99+' : String(k); b.title = pend[v].partes.join(' · '); }
+      }
+    }
+    const card = document.querySelector(`#view-equipe [data-equipe-go="${v}"]`);
+    if(card){
+      let t = card.querySelector(':scope > .reu-badge');
+      if(!k){ if(t) t.remove(); }
+      else { if(!t){ t = document.createElement('span'); t.className = 'reu-badge'; card.appendChild(t); } t.textContent = pend[v].partes.join(' · '); }
+    }
+  });
   /* A bolinha fica só ao lado do item no menu lateral: tira as que existiam no botão do menu e no card do Início. */
   document.querySelectorAll('#menu-btn > .msg-bol, [data-equipe-go="mensagens"] > .msg-bol').forEach(x=>x.remove());
 }
@@ -18200,7 +18233,7 @@ function renderEquipe(){
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
           <span class="equipe-ic">${icon(ic)}</span>
           <span class="equipe-tit">${escapeHtml(label)}</span>
-          <span class="equipe-desc">${escapeHtml(a.desc)}</span>${a.view==='reunioes' ? reuBadgeHtml() : ''}${a.view==='politicas' ? polBadgeHtml() : ''}
+          <span class="equipe-desc">${escapeHtml(a.desc)}</span>
         </button>`; }).join('')}
     </div>`;
   msgBolinhas();
@@ -19418,7 +19451,11 @@ let POL_PREPARADO = false;
 function polPreparar(){ try{ if(POL_PREPARADO || !polPodeAbrir()) return; POL_PREPARADO = true; }catch(e){ return; } polCarregar(); }
 function polRespostasDoc(d){ return (POL_UI.resp||[]).filter(r=>String(r.doc_id)===String(d.id) && r.rodada===d.rodada); }
 function polMinhaResposta(d){ const eu = idEfetivo(); return polRespostasDoc(d).find(r=>r.user_id===eu || r.user_id===(currentUser&&currentUser.id)) || null; }
-function polDevoRevisar(d){ return polSocio() && d.status==='revisao' && !polMinhaResposta(d); }
+/* Quem concordou numa rodada anterior já está fora: a nova rodada é só para quem revisou com anotações. */
+function polConcordouAntes(d, uid){ return (POL_UI.resp||[]).some(r=>String(r.doc_id)===String(d.id) && r.rodada < (d.rodada||1) && r.user_id===uid && r.tipo==='concordo'); }
+function polSociosDaRodada(d){ return REU_SOCIOS.filter(id=>!polConcordouAntes(d, id)); }
+function polEuConcordeiAntes(d){ const eu = idEfetivo(); return polConcordouAntes(d, eu) || (!!currentUser && polConcordouAntes(d, currentUser.id)); }
+function polDevoRevisar(d){ return polSocio() && d.status==='revisao' && !polMinhaResposta(d) && !polEuConcordeiAntes(d); }
 function polPendentesMeus(){ try{ return (POL_UI.docs||[]).filter(polDevoRevisar); }catch(e){ return []; } }
 function polBadgeHtml(){ const n = polPendentesMeus().length; return n ? `<span class="reu-badge">${n} ${n===1?'documento aguarda':'documentos aguardam'} sua revisão</span>` : ''; }
 function polSocioNome(id){ const p = PEOPLE[id]; return p ? p.name.split(' ')[0] : 'Sócio'; }
@@ -19460,7 +19497,7 @@ function polAprovacaoHtml(d){
 function polSociosHtml(d){
   if(d.status!=='revisao') return '<span class="muted">—</span>';
   const rs = polRespostasDoc(d);
-  return `<div class="pol-socios">${REU_SOCIOS.map(id=>{ const r = rs.find(x=>x.user_id===id); const cls = !r ? 'pend' : r.tipo; const tit = !r ? 'ainda não respondeu' : r.tipo==='concordo' ? 'concordou' : 'revisou com anotações'; return `<span class="pol-socio ${cls}" title="${escapeAttr(polSocioNome(id)+': '+tit)}">${!r ? '○' : r.tipo==='concordo' ? icon('tick','tiny') : icon('edit','tiny')} ${escapeHtml(polSocioNome(id))}</span>`; }).join('')}</div>`;
+  return `<div class="pol-socios">${polSociosDaRodada(d).map(id=>{ const r = rs.find(x=>x.user_id===id); const cls = !r ? 'pend' : r.tipo; const tit = !r ? 'ainda não respondeu' : r.tipo==='concordo' ? 'concordou' : 'revisou com anotações'; return `<span class="pol-socio ${cls}" title="${escapeAttr(polSocioNome(id)+': '+tit)}">${!r ? '○' : r.tipo==='concordo' ? icon('tick','tiny') : icon('edit','tiny')} ${escapeHtml(polSocioNome(id))}</span>`; }).join('')}</div>`;
 }
 function renderPoliticas(){
   const el = document.getElementById('view-politicas'); if(!el) return;
@@ -19515,9 +19552,11 @@ function polDetalheHtml(d){
   const f = POL_UI.form || (minha ? { tipo:minha.tipo, notas:(minha.anotacoes||[]).map(a=>({trecho:a.trecho||'', texto:a.texto||''})) } : { tipo:null, notas:[{trecho:'', texto:''}] });
   if(!f.notas.length) f.notas = [{trecho:'', texto:''}];
   POL_UI.form = f;
-  const editandoMinha = polSocio() && d.status==='revisao' && (!minha || POL_UI.editando===d.id);
-  const prontos = REU_SOCIOS.filter(id=>rs.some(r=>r.user_id===id)).length;
-  const todosConcordam = REU_SOCIOS.every(id=>rs.some(r=>r.user_id===id && r.tipo==='concordo'));
+  const jaConcordei = polEuConcordeiAntes(d);
+  const editandoMinha = polSocio() && d.status==='revisao' && !jaConcordei && (!minha || POL_UI.editando===d.id);
+  const daRodada = polSociosDaRodada(d);
+  const prontos = daRodada.filter(id=>rs.some(r=>r.user_id===id)).length;
+  const todosConcordam = daRodada.every(id=>rs.some(r=>r.user_id===id && r.tipo==='concordo'));
   return `<div class="pol-det">
     <button type="button" class="link-btn" id="pol-voltar">${icon('back','tiny')} Voltar para a lista</button>
     <div class="pol-det-hd">
@@ -19526,10 +19565,11 @@ function polDetalheHtml(d){
     </div>
     ${d.status==='revisao' ? `
       <div class="pol-bloco">
-        <h4>Revisão dos sócios <span class="muted">(${prontos} de ${REU_SOCIOS.length} responderam${todosConcordam ? ' · todos concordam' : ''})</span></h4>
+        <h4>Revisão dos sócios${d.rodada>1 ? ` · ${d.rodada}ª rodada` : ''} <span class="muted">(${prontos} de ${daRodada.length} responderam${todosConcordam ? ' · todos concordam' : ''})</span></h4>
         ${polSociosHtml(d)}
       </div>
-      ${polSocio() ? (editandoMinha ? `
+      ${polSocio() && jaConcordei ? `<div class="pol-bloco"><h4>A sua resposta</h4><p class="muted">Você já concordou em rodada anterior. Esta rodada é só para quem revisou com anotações.</p></div>` : ''}
+      ${polSocio() && !jaConcordei ? (editandoMinha ? `
       <div class="pol-bloco pol-minha">
         <h4>A sua resposta</h4>
         <p class="muted" style="margin-top:-4px">Leia o documento e escolha uma opção. Ao salvar, ${ehPol?'esta política':'este fluxo'} sai da sua lista de pendências.</p>
@@ -19603,7 +19643,7 @@ function polDetalheBind(el, d){
     Object.assign(d, campos); updateNotifBadge(); re(); return true;
   };
   const ed = el.querySelector('#pol-editar'); if(ed) ed.addEventListener('click', ()=>polDocForm(d));
-  const en = el.querySelector('#pol-encerrar'); if(en) en.addEventListener('click', async ()=>{ if(await showAppConfirm(`Encerrar a revisão de "${d.titulo}"? O documento passa a constar como Vigente e sai da pendência de todos os sócios.`, {title:'Encerrar revisão', confirmLabel:'Encerrar', cancelLabel:'Cancelar'})){ const hoje = new Date(); const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`; atualizaDoc({ status:'vigente', aprovada_em: iso, aprovada_por: polRespostasDoc(d).filter(r=>r.tipo==='concordo').map(r=>r.user_id) }); } });
+  const en = el.querySelector('#pol-encerrar'); if(en) en.addEventListener('click', async ()=>{ if(await showAppConfirm(`Encerrar a revisão de "${d.titulo}"? O documento passa a constar como Vigente e sai da pendência de todos os sócios.`, {title:'Encerrar revisão', confirmLabel:'Encerrar', cancelLabel:'Cancelar'})){ const hoje = new Date(); const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`; atualizaDoc({ status:'vigente', aprovada_em: iso, aprovada_por: REU_SOCIOS.filter(id=>polConcordouAntes(d, id) || polRespostasDoc(d).some(r=>r.user_id===id && r.tipo==='concordo')) }); } });
   const rv = el.querySelector('#pol-revisar'); if(rv) rv.addEventListener('click', async ()=>{ if(await showAppConfirm(`Colocar "${d.titulo}" em revisão? Cada sócio vai receber a pendência para revisar ou concordar.`, {title:'Colocar em revisão', confirmLabel:'Colocar em revisão', cancelLabel:'Cancelar'})) atualizaDoc({ status:'revisao', rodada:(d.rodada||1) + (polRespostasDoc(d).length ? 1 : 0) }); });
   const rm = el.querySelector('#pol-remover'); if(rm) rm.addEventListener('click', async ()=>{ if(await showAppConfirm(`Tirar "${d.titulo}" da lista? O arquivo no Drive não é apagado.`, {title:'Tirar da lista', confirmLabel:'Tirar', cancelLabel:'Cancelar'})){ if(await atualizaDoc({ ativo:false })){ POL_UI.docs = POL_UI.docs.filter(x=>x!==d); POL_UI.aberta = null; re(); } } });
 }
