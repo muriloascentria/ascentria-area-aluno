@@ -2688,6 +2688,12 @@
   .rd-motivos{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px;}
   .rd-motivos li{font-size:12px;line-height:1.3;padding:4px 9px;border-radius:999px;background:var(--individual-soft);color:var(--text);}
   .rd-motivos li.rd-m2{background:var(--danger-soft);}
+  .rd-motivos li.rd-m0{background:rgba(47,158,90,.14);color:#2f9e5a;}
+  .rd-metas-link{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+  .vg-cobr{font-size:10.5px;color:#2f9e5a;margin-top:2px;white-space:nowrap;display:flex;align-items:center;gap:3px;}
+  .vg-cobr .icon{width:11px;height:11px;}
+  .metas-envio-wa-ok{display:inline-flex;align-items:center;gap:6px;}
+  .metas-envio-wa-ok.on{background:#2f9e5a !important;border-color:#2f9e5a !important;color:#fff !important;}
   .rd-espera-ok{margin-left:6px;font:inherit;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);border-radius:999px;padding:1px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;vertical-align:middle;}
   .rd-espera-ok:hover{border-color:var(--success);color:var(--success);}
   .rd-ok{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--success);}
@@ -12218,6 +12224,33 @@ function metaVencida(t){
 /* Envio direto da mensagem de metas pendentes pelo Mensagens do ePLAT (Acompanhamento do aluno).
    "Respondente" = o aluno escreveu no Mensagens nos últimos 30 dias. Se não for, o botão fica vermelho e,
    ao clicar, a equipe é orientada a mandar pelo WhatsApp (pode enviar pelo ePLAT mesmo assim). */
+/* Cobranças de metas pendentes já feitas pela equipe (Mensagens do ePLAT ou WhatsApp). Por 7 dias a
+   cobrança conta como "tratada" no Radar; a de WhatsApp também conta como contato pessoal da equipe. */
+let METAS_COBR = null; // {aluno_id: [linhas, mais nova primeiro]}
+const METAS_COBR_DIAS = 7;
+async function metasCobrCarregar(){
+  try{
+    const { data, error } = await sb.from('metas_cobrancas').select('*').order('enviado_em',{ascending:false});
+    if(error) throw error;
+    const m = {}; (data||[]).forEach(r=>{ (m[r.aluno_id] = m[r.aluno_id] || []).push(r); });
+    METAS_COBR = m;
+  }catch(e){ console.error('metas_cobrancas', e); METAS_COBR = METAS_COBR || {}; }
+}
+function metasCobrUltima(sid, canal){ const l = (METAS_COBR||{})[sid] || []; return canal ? (l.find(r=>r.canal===canal) || null) : (l[0] || null); }
+function metasCobrRecente(sid){ const r = metasCobrUltima(sid); return r && (Date.now()-new Date(r.enviado_em).getTime()) < METAS_COBR_DIAS*86400000 ? r : null; }
+function metasCobrTxt(r){ const quem = r.enviado_por && PEOPLE[r.enviado_por] ? PEOPLE[r.enviado_por].name.split(' ')[0] : ''; return `${tzDataCurta(r.enviado_em)} ${r.canal==='whatsapp' ? 'pelo WhatsApp' : 'pelo Mensagens do ePLAT'}${quem ? ' ('+quem+')' : ''}`; }
+async function metasCobrRegistrar(sid, canal){
+  const { data, error } = await sb.from('metas_cobrancas').insert({ aluno_id:sid, canal, enviado_por:currentUser.id }).select().single();
+  if(error){ console.error('metasCobrRegistrar', error); alert('Não foi possível registrar: '+(error.message||'')); return null; }
+  METAS_COBR = METAS_COBR || {}; (METAS_COBR[sid] = METAS_COBR[sid] || []).unshift(data);
+  return data;
+}
+async function metasCobrDesfazer(row){
+  const { error } = await sb.from('metas_cobrancas').delete().eq('id', row.id);
+  if(error){ alert('Não foi possível desfazer: '+(error.message||'')); return false; }
+  const l = (METAS_COBR||{})[row.aluno_id] || []; const i = l.findIndex(x=>x.id===row.id); if(i>=0) l.splice(i,1);
+  return true;
+}
 const METAS_ENVIO = {};
 function metasEnvioInfo(sid){
   if(METAS_ENVIO[sid] !== undefined) return METAS_ENVIO[sid];
@@ -12238,6 +12271,7 @@ function metasWhatsLink(s, texto){
 }
 function metasEnvioHtml(s){
   const inf = metasEnvioInfo(s.id);
+  if(METAS_COBR===null){ metasCobrCarregar().then(()=>{ if(currentView==='metas' && currentStudentId===s.id) renderMetas(); }); }
   const m = RD_MSGS_PADRAO.find(x=>x.id==='metas'); const texto = rdMsgTexto(m, (s.name||'').trim().split(/\s+/)[0]);
   const wa = metasWhatsLink(s, texto);
   const sit = inf===null ? 'Verificando se o aluno responde no Mensagens…'
@@ -12246,10 +12280,21 @@ function metasEnvioHtml(s){
   return `<div class="metas-envio">
     <button type="button" class="btn-accent metas-envio-btn ${inf && !inf.ativo ? 'inativo' : ''}" id="metas-enviar-eplat" ${inf===null?'disabled':''}>${icon('comment','tiny')} Enviar pelo Mensagens do ePLAT</button>
     ${wa ? `<a class="btn-outline metas-envio-wa" href="${escapeAttr(wa)}" target="_blank" rel="noopener">${icon('send','tiny')} Abrir no WhatsApp</a>` : ''}
-    <small class="metas-envio-sit ${inf && !inf.ativo ? 'inativo' : ''}">${escapeHtml(sit)}</small>
+    ${(()=>{ const r = metasCobrUltima(s.id, 'whatsapp'); const rec = r && (Date.now()-new Date(r.enviado_em).getTime()) < METAS_COBR_DIAS*86400000;
+      return `<button type="button" class="btn-outline metas-envio-wa-ok ${rec?'on':''}" id="metas-wa-ok" ${METAS_COBR===null?'disabled':''} title="${rec ? 'Clique para desfazer' : 'Marque depois de enviar a mensagem pelo WhatsApp'}">${icon(rec?'check':'tick','tiny')} ${rec ? 'Enviado pelo WhatsApp · '+tzDataCurta(r.enviado_em) : 'Enviado pelo WhatsApp'}</button>`; })()}
+    <small class="metas-envio-sit ${inf && !inf.ativo ? 'inativo' : ''}">${escapeHtml(sit)}${(()=>{ const r = metasCobrUltima(s.id); return r ? ` Última cobrança de metas: ${escapeHtml(metasCobrTxt(r))}.` : ''; })()}</small>
   </div>`;
 }
+function radarAtualizarSeAberto(){ try{ if(currentView==='radar') renderRadar(); if(currentView==='visaogeral') renderVisaoGeral(); }catch(e){} }
 function metasEnvioBind(s){
+  const w = document.getElementById('metas-wa-ok');
+  if(w) w.addEventListener('click', async ()=>{
+    const r = metasCobrUltima(s.id, 'whatsapp'); const rec = r && (Date.now()-new Date(r.enviado_em).getTime()) < METAS_COBR_DIAS*86400000;
+    w.disabled = true;
+    if(rec){ if(await showAppConfirm('Desmarcar o envio pelo WhatsApp registrado em '+tzDataCurta(r.enviado_em)+'?', {title:'Desfazer', confirmLabel:'Desmarcar', cancelLabel:'Manter'})) await metasCobrDesfazer(r); }
+    else await metasCobrRegistrar(s.id, 'whatsapp');
+    renderMetas();
+  });
   const b = document.getElementById('metas-enviar-eplat'); if(!b) return;
   b.addEventListener('click', async ()=>{
     const inf = METAS_ENVIO[s.id]; if(!inf) return;
@@ -12263,7 +12308,7 @@ function metasEnvioBind(s){
     }
     b.disabled = true; b.textContent = 'Enviando…';
     const enviado = await msgEnviar(msgChaveAcomp(s.id), texto);
-    if(enviado){ b.innerHTML = icon('check','tiny')+' Enviada no Mensagens do ePLAT'; b.classList.add('enviado'); }
+    if(enviado){ await metasCobrRegistrar(s.id, 'eplat'); b.innerHTML = icon('check','tiny')+' Enviada no Mensagens do ePLAT'; b.classList.add('enviado'); radarAtualizarSeAberto(); }
     else { b.disabled = false; b.innerHTML = icon('comment','tiny')+' Enviar pelo Mensagens do ePLAT'; }
   });
 }
@@ -22521,7 +22566,8 @@ function rdAvaliar(s, r){
     else if(d>=14) add(1, `Não responde a equipe há ${d} dias`);
   }
   // 5. Contato pessoal da equipe (sem contar o checkpoint automático)
-  const dHumano = rdDiasDesde(r.ult_contato_humano);
+  const waCob = metasCobrUltima(s.id, 'whatsapp');
+  const dHumano = [rdDiasDesde(r.ult_contato_humano), waCob ? rdDiasDesde(waCob.enviado_em) : null].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
   if(dHumano===null) add(1, 'Nenhum contato pessoal da equipe no Acompanhamento');
   else if(dHumano>=14) add(1, `Equipe sem contato pessoal há ${dHumano} dias`);
   // 6. Pagamento (só para quem tem acesso ao Financeiro)
@@ -22540,6 +22586,13 @@ function rdAvaliar(s, r){
   // 8b. Dashboard x Painel do Método: tarefa marcada com o quadro do Painel vazio
   const incoer = dashPainelIncoerencias(s);
   if(incoer.length) add(1, `Painel do Método incoerente: tarefa marcada no Dashboard, mas ${incoer.length>1 ? 'os quadros '+incoer.map(a=>a.t.title).join(', ')+' estão vazios' : 'o quadro '+incoer[0].t.title+' está vazio'}`);
+  // 8c. Metas do mentorado com prazo vencido. Por 7 dias depois da cobrança (ePLAT ou WhatsApp), fica como tratado.
+  const vencidas = (s.checklist||[]).filter(metaVencida).length;
+  if(vencidas){
+    const cob = metasCobrRecente(s.id);
+    if(cob) add(0, `${vencidas} meta${vencidas>1?'s':''} vencida${vencidas>1?'s':''} · cobrança enviada ${metasCobrTxt(cob)}`, 'metas');
+    else add(1, `${vencidas} meta${vencidas>1?'s':''} vencida${vencidas>1?'s':''} sem cobrança da equipe`, 'metas');
+  }
   // 9. Próxima ação vencida
   const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
   if(r.prazo && r.prazo < hojeISO) add(1, `Próxima ação vencida em ${tzDataCurta(r.prazo)}`);
@@ -22859,6 +22912,7 @@ function renderRadar(){
   if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Direção de Desenvolvimento e da Navegadora.</div>'; return; }
   // O NPS não aparece mais aqui (fica em Comunicação), mas a nota entra no alerta de cada mentorado.
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
+  if(METAS_COBR===null){ metasCobrCarregar().then(()=>{ if(currentView==='radar') renderRadar(); }); }
   if(RADAR_UI.rows===null && !RADAR_UI.carregando && !RADAR_UI.erro){ radarCarregar(); }
   else if(RADAR_UI.rows && !RADAR_UI.carregando && Date.now()-(RADAR_UI.carregadoEm||0) > 2*60*1000){ radarCarregar(); }
   if(RADAR_UI.carregando && RADAR_UI.rows===null){ el.innerHTML = '<div class="empty-state">Carregando o radar…</div>'; return; }
@@ -22931,7 +22985,7 @@ function renderRadar(){
               <button type="button" class="btn-mini" data-rd-acomp="${s.id}">${icon('chart','tiny')}<span> Acompanhamento</span></button>
             </div>
           </div>
-          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
+          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
           <button type="button" class="rd-mais" data-rd-abrir="${s.id}">${icon(aberto?'up':'down','tiny')} ${aberto?'Esconder detalhes':'Ver detalhes'}</button>
           ${aberto ? `
           <div class="rd-dados">
@@ -22958,6 +23012,7 @@ function renderRadar(){
   el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
   rdMsgBindCopiar(el);
   const momT = document.getElementById('rd-mom-toggle'); if(momT) momT.addEventListener('click', ()=>{ RADAR_UI.momAberto = !RADAR_UI.momAberto; renderRadar(); });
+  el.querySelectorAll('[data-open-meta-rd]').forEach(b=>b.addEventListener('click', ()=>{ currentStudentId = b.dataset.openMetaRd; renderProfile(); goTo('metas'); }));
   el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
   el.querySelectorAll('[data-rd-espera-ok]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = b.dataset.rdEsperaOk; b.disabled = true;
@@ -23697,6 +23752,7 @@ function embCelulaVG(s){
 }
 
 function renderVisaoGeral(){
+  if(METAS_COBR===null && currentRole==='staff'){ metasCobrCarregar().then(()=>{ if(currentView==='visaogeral') renderVisaoGeral(); }); }
   const mentoradosTodos = STUDENTS.filter(s=>s.tier!=='curso');
   const cursoTodos = STUDENTS.filter(s=>s.tier==='curso' && !s.pos);
   const posTodos = STUDENTS.filter(s=>s.tier==='curso' && s.pos);
@@ -23788,7 +23844,7 @@ function renderVisaoGeral(){
                   <div class="module-bar" style="margin-bottom:4px"><div class="fill" style="width:${pct}%"></div></div>
                   <span style="font-size:11.5px;color:var(--text-mute)">${pct}%</span>
                 </td>
-                <td style="min-width:96px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}" title="Abrir as metas deste mentorado">Pendentes</button>` : '<span style="color:var(--text-mute)">Em dia</span>'}</td>
+                <td style="min-width:96px">${nextTask? `<button type="button" class="link-btn" data-open-meta="${s.id}" title="Abrir as metas deste mentorado">Pendentes</button>${(()=>{ const c = metasCobrRecente(s.id); return c ? `<div class="vg-cobr" title="${escapeAttr('Cobrança enviada '+metasCobrTxt(c))}">${icon('check','tiny')} cobrado ${tzDataCurta(c.enviado_em)}${c.canal==='whatsapp'?' · WhatsApp':' · ePLAT'}</div>` : ''; })()}` : '<span style="color:var(--text-mute)">Em dia</span>'}</td>
                 <td style="white-space:nowrap">${dias<0? `<span style="color:var(--danger)">encerrada</span>` : dias+'d'}</td>
                 <td><span class="stage-tag ${estagio.cls}">${estagio.label}</span></td>
                 <td style="min-width:150px">${embCelulaVG(s)}</td>
