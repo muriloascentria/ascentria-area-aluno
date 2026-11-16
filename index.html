@@ -2348,6 +2348,11 @@
   .msg-pessoa-txt{display:flex;flex-direction:column;min-width:0;flex:1;gap:2px;}
   .msg-pessoa-txt strong{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .msg-pessoa-txt small{font-size:11.5px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .msg-nome-prod{display:flex !important;align-items:center;gap:8px;min-width:0;}
+  .msg-nome-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .msg-prod{flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 9px;border-radius:999px;line-height:1.2;}
+  .msg-prod-metodo{background:#1f3566;color:#fff;border:1px solid #4a6bb0;}
+  .msg-prod-mentoria{background:#efe3c8;color:#4a3b1c;border:1px solid #d9c79f;}
   .msg-badge{min-width:20px;height:20px;border-radius:10px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;}
   .msg-quando{font-size:10.5px;color:var(--text-mute);white-space:nowrap;}
   .msg-conversa{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
@@ -16944,6 +16949,13 @@ function msgBindVoltarArrastando(el){
 
 const MSG_HTML_ANTERIOR = {};   // última tela desenhada, por área — evita redesenho inútil
 /* ---- tela ---- */
+/* Selo do produto ao lado do nome do aluno, no topo da conversa: Método em azul-marinho, Mentoria em creme. */
+function msgProdutoPill(a){
+  if(!a || !a.tier) return '';
+  const metodo = a.tier==='curso';
+  const txt = metodo ? (a.pos ? 'MÉTODO · PÓS' : 'MÉTODO') : (a.pos ? 'MENTORIA · PÓS' : 'MENTORIA');
+  return `<span class="msg-prod ${metodo?'msg-prod-metodo':'msg-prod-mentoria'}" title="${escapeAttr(produtoAluno(a))}">${txt}</span>`;
+}
 function renderMensagens(){
   /* Duas portas para a mesma tela: "Mensagens" (equipe: pessoas, grupos e acompanhamento dos mentorados) e
      "Acompanhamento" (mentorado: só a conversa dele com a equipe — sem lista, sem grupos). A equipe em modo
@@ -17020,7 +17032,7 @@ function renderMensagens(){
     : acomp && msgSouMentorado()
     ? `${msgGrupoAvatar(36)}<div class="msg-pessoa-txt"><strong>Acompanhamento</strong><small>Sua conversa com a equipe Ascentria</small></div>`
     : acomp
-    ? `${msgAvatarDe(acompId, 36)}<div class="msg-pessoa-txt"><strong>${escapeHtml(acompAluno ? acompAluno.name : 'Mentorado')}</strong><small>Acompanhamento · conversa compartilhada com toda a equipe</small></div>`
+    ? `${msgAvatarDe(acompId, 36)}<div class="msg-pessoa-txt"><strong class="msg-nome-prod"><span class="msg-nome-nm">${escapeHtml(acompAluno ? acompAluno.name : 'Mentorado')}</span>${msgProdutoPill(acompAluno)}</strong><small>Acompanhamento · conversa compartilhada com toda a equipe</small></div>`
     : outro ? `${initialsAvatar(outro.initials, outro.color, 36, outro.avatarUrl)}<div class="msg-pessoa-txt"><strong>${escapeHtml(outro.name)}</strong><small>${escapeHtml(msgPapelLabel(outro))}</small></div>` : '';
   /* A lista de conversas tem uma seção "Não lidas" no topo, como no WhatsApp: toda conversa com
      mensagem nova sobe para lá, seja de uma pessoa, de um grupo ou do acompanhamento de um mentorado.
