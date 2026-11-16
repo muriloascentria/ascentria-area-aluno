@@ -7604,6 +7604,7 @@ function setRole(role){
     if(el) el.style.display = (role==='aluno' && !isCursoView) ? 'flex' : 'none';
   });
   { const pel = document.querySelector('.nav-item[data-view="painel"]'); if(pel) pel.style.display = role==='aluno' ? 'flex' : 'none'; }
+  { const iel = document.querySelector('.nav-item[data-view="indicacao"]'); if(iel) iel.style.display = role==='aluno' ? 'flex' : 'none'; }
   /* Dashboard (progresso no Método, item a item) e Acompanhamento (mensagens com a equipe) são liberados também pro aluno do Curso Gravado. */
   ['inicio','aulas','comunidade','dashboard','acompanhamento'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
