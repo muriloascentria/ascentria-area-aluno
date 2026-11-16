@@ -13494,7 +13494,7 @@ function renderInterno(){
                 const tag = `<span class="int-tag-mc">${icon('calendar','tiny')} Resolução de momento-chave</span>`;
                 return `<td style="white-space:nowrap">${mc ? (enc ? enc+'<br>'+tag : tag) : (enc || '<span style="color:var(--text-mute)">—</span>')}</td>
               <td style="min-width:280px">${linkify(mc ? String(r.texto).slice(PFX.length) : r.texto).replace(/\n/g,'<br>')}</td>`; })()}
-              <td style="white-space:nowrap"><button class="btn-mini" data-rec-encontro="${r.id}" title="${intVk(r)?'Trocar o encontro vinculado':'Vincular a um encontro'}">${icon('calendar','tiny')} ${r.contatoId?'Trocar':'Vincular'}</button> <button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
+              <td style="white-space:nowrap">${String(r.texto||'').startsWith('Momento-chave (Radar): ') ? '' : `<button class="btn-mini" data-rec-encontro="${r.id}" title="${intVk(r)?'Trocar o encontro vinculado':'Vincular a um encontro'}">${icon('calendar','tiny')} ${r.contatoId?'Trocar':'Vincular'}</button> `}<button class="btn-mini danger" data-del-record="${r.id}" title="Excluir registro">${icon('trash')}</button></td>
             </tr>
           `).join('') || `<tr><td colspan="5" style="color:var(--text-mute)">Nenhum registro interno ainda.</td></tr>`}
         </tbody>
