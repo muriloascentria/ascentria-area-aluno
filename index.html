@@ -2649,6 +2649,7 @@
   .dp-onde{display:block;margin-top:3px;font-size:11.5px;color:var(--text-mute);line-height:1.4;}
   .dp-onde .icon{display:inline-block !important;width:12px;height:12px;vertical-align:-2px;margin-right:2px;}
   .dp-onde b{color:var(--text-dim,var(--text));font-weight:600;}
+  .apoio-lim{display:block;font-size:10.5px;color:var(--text-mute);margin-top:2px;}
   .dp-onde-ir{background:none;border:0;padding:0;margin-left:4px;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:11.5px;}
   .int-tag-mc{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:rgba(141,145,111,.14);border:1px solid rgba(141,145,111,.4);padding:2px 8px;border-radius:999px;}
   .int-tag-mc .icon{width:12px;height:12px;}
@@ -8245,10 +8246,14 @@ function libAte(s){
   }
   return ate;
 }
+/* Aula ou item do Dashboard que a equipe vinculou a uma tarefa do mentorado (Checklist de Acompanhamento)
+   fica liberado na hora, mesmo fora do bloco atual. */
+function libVinculadoEmTarefa(s, id){ return (s.checklist||[]).some(t=>(t.aulas||[]).some(x=>String(x)===String(id))); }
 function libBloqueadoAtivo(){ return currentRole!=='staff'; }
 function isLessonLocked(courseId, student){
   if(!libBloqueadoAtivo()) return false; // equipe interna nunca é bloqueada
   if(!student || student.aulasLiberadas) return false;
+  if(libVinculadoEmTarefa(student, courseId)) return false;
   const L = libPassos(); const k = L.porCurso[courseId];
   if(k===undefined) return false;
   return k >= libAte(student);
@@ -8256,6 +8261,7 @@ function isLessonLocked(courseId, student){
 function isItemLocked(modId, idx, student){
   if(!libBloqueadoAtivo()) return false;
   if(!student || student.aulasLiberadas) return false;
+  if(libVinculadoEmTarefa(student, `chk:${modId}:${idx}`)) return false;
   const k = libPassos().porItem[modId+':'+idx];
   if(k===undefined) return false;
   return k >= libAte(student);
@@ -12857,6 +12863,10 @@ function apoioOrdenar(set){
   const seq = apoioSequencia().map(x=>x.id).filter(id=>sel.has(id));
   return seq.concat([...sel].filter(id=>!seq.includes(id) && (getCourse(id) || apoioAtividade(id))));
 }
+/* Limite por tarefa: no máximo 3 aulas, 3 resumos e 3 tarefas do Dashboard. */
+const APOIO_MAX = 3;
+const APOIO_NOME = { aula:'aulas', resumo:'resumos', tarefa:'tarefas' };
+function apoioTipo(id){ if(getCourse(id)) return 'aula'; const a = apoioAtividade(id); return a && /^resumir/i.test(a.label.trim()) ? 'resumo' : 'tarefa'; }
 function apoioContagem(set){ const n = set.size; return n ? `${n} selecionado${n>1?'s':''}` : 'nenhum selecionado'; }
 /* Menu suspenso próprio (não o select do navegador): clicar num item marca ou desmarca e o menu
    continua aberto, para ir escolhendo várias aulas e atividades sem voltar ao começo. */
@@ -12902,7 +12912,12 @@ function bindAulaPick(prefix, set){
     lista.scrollTop = st;
     lista.querySelectorAll('[data-apoio-op]').forEach(b=>b.addEventListener('click', ()=>{
       const id = b.dataset.apoioOp;
-      if(set.has(id)) set.delete(id); else set.add(id);
+      if(set.has(id)) set.delete(id);
+      else {
+        const tipo = apoioTipo(id); const n = [...set].filter(x=>apoioTipo(x)===tipo).length;
+        if(n >= APOIO_MAX){ alert(`Cada tarefa pode ter no máximo ${APOIO_MAX} aulas, ${APOIO_MAX} resumos e ${APOIO_MAX} tarefas, para não sobrecarregar o mentorado. Já há ${APOIO_MAX} ${APOIO_NOME[tipo]} nesta tarefa: tire um para escolher outro.`); return; }
+        set.add(id);
+      }
       const st2 = lista.scrollTop;
       pills();
       const l2 = painel && painel.querySelector('.apoio-lista'); if(l2) l2.scrollTop = st2;
@@ -12911,7 +12926,7 @@ function bindAulaPick(prefix, set){
   const abre = (manterBusca)=>{
     const dd = box.querySelector('.apoio-dd');
     painel = document.createElement('div'); painel.className = 'apoio-painel';
-    painel.innerHTML = `<input class="ps-input apoio-busca" type="search" placeholder="Buscar aula ou atividade..." value="${escapeAttr(manterBusca ? busca : '')}"><div class="apoio-lista"></div><div class="apoio-rod"><span>${apoioContagem(set)}</span><button type="button" class="btn-accent apoio-pronto">Pronto</button></div>`;
+    painel.innerHTML = `<input class="ps-input apoio-busca" type="search" placeholder="Buscar aula ou atividade..." value="${escapeAttr(manterBusca ? busca : '')}"><div class="apoio-lista"></div><div class="apoio-rod"><span>${apoioContagem(set)}<small class="apoio-lim">Máximo por tarefa: 3 aulas, 3 resumos e 3 tarefas</small></span><button type="button" class="btn-accent apoio-pronto">Pronto</button></div>`;
     if(!manterBusca) busca = '';
     dd.appendChild(painel);
     desenhaLista();
