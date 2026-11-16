@@ -259,7 +259,7 @@
   }
   .nav-item:hover{background:var(--bg-card);color:var(--text);}
   .msg-bol{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--danger,#d9534f);color:#fff;font-size:11px;font-weight:700;line-height:1;font-family:Arial,Helvetica,sans-serif;font-variant-numeric:tabular-nums;text-box:trim-both cap alphabetic;text-align:center;box-sizing:border-box;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-sidebar,var(--bg));}
-  .nav-item > .msg-bol{margin-left:-2px;}
+  .nav-item > .msg-bol{margin-left:-2px;min-width:9px;width:9px;height:9px;padding:0;border-radius:50%;font-size:0;color:transparent;}
   #menu-btn{position:relative;}
   #menu-btn > .msg-bol{position:absolute;top:-3px;right:-5px;}
   .equipe-card{position:relative;}
@@ -2946,13 +2946,15 @@
   .pol-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
   .pol-resp{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
   .pol-resp.concordo{border-color:var(--success);}
+  .pol-resp.pend{border-style:dashed;}
+  .pol-resp.pend .pol-resp-hd{color:var(--text-mute);}
   .pol-resp-hd{font-size:13px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
   .pol-resp-hd .icon{width:13px;height:13px;}
   .pol-notas{margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.5;}
   .pol-notas li{margin-bottom:4px;}
   .pol-trecho{display:inline-block;font-size:11px;font-weight:700;color:var(--accent-2);background:var(--accent-soft);border-radius:6px;padding:0 6px;margin-right:6px;}
   @media (max-width:640px){ .pol-opcoes{grid-template-columns:1fr;} .pol-anot-linha{grid-template-columns:1fr auto;} .pol-anot-linha textarea{grid-column:1 / 2;} }
-  .reu-badge{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:600;color:#fff;background:var(--danger);border-radius:20px;padding:3px 10px;}
+  .reu-badge{display:inline-flex;align-items:center;justify-content:center;text-align:center;margin-top:8px;min-height:22px;box-sizing:border-box;font-size:11.5px;font-weight:600;line-height:1;text-box:trim-both cap alphabetic;color:#fff;background:var(--danger);border-radius:20px;padding:4px 11px;}
   .reu-cont{display:inline-block;min-width:18px;padding:0 6px;border-radius:10px;background:var(--accent,#8d916f);color:#fff;font-size:11px;margin-left:4px;}
   .reu-tabela-wrap{margin-top:6px;}
   .reu-tabela{min-width:720px;}
@@ -19473,6 +19475,36 @@ function polStatusPill(d){ return `<span class="pol-st pol-st-${d.status}">${POL
 function polDataBr(iso){ if(!iso) return ''; const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
 function polPessoaNome(id){ const p = PEOPLE[id]; return p ? p.name : 'Pessoa'; }
 function polEquipeInterna(){ return Object.values(PEOPLE).filter(p=>['staff','vendas','editor'].includes(p.role) && !p.contaTeste && !p.espelhoDe).sort((a,b)=> (REU_SOCIOS.indexOf(b.id)>-1) - (REU_SOCIOS.indexOf(a.id)>-1) || a.name.localeCompare(b.name,'pt-BR')); }
+/* Rodadas de revisão: a 1ª é de todos os sócios; cada rodada seguinte é só de quem ainda não concordou. */
+function polParticipantes(d, n){ return REU_SOCIOS.filter(id=>!(POL_UI.resp||[]).some(r=>String(r.doc_id)===String(d.id) && r.rodada < n && r.user_id===id && r.tipo==='concordo')); }
+function polPediramRevisao(d){
+  const n = d.rodada||1;
+  const rs = (POL_UI.resp||[]).filter(r=>String(r.doc_id)===String(d.id) && r.rodada===n);
+  if(!rs.some(r=>r.tipo==='revisei')) return [];
+  return polParticipantes(d, n+1);
+}
+function polRodadasHtml(d){
+  const ultima = d.rodada||1;
+  const todas = (POL_UI.resp||[]).filter(r=>String(r.doc_id)===String(d.id));
+  if(!todas.length && d.status!=='revisao') return '';
+  const eu = idEfetivo();
+  let html = '';
+  for(let n=1; n<=ultima; n++){
+    const rs = todas.filter(r=>r.rodada===n);
+    const parts = polParticipantes(d, n);
+    const atual = n===ultima && d.status==='revisao';
+    if(!rs.length && !atual) continue;
+    const ids = parts.concat(rs.map(r=>r.user_id).filter(id=>!parts.includes(id)));
+    const resp = ids.filter(id=>rs.some(r=>r.user_id===id)).length;
+    html += `<div class="pol-bloco">
+      <h4>${n}ª rodada de revisão <span class="muted">(${resp} de ${ids.length} responderam${atual ? ' · em andamento' : ''})</span></h4>
+      ${ids.map(id=>{ const r = rs.find(x=>x.user_id===id);
+        if(r) return polRespostaHtml(r, d) + (atual && polSocio() && (id===eu || (currentUser && id===currentUser.id)) && POL_UI.editando!==d.id ? `<button type="button" class="link-btn" id="pol-alterar" style="margin:-2px 0 8px">${icon('edit','tiny')} Alterar a minha resposta</button>` : '');
+        return `<div class="pol-resp pend"><div class="pol-resp-hd">○ <b>${escapeHtml(polSocioNome(id))}</b> <span class="muted">${atual ? 'aguardando resposta' : 'não respondeu'}</span></div></div>`; }).join('')}
+    </div>`;
+  }
+  return html;
+}
 /* Histórico: respostas das rodadas anteriores, com as anotações de quem revisou. */
 function polHistoricoHtml(d){
   const ant = (POL_UI.resp||[]).filter(r=>String(r.doc_id)===String(d.id) && r.rodada < (d.rodada||1));
@@ -19490,8 +19522,7 @@ function polAprovacaoHtml(d){
     <h4>Aprovação</h4>
     <p class="pol-aprov-data">${d.aprovada_em ? `Aprovada em <b>${polDataBr(d.aprovada_em)}</b>` : '<span class="muted">Data de aprovação não registrada.</span>'}</p>
     ${aprov.length ? `<div class="muted" style="font-size:12px;margin-bottom:4px">Aprovaram</div><div class="pol-aprov-lista">${aprov.map(id=>`<span class="pol-aprov-pessoa">${icon('tick','tiny')} ${escapeHtml(polPessoaNome(id))}</span>`).join('')}</div>` : ''}
-    ${rs.length ? `<div class="muted" style="font-size:12px;margin-bottom:4px">Revisão dos sócios${d.rodada>1 ? ` (${d.rodada}ª rodada)` : ''}</div><ul class="pol-aprov-resp">${rs.map(r=>`<li>${r.tipo==='concordo' ? icon('tick','tiny') : icon('edit','tiny')} <b>${escapeHtml(polPessoaNome(r.user_id))}</b> ${r.tipo==='concordo' ? 'concordou' : 'revisou com anotações'} <span class="muted">· ${escapeHtml(polDataBr((r.updated_at||r.created_at||'').slice(0,10)))}</span></li>`).join('')}</ul>` : ''}
-    ${!aprov.length && !rs.length && polSocio() ? '<p class="muted" style="font-size:12px;margin:0">Registre quem aprovou em "Editar título, link e situação".</p>' : ''}
+    ${!aprov.length && polSocio() ? '<p class="muted" style="font-size:12px;margin:0">Registre quem aprovou em "Editar título, link e situação".</p>' : ''}
   </div>`;
 }
 function polSociosHtml(d){
@@ -19564,12 +19595,7 @@ function polDetalheHtml(d){
       ${reuUrlOk(d.link) ? `<a class="btn-accent pol-abrir-doc" href="${escapeAttr(d.link)}" target="_blank" rel="noopener">${icon('externallink','tiny')} Abrir documento</a>` : ''}
     </div>
     ${d.status==='revisao' ? `
-      <div class="pol-bloco">
-        <h4>Revisão dos sócios${d.rodada>1 ? ` · ${d.rodada}ª rodada` : ''} <span class="muted">(${prontos} de ${daRodada.length} responderam${todosConcordam ? ' · todos concordam' : ''})</span></h4>
-        ${polSociosHtml(d)}
-      </div>
-      ${polSocio() && jaConcordei ? `<div class="pol-bloco"><h4>A sua resposta</h4><p class="muted">Você já concordou em rodada anterior. Esta rodada é só para quem revisou com anotações.</p></div>` : ''}
-      ${polSocio() && !jaConcordei ? (editandoMinha ? `
+      ${editandoMinha ? `
       <div class="pol-bloco pol-minha">
         <h4>A sua resposta</h4>
         <p class="muted" style="margin-top:-4px">Leia o documento e escolha uma opção. Ao salvar, ${ehPol?'esta política':'este fluxo'} sai da sua lista de pendências.</p>
@@ -19591,26 +19617,18 @@ function polDetalheHtml(d){
           <button type="button" class="btn-accent" id="pol-salvar" ${f.tipo?'':'disabled'}>${icon('check','tiny')} Salvar resposta</button>
           ${minha ? '<button type="button" class="btn-outline" id="pol-cancelar">Cancelar</button>' : ''}
         </div>
-      </div>` : `
-      <div class="pol-bloco">
-        <h4>A sua resposta</h4>
-        ${polRespostaHtml(minha, d)}
-        <button type="button" class="link-btn" id="pol-alterar">${icon('edit','tiny')} Alterar a minha resposta</button>
-      </div>`) : ''}
-      <div class="pol-bloco">
-        <h4>Respostas ${polSocio() ? 'dos outros sócios' : 'dos sócios'}</h4>
-        ${(polSocio() ? outros : rs).length ? (polSocio() ? outros : rs).map(r=>polRespostaHtml(r, d)).join('') : '<p class="muted">Ninguém respondeu ainda.</p>'}
-      </div>` : ''}
+      </div>` : ''}` : ''}
+    ${polRodadasHtml(d)}
     ${d.status==='vigente' ? polAprovacaoHtml(d) : ''}
-    ${polHistoricoHtml(d)}
     ${polSocio() ? `<div class="pol-bloco pol-gestao">
       <h4>Gestão do documento</h4>
       <div class="pol-acoes">
         <button type="button" class="btn-outline" id="pol-editar">${icon('edit','tiny')} Editar título, link e situação</button>
-        ${d.status==='revisao' ? `<button type="button" class="btn-outline" id="pol-encerrar">${icon('check','tiny')} Encerrar revisão (fica vigente)</button>` : `<button type="button" class="btn-outline" id="pol-revisar">${icon('edit','tiny')} Colocar em revisão</button>`}
+        ${d.status==='revisao' ? `<button type="button" class="btn-outline" id="pol-encerrar">${icon('check','tiny')} Encerrar revisão (fica vigente)</button>` : ''}
+        ${polPediramRevisao(d).length ? `<button type="button" class="btn-accent" id="pol-novarodada">${icon('send','tiny')} Enviar para quem pediu revisão (${polPediramRevisao(d).map(id=>escapeHtml(polSocioNome(id))).join(', ')})</button>` : ''}
         <button type="button" class="btn-outline danger" id="pol-remover">${icon('trash','tiny')} Tirar da lista</button>
       </div>
-      <p class="muted" style="margin:8px 0 0;font-size:12px">Colocar em revisão de novo abre uma nova rodada: as respostas anteriores ficam guardadas e cada sócio responde outra vez.</p>
+      <p class="muted" style="margin:8px 0 0;font-size:12px">Depois de ajustar o documento, envie para uma nova rodada: ela vai só para quem pediu revisão. Quem já concordou fica registrado na rodada em que concordou.</p>
     </div>` : ''}
   </div>`;
 }
@@ -19644,6 +19662,7 @@ function polDetalheBind(el, d){
   };
   const ed = el.querySelector('#pol-editar'); if(ed) ed.addEventListener('click', ()=>polDocForm(d));
   const en = el.querySelector('#pol-encerrar'); if(en) en.addEventListener('click', async ()=>{ if(await showAppConfirm(`Encerrar a revisão de "${d.titulo}"? O documento passa a constar como Vigente e sai da pendência de todos os sócios.`, {title:'Encerrar revisão', confirmLabel:'Encerrar', cancelLabel:'Cancelar'})){ const hoje = new Date(); const iso = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`; atualizaDoc({ status:'vigente', aprovada_em: iso, aprovada_por: REU_SOCIOS.filter(id=>polConcordouAntes(d, id) || polRespostasDoc(d).some(r=>r.user_id===id && r.tipo==='concordo')) }); } });
+  const nr = el.querySelector('#pol-novarodada'); if(nr) nr.addEventListener('click', async ()=>{ const quem = polPediramRevisao(d).map(id=>polSocioNome(id)); if(await showAppConfirm(`Enviar "${d.titulo}" para a ${(d.rodada||1)+1}ª rodada? Vai só para quem pediu revisão: ${quem.join(', ')}. Quem já concordou continua registrado.`, {title:'Nova rodada de revisão', confirmLabel:'Enviar', cancelLabel:'Cancelar'})) atualizaDoc({ status:'revisao', rodada:(d.rodada||1)+1, aprovada_em:null, aprovada_por:[] }); });
   const rv = el.querySelector('#pol-revisar'); if(rv) rv.addEventListener('click', async ()=>{ if(await showAppConfirm(`Colocar "${d.titulo}" em revisão? Cada sócio vai receber a pendência para revisar ou concordar.`, {title:'Colocar em revisão', confirmLabel:'Colocar em revisão', cancelLabel:'Cancelar'})) atualizaDoc({ status:'revisao', rodada:(d.rodada||1) + (polRespostasDoc(d).length ? 1 : 0) }); });
   const rm = el.querySelector('#pol-remover'); if(rm) rm.addEventListener('click', async ()=>{ if(await showAppConfirm(`Tirar "${d.titulo}" da lista? O arquivo no Drive não é apagado.`, {title:'Tirar da lista', confirmLabel:'Tirar', cancelLabel:'Cancelar'})){ if(await atualizaDoc({ ativo:false })){ POL_UI.docs = POL_UI.docs.filter(x=>x!==d); POL_UI.aberta = null; re(); } } });
 }
