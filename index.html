@@ -2472,6 +2472,8 @@
   .notif-item:last-child{border-bottom:none;}
   /* Itens nunca encolhem: com muitas notificações a lista rola, em vez de espremer os avisos brilhantes (que têm overflow:hidden). */
   .notif-lista > .notif-item{flex-shrink:0;}
+  .msg-bloq-aviso{margin:8px 12px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);font-size:13.5px;line-height:1.45;display:flex;gap:8px;align-items:flex-start;}
+  .msg-bloq-aviso .icon{flex-shrink:0;margin-top:2px;}
   .notif-item:hover{background:var(--bg-card);}
   .notif-item .avatar,.notif-item .msg-grupo-av{flex-shrink:0;margin-top:1px;}
   .notif-ic{width:34px;height:34px;border-radius:50%;background:rgba(141,145,111,.25);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -7681,7 +7683,7 @@ function setRole(role){
   /* Dashboard (progresso no Método, item a item) e Acompanhamento (mensagens com a equipe) são liberados também pro aluno do Curso Gravado. */
   ['inicio','aulas','comunidade','dashboard','acompanhamento'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
-    if(el) el.style.display = role==='aluno' ? 'flex' : 'none';
+    if(el) el.style.display = (role==='aluno' && !(v==='acompanhamento' && MSG_SO_METODO && !isCursoView)) ? 'flex' : 'none';
   });
   /* Prontuários eSIS: mentorado abre o site; aluno do Curso vê o item com cadeado e, ao clicar, o aviso. */
   const prontEl = document.getElementById('nav-prontuarios');
@@ -7759,6 +7761,7 @@ function goTo(view){
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
   { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = currentUserRole==='me_convidado' ? 'me_aulas' : 'equipe'; }
   if(!areaAtiva(view)) view = 'equipe';
+  if(view==='acompanhamento' && MSG_SO_METODO && currentRole==='aluno' && getViewingTier()!=='curso') view = 'inicio';
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo() && !fsSouLider()) view = 'equipe';
@@ -12408,11 +12411,12 @@ function metasEnvioHtml(s){
   if(METAS_COBR===null){ metasCobrCarregar().then(()=>{ if(currentView==='metas' && currentStudentId===s.id) renderMetas(); }); }
   const m = RD_MSGS_PADRAO.find(x=>x.id==='metas'); const texto = rdMsgTexto(m, (s.name||'').trim().split(/\s+/)[0]);
   const wa = metasWhatsLink(s, texto);
-  const sit = inf===null ? 'Verificando se o aluno responde no Mensagens…'
+  const sit = msgAcompBloqueado(msgChaveAcomp(s.id)) ? 'O Mensagens do ePLAT está desativado para alunos da Mentoria: envie pelo WhatsApp e marque "Enviado pelo WhatsApp".'
+    : inf===null ? 'Verificando se o aluno responde no Mensagens…'
     : inf.ativo ? `Responde no Mensagens do ePLAT (última mensagem dele ${inf.dias===0 ? 'hoje' : 'há '+inf.dias+' dia'+(inf.dias>1?'s':'')}).`
     : inf.ult ? `Não responde no Mensagens do ePLAT há ${inf.dias} dias. Recomendamos o WhatsApp.` : 'Nunca escreveu no Mensagens do ePLAT. Recomendamos o WhatsApp.';
   return `<div class="metas-envio">
-    <button type="button" class="btn-accent metas-envio-btn ${inf && !inf.ativo ? 'inativo' : ''}" id="metas-enviar-eplat" ${inf===null?'disabled':''}>${icon('comment','tiny')} Enviar pelo Mensagens do ePLAT</button>
+    ${msgAcompBloqueado(msgChaveAcomp(s.id)) ? '' : `<button type="button" class="btn-accent metas-envio-btn ${inf && !inf.ativo ? 'inativo' : ''}" id="metas-enviar-eplat" ${inf===null?'disabled':''}>${icon('comment','tiny')} Enviar pelo Mensagens do ePLAT</button>`}
     ${wa ? `<a class="btn-outline metas-envio-wa" href="${escapeAttr(wa)}" target="_blank" rel="noopener">${icon('send','tiny')} Abrir no WhatsApp</a>` : ''}
     ${(()=>{ const r = metasCobrUltima(s.id, 'whatsapp'); const rec = r && (Date.now()-new Date(r.enviado_em).getTime()) < METAS_COBR_DIAS*86400000;
       return `<button type="button" class="btn-outline metas-envio-wa-ok ${rec?'on':''}" id="metas-wa-ok" ${METAS_COBR===null?'disabled':''} title="${rec ? 'Clique para desfazer' : 'Marque depois de enviar a mensagem pelo WhatsApp'}">${icon(rec?'check':'tick','tiny')} ${rec ? 'Enviado pelo WhatsApp · '+tzDataCurta(r.enviado_em) : 'Enviado pelo WhatsApp'}</button>`; })()}
@@ -12464,7 +12468,7 @@ function renderMetas(){
     `).join('')}
     ${currentUserRole==='staff' && minhas.some(metaVencida) ? `<div class="rd-msgs">
       <div class="rd-msgs-hd">${icon('comment')} <strong>MENSAGEM PADRONIZADA · METAS PENDENTES</strong></div>
-      <p class="rd-msgs-aviso"><strong>Primeiro, envie pelo Mensagens do ePLAT.</strong> Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp. Só a equipe vê este quadro.</p>
+      <p class="rd-msgs-aviso">${msgAcompBloqueado(msgChaveAcomp(s.id)) ? '<strong>Envie pelo WhatsApp</strong> e depois marque "Enviado pelo WhatsApp".' : '<strong>Primeiro, envie pelo Mensagens do ePLAT.</strong> Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp.'} Só a equipe vê este quadro.</p>
       ${rdMsgCardHtml(RD_MSGS_PADRAO.find(m=>m.id==='metas'), (s.name||'').trim().split(/\s+/)[0])}
       ${metasEnvioHtml(s)}
     </div>` : ''}
@@ -15639,6 +15643,13 @@ function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUser
 /* Mentorado (aluno da mentoria, não do curso gravado): tem a janela "Acompanhamento" com a equipe. */
 /* Aluno com Acompanhamento (conversa com a equipe): mentorados e, desde 05/10/2026, também os alunos do Método. */
 function msgSouMentorado(){ return currentUserRole==='aluno' && !!currentUserProfile; }
+/* Pedido do Murilo (17/11/2026): o Mensagens do ePLAT fica ligado só para os alunos do Método (tier 'curso').
+   Mentorados da Mentoria não veem mais o Acompanhamento, e a equipe não consegue mais escrever para eles
+   por aqui (o histórico continua guardado). Para voltar como antes, troque para false. */
+const MSG_SO_METODO = true;
+function msgAlunoMetodo(id){ const a = msgAlunoAcomp(id); return !!a && a.tier==='curso'; }
+function msgAcompBloqueado(chave){ return MSG_SO_METODO && msgEhAcomp(chave) && !msgAlunoMetodo(msgAcompDaChave(chave)); }
+function msgMentoriaSemMensagens(){ return MSG_SO_METODO && msgSouMentoradoPleno(); }
 function msgSouMentoradoPleno(){ return msgSouMentorado() && (currentUserProfile.tier||'mentorado')!=='curso'; }
 function msgNaTela(){ return currentView==='mensagens' || currentView==='acompanhamento'; }
 function msgChaveAcomp(id){ return 'a:'+id; }
@@ -17370,7 +17381,7 @@ function renderMensagens(){
   const pessoas = MSG_SO_ALUNOS ? [] : MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
   if(MSG_SO_ALUNOS && !solo && msgUI.aberto && !msgAcompDaChave(msgUI.aberto)) msgUI.aberto = null;
   const grupos = msgGruposVisiveis().filter(g=>!q || normTxt(g.nome).includes(q));
-  const mentorados = (!solo && msgPodeAcomp()) ? msgMentorados().filter(s=>!q || normTxt(s.name).includes(q)) : [];
+  const mentorados = (!solo && msgPodeAcomp()) ? msgMentorados().filter(s=>(!MSG_SO_METODO || s.tier==='curso') && (!q || normTxt(s.name).includes(q))) : [];
   const ultima = (chave)=>{ const l = MSG_CONVERSAS[chave]||[]; return l.length ? l[l.length-1] : null; };
   const previa = (u, grupo)=>{ if(!u) return ''; const quem = u.de===eu ? 'Você: ' : (grupo ? msgNomeDe(u.de)+': ' : ''); return escapeHtml(quem+u.texto).slice(0,60); };
   const quando = (u)=> u ? `<small class="msg-quando">${tzDataCurta(tzDataHora(u.createdAt).split('/').reverse().join('-'))}</small>` : '';
@@ -17512,7 +17523,7 @@ function renderMensagens(){
             <div class="msg-config-linha"><span>Tamanho da letra</span><span class="msg-fonte"><button type="button" id="msg-fonte-menos" title="Diminuir">A−</button><b id="msg-fonte-valor">${msgUI.fonte}</b><button type="button" id="msg-fonte-mais" title="Aumentar">A+</button></span></div>
           </div>` : ''}
           ${grupo && msgUI.gtfAberto===grupo.id ? gtfPainelHtml(grupo, admin) : ''}
-          <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe Ascentria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o aluno e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
+          <div class="msg-corpo" id="msg-corpo">${bolhas || `<div class="tf-vazio" style="text-align:center;padding:30px">${grupo ? 'Nenhuma mensagem no grupo ainda. Comece a conversa!' : acomp && msgSouMentorado() ? 'Este é o seu canal direto com a equipe Ascentria. Escreva, mande áudio ou anexe um arquivo — alguém da equipe responde por aqui.' : acomp && msgAcompBloqueado(chave) ? 'Nenhuma mensagem no histórico.' : acomp ? 'Nenhuma mensagem ainda. O que você escrever aqui chega para o aluno e fica visível para toda a equipe.' : 'Nenhuma mensagem ainda. Diga oi!'}</div>`}</div>
           <div class="msg-mencoes" id="msg-mencoes" hidden></div>
           ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<div class="msg-aula-painel" id="msg-aula-painel" hidden>
             <div class="msg-aula-hd"><input class="ps-input" type="text" id="msg-aula-busca" placeholder="Buscar aula pelo nome…"><button type="button" class="btn-mini" id="msg-aula-fechar">${icon('x','tiny')}</button></div>
@@ -17528,7 +17539,8 @@ function renderMensagens(){
             <div class="msg-respondendo-txt"><strong>${icon('reply','tiny')} Respondendo ${escapeHtml(msgUI.respondendo.de===eu ? 'você mesmo' : msgNomeDe(msgUI.respondendo.de))}</strong><small>${escapeHtml((msgUI.respondendo.texto||'').replace(/\s+/g,' ').slice(0,140))}</small></div>
             <button type="button" class="btn-mini" id="msg-resp-cancelar" title="Cancelar resposta">${icon('x','tiny')}</button>
           </div>` : ''}
-          <div class="msg-editor">
+          ${msgAcompBloqueado(chave) ? `<div class="msg-bloq-aviso">${icon('lock','tiny')} O Mensagens do ePLAT está desativado para alunos da Mentoria. Fale com ${escapeHtml(((msgAlunoAcomp(msgAcompDaChave(chave))||{}).name||'o mentorado').split(' ')[0])} pelo WhatsApp. O histórico das conversas continua guardado aqui.</div>` : ''}
+          <div class="msg-editor" ${msgAcompBloqueado(chave) ? 'style="display:none"' : ''}>
             <textarea class="ps-input" id="msg-texto" rows="1" placeholder="${window.innerWidth<=560 ? 'Mensagem…' : 'Escreva uma mensagem…'}" maxlength="4000"></textarea>
             <button type="button" class="emoji-btn" data-emoji-for="#msg-texto" title="Emoji">😊</button>
             ${acomp && msgPodeAcomp() && !msgSouMentorado() ? `<button type="button" class="msg-mic" id="msg-aula-btn" title="Indicar uma aula ao mentorado">${icon('film')}</button><button type="button" class="msg-mic" id="msg-painel-btn" title="Indicar um quadro do Painel do Método">${icon('target')}</button>` : ''}
@@ -23079,11 +23091,12 @@ function rdAvaliar(s, r){
   /* Quem já concluiu todas as tarefas do dashboard não tem mais o que marcar: não entra como parado. */
   if(!rdDashboardCompleto(s)){ if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv); }
   // 3. Mensagem do aluno esperando a equipe
-  const hEspera = rdHorasDesde(r.aguardando_desde);
+  const semMsg = msgAcompBloqueado(msgChaveAcomp(s.id));
+  const hEspera = semMsg ? null : rdHorasDesde(r.aguardando_desde);
   if(hEspera!==null && hEspera>=48) add(2, `Esperando resposta da equipe há ${rdTempo(hEspera)}`, 'espera');
   else if(hEspera!==null && hEspera>=24) add(1, `Esperando resposta da equipe há ${rdTempo(hEspera)}`, 'espera');
   // 4. Aluno que parou de responder
-  if(r.ult_msg_equipe && (!r.ult_msg_aluno || new Date(r.ult_msg_aluno) < new Date(r.ult_msg_equipe))){
+  if(!semMsg && r.ult_msg_equipe && (!r.ult_msg_aluno || new Date(r.ult_msg_aluno) < new Date(r.ult_msg_equipe))){
     const d = r.ult_msg_aluno ? rdDiasDesde(r.ult_msg_aluno) : null;
     if(d===null) add(1, 'Nunca respondeu no Acompanhamento');
     else if(d>=14) add(1, `Não responde a equipe há ${d} dias`);
@@ -23409,7 +23422,7 @@ Conta comigo!` }
 function rdMsgsPadraoHtml(){
   return `<div class="rd-msgs">
     <div class="rd-msgs-hd">${icon('comment')} <strong>MENSAGENS PADRONIZADAS</strong></div>
-    <p class="rd-msgs-aviso"><strong>Primeiro, envie pelo Mensagens do ePLAT</strong> (botão Conversa no card do mentorado). Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp. Troque {NOME} pelo primeiro nome do mentorado.</p>
+    <p class="rd-msgs-aviso">${MSG_SO_METODO ? '<strong>Envie pelo WhatsApp</strong> (o Mensagens do ePLAT está desativado para os mentorados da Mentoria).' : '<strong>Primeiro, envie pelo Mensagens do ePLAT</strong> (botão Conversa no card do mentorado). Se o mentorado não responder por lá, envie a mesma mensagem pelo WhatsApp.'} Troque {NOME} pelo primeiro nome do mentorado.</p>
     ${RD_MSGS_PADRAO.map(m=>rdMsgCardHtml(m)).join('')}
   </div>`;
 }
@@ -23504,7 +23517,7 @@ function renderRadar(){
               <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método</small>
             </div>
             <div class="rd-acoes">
-              <button type="button" class="btn-mini" data-rd-conversa="${s.id}">${icon('comment','tiny')}<span> Conversa</span></button>
+              ${msgAcompBloqueado(msgChaveAcomp(s.id)) ? '' : `<button type="button" class="btn-mini" data-rd-conversa="${s.id}">${icon('comment','tiny')}<span> Conversa</span></button>`}
               <button type="button" class="btn-mini" data-rd-acomp="${s.id}">${icon('chart','tiny')}<span> Acompanhamento</span></button>
             </div>
           </div>
