@@ -15647,7 +15647,7 @@ function msgEu(){ return currentUser ? currentUser.id : null; }
 function msgPessoa(id){ return MSG_EQUIPE.find(p=>p.id===id) || null; }
 /* Mensagens só entre alunos e time (11/11/2026): as conversas internas da equipe (pessoa a pessoa) e os grupos
    ficam desativados; continua só o Acompanhamento de cada aluno com a equipe. Para reativar, false. */
-const MSG_SO_ALUNOS = false;   // reativado em 12/11/2026
+const MSG_SO_ALUNOS = true;   // 17/11/2026 (Murilo): sem grupos e sem conversa entre a equipe; só o acompanhamento dos alunos do Método
 function msgSouEquipe(){ return ['staff','vendas','editor'].includes(currentUserRole); }
 /* Mentorado (aluno da mentoria, não do curso gravado): tem a janela "Acompanhamento" com a equipe. */
 /* Aluno com Acompanhamento (conversa com a equipe): mentorados e, desde 05/10/2026, também os alunos do Método. */
@@ -17493,7 +17493,7 @@ function renderMensagens(){
     <div class="msg-wrap ${solo?'msg-solo':''}" style="--msg-fonte:${msgUI.fonte}px">
       ${solo ? '' : `<aside class="msg-lista ${chave?'com-conversa':''}">
         <div class="msg-lista-hd">
-          <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="${MSG_SO_ALUNOS ? 'Buscar aluno ou mentorado…' : 'Buscar pessoa ou grupo…'}">
+          <input class="ps-input" type="text" id="msg-busca" value="${escapeAttr(msgUI.busca)}" placeholder="${MSG_SO_ALUNOS ? (MSG_SO_METODO ? 'Buscar aluno do Método…' : 'Buscar aluno ou mentorado…') : 'Buscar pessoa ou grupo…'}">
           <button type="button" class="msg-config-btn ${msgUI.configAberta?'ativo':''}" id="msg-config-btn" title="Configurações das mensagens">${icon('gear')}</button>
         </div>
         <div class="msg-config" id="msg-config" ${msgUI.configAberta?'':'hidden'}>
@@ -17566,7 +17566,7 @@ function renderMensagens(){
             <button type="button" class="btn-accent" id="msg-grav-enviar">${icon('reply','tiny')} Enviar áudio</button>
             <span class="msg-grav-st" id="msg-grav-status" hidden></span>
           </div>`
-        : MSG_SO_ALUNOS ? `<div class="msg-vazio">${icon('comment')}<p>Escolha um aluno ou mentorado para conversar.</p><small>O acompanhamento de cada aluno fica visível para toda a equipe, e quem receber vê a mensagem na hora, em qualquer tela.</small></div>`
+        : MSG_SO_ALUNOS ? `<div class="msg-vazio">${icon('comment')}<p>Escolha um ${MSG_SO_METODO ? 'aluno do Método' : 'aluno ou mentorado'} para conversar.</p><small>O acompanhamento de cada aluno fica visível para toda a equipe, e quem receber vê a mensagem na hora, em qualquer tela.</small></div>`
         : `<div class="msg-vazio">${icon('comment')}<p>Escolha alguém da equipe${msgGruposVisiveis().length ? ', um grupo' : ''}${mentorados.length ? ' ou um mentorado' : ''} para conversar.</p><small>Conversas privadas e grupos da equipe, e o acompanhamento de cada mentorado (visível para toda a equipe). Quem receber vê a mensagem na hora, em qualquer tela.${admin ? ' Só você (administrador) cria e gerencia grupos.' : ''}</small></div>`}
       </section>
     </div>`;
