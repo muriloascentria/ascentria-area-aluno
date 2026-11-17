@@ -630,6 +630,60 @@
   .pe-faixa.f5{background:var(--shared);color:#0b0b0a;}
   .pe-faixa.f0{background:var(--bg-card-hover);color:var(--text-dim);border:1px solid var(--border);}
   .pe-lista{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+  /* Formulário de Documentos (link público ?documentos) */
+  .fd-page{color-scheme:light;position:fixed;inset:0;z-index:340;background:#F7F4EC;color:#1b2440;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:inherit;}
+  .fd-page *{box-sizing:border-box;}
+  .fd-wrap{max-width:760px;margin:0 auto;padding:28px 18px 64px;}
+  .fd-top{display:flex;justify-content:center;margin-bottom:22px;}
+  .fd-top img{height:48px;width:auto;max-width:80%;}
+  .fd-hero{background:#1f3566;color:#fff;border-radius:16px;padding:24px 22px;margin-bottom:18px;}
+  .fd-hero .fd-k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#efe3c8;font-weight:700;margin-bottom:8px;}
+  .fd-hero h1{font-size:24px;line-height:1.25;margin:0 0 10px;color:#fff;}
+  .fd-hero p{margin:0;font-size:15px;line-height:1.55;color:rgba(255,255,255,.88);}
+  .fd-card{background:#fff;border:1px solid rgba(31,53,102,.14);border-radius:14px;padding:18px 18px 20px;margin-bottom:14px;}
+  .fd-card h2{font-size:17px;margin:0 0 6px;color:#1f3566;}
+  .fd-card .fd-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#1f3566;color:#fff;font-size:12px;margin-right:8px;vertical-align:2px;}
+  .fd-def{font-size:14.5px;line-height:1.55;margin:0 0 10px;color:#33405f;}
+  .fd-ex{background:#efe3c8;border-radius:10px;padding:10px 14px;margin:0 0 12px;font-size:14px;line-height:1.5;color:#3a3220;}
+  .fd-ex b{display:block;margin-bottom:4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;}
+  .fd-ex ul{margin:0;padding-left:18px;}
+  .fd-ex li{margin:2px 0;}
+  .fd-label{display:block;font-weight:700;font-size:14.5px;margin:0 0 6px;color:#1b2440;}
+  .fd-opc{font-weight:400;color:#6b7590;font-size:13px;}
+  .fd-in{width:100%;border:1.5px solid rgba(31,53,102,.25);background:#fff;color:#1b2440;font:inherit;font-size:15px;padding:12px 14px;border-radius:10px;}
+  .fd-in:focus{outline:2px solid #1f3566;outline-offset:1px;}
+  .fd-in.erro{border-color:#b4233c;}
+  .fd-campo{position:relative;}
+  .fd-campo textarea{min-height:150px;resize:vertical;line-height:1.55;padding-right:54px;}
+  .fd-mic{position:absolute;right:8px;top:8px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(31,53,102,.25);background:#F7F4EC;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .fd-mic .icon{stroke:#1f3566;width:18px;height:18px;}
+  .fd-mic.ouvindo{background:#b4233c;border-color:#b4233c;}
+  .fd-mic.ouvindo .icon{stroke:#fff;}
+  .fd-erro{color:#b4233c;font-size:14px;min-height:20px;margin:6px 0 0;}
+  .fd-acoes{display:flex;justify-content:flex-end;margin-top:6px;}
+  .fd-btn{background:#1f3566;color:#fff;border:0;border-radius:10px;padding:13px 22px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;}
+  .fd-btn:disabled{opacity:.6;cursor:default;}
+  .fd-aviso{background:#fff4d6;border:1px solid #e8cf86;border-radius:10px;padding:10px 14px;font-size:14px;margin-bottom:14px;}
+  .fd-fim{text-align:center;padding:30px 10px;}
+  .fd-fim h2{color:#1f3566;font-size:22px;margin:0 0 10px;}
+  .fd-fim p{font-size:15px;line-height:1.55;color:#33405f;margin:0 auto;max-width:520px;}
+  @media (max-width:520px){ .fd-hero h1{font-size:21px;} .fd-btn{width:100%;} }
+  /* Tela da equipe */
+  .fdq-filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 14px;}
+  .fdq-filtros input{flex:1 1 220px;min-width:0;margin:0 !important;}
+  .fdq-filtros .btn-outline{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .fdq-lista{display:flex;flex-direction:column;gap:12px;}
+  .fdq-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
+  .fdq-item.nova{border-left:4px solid var(--accent);}
+  .fdq-hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px;}
+  .fdq-hd strong{font-size:15px;}
+  .fdq-hd small{color:var(--text-muted);}
+  .fdq-hd .fdq-acoes{margin-left:auto;display:flex;gap:6px;}
+  .fdq-serv{font-size:13.5px;color:var(--text-muted);margin:0 0 8px;}
+  .fdq-sec{margin-top:10px;}
+  .fdq-sec h4{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px;color:var(--text-muted);}
+  .fdq-sec p{margin:0;white-space:pre-wrap;line-height:1.5;font-size:14px;}
+  .fdq-vazio{color:var(--text-muted);font-style:italic;}
   .pe-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;}
   .pe-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .pe-hd small{color:var(--text-mute);font-size:12px;}
@@ -3774,6 +3828,7 @@
     <button class="nav-item restrict" id="nav-embarque" data-view="embarque" style="display:none"></button>
     <button class="nav-item restrict" id="nav-radar" data-view="radar" style="display:none"></button>
     <button class="nav-item restrict" id="nav-indicacoes" data-view="indicacoes" style="display:none"></button>
+    <button class="nav-item restrict" id="nav-formdocs" data-view="formdocs" style="display:none"></button>
     <button class="nav-item restrict" id="nav-evento" data-view="evento" style="display:none"></button>
     <button class="nav-item restrict" id="nav-reunioes" data-view="reunioes" style="display:none"></button>
     <button class="nav-item restrict" id="nav-politicas" data-view="politicas" style="display:none"></button>
@@ -3870,6 +3925,7 @@
       <div class="view" id="view-gestaotime"></div>
       <div class="view" id="view-radar"></div>
       <div class="view" id="view-indicacoes"></div>
+      <div class="view" id="view-formdocs"></div>
       <div class="view" id="view-indicacao"></div>
       <div class="view" id="view-evento"></div>
       <div class="view" id="view-planner"></div>
@@ -3971,7 +4027,7 @@ const NAV_LABELS = {
   treinamento:['play','Treinamento Time'],
   gestaotime:['target','Gestão do Time'],
   radar:['radar','Radar dos Mentorados'],
-  indicacoes:['gift','Gestão do Programa de Indicação'], indicacao:['gift','Programa de Indicação'],
+  indicacoes:['gift','Gestão do Programa de Indicação'], indicacao:['gift','Programa de Indicação'], formdocs:['file','Formulário de Documentos'],
   evento:['award','Evento Essência Experience'],
   desempenho:['chart','Desempenho das Consultoras'],
   dre:['money','DRE'], radarfin:['radar','Radar Financeiro'],
@@ -7453,7 +7509,7 @@ window.addEventListener('orientationchange', ()=>setTimeout(ajustarTituloTopo, 2
    Os dados continuam no banco. Para reativar uma área, basta tirá-la desta lista. */
 const AREAS_DESATIVADAS = new Set([]);   // reativadas em 12/11/2026 (antes: 'tarefas','reunioes','politicas','treinamento','gestaotime')
 function areaAtiva(v){ return !AREAS_DESATIVADAS.has(v); }
-const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','indicacoes','evento','reunioes','politicas','conteudo','marca','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
+const VIEWS_EQUIPE = ['equipe','tarefas','comunicacao','mensagens','visaogeral','interno','embarque','radar','indicacoes','formdocs','evento','reunioes','politicas','conteudo','marca','vendas','analise','desempenho','clientes','financeiro','dre','radarfin','treinamento','gestaotime'];
 function equipeNoModoAluno(){ return currentUserRole==='staff' && currentRole==='aluno'; }
 /* ================= TROCA PARA AS CONTAS DE TESTE (só o Murilo) =================
    No botão lá de cima, Aluno, CS, Consultora e Editor entram de verdade nas contas de teste do Murilo
@@ -7584,6 +7640,7 @@ function setRole(role){
   document.getElementById('nav-radar').style.display = (staffNav && radarPode()) ? 'flex' : 'none';
   document.getElementById('nav-indicacoes').style.display = (staffNav && indPodeGerir()) ? 'flex' : 'none';
   document.getElementById('nav-evento').style.display = (staffNav && radarPode()) ? 'flex' : 'none';
+  document.getElementById('nav-formdocs').style.display = staffNav ? 'flex' : 'none';
   /* eCRM é da equipe interna e das consultoras. O editor de vídeos não vê (nem na pré-visualização). */
   document.getElementById('nav-ecrm').style.display = staffNav ? 'flex' : 'none';
   if(staffNav && staffBloqueios().size){
@@ -7723,7 +7780,7 @@ function goTo(view){
 function renderCurrentView(){
   const map = {inicio:renderInicio, aulas:renderAulas, comunidade:renderComunidade, ranking:renderRanking, agenda:renderAgenda,
                materiais:renderMateriais, dashboard:renderDashboard, painel:renderPainel,
-               sessoes:renderSessoes, metas:renderMetas, indicacao:renderIndicacao, indicacoes:renderIndicacoes, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
+               sessoes:renderSessoes, metas:renderMetas, indicacao:renderIndicacao, indicacoes:renderIndicacoes, formdocs:renderFormDocs, interno:renderInterno, conteudo:renderConteudo, visaogeral:renderVisaoGeral,
                vendas:renderVendas, analise:renderAnalise, clientes:renderClientes, financeiro:renderFinanceiro, radarfin:renderRadarFin, treinamento:renderTreinamento, gestaotime:renderGestaoTime, marca:renderMarca, radar:renderRadar, evento:renderEvento, planner:renderPlanner, desempenho:renderDesempenho, dre:renderDre, reunioes:renderReunioes, politicas:renderPoliticas,
                comunicacao:renderComunicacao, embarque:renderEmbarque, equipe:renderEquipe, tarefas:renderTarefas, mensagens:renderMensagens, acompanhamento:renderMensagens,
                me_jornada:renderMeJornada, me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas, me_materiais:renderMeMateriais};
@@ -7754,7 +7811,7 @@ const BACKUP_TABLES = [
   'live_sessions','live_session_watched',
   'venda_sessoes','contatos','registro_clientes',
   'fin_categorias','fin_contas','fin_formas','fin_lancamentos',
-  'access_codes','premio_ee2026',
+  'access_codes','premio_ee2026','form_documentos',
 ];
 async function fetchTableAll(table){
   const PAGE = 1000;
@@ -18526,6 +18583,7 @@ const EQUIPE_ATALHOS = [
   {view:'embarque',   desc:'Os 30 primeiros dias de cada mentorado: grupo, mensagens iniciais, onboardings e mentorias de desenvolvimento.'},
   {view:'radar',      desc:'Quem precisa de atenção hoje e por quê: acesso, avanço, mensagens, ritmo e próximas ações.'},
   {view:'indicacoes', desc:'Quem indicou quem para a Mentoria, o progresso de cada um e os níveis Embaixador e Elite.'},
+  {view:'formdocs',   desc:'Respostas dos alunos sobre os protocolos, POPs e políticas internas que cada um precisa, com o link do formulário.'},
   {view:'evento',     desc:'Prêmio Essência Experience e as inscrições do evento, com os links para quem não tem acesso ao PLAT.'},
   {view:'reunioes',   desc:'Vídeo, transcrição e ata de cada reunião, com a concordância de quem participou, e as pautas da próxima.'},
   {view:'politicas',  desc:'Políticas internas da Ascentria, com os POPs de cada área, os links e a revisão dos sócios nos documentos em revisão.'},
@@ -22566,6 +22624,169 @@ function premioHtmlEquipe(){
         </div>`; }).join('') || '<div class="empty-state">Nenhuma participação ainda.</div>'}
     </div>`;
 }
+/* ================= FORMULÁRIO DE DOCUMENTOS DO SERVIÇO =================
+   Link público (?documentos), sem login, para os alunos contarem quais protocolos assistenciais de
+   enfermagem, POPs e políticas internas de funcionamento precisam para o serviço deles. O aluno só
+   consegue inserir (RLS); a leitura é só da equipe interna, na área "Formulário de Documentos". */
+const FD_SECOES = [
+  { k:'protocolos', t:'Protocolos assistenciais de enfermagem',
+    def:'O protocolo assistencial define <b>o que fazer no cuidado</b> de um tipo de paciente ou de uma situação clínica: como avaliar, qual conduta seguir, quais critérios usar e quando encaminhar. Ele se baseia em evidência científica e dá segurança para você e para o paciente.',
+    ex:['Protocolo de avaliação e tratamento de feridas (escolha de coberturas)','Protocolo de aromaterapia clínica para ansiedade e insônia','Protocolo de prevenção de lesão por pressão','Protocolo de auriculoterapia para dor crônica','Protocolo de atendimento domiciliar ao idoso','Protocolo de consulta de enfermagem em saúde da mulher'],
+    ph:'Ex.: Protocolo de tratamento de feridas, protocolo de aromaterapia para ansiedade...' },
+  { k:'pops', t:'POPs (Procedimentos Operacionais Padrão)',
+    def:'O POP descreve <b>como fazer uma tarefa, passo a passo</b>, para que ela seja feita sempre do mesmo jeito, por qualquer pessoa da equipe. É o "manual de instrução" de cada atividade do dia a dia do serviço.',
+    ex:['POP de higienização das mãos','POP de limpeza e desinfecção da sala e da maca','POP de realização de curativo','POP de descarte de perfurocortantes e resíduos','POP de esterilização ou preparo de materiais','POP de agendamento e confirmação de consultas','POP de registro no prontuário'],
+    ph:'Ex.: POP de curativo, POP de limpeza da sala, POP de agendamento...' },
+  { k:'politicas', t:'Políticas internas de funcionamento',
+    def:'As políticas internas são <b>as regras de funcionamento do seu serviço</b>, que valem para os pacientes e para a equipe. Elas deixam claro como o serviço funciona e evitam conflitos.',
+    ex:['Política de agendamento, cancelamento, atrasos e faltas','Política de pagamento, reembolso e pacotes','Política de privacidade e proteção de dados (LGPD) e sigilo do prontuário','Política de uso de imagem do paciente nas redes sociais','Política de atendimento domiciliar (região atendida e taxa de deslocamento)','Termo de consentimento livre e esclarecido'],
+    ph:'Ex.: Política de cancelamento e faltas, política de pagamento, LGPD...' },
+];
+function fdLinkPublico(){ return location.origin + location.pathname + '?documentos'; }
+function fdAbrir(){
+  if(document.querySelector('.fd-page')) return;
+  const st = { nome:'', servico:'', protocolos:'', pops:'', politicas:'', erro:'', campoErro:'', enviando:false, fim:false };
+  const page = document.createElement('div');
+  page.className = 'fd-page'; page.setAttribute('role','main'); page.setAttribute('aria-label','Formulário de documentos do serviço');
+  document.body.appendChild(page);
+  document.body.style.overflow = 'hidden';
+  const mic = wfDitadoDisponivel();
+  const desenhar = (topo)=>{
+    page.innerHTML = `<div class="fd-wrap">
+      <div class="fd-top"><img src="email-logo-metodo.png" alt="Método Essência"></div>
+      ${st.fim ? `<div class="fd-card fd-fim">
+          <h2>Respostas enviadas!</h2>
+          <p>Obrigado, ${escapeHtml(st.nome.trim().split(/\s+/)[0]||'')}. A equipe já recebeu as suas respostas e vai usar essas informações para preparar os documentos do seu serviço.</p>
+        </div>` : `
+      <div class="fd-hero">
+        <div class="fd-k">Documentos do seu serviço</div>
+        <h1>Quais documentos o seu serviço de enfermagem precisa?</h1>
+        <p>Queremos entender quais protocolos, POPs e políticas internas você precisa para organizar o seu serviço. Leia a explicação e os exemplos de cada item e escreva com as suas palavras. Pode listar quantos quiser.</p>
+      </div>
+      <div class="fd-card">
+        <label class="fd-label" for="fd-nome">Qual é o seu nome completo?</label>
+        <input class="fd-in ${st.campoErro==='fd-nome'?'erro':''}" id="fd-nome" type="text" maxlength="150" autocomplete="name" value="${escapeHtml(st.nome)}" placeholder="Seu nome completo">
+        <label class="fd-label" for="fd-servico" style="margin-top:14px">Qual serviço você oferece ou quer oferecer? <span class="fd-opc">(opcional)</span></label>
+        <input class="fd-in" id="fd-servico" type="text" maxlength="1000" value="${escapeHtml(st.servico)}" placeholder="Ex.: consultório de feridas, atendimento domiciliar, práticas integrativas">
+      </div>
+      ${FD_SECOES.map((s,i)=>`
+      <div class="fd-card">
+        <h2><span class="fd-num">${i+1}</span>${escapeHtml(s.t)}</h2>
+        <p class="fd-def">${s.def}</p>
+        <div class="fd-ex"><b>Exemplos</b><ul>${s.ex.map(e=>`<li>${escapeHtml(e)}</li>`).join('')}</ul></div>
+        <label class="fd-label" for="fd-${s.k}">Quais ${i===0?'protocolos assistenciais':i===1?'POPs':'políticas internas'} você precisa para o seu serviço?</label>
+        <div class="fd-campo">
+          <textarea class="fd-in ${st.campoErro==='fd-'+s.k?'erro':''}" id="fd-${s.k}" maxlength="5000" placeholder="${escapeHtml(s.ph)}">${escapeHtml(st[s.k])}</textarea>
+          ${mic ? `<button type="button" class="fd-mic" data-fd-mic="${s.k}" title="Falar" aria-label="Falar em vez de digitar">${icon('mic')}</button>` : ''}
+        </div>
+      </div>`).join('')}
+      <p class="fd-erro" role="alert">${escapeHtml(st.erro)}</p>
+      <div class="fd-acoes"><button type="button" class="fd-btn" id="fd-enviar" ${st.enviando?'disabled':''}>${st.enviando?'Enviando...':'Enviar respostas'}</button></div>`}
+    </div>`;
+    if(topo) page.scrollTop = 0;
+    ['nome','servico','protocolos','pops','politicas'].forEach(k=>{ const e = page.querySelector('#fd-'+k); if(e) e.addEventListener('input', ()=>{ st[k] = e.value; e.classList.remove('erro'); }); });
+    page.querySelectorAll('[data-fd-mic]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.fdMic; const c = page.querySelector('#fd-'+k); premioDitar(b, c, t=>{ st[k] = t; }); }));
+    const env = page.querySelector('#fd-enviar'); if(env) env.addEventListener('click', enviar);
+  };
+  const enviar = async ()=>{
+    premioDitarParar();
+    st.campoErro = '';
+    if(st.nome.trim().length < 2){ st.erro = 'Escreva o seu nome.'; st.campoErro = 'fd-nome'; desenhar(); const e = page.querySelector('#fd-nome'); if(e){ e.focus(); e.scrollIntoView({block:'center'}); } return; }
+    if(!st.protocolos.trim() && !st.pops.trim() && !st.politicas.trim()){ st.erro = 'Responda pelo menos uma das três perguntas.'; st.campoErro = 'fd-protocolos'; desenhar(); const e = page.querySelector('#fd-protocolos'); if(e){ e.focus(); e.scrollIntoView({block:'center'}); } return; }
+    st.enviando = true; st.erro = ''; desenhar();
+    const linha = { nome: st.nome.trim().slice(0,150), servico: st.servico.trim().slice(0,1000) || null,
+      protocolos: st.protocolos.trim().slice(0,5000) || null, pops: st.pops.trim().slice(0,5000) || null, politicas: st.politicas.trim().slice(0,5000) || null };
+    const { error } = await sb.from('form_documentos').insert(linha);
+    st.enviando = false;
+    if(error){ console.error('form_documentos', error); st.erro = 'Não foi possível enviar agora. Confira a internet e tente de novo.'; desenhar(); return; }
+    st.fim = true; desenhar(true);
+  };
+  desenhar(true);
+}
+/* ---- Visão da equipe ---- */
+const FD_UI = { rows:null, carregando:false, erro:false, busca:'', filtro:'todas' };
+async function fdCarregar(){
+  if(FD_UI.carregando) return; FD_UI.carregando = true;
+  try{ const { data, error } = await sb.from('form_documentos').select('*').order('created_at',{ascending:false}); if(error) throw error; FD_UI.rows = data || []; FD_UI.erro = false; }
+  catch(e){ console.error('form_documentos', e); FD_UI.rows = FD_UI.rows || []; FD_UI.erro = true; }
+  FD_UI.carregando = false;
+  if(currentView==='formdocs') renderFormDocs();
+}
+function fdAluno(nome){
+  const n = normTxt(nome).trim().replace(/\s+/g,' '); if(!n) return null;
+  return STUDENTS.find(s=>normTxt(s.name).trim().replace(/\s+/g,' ')===n)
+    || STUDENTS.find(s=>{ const a = normTxt(s.name).trim().split(/\s+/), b = n.split(' '); return a.length>1 && b.length>1 && a[0]===b[0] && a[a.length-1]===b[b.length-1]; }) || null;
+}
+function fdCsv(rows){
+  const q = v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const cab = ['Data','Nome','Serviço','Protocolos assistenciais','POPs','Políticas internas'];
+  const linhas = rows.map(r=>[tzDataHora(r.created_at,true), r.nome, r.servico, r.protocolos, r.pops, r.politicas].map(q).join(';'));
+  const blob = new Blob(['﻿'+[cab.map(q).join(';'), ...linhas].join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'formulario-documentos.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function renderFormDocs(){
+  const el = document.getElementById('view-formdocs'); if(!el) return;
+  if(currentUserRole!=='staff'){ el.innerHTML = '<div class="empty-state">Esta área é da equipe interna.</div>'; return; }
+  if(FD_UI.rows===null){ if(!FD_UI.carregando) fdCarregar(); el.innerHTML = '<div class="empty-state">Carregando as respostas…</div>'; return; }
+  const url = fdLinkPublico();
+  const q = normTxt(FD_UI.busca).trim();
+  const todas = FD_UI.rows;
+  const vis = todas.filter(r=>(FD_UI.filtro==='todas' || (FD_UI.filtro==='novas' ? !r.lida : r.lida))
+    && (!q || normTxt([r.nome,r.servico,r.protocolos,r.pops,r.politicas].join(' ')).includes(q)));
+  const nNovas = todas.filter(r=>!r.lida).length;
+  const tile = (k, rot, n)=>`<button type="button" class="kpi-tile pe-tile ${FD_UI.filtro===k?'on':''}" data-fd-f="${k}"><div class="label">${rot}</div><div class="value">${n}</div></button>`;
+  const sec = (t, v)=>`<div class="fdq-sec"><h4>${t}</h4><p class="${v?'':'fdq-vazio'}">${v ? escapeHtml(v) : 'Não respondeu'}</p></div>`;
+  el.innerHTML = `
+    <div class="ee-link-box">
+      <div class="ee-link-rotulo">Link do formulário para enviar aos alunos (abre sem login)</div>
+      <div class="ee-link-linha">
+        <a class="ee-link-url" href="${escapeAttr(url)}" target="_blank" rel="noopener" title="${escapeAttr(url)}">${icon('externallink','tiny')}<span>${escapeHtml(url)}</span></a>
+        <button type="button" class="btn-accent" id="fd-copiar">${icon('copy','tiny')} <span>Copiar link</span></button>
+      </div>
+    </div>
+    <p class="section-sub" style="margin-top:0">Respostas dos alunos sobre os protocolos assistenciais de enfermagem, os POPs e as políticas internas que cada um precisa para o próprio serviço. Só a equipe interna vê esta área.</p>
+    <div class="pe-tiles">${tile('todas','Respostas', todas.length)}${tile('novas','Não lidas', nNovas)}${tile('lidas','Lidas', todas.length-nNovas)}</div>
+    <div class="fdq-filtros">
+      <input type="search" class="reu-busca" id="fd-busca" placeholder="Buscar por nome ou palavra (ex.: curativo)" value="${escapeHtml(FD_UI.busca)}">
+      <button type="button" class="btn-outline" id="fd-csv" ${todas.length?'':'disabled'}>${icon('download','tiny')} Baixar planilha</button>
+    </div>
+    ${FD_UI.erro ? '<div class="empty-state">Não foi possível carregar as respostas. Recarregue a página.</div>' : ''}
+    <div class="fdq-lista">
+      ${vis.map(r=>{ const s = fdAluno(r.nome); return `
+        <div class="fdq-item ${r.lida?'':'nova'}">
+          <div class="fdq-hd">
+            <strong>${escapeHtml(r.nome)}</strong>${s ? msgProdutoPill(s) : ''}
+            <small>${tzDataHora(r.created_at,true)}</small>
+            <span class="fdq-acoes">
+              <button type="button" class="btn-mini" data-fd-lida="${r.id}">${icon(r.lida?'x':'check','tiny')} ${r.lida?'Marcar como não lida':'Marcar como lida'}</button>
+              <button type="button" class="btn-mini" data-fd-del="${r.id}" title="Apagar resposta" aria-label="Apagar resposta">${icon('trash','tiny')}</button>
+            </span>
+          </div>
+          ${r.servico ? `<p class="fdq-serv"><b>Serviço:</b> ${escapeHtml(r.servico)}</p>` : ''}
+          ${sec('Protocolos assistenciais de enfermagem', r.protocolos)}
+          ${sec('POPs', r.pops)}
+          ${sec('Políticas internas de funcionamento', r.politicas)}
+        </div>`; }).join('') || `<div class="empty-state">${todas.length ? 'Nenhuma resposta com esse filtro.' : 'Nenhuma resposta ainda. Copie o link acima e envie para os alunos.'}</div>`}
+    </div>`;
+  eeBindCopiar(el.querySelector('#fd-copiar'), url);
+  el.querySelectorAll('[data-fd-f]').forEach(b=>b.addEventListener('click', ()=>{ FD_UI.filtro = (FD_UI.filtro===b.dataset.fdF && b.dataset.fdF!=='todas') ? 'todas' : b.dataset.fdF; renderFormDocs(); }));
+  const busca = el.querySelector('#fd-busca');
+  if(busca) busca.addEventListener('input', ()=>{ FD_UI.busca = busca.value; const pos = busca.selectionStart; renderFormDocs(); const b2 = document.getElementById('fd-busca'); if(b2){ b2.focus(); try{ b2.setSelectionRange(pos,pos); }catch(e){} } });
+  const csv = el.querySelector('#fd-csv'); if(csv) csv.addEventListener('click', ()=>fdCsv(vis));
+  el.querySelectorAll('[data-fd-lida]').forEach(b=>b.addEventListener('click', async ()=>{
+    const r = FD_UI.rows.find(x=>String(x.id)===b.dataset.fdLida); if(!r) return;
+    const nova = !r.lida; r.lida = nova; renderFormDocs();
+    const { error } = await sb.from('form_documentos').update({ lida:nova }).eq('id', r.id);
+    if(error){ r.lida = !nova; renderFormDocs(); showAppAlert('Não foi possível salvar. Tente de novo.'); }
+  }));
+  el.querySelectorAll('[data-fd-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const r = FD_UI.rows.find(x=>String(x.id)===b.dataset.fdDel); if(!r) return;
+    if(!(await showAppConfirm(`Apagar a resposta de ${r.nome}? Isso não pode ser desfeito.`, {title:'Apagar resposta', confirmLabel:'Apagar'}))) return;
+    const { error } = await sb.from('form_documentos').delete().eq('id', r.id);
+    if(error){ showAppAlert('Não foi possível apagar. Tente de novo.'); return; }
+    FD_UI.rows = FD_UI.rows.filter(x=>x!==r); renderFormDocs();
+  }));
+}
 /* ================= RADAR DOS MENTORADOS (Sandra, Viviane e Murilo) =================
    Um semáforo por mentorado com o motivo escrito ao lado, para a pessoa abrir a tela e saber quem
    precisa de atenção hoje. Os dados que só o banco sabe (último acesso, quando marcou o último item
@@ -26043,6 +26264,7 @@ sb.auth.onAuthStateChange((event, session)=>{
   /* Link externo da inscrição no Essência Experience: abre só o formulário, sem login. */
   if(new URLSearchParams(location.search).has('inscricao')){ eeAbrir({publico:true}); return; }
   if(new URLSearchParams(location.search).has('premio')){ premioAbrir({publico:true}); return; }
+  if(new URLSearchParams(location.search).has('documentos')){ fdAbrir(); return; }
   try{
     const { data: { session } } = await sb.auth.getSession();
     if(session && session.user){
