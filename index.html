@@ -6020,7 +6020,7 @@ function mapProfileRow(p){
       objetivo12meses: diag.objetivo_12meses || '—', horasSemana: diag.horas_semana || '—',
       wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
-    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null})),
+    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null,criadoPor:t.criado_por||null,criadoEm:t.criado_em||null})),
     sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||'',responsavel:x.responsavel||''})),
     contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,tipo:c.tipo||'',responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
     registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
@@ -6583,7 +6583,15 @@ function syncChecklistItemStatus(id, status){
 async function syncChecklistItemInsert(sid, item){
   const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[], contato_id:item.contatoId||null, agendamento_id:item.agendamentoId||null}).select().single();
   if(error) throw error;
+  item.criadoPor = data.criado_por || (currentUser && currentUser.id) || null; item.criadoEm = data.criado_em || null;
   return data.id;
+}
+/* Checklist: quem da equipe criou a tarefa (checklist_items.criado_por, preenchido pelo banco).
+   Tarefas antigas, de antes de 17/11/2026, não têm esse registro. */
+function checklistCriadorNome(t){
+  if(!t || !t.criadoPor) return '';
+  const p = getPerson(t.criadoPor);
+  return p && p.name ? p.name.trim().split(/\s+/)[0] : '';
 }
 async function syncChecklistItemUpdate(id, campos){
   const { error } = await sb.from('checklist_items').update(campos).eq('id', id);
@@ -12643,7 +12651,7 @@ function openEditAlunoModal(s){
 /* Lista fixa de quem da equipe interna pode registrar um contato (reunião/WhatsApp) com o mentorado —
    evita depender de digitação livre do nome. MENTORES_MASC define quem usa "mentor" (em vez de
    "mentora") no rótulo mostrado pro aluno em Minhas Sessões 1:1 (ver mentorLabel). */
-const RESPONSAVEL_CONTATO_OPTS = ['Murilo Pedroso','Sandra Bublitz','Viviane da Silva','Carmem Goretty','Diego Eller'];
+const RESPONSAVEL_CONTATO_OPTS = ['Murilo Pedroso','Sandra Bublitz','Viviane da Silva','Carmem Goretty','Diego Eller','Mariane Mendes'];
 const MENTORES_MASC = ['Murilo Pedroso','Diego Eller'];
 /* ---- Acompanhamento Completo do Mentorado (PDF) ------------------------------------------
    Junta, num documento só, tudo que a empresa registrou sobre um aluno: cadastro, diagnóstico de
@@ -13700,7 +13708,7 @@ function renderInterno(){
     ${intBody('checklist')}
     <div class="table-wrap">
       <table class="check-table">
-        <thead><tr><th>Tarefa</th><th>Encontro</th><th>Aulas de apoio</th><th>Responsável</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Tarefa</th><th>Encontro</th><th>Aulas de apoio</th><th>Responsável</th><th>Criada por</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
         <tbody>
           ${s.checklist.map(t=>`
             <tr>
@@ -13712,6 +13720,7 @@ function renderInterno(){
                     : `<button class="btn-mini" data-aulas-ver="${t.id}" title="Ver as aulas e atividades vinculadas">${icon('down','tiny')} Ver mais (${(t.aulas||[]).length})</button>`)
                 : `<button class="btn-mini" data-task-aulas="${t.id}" title="Escolher aulas de apoio">${icon('plus','tiny')} Vincular aulas</button>`}</td>
               <td><span class="resp-pill">${t.responsavel}</span></td>
+              <td style="white-space:nowrap">${checklistCriadorNome(t) ? `<span title="${t.criadoEm ? 'Criada em '+escapeAttr(tzDataCurta(t.criadoEm)) : ''}">${escapeHtml(checklistCriadorNome(t))}</span>` : '<span style="color:var(--text-mute)">—</span>'}</td>
               <td>${t.prazo}</td>
               <td><button class="status-pill ${statusClass(t.status)}" data-check="${t.id}">${t.status}</button></td>
               <td style="white-space:nowrap"><button class="btn-mini" data-edit-task="${t.id}" title="Editar tarefa">${icon('edit')}</button> <button class="btn-mini danger" data-del-task="${t.id}" title="Excluir tarefa">${icon('trash')}</button></td>
