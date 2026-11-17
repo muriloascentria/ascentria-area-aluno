@@ -22666,8 +22666,6 @@ function fdAbrir(){
       <div class="fd-card">
         <label class="fd-label" for="fd-nome">Qual é o seu nome completo?</label>
         <input class="fd-in ${st.campoErro==='fd-nome'?'erro':''}" id="fd-nome" type="text" maxlength="150" autocomplete="name" value="${escapeHtml(st.nome)}" placeholder="Seu nome completo">
-        <label class="fd-label" for="fd-servico" style="margin-top:14px">Qual serviço você oferece ou quer oferecer? <span class="fd-opc">(opcional)</span></label>
-        <input class="fd-in" id="fd-servico" type="text" maxlength="1000" value="${escapeHtml(st.servico)}" placeholder="Ex.: consultório de feridas, atendimento domiciliar, práticas integrativas">
       </div>
       ${FD_SECOES.map((s,i)=>`
       <div class="fd-card">
@@ -22694,8 +22692,7 @@ function fdAbrir(){
     if(st.nome.trim().length < 2){ st.erro = 'Escreva o seu nome.'; st.campoErro = 'fd-nome'; desenhar(); const e = page.querySelector('#fd-nome'); if(e){ e.focus(); e.scrollIntoView({block:'center'}); } return; }
     if(!st.protocolos.trim() && !st.pops.trim() && !st.politicas.trim()){ st.erro = 'Responda pelo menos uma das três perguntas.'; st.campoErro = 'fd-protocolos'; desenhar(); const e = page.querySelector('#fd-protocolos'); if(e){ e.focus(); e.scrollIntoView({block:'center'}); } return; }
     st.enviando = true; st.erro = ''; desenhar();
-    const linha = { nome: st.nome.trim().slice(0,150), servico: st.servico.trim().slice(0,1000) || null,
-      protocolos: st.protocolos.trim().slice(0,5000) || null, pops: st.pops.trim().slice(0,5000) || null, politicas: st.politicas.trim().slice(0,5000) || null };
+    const linha = { nome: st.nome.trim().slice(0,150), protocolos: st.protocolos.trim().slice(0,5000) || null, pops: st.pops.trim().slice(0,5000) || null, politicas: st.politicas.trim().slice(0,5000) || null };
     const { error } = await sb.from('form_documentos').insert(linha);
     st.enviando = false;
     if(error){ console.error('form_documentos', error); st.erro = 'Não foi possível enviar agora. Confira a internet e tente de novo.'; desenhar(); return; }
