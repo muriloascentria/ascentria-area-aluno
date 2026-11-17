@@ -2470,6 +2470,8 @@
   .notif-lista{overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;}
   .notif-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:none;border-bottom:1px solid var(--border);background:none;text-align:left;font:inherit;color:var(--text);cursor:pointer;}
   .notif-item:last-child{border-bottom:none;}
+  /* Itens nunca encolhem: com muitas notificações a lista rola, em vez de espremer os avisos brilhantes (que têm overflow:hidden). */
+  .notif-lista > .notif-item{flex-shrink:0;}
   .notif-item:hover{background:var(--bg-card);}
   .notif-item .avatar,.notif-item .msg-grupo-av{flex-shrink:0;margin-top:1px;}
   .notif-ic{width:34px;height:34px;border-radius:50%;background:rgba(141,145,111,.25);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
