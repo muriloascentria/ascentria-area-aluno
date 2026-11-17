@@ -668,6 +668,15 @@
   .fd-fim h2{color:#1f3566;font-size:22px;margin:0 0 10px;}
   .fd-fim p{font-size:15px;line-height:1.55;color:#33405f;margin:0 auto;max-width:520px;}
   @media (max-width:520px){ .fd-hero h1{font-size:21px;} .fd-btn{width:100%;} }
+  .fd-ja{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;border-color:#1f3566;}
+  .fd-ja span{font-size:14px;color:#33405f;}
+  .fd-aviso-edit{background:#e8eef9;border-color:#9fb2d8;}
+  .fd-btn-sec{background:#fff;color:#1f3566;border:1.5px solid #1f3566;padding:11px 16px;white-space:nowrap;}
+  .fd-link{margin-top:20px;text-align:left;}
+  .fd-link p{font-size:14px;margin:0 0 8px;}
+  .fd-link-linha{display:flex;gap:8px;}
+  .fd-link-linha .fd-in{font-size:13px;min-width:0;}
+  @media (max-width:520px){ .fd-link-linha{flex-direction:column;} .fd-ja .fd-btn{width:100%;} }
   /* Tela da equipe */
   .fdq-filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 14px;}
   .fdq-filtros input{flex:1 1 220px;min-width:0;margin:0 !important;}
@@ -22643,26 +22652,51 @@ const FD_SECOES = [
     ph:'Ex.: Política de cancelamento e faltas, política de pagamento, LGPD...' },
 ];
 function fdLinkPublico(){ return location.origin + location.pathname + '?documentos'; }
+function fdEditLink(t){ return location.origin + location.pathname + '?documentos=' + t; }
+function fdTokensSalvos(){ try{ return JSON.parse(localStorage.getItem('fd_tokens')||'[]').filter(t=>/^[0-9a-f-]{36}$/i.test(t)); }catch(e){ return []; } }
+function fdTokenSalvar(t){ try{ const l = fdTokensSalvos().filter(x=>x!==t); l.unshift(t); localStorage.setItem('fd_tokens', JSON.stringify(l.slice(0,5))); }catch(e){} }
 function fdAbrir(){
   if(document.querySelector('.fd-page')) return;
-  const st = { nome:'', servico:'', protocolos:'', pops:'', politicas:'', erro:'', campoErro:'', enviando:false, fim:false };
+  const tokUrl = (new URLSearchParams(location.search).get('documentos')||'').trim();
+  const st = { nome:'', protocolos:'', pops:'', politicas:'', erro:'', campoErro:'', enviando:false, fim:false,
+    token:null, carregando:false, salvo:fdTokensSalvos()[0]||null, editada:false, linkErro:'' };
   const page = document.createElement('div');
   page.className = 'fd-page'; page.setAttribute('role','main'); page.setAttribute('aria-label','Formulário de documentos do serviço');
   document.body.appendChild(page);
   document.body.style.overflow = 'hidden';
   const mic = wfDitadoDisponivel();
+  const carregar = async (t)=>{
+    st.carregando = true; st.linkErro = ''; desenhar(true);
+    const { data, error } = await sb.rpc('fd_obter', { p_token:t });
+    st.carregando = false;
+    const r = Array.isArray(data) ? data[0] : data;
+    if(error || !r){ if(error) console.error('fd_obter', error); st.linkErro = 'Não encontramos respostas para este link de edição. Confira o link ou envie as respostas de novo.'; st.token = null; desenhar(true); return; }
+    st.token = t; st.nome = r.nome||''; st.protocolos = r.protocolos||''; st.pops = r.pops||''; st.politicas = r.politicas||''; st.fim = false; st.erro = '';
+    fdTokenSalvar(t); st.salvo = t;
+    desenhar(true);
+  };
+  const linkBox = t=>`<div class="fd-link">
+      <p>Guarde este link para editar as suas respostas depois, de qualquer aparelho:</p>
+      <div class="fd-link-linha"><input class="fd-in" readonly value="${escapeHtml(fdEditLink(t))}" aria-label="Link de edição"><button type="button" class="fd-btn fd-btn-sec" id="fd-copiar-link">Copiar link</button></div>
+    </div>`;
   const desenhar = (topo)=>{
-    page.innerHTML = `<div class="fd-wrap">
-      <div class="fd-top"><img src="email-logo-metodo.png" alt="Método Essência"></div>
-      ${st.fim ? `<div class="fd-card fd-fim">
-          <h2>Respostas enviadas!</h2>
+    let corpo;
+    if(st.carregando) corpo = `<div class="fd-card fd-fim"><p>Carregando as suas respostas…</p></div>`;
+    else if(st.fim) corpo = `<div class="fd-card fd-fim">
+          <h2>${st.editada ? 'Respostas atualizadas!' : 'Respostas enviadas!'}</h2>
           <p>Obrigado, ${escapeHtml(st.nome.trim().split(/\s+/)[0]||'')}. A equipe já recebeu as suas respostas e vai usar essas informações para preparar os documentos do seu serviço.</p>
-        </div>` : `
-      <div class="fd-hero">
+          <div class="fd-acoes" style="justify-content:center;margin-top:16px"><button type="button" class="fd-btn" id="fd-editar">Ver e editar minhas respostas</button></div>
+          ${linkBox(st.token)}
+        </div>`;
+    else corpo = `
+      ${st.token ? '' : `<div class="fd-hero">
         <div class="fd-k">Documentos do seu serviço</div>
         <h1>Quais documentos o seu serviço de enfermagem precisa?</h1>
         <p>Queremos entender quais protocolos, POPs e políticas internas você precisa para organizar o seu serviço. Leia a explicação e os exemplos de cada item e escreva com as suas palavras. Pode listar quantos quiser.</p>
-      </div>
+      </div>`}
+      ${st.linkErro ? `<div class="fd-aviso">${escapeHtml(st.linkErro)}</div>` : ''}
+      ${st.token ? `<div class="fd-aviso fd-aviso-edit"><b>Você está editando as respostas que já enviou.</b> Altere o que quiser e toque em "Salvar alterações" no final.</div>`
+        : (st.salvo ? `<div class="fd-card fd-ja"><div><b>Você já respondeu este formulário?</b><br><span>Veja e edite as respostas que você enviou deste aparelho.</span></div><button type="button" class="fd-btn" id="fd-ver-salvo">Ver e editar minhas respostas</button></div>` : '')}
       <div class="fd-card">
         <label class="fd-label" for="fd-nome">Qual é o seu nome completo?</label>
         <input class="fd-in ${st.campoErro==='fd-nome'?'erro':''}" id="fd-nome" type="text" maxlength="150" autocomplete="name" value="${escapeHtml(st.nome)}" placeholder="Seu nome completo">
@@ -22679,12 +22713,19 @@ function fdAbrir(){
         </div>
       </div>`).join('')}
       <p class="fd-erro" role="alert">${escapeHtml(st.erro)}</p>
-      <div class="fd-acoes"><button type="button" class="fd-btn" id="fd-enviar" ${st.enviando?'disabled':''}>${st.enviando?'Enviando...':'Enviar respostas'}</button></div>`}
-    </div>`;
+      <div class="fd-acoes"><button type="button" class="fd-btn" id="fd-enviar" ${st.enviando?'disabled':''}>${st.enviando?(st.token?'Salvando...':'Enviando...'):(st.token?'Salvar alterações':'Enviar respostas')}</button></div>`;
+    page.innerHTML = `<div class="fd-wrap"><div class="fd-top"><img src="email-logo-metodo.png" alt="Método Essência"></div>${corpo}</div>`;
     if(topo) page.scrollTop = 0;
-    ['nome','servico','protocolos','pops','politicas'].forEach(k=>{ const e = page.querySelector('#fd-'+k); if(e) e.addEventListener('input', ()=>{ st[k] = e.value; e.classList.remove('erro'); }); });
+    ['nome','protocolos','pops','politicas'].forEach(k=>{ const e = page.querySelector('#fd-'+k); if(e) e.addEventListener('input', ()=>{ st[k] = e.value; e.classList.remove('erro'); }); });
     page.querySelectorAll('[data-fd-mic]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.dataset.fdMic; const c = page.querySelector('#fd-'+k); premioDitar(b, c, t=>{ st[k] = t; }); }));
     const env = page.querySelector('#fd-enviar'); if(env) env.addEventListener('click', enviar);
+    const ver = page.querySelector('#fd-ver-salvo'); if(ver) ver.addEventListener('click', ()=>carregar(st.salvo));
+    const ed = page.querySelector('#fd-editar'); if(ed) ed.addEventListener('click', ()=>carregar(st.token));
+    const cp = page.querySelector('#fd-copiar-link'); if(cp) cp.addEventListener('click', async ()=>{
+      const url = fdEditLink(st.token);
+      try{ await navigator.clipboard.writeText(url); cp.textContent = 'Link copiado!'; setTimeout(()=>{ cp.textContent = 'Copiar link'; }, 2000); }
+      catch(e){ const i = page.querySelector('.fd-link input'); if(i){ i.focus(); i.select(); } }
+    });
   };
   const enviar = async ()=>{
     premioDitarParar();
@@ -22692,13 +22733,15 @@ function fdAbrir(){
     if(st.nome.trim().length < 2){ st.erro = 'Escreva o seu nome.'; st.campoErro = 'fd-nome'; desenhar(); const e = page.querySelector('#fd-nome'); if(e){ e.focus(); e.scrollIntoView({block:'center'}); } return; }
     if(!st.protocolos.trim() && !st.pops.trim() && !st.politicas.trim()){ st.erro = 'Responda pelo menos uma das três perguntas.'; st.campoErro = 'fd-protocolos'; desenhar(); const e = page.querySelector('#fd-protocolos'); if(e){ e.focus(); e.scrollIntoView({block:'center'}); } return; }
     st.enviando = true; st.erro = ''; desenhar();
-    const linha = { nome: st.nome.trim().slice(0,150), protocolos: st.protocolos.trim().slice(0,5000) || null, pops: st.pops.trim().slice(0,5000) || null, politicas: st.politicas.trim().slice(0,5000) || null };
-    const { error } = await sb.from('form_documentos').insert(linha);
+    const args = { p_nome: st.nome.trim().slice(0,150), p_protocolos: st.protocolos.trim().slice(0,5000), p_pops: st.pops.trim().slice(0,5000), p_politicas: st.politicas.trim().slice(0,5000) };
+    let error, data;
+    if(st.token){ ({ data, error } = await sb.rpc('fd_atualizar', Object.assign({ p_token:st.token }, args))); if(!error && data===false) error = { message:'não encontrado' }; st.editada = true; }
+    else { ({ data, error } = await sb.rpc('fd_enviar', args)); if(!error && data){ st.token = data; fdTokenSalvar(data); st.salvo = data; } st.editada = false; }
     st.enviando = false;
     if(error){ console.error('form_documentos', error); st.erro = 'Não foi possível enviar agora. Confira a internet e tente de novo.'; desenhar(); return; }
     st.fim = true; desenhar(true);
   };
-  desenhar(true);
+  if(/^[0-9a-f-]{36}$/i.test(tokUrl)) carregar(tokUrl); else desenhar(true);
 }
 /* ---- Visão da equipe ---- */
 const FD_UI = { rows:null, carregando:false, erro:false, busca:'', filtro:'todas' };
@@ -22741,7 +22784,7 @@ function renderFormDocs(){
         <button type="button" class="btn-accent" id="fd-copiar">${icon('copy','tiny')} <span>Copiar link</span></button>
       </div>
     </div>
-    <p class="section-sub" style="margin-top:0">Respostas dos alunos sobre os protocolos assistenciais de enfermagem, os POPs e as políticas internas que cada um precisa para o próprio serviço. Só a equipe interna vê esta área.</p>
+    <p class="section-sub" style="margin-top:0">Respostas dos alunos sobre os protocolos assistenciais de enfermagem, os POPs e as políticas internas que cada um precisa para o próprio serviço. O aluno pode editar a resposta pelo mesmo aparelho em que respondeu ou pelo link de edição (botão em cada resposta). Quando ele edita, a resposta volta para Não lidas. Só a equipe interna vê esta área.</p>
     <div class="pe-tiles">${tile('todas','Respostas', todas.length)}${tile('novas','Não lidas', nNovas)}${tile('lidas','Lidas', todas.length-nNovas)}</div>
     <div class="fdq-filtros">
       <input type="search" class="reu-busca" id="fd-busca" placeholder="Buscar por nome ou palavra (ex.: curativo)" value="${escapeHtml(FD_UI.busca)}">
@@ -22753,8 +22796,9 @@ function renderFormDocs(){
         <div class="fdq-item ${r.lida?'':'nova'}">
           <div class="fdq-hd">
             <strong>${escapeHtml(r.nome)}</strong>${s ? msgProdutoPill(s) : ''}
-            <small>${tzDataHora(r.created_at,true)}</small>
+            <small>${tzDataHora(r.created_at,true)}${r.updated_at ? ' · editada em '+tzDataHora(r.updated_at,true) : ''}</small>
             <span class="fdq-acoes">
+              ${r.edit_token ? `<button type="button" class="btn-mini" data-fd-link="${r.id}" title="Copia o link para o aluno editar esta resposta">${icon('copy','tiny')} <span>Copiar link de edição</span></button>` : ''}
               <button type="button" class="btn-mini" data-fd-lida="${r.id}">${icon(r.lida?'x':'check','tiny')} ${r.lida?'Marcar como não lida':'Marcar como lida'}</button>
               <button type="button" class="btn-mini" data-fd-del="${r.id}" title="Apagar resposta" aria-label="Apagar resposta">${icon('trash','tiny')}</button>
             </span>
@@ -22770,6 +22814,12 @@ function renderFormDocs(){
   const busca = el.querySelector('#fd-busca');
   if(busca) busca.addEventListener('input', ()=>{ FD_UI.busca = busca.value; const pos = busca.selectionStart; renderFormDocs(); const b2 = document.getElementById('fd-busca'); if(b2){ b2.focus(); try{ b2.setSelectionRange(pos,pos); }catch(e){} } });
   const csv = el.querySelector('#fd-csv'); if(csv) csv.addEventListener('click', ()=>fdCsv(vis));
+  el.querySelectorAll('[data-fd-link]').forEach(b=>b.addEventListener('click', async ()=>{
+    const r = FD_UI.rows.find(x=>String(x.id)===b.dataset.fdLink); if(!r) return;
+    const url = fdEditLink(r.edit_token);
+    try{ await navigator.clipboard.writeText(url); }catch(e){ showAppAlert(url, {title:'Copie o link de edição'}); return; }
+    const sp = b.querySelector('span'); if(sp){ sp.textContent = 'Link copiado!'; setTimeout(()=>{ sp.textContent = 'Copiar link de edição'; }, 2000); }
+  }));
   el.querySelectorAll('[data-fd-lida]').forEach(b=>b.addEventListener('click', async ()=>{
     const r = FD_UI.rows.find(x=>String(x.id)===b.dataset.fdLida); if(!r) return;
     const nova = !r.lida; r.lida = nova; renderFormDocs();
