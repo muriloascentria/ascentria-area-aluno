@@ -15673,7 +15673,7 @@ function msgSouMentorado(){ return currentUserRole==='aluno' && !!currentUserPro
    por aqui (o histórico continua guardado). Para voltar como antes, troque para false. */
 const MSG_SO_METODO = true;
 /* Mentorados da Mentoria com o Mensagens liberado como exceção (pedido do Murilo em 18/11/2026). */
-const MSG_MENTORIA_LIBERADOS = ['f37ee6b8-ae14-4bad-9f55-96e9d6dae2fb']; // Leticia Mota Luz de Souza de Sá
+const MSG_MENTORIA_LIBERADOS = []; // ex.: ['<id do perfil>']. Leticia Mota teve acesso de 18/11 a 18/11/2026.
 function msgAlunoTemMensagens(id){ if(!MSG_SO_METODO || MSG_MENTORIA_LIBERADOS.includes(id)) return true; const a = getStudent(id); return !!a && a.tier==='curso'; }
 function msgAlunoMetodo(id){ return MSG_MENTORIA_LIBERADOS.includes(id) || (()=>{ const a = msgAlunoAcomp(id); return !!a && a.tier==='curso'; })(); }
 function msgAcompBloqueado(chave){ return MSG_SO_METODO && msgEhAcomp(chave) && !msgAlunoMetodo(msgAcompDaChave(chave)); }
