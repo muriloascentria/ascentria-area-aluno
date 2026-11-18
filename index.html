@@ -787,6 +787,7 @@
   .acesso-canc-tag{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:2px 8px;border-radius:20px;background:rgba(220,80,80,.14);color:var(--danger);font-size:11px;font-weight:700;}
   .acesso-btn-perigo{background:var(--danger)!important;border-color:var(--danger)!important;color:#fff!important;}
   tr.vg-cancelado td{opacity:.55;}
+  .vg-ver-canc{display:inline-block;margin:8px 0 4px;font-size:12.5px;}
   tr.vg-cancelado td:has(.acesso-canc-tag), tr.vg-cancelado td:last-child{opacity:1;}
   .me-meta-quem{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:11.5px;color:var(--success);font-weight:600;}
   .me-conv-faixa{display:flex;align-items:center;justify-content:center;gap:6px;margin:-4px auto 14px;padding:7px 14px;max-width:560px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:12.5px;font-weight:600;text-align:center;}
@@ -4963,6 +4964,8 @@ let analiseBusca = '';
 let analiseNovoId = null; // lead recém-adicionado à mão: aparece mesmo antes de ter análise
 let aulasBusca = '';                       // busca na aba Aulas (título da aula ou nome de material anexado)
 let vgBusca = { mentorados:'', curso:'', pos:'' }; // busca por nome nas listas da Visão Geral
+/* 18/11/2026: alunos com acesso cancelado saem da Visão Geral; o botão no fim de cada lista mostra de novo. */
+let vgVerCancelados = false;
 let vgAberto = { mentorados:true, curso:true, pos:true, codigos:true, backup:true }; // listas da Visão Geral recolhidas/expandidas
 let CLIENTES_REGISTRO = []; // Registro de Clientes (cadastro público) — só carregado/visível pra equipe interna, ver bootstrapData
 let ACCESS_CODES = []; // Códigos de acesso (Criar conta) — só carregado/visível pra equipe interna, ver bootstrapData
@@ -24302,7 +24305,9 @@ function renderVisaoGeral(){
   const cursoTodos = STUDENTS.filter(s=>s.tier==='curso' && !s.pos);
   const posTodos = STUDENTS.filter(s=>s.tier==='curso' && s.pos);
   const porNome = (lista, q)=>{ const n = normTxt(q).trim(); return n? lista.filter(s=>normTxt(s.name).includes(n) || normTxt((s.cadastro||{}).nomeCompleto).includes(n)) : lista; };
-  const canceladosNoFim = l=>l.slice().sort((a,b)=>(acessoCancelado(a.id)?1:0)-(acessoCancelado(b.id)?1:0));
+  const canceladosNoFim = l=>l.slice().filter(x=>vgVerCancelados || !acessoCancelado(x.id)).sort((a,b)=>(acessoCancelado(a.id)?1:0)-(acessoCancelado(b.id)?1:0));
+  const nCanc = l=>l.filter(x=>acessoCancelado(x.id)).length;
+  const btnCanc = l=>{ const n = nCanc(l); return n ? `<button type="button" class="link-btn vg-ver-canc" data-vg-canc>${vgVerCancelados ? 'Esconder' : 'Mostrar'} ${n===1?'o aluno':'os '+n+' alunos'} com acesso cancelado</button>` : ''; };
   const mentorados = canceladosNoFim(porNome(mentoradosTodos, vgBusca.mentorados));
   const cursoAlunos = canceladosNoFim(porNome(cursoTodos, vgBusca.curso));
   const posAlunos = canceladosNoFim(porNome(posTodos, vgBusca.pos));
@@ -24313,7 +24318,7 @@ function renderVisaoGeral(){
       <button type="button" class="vg-sec-toggle ${vgAberto[chave]?'':'fechado'}" title="${vgAberto[chave]?'Recolher':'Expandir'}">${icon('down')} ${vgAberto[chave]?'Recolher':'Expandir'}</button>
     </div>`;
   const cursoSec = (chave, ic, titulo, todos, lista, placeholder, sub, vazio)=> `
-    ${secHead(chave, ic, titulo, todos.length, lista.length)}
+    ${secHead(chave, ic, titulo, todos.length - (vgVerCancelados?0:nCanc(todos)), lista.length)}
     <div id="vg-sec-${chave}" style="${vgAberto[chave]?'':'display:none'}">
     <p class="section-sub" style="margin-top:4px">${sub}</p>
     <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-${chave}" value="${escapeAttr(vgBusca[chave])}" placeholder="${placeholder}">${vgBusca[chave].trim()? `<button type="button" class="btn-outline" data-vg-limpar="${chave}">${icon('x','tiny')} Limpar</button>` : ''}</div>
@@ -24344,11 +24349,12 @@ function renderVisaoGeral(){
         </tbody>
       </table>
     </div>
+    ${btnCanc(todos)}
     </div>
   `;
   const totalMentorados = mentoradosTodos.filter(s=>!acessoCancelado(s.id)).length;
-  const avgProgress = totalMentorados ? Math.round(mentoradosTodos.reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
-  const atrasadasTotal = mentoradosTodos.reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
+  const avgProgress = totalMentorados ? Math.round(mentoradosTodos.filter(s=>!acessoCancelado(s.id)).reduce((a,s)=>a+overallProgress(s),0)/totalMentorados) : 0;
+  const atrasadasTotal = mentoradosTodos.filter(s=>!acessoCancelado(s.id)).reduce((a,s)=>a+s.checklist.filter(t=>t.status==='Atrasada').length,0);
   // Mesma fonte do sininho (comunidade_pendencias no banco): a comunidade não é mais carregada
   // inteira no navegador, então contar varrendo COMMUNITY_POSTS daria um número menor que o real.
   const duvidas = PENDENCIAS.filter(x=>x.motivo==='duvida').length;
@@ -24364,7 +24370,7 @@ function renderVisaoGeral(){
       <div class="kpi-tile"><div class="label">Dúvidas pendentes na comunidade</div><div class="value">${duvidas}</div></div>
     </div>
 
-    ${secHead('mentorados','users','Mentorados', mentoradosTodos.length, mentorados.length)}
+    ${secHead('mentorados','users','Mentorados', mentoradosTodos.length - (vgVerCancelados?0:nCanc(mentoradosTodos)), mentorados.length)}
     <div id="vg-sec-mentorados" style="${vgAberto.mentorados?'':'display:none'}">
     <p class="section-sub" style="margin-top:4px">Clique no nome para ver a plataforma como esse mentorado vê, e em "Abrir acompanhamento" para ver e registrar a evolução dele no Método. O campo "Acesso" muda o aluno para o Curso Gravado (sem mentoria individual, só Aulas e uma comunidade própria).</p>
     <div class="busca-bar larga"><input class="ps-input" type="text" id="vg-busca-mentorados" value="${escapeAttr(vgBusca.mentorados)}" placeholder="Buscar mentorado pelo nome…">${vgBusca.mentorados.trim()? `<button type="button" class="btn-outline" data-vg-limpar="mentorados">${icon('x','tiny')} Limpar</button>` : ''}</div>
@@ -24400,6 +24406,7 @@ function renderVisaoGeral(){
         </tbody>
       </table>
     </div>
+    ${btnCanc(mentoradosTodos)}
     </div>
 
     ${cursoSec('curso','film','Alunos do Curso Gravado', cursoTodos, cursoAlunos, 'Buscar aluno do Método pelo nome…', 'Sem mentoria individual: Aulas, Dashboard e Painel do Método (aulas liberadas de 3 em 3, como para todos os alunos) e uma comunidade própria, separada da dos mentorados.', 'Nenhum aluno do curso ainda.')}
@@ -24492,6 +24499,7 @@ function renderVisaoGeral(){
   bindBuscaInput('vg-busca-mentorados', v=>{ vgBusca.mentorados = v; }, renderVisaoGeral);
   bindBuscaInput('vg-busca-curso', v=>{ vgBusca.curso = v; }, renderVisaoGeral);
   bindBuscaInput('vg-busca-pos', v=>{ vgBusca.pos = v; }, renderVisaoGeral);
+  document.querySelectorAll('[data-vg-canc]').forEach(b=>b.addEventListener('click', ()=>{ vgVerCancelados = !vgVerCancelados; renderVisaoGeral(); }));
   document.querySelectorAll('[data-vg-limpar]').forEach(b=>b.addEventListener('click', ()=>{ vgBusca[b.dataset.vgLimpar] = ''; renderVisaoGeral(); }));
   document.querySelectorAll('[data-vg-toggle]').forEach(h=>h.addEventListener('click', ()=>{ const k = h.dataset.vgToggle; vgAberto[k] = !vgAberto[k]; renderVisaoGeral(); }));
   document.querySelectorAll('[data-open-staff]').forEach(btn=>{
