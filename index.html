@@ -15105,7 +15105,7 @@ function tarefaEhRotina(t){
    com os itens não marcados e salva o que a pessoa escrever. */
 function rotinaGarantirJustificativas(t){
   if(!tarefaEhRotina(t)) return Promise.resolve(true);
-  const pend = (TAREFAS_SUB[t.id]||[]).filter(s=>!s.concluida);
+  const pend = (TAREFAS_SUB[t.id]||[]).filter(s=>!s.concluida && !s.adiadaTarefaId);
   const faltam = pend.filter(s=>(s.justificativa||'').trim().length < ROTINA_JUST_MIN);
   if(!faltam.length) return Promise.resolve(true);
   return new Promise(resolve=>{
