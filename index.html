@@ -7694,7 +7694,7 @@ function setRole(role){
   /* Dashboard (progresso no Método, item a item) e Acompanhamento (mensagens com a equipe) são liberados também pro aluno do Curso Gravado. */
   ['inicio','aulas','comunidade','dashboard','acompanhamento'].forEach(v=>{
     const el = document.querySelector(`.nav-item[data-view="${v}"]`);
-    if(el) el.style.display = (role==='aluno' && !(v==='acompanhamento' && MSG_SO_METODO && !isCursoView)) ? 'flex' : 'none';
+    if(el) el.style.display = (role==='aluno' && !(v==='acompanhamento' && !isCursoView && !msgAlunoTemMensagens(currentStudentId))) ? 'flex' : 'none';
   });
   /* Prontuários eSIS: mentorado abre o site; aluno do Curso vê o item com cadeado e, ao clicar, o aviso. */
   const prontEl = document.getElementById('nav-prontuarios');
@@ -7772,7 +7772,7 @@ function goTo(view){
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
   { const permitidas = viewsDoPapel(); if(permitidas && !permitidas.includes(view)) view = currentUserRole==='me_convidado' ? 'me_aulas' : 'equipe'; }
   if(!areaAtiva(view)) view = 'equipe';
-  if(view==='acompanhamento' && MSG_SO_METODO && currentRole==='aluno' && getViewingTier()!=='curso') view = 'inicio';
+  if(view==='acompanhamento' && MSG_SO_METODO && currentRole==='aluno' && getViewingTier()!=='curso' && !msgAlunoTemMensagens(currentStudentId)) view = 'inicio';
   if(view==='tarefas' && !tarefasSouMembro()) view = 'equipe';
   if(staffBloqueios().has(view)) view = 'equipe';
   if(view==='gestaotime' && !souMurilo() && !fsSouLider()) view = 'equipe';
@@ -15659,9 +15659,12 @@ function msgSouMentorado(){ return currentUserRole==='aluno' && !!currentUserPro
    Mentorados da Mentoria não veem mais o Acompanhamento, e a equipe não consegue mais escrever para eles
    por aqui (o histórico continua guardado). Para voltar como antes, troque para false. */
 const MSG_SO_METODO = true;
-function msgAlunoMetodo(id){ const a = msgAlunoAcomp(id); return !!a && a.tier==='curso'; }
+/* Mentorados da Mentoria com o Mensagens liberado como exceção (pedido do Murilo em 18/11/2026). */
+const MSG_MENTORIA_LIBERADOS = ['f37ee6b8-ae14-4bad-9f55-96e9d6dae2fb']; // Leticia Mota Luz de Souza de Sá
+function msgAlunoTemMensagens(id){ if(!MSG_SO_METODO || MSG_MENTORIA_LIBERADOS.includes(id)) return true; const a = getStudent(id); return !!a && a.tier==='curso'; }
+function msgAlunoMetodo(id){ return MSG_MENTORIA_LIBERADOS.includes(id) || (()=>{ const a = msgAlunoAcomp(id); return !!a && a.tier==='curso'; })(); }
 function msgAcompBloqueado(chave){ return MSG_SO_METODO && msgEhAcomp(chave) && !msgAlunoMetodo(msgAcompDaChave(chave)); }
-function msgMentoriaSemMensagens(){ return MSG_SO_METODO && msgSouMentoradoPleno(); }
+function msgMentoriaSemMensagens(){ return MSG_SO_METODO && msgSouMentoradoPleno() && !MSG_MENTORIA_LIBERADOS.includes(currentUser && currentUser.id); }
 function msgSouMentoradoPleno(){ return msgSouMentorado() && (currentUserProfile.tier||'mentorado')!=='curso'; }
 function msgNaTela(){ return currentView==='mensagens' || currentView==='acompanhamento'; }
 function msgChaveAcomp(id){ return 'a:'+id; }
@@ -17393,7 +17396,7 @@ function renderMensagens(){
   const pessoas = MSG_SO_ALUNOS ? [] : MSG_EQUIPE.filter(p=>!q || normTxt(p.name).includes(q));
   if(MSG_SO_ALUNOS && !solo && msgUI.aberto && !msgAcompDaChave(msgUI.aberto)) msgUI.aberto = null;
   const grupos = msgGruposVisiveis().filter(g=>!q || normTxt(g.nome).includes(q));
-  const mentorados = (!solo && msgPodeAcomp()) ? msgMentorados().filter(s=>(!MSG_SO_METODO || s.tier==='curso') && (!q || normTxt(s.name).includes(q))) : [];
+  const mentorados = (!solo && msgPodeAcomp()) ? msgMentorados().filter(s=>(!MSG_SO_METODO || s.tier==='curso' || MSG_MENTORIA_LIBERADOS.includes(s.id)) && (!q || normTxt(s.name).includes(q))) : [];
   const ultima = (chave)=>{ const l = MSG_CONVERSAS[chave]||[]; return l.length ? l[l.length-1] : null; };
   const previa = (u, grupo)=>{ if(!u) return ''; const quem = u.de===eu ? 'Você: ' : (grupo ? msgNomeDe(u.de)+': ' : ''); return escapeHtml(quem+u.texto).slice(0,60); };
   const quando = (u)=> u ? `<small class="msg-quando">${tzDataCurta(tzDataHora(u.createdAt).split('/').reverse().join('-'))}</small>` : '';
