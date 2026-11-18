@@ -2302,6 +2302,8 @@
   .tf-status.em_andamento{color:#2563eb;border-color:rgba(37,99,235,.35);}
   .tf-status.aguardando{color:#d97706;border-color:rgba(217,119,6,.35);}
   .tf-status.concluida{color:var(--success);border-color:rgba(34,197,94,.35);}
+  .tf-sub-adiar{margin-left:auto;white-space:nowrap;}
+  .tf-sub-adiada{display:block;color:var(--accent);font-size:11.5px;margin-top:2px;}
   .tf-status.cancelada{color:var(--text-mute);text-decoration:line-through;}
   .tf-status:disabled{cursor:default;opacity:.7;}
   .tf-card-sinais{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
@@ -14729,7 +14731,7 @@ async function carregarSubtarefasDe(ids){
   if(!ids.length) return;
   const { data } = await sb.from('tarefas_subtarefas').select('*').in('tarefa_id', ids).order('ordem').order('created_at');
   ids.forEach(id=>{ TAREFAS_SUB[id] = []; });
-  (data||[]).forEach(s=>{ (TAREFAS_SUB[s.tarefa_id] = TAREFAS_SUB[s.tarefa_id]||[]).push({id:s.id, tarefaId:s.tarefa_id, titulo:s.titulo, concluida:!!s.concluida, concluidaEm:s.concluida_em, concluidaPor:s.concluida_por, ordem:s.ordem, justificativa:s.justificativa||'', justificadaEm:s.justificada_em, prova:s.prova||[], provaAlunos:s.prova_alunos||[], provaMeta:s.prova_meta}); });
+  (data||[]).forEach(s=>{ (TAREFAS_SUB[s.tarefa_id] = TAREFAS_SUB[s.tarefa_id]||[]).push({id:s.id, tarefaId:s.tarefa_id, titulo:s.titulo, concluida:!!s.concluida, concluidaEm:s.concluida_em, concluidaPor:s.concluida_por, ordem:s.ordem, justificativa:s.justificativa||'', justificadaEm:s.justificada_em, prova:s.prova||[], provaAlunos:s.prova_alunos||[], provaMeta:s.prova_meta, adiadaTarefaId:s.adiada_tarefa_id||null}); });
 }
 /* Histórico de concluídas/canceladas: carregamento progressivo, 50 por vez. */
 async function carregarTarefasConcluidas(mais){
@@ -15330,12 +15332,13 @@ async function openTarefaModal(id, defaults){
       <textarea class="ps-input" id="tf-m-desc" rows="3" placeholder="Detalhes, contexto, links…" ${ro(dono)}>${escapeHtml(t.descricao)}</textarea>
 
       <h4 class="tf-h">${icon('check','tiny')} Subtarefas ${subs.length? `<span class="qtd">${subs.filter(s=>s.concluida).length}/${subs.length}</span>` : ''}</h4>
-      ${rotina && t.status!=='concluida' && t.status!=='cancelada' ? `<p class="tf-rot-aviso">Para concluir a rotina, marque o que foi feito. O que não foi feito pede uma justificativa curta na hora de concluir.</p>` : ''}
+      ${rotina && t.status!=='concluida' && t.status!=='cancelada' ? `<p class="tf-rot-aviso">Para concluir a rotina, marque o que foi feito. O que não deu para fazer hoje, use "Adiar": vira uma tarefa própria para o próximo dia útil. O que não foi feito nem adiado pede uma justificativa curta na hora de concluir.</p>` : ''}
       <div class="tf-subs" id="tf-subs">
         ${(nova ? draftNovoSubs.map((s,i)=>({id:'d'+i, titulo:s, concluida:false})) : subs).map(s=>`
           <div class="tf-sub-item ${s.concluida?'ok':''}">
             <input type="checkbox" data-tf-sub="${s.id}" ${s.concluida?'checked':''} ${ro(podeEditar)}>
-            <span>${escapeHtml(s.titulo)}${!s.concluida && s.justificativa ? `<small class="tf-sub-just">Não feito: ${escapeHtml(s.justificativa)}</small>` : ''}${s.concluida && (s.prova||[]).length ? `<small class="tf-sub-prova">Prova: ${s.prova.length} ${s.prova.length===1?'análise':'análises'}</small>` : ''}${s.concluida && (s.provaAlunos||[]).length ? `<small class="tf-sub-prova">Prova: ${s.provaAlunos.length} ${s.provaAlunos.length===1?'mentorado resolvido':'mentorados resolvidos'}${s.provaMeta?` (meta ${s.provaMeta})`:''}: ${escapeHtml(s.provaAlunos.map(id=>((getStudent(id)||{}).name||'').split(' ')[0]).filter(Boolean).join(', '))}</small>` : ''}</span>
+            <span>${escapeHtml(s.titulo)}${!s.concluida && s.adiadaTarefaId ? `<small class="tf-sub-adiada">${escapeHtml(s.justificativa||'Adiado (virou uma tarefa própria).')}</small>` : (!s.concluida && s.justificativa ? `<small class="tf-sub-just">Não feito: ${escapeHtml(s.justificativa)}</small>` : '')}${s.concluida && (s.prova||[]).length ? `<small class="tf-sub-prova">Prova: ${s.prova.length} ${s.prova.length===1?'análise':'análises'}</small>` : ''}${s.concluida && (s.provaAlunos||[]).length ? `<small class="tf-sub-prova">Prova: ${s.provaAlunos.length} ${s.provaAlunos.length===1?'mentorado resolvido':'mentorados resolvidos'}${s.provaMeta?` (meta ${s.provaMeta})`:''}: ${escapeHtml(s.provaAlunos.map(id=>((getStudent(id)||{}).name||'').split(' ')[0]).filter(Boolean).join(', '))}</small>` : ''}</span>
+            ${rotina && !s.concluida && !s.adiadaTarefaId && t.status!=='concluida' && t.status!=='cancelada' && podeEditar ? `<button type="button" class="btn-mini tf-sub-adiar" data-tf-sub-adiar="${s.id}" title="Não deu para fazer hoje: vira uma tarefa própria para o próximo dia útil">${icon('calendar','tiny')} Adiar</button>` : ''}
             ${podeEditar && !(rotina && !tarefasSouAdmin()) ? `<button type="button" class="btn-mini icon-only danger" data-tf-sub-del="${s.id}" title="Remover">${icon('x','tiny')}</button>` : ''}
           </div>`).join('') || '<div class="tf-vazio">Nenhuma subtarefa.</div>'}
       </div>
@@ -15450,6 +15453,16 @@ async function openTarefaModal(id, defaults){
     const { error } = await sb.from('tarefas_subtarefas').update({concluida: cb.checked}).eq('id', cb.dataset.tfSub);
     if(error){ alert('Não foi possível atualizar: '+error.message); cb.checked = !cb.checked; return; }
     await recarregarTarefa(t.id); openTarefaModal(t.id);
+  }));
+  modal.querySelectorAll('[data-tf-sub-adiar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const sub = subs.find(x=>x.id===b.dataset.tfSubAdiar); if(!sub) return;
+    if(!(await showAppConfirm(`Adiar "${sub.titulo}"? Ele sai desta rotina e vira uma tarefa própria para o próximo dia útil.`, {title:'Adiar item', confirmLabel:'Adiar'}))) return;
+    b.disabled = true;
+    const { data, error } = await sb.rpc('rotina_adiar_item', { p_sub: sub.id });
+    if(error){ b.disabled = false; alert('Não foi possível adiar: '+error.message); return; }
+    if(data && data.tarefa_id) await recarregarTarefa(data.tarefa_id);
+    await recarregarTarefa(t.id); openTarefaModal(t.id);
+    try{ renderTarefas(); }catch(e){}
   }));
   modal.querySelectorAll('[data-tf-sub-del]').forEach(b=>b.addEventListener('click', async ()=>{
     const { error } = await sb.from('tarefas_subtarefas').delete().eq('id', b.dataset.tfSubDel);
