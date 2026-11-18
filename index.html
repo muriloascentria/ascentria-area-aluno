@@ -2009,6 +2009,17 @@
   .ae-comp li{border-top:1px solid var(--border);}
   .ae-comp label{display:flex;gap:10px;align-items:flex-start;padding:9px 0;cursor:pointer;}
   .ae-comp input{margin-top:3px;width:16px;height:16px;flex:0 0 auto;accent-color:var(--success);}
+  .ae-comp li.ae-equipe input{accent-color:var(--equipe,#8b7bd8);}
+  .ae-eq-tag{display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-style:normal;font-size:11px;font-weight:600;color:var(--equipe,#8b7bd8);}
+  .ae-eq-tag .icon{stroke:var(--equipe,#8b7bd8);}
+  .ae-comp small.ae-prog{color:var(--text-dim);}
+  .mod-check-item.equipe .box{background:var(--equipe,#8b7bd8);border-color:var(--equipe,#8b7bd8);}
+  .mod-check-item.equipe .eq-tag{display:block;margin-top:3px;font-size:11px;font-weight:600;color:var(--equipe,#8b7bd8);}
+  .module-bar{position:relative;}
+  .module-bar .fill-eq{position:absolute;top:0;bottom:0;background:var(--equipe,#8b7bd8);opacity:.75;border-radius:0 6px 6px 0;}
+  .frac-eq{color:var(--equipe,#8b7bd8);font-weight:600;font-size:12px;margin-left:6px;}
+  .dash-eq-legenda{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);margin:-2px 0 12px;}
+  .dash-eq-legenda i{width:12px;height:12px;border-radius:3px;background:var(--equipe,#8b7bd8);display:inline-block;}
   .ae-comp b{display:block;font-size:13px;font-weight:600;}
   .ae-comp small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px;}
   .ae-rodape{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid var(--border);}
@@ -9971,6 +9982,9 @@ function renderDashboard(){
   const painelBloqueado = false; // Painel do Método liberado também para o Método (curso gravado)
   const s = getStudent(currentStudentId);
   const overall = overallProgress(s);
+  equipeCompCarregar(s && s.id, ()=>{ if(currentView==='dashboard') renderDashboard(); });
+  const eqPorMod = {}; let eqTotal = 0;
+  MODULES.forEach(m=>{ const n = s ? dashItensEquipe(s.id, m.id).size : 0; eqPorMod[m.id] = n; eqTotal += n; });
   document.getElementById('view-dashboard').innerHTML = `
     <p class="section-sub">Visão geral do progresso no Método Essência — o mesmo painel que você e a equipe interna acompanham.</p>
     <div class="progress-hero">
@@ -9985,13 +9999,15 @@ function renderDashboard(){
 
     <h2 class="section-title">Progresso por módulo</h2>
     <p class="section-sub" style="margin-top:-6px;">Clique em um módulo para abrir o checklist item a item — igual à aba "Método Essência" do Dashboard.</p>
+    ${eqTotal ? `<div class="dash-eq-legenda"><i></i> Em roxo: itens avançados pela equipe no seu acompanhamento. Eles não contam como feitos por você; quando você fizer, marque normalmente.</div>` : ''}
     <div class="module-bars">
       ${MODULES.map(m=>{
         const done = s.moduleProgress[m.id];
         const pct = Math.round(done/m.total*100);
+        const eqN = eqPorMod[m.id]||0; const eqPct = Math.min(100-pct, Math.round(eqN/m.total*100));
         return `<div class="module-bar-row clickable" data-mod="${m.id}">
-          <div class="top"><span class="name">${m.name}</span><span class="frac">${done}/${m.total} itens</span><span class="pct">${pct}%</span></div>
-          <div class="module-bar"><div class="fill" style="width:${pct}%"></div></div>
+          <div class="top"><span class="name">${m.name}</span><span class="frac">${done}/${m.total} itens${eqN?`<span class="frac-eq">+${eqN} pela equipe</span>`:''}</span><span class="pct">${pct}%</span></div>
+          <div class="module-bar"><div class="fill" style="width:${pct}%"></div>${eqN?`<div class="fill-eq" style="left:${pct}%;width:${eqPct}%"></div>`:''}</div>
           <div class="module-bar-cta">${icon('tick','tiny')} Ver checklist do módulo</div>
         </div>`;
       }).join('')}
@@ -10173,19 +10189,21 @@ function openModuleChecklist(modId, hlIdx){
     const state = getModuleChecklistState(s.id, modId);
     const done = state.filter(Boolean).length;
     const pct = Math.round(done/items.length*100);
+    const eqSet = dashItensEquipe(s.id, modId);
     modalEl.innerHTML = `
       <div class="modal-body form-modal">
         <div class="cat">Dashboard · Progresso no Método Essência</div>
         <h3>Checklist — Módulo ${mod.name}</h3>
-        <p class="desc">${done}/${items.length} itens marcados (${pct}%). Clique em cada item para marcar aula assistida, resumo feito ou tarefa concluída.</p>
+        <p class="desc">${done}/${items.length} itens marcados (${pct}%)${eqSet.size ? ` · ${eqSet.size} avançado${eqSet.size>1?'s':''} pela equipe (em roxo)` : ''}. Clique em cada item para marcar aula assistida, resumo feito ou tarefa concluída.</p>
         <div class="mod-check-list">
           ${items.map((label,idx)=>{
             const linkedCourse = checklistLinkedCourse(label, mod.name);
             const trav = !state[idx] && isItemLocked(modId, idx, s);
+            const eqIt = !state[idx] && eqSet.has(idx);
             return `
-            <div class="mod-check-item ${state[idx]?'done':''} ${trav?'travado':''}" data-idx="${idx}" ${trav?'data-travado="1"':''}>
-              <span class="box">${state[idx]? icon('tick') : trav ? icon('lock','tiny') : ''}</span>
-              <span class="txt">${label}${trav ? '' : dashTarefaPainelHtml(modId, idx, label)}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx] || trav) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
+            <div class="mod-check-item ${state[idx]?'done':''} ${trav?'travado':''} ${eqIt?'equipe':''}" data-idx="${idx}" ${trav?'data-travado="1"':''}>
+              <span class="box">${state[idx] || eqIt ? icon('tick') : trav ? icon('lock','tiny') : ''}</span>
+              <span class="txt">${label}${eqIt ? '<small class="eq-tag">Avançado pela equipe</small>' : ''}${trav ? '' : dashTarefaPainelHtml(modId, idx, label)}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx] || trav) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
               ${linkedCourse && !trav ? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
             </div>`;
           }).join('')}
@@ -13013,7 +13031,7 @@ function exportAcompanhamentoPDF(s){
         const feitos = itens.filter(x=>x.dash||x.ok).length;
         return `<div class="comp-mod">
           <div class="comp-cab"><b>${escapeHtml(e.label)}</b> <span>${feitos}/${itens.length}${e.label===aeSit.atual ? ' · estágio atual' : ''}</span></div>
-          <ul class="comp">${itens.map(x=>`<li class="${x.dash||x.ok?'ok':''}">${x.dash||x.ok?'✓':'○'} ${escapeHtml(x.c)} <span class="enc-meta">· ${escapeHtml(x.ev)}${x.dash?' (concluída pelo aluno no Dashboard)':''}</span></li>`).join('')}</ul>
+          <ul class="comp">${itens.map(x=>`<li class="${x.dash||x.ok?'ok':''}">${x.dash||x.ok?'✓':'○'} ${escapeHtml(x.c)} <span class="enc-meta">· ${escapeHtml(x.ev)}${x.dash?' (pacote concluído pelo aluno no Dashboard)':(x.ok?' (marcada pela equipe)':'')}</span></li>`).join('')}</ul>
         </div>`; }).join('')}
 
       <h2>Progresso no Método</h2>
@@ -13492,7 +13510,7 @@ function intCompetenciasHtml(s){
           ${e.label===sit.atual ? '<span class="ae-mod-agora">estágio atual</span>' : ''}
           <span class="ae-mod-cont ${feitos===total?'ok':''}">${feitos}/${total}</span>${icon(aberto?'up':'down','tiny')}
         </button>
-        ${aberto ? `<ul class="ae-comp">${e.mod==='ABERTURA' ? obCompItensHtml(s) : ''}${m.itens.map(([c,ev],i)=>{ const dash = aeFeitoNoDashboard(s.id, e.mod, i); return `<li class="${dash?'ae-dash':''}"><label title="${dash?'Marcada automaticamente: o aluno concluiu a tarefa no Dashboard':''}"><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${dash?'data-ae-dash="1" checked onclick="return false" tabindex="-1"':(comp[e.mod+'-'+i]?'checked':'')}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small>${dash?`<em class="ae-dash-tag">${icon('tick','tiny')} Tarefa concluída pelo aluno no Dashboard</em>`:''}</span></label></li>`; }).join('')}</ul>` : ''}
+        ${aberto ? `<ul class="ae-comp">${e.mod==='ABERTURA' ? obCompItensHtml(s) : ''}${m.itens.map(([c,ev],i)=>{ const pac = aeCompPacote(s.id, e.mod, i); const dash = pac.completo; const eq = !dash && comp[e.mod+'-'+i]; const eqData = (typeof eq==='string') ? tzDataCurta(eq.slice(0,10)) : ''; const prog = pac.total ? `Aluno: ${pac.feitos} de ${pac.total}${pac.faltam.length ? ' · falta: '+pac.faltam.slice(0,3).join('; ')+(pac.faltam.length>3 ? ` e mais ${pac.faltam.length-3}` : '') : ''}` : ''; return `<li class="${dash?'ae-dash':''} ${eq?'ae-equipe':''}"><label title="${dash?'Marcada automaticamente: o aluno concluiu o pacote no Dashboard':''}"><input type="checkbox" data-ae-comp="${e.mod}-${i}" ${dash?'data-ae-dash="1" checked onclick="return false" tabindex="-1"':(eq?'checked':'')}><span><b>${escapeHtml(c)}</b><small>Evidência: ${escapeHtml(ev)}</small>${dash?`<em class="ae-dash-tag">${icon('tick','tiny')} Pacote concluído pelo aluno no Dashboard</em>`:''}${eq?`<em class="ae-eq-tag">${icon('tick','tiny')} Marcada pela equipe${eqData?' em '+escapeHtml(eqData):''}</em>`:''}${!dash && prog ? `<small class="ae-prog">${escapeHtml(prog)}</small>`:''}</span></label></li>`; }).join('')}</ul>` : ''}
       </div>`;
     }).join('')}
     </div>`;
@@ -13535,10 +13553,11 @@ function intAeBind(s){
   v.querySelectorAll('[data-ae-mod]').forEach(b=>b.addEventListener('click', ()=>{ AE_UI.abertos[b.dataset.aeMod] = !AE_UI.abertos[b.dataset.aeMod]; renderInterno(); }));
   v.querySelectorAll('[data-ae-comp]:not([data-ae-dash])').forEach(c=>c.addEventListener('change', async ()=>{
     const comp2 = Object.assign({}, (AE_UI.dados||{}).competencias || {});
-    if(c.checked) comp2[c.dataset.aeComp] = true; else delete comp2[c.dataset.aeComp];
+    if(c.checked) comp2[c.dataset.aeComp] = new Date().toISOString(); else delete comp2[c.dataset.aeComp];
     const { data, error } = await sb.from('acompanhamento_evolucao').upsert({ student_id:s.id, competencias:comp2 }, { onConflict:'student_id' }).select().single();
     if(error){ console.error(error); alert('Não foi possível salvar a competência: '+(error.message||'')); c.checked = !c.checked; return; }
     AE_UI.dados = Object.assign({}, AE_UI.dados||{}, { competencias: (data && data.competencias) || comp2 });
+    EQUIPE_COMP[s.id] = AE_UI.dados.competencias;
     renderInterno();
   }));
   v.querySelectorAll('[data-ob]').forEach(inp=>inp.addEventListener('change', async ()=>{ if(await obSalvar(inp.dataset.ob, inp.value)) renderInterno(); }));
@@ -23078,14 +23097,26 @@ function rdDiasTxt(d){ return d===0 ? 'hoje' : d===1 ? 'ontem' : `há ${d} dias`
 function rdDashboardCompleto(s){
   return MODULES.every(m=>{ let feitos = 0; try{ feitos = (getModuleChecklistState(s.id, m.id)||[]).slice(0, m.total).filter(Boolean).length; }catch(e){} return feitos >= m.total; });
 }
+/* Estágio real: o módulo conta como vencido quando o aluno marcou 80% do checklist dele no Dashboard, ou
+   quando TODAS as competências do módulo estão completas (pacote feito pelo aluno ou marcada pela equipe).
+   A régua da equipe é mais exigente de propósito, para uma marcação da equipe não adiantar o módulo cedo demais. */
+function rdModuloCompetenciasOk(s, modId){
+  const mod = AE_MOD_DO_DASH[modId]; const m = AE_COMPETENCIAS[mod];
+  if(!m || !m.itens.length) return false;
+  return m.itens.every((_,i)=>aeCompCompleta(s.id, mod, i));
+}
 function rdEstagioReal(s){
+  let viaEquipe = false;
   for(let i=0;i<MODULES.length;i++){
     const m = MODULES[i];
     let feitos = 0;
     try{ feitos = (getModuleChecklistState(s.id, m.id)||[]).slice(0, m.total).filter(Boolean).length; }catch(e){}
-    if(feitos < m.total*0.8) return { idx:i, pct:Math.round(feitos/m.total*100) };
+    if(feitos < m.total*0.8){
+      if(rdModuloCompetenciasOk(s, m.id)){ viaEquipe = true; continue; }
+      return { idx:i, pct:Math.round(feitos/m.total*100), viaEquipe };
+    }
   }
-  return { idx:5, pct:100 };
+  return { idx:5, pct:100, viaEquipe };
 }
 function rdDiasDeMatricula(s){
   const c = s.cadastro||{};
@@ -23117,7 +23148,14 @@ function rdAvaliar(s, r){
   const dAvanco = rdDiasDesde(r.ultimo_avanco || RADAR_INICIO_MEDICAO+'T00:00:00-03:00');
   const txtAv = r.ultimo_avanco ? `${dAvanco} dias sem avançar no dashboard` : `Sem avançar no dashboard desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`;
   /* Quem já concluiu todas as tarefas do dashboard não tem mais o que marcar: não entra como parado. */
-  if(!rdDashboardCompleto(s)){ if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv); }
+  /* Marcação recente da equipe no Acompanhamento Interno conta como avanço, mas o alerta não some:
+     fica amarelo e diz que o avanço foi da equipe, para não esconder o aluno que não está executando. */
+  const ultEq = aeEquipeUltimaMarcacao(s.id);
+  const dEquipe = ultEq ? rdDiasDesde(ultEq) : null;
+  if(!rdDashboardCompleto(s)){
+    if(dAvanco>=14 && dEquipe!==null && dEquipe<14) add(1, `Avanço registrado pela equipe ${dEquipe===0?'hoje':'há '+dEquipe+' dia'+(dEquipe>1?'s':'')}; aluno sem avançar no Dashboard ${r.ultimo_avanco ? 'há '+dAvanco+' dias' : 'desde '+tzDataCurta(RADAR_INICIO_MEDICAO)}`);
+    else if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv);
+  }
   // 3. Mensagem do aluno esperando a equipe
   const semMsg = msgAcompBloqueado(msgChaveAcomp(s.id));
   const hEspera = semMsg ? null : rdHorasDesde(r.aguardando_desde);
@@ -23140,7 +23178,7 @@ function rdAvaliar(s, r){
   const esp = rdEstagioEsperado(s), real = rdEstagioReal(s);
   if(esp && diasRestantes(s)>=0){
     const atraso = esp.idx - real.idx;
-    const txt = `Atrasado no método: deveria estar em ${RADAR_ESTAGIOS[esp.idx]}, está em ${RADAR_ESTAGIOS[real.idx]}`;
+    const txt = `Atrasado no método: deveria estar em ${RADAR_ESTAGIOS[esp.idx]}, está em ${RADAR_ESTAGIOS[real.idx]}${real.viaEquipe?' (contando módulo concluído pela equipe)':''}`;
     if(atraso>=2) add(2, txt); else if(atraso===1) add(1, txt);
   }
   // 8. NPS: nota de 0 a 6 na última pesquisa respondida
@@ -23333,6 +23371,8 @@ async function radarCarregar(){
     const { data, error } = await sb.rpc('radar_mentorados');
     if(error) throw error;
     RADAR_UI.rows = data || []; RADAR_UI.carregadoEm = Date.now();
+    const ce = await sb.from('acompanhamento_evolucao').select('student_id,competencias');
+    ((ce && ce.data) || []).forEach(x=>{ EQUIPE_COMP[x.student_id] = x.competencias || {}; });
     const rr = await sb.from('radar_momentos_resolvidos').select('student_id,chave,resolvido_por,resolvido_em');
     RADAR_UI.resolvidos = {};
     ((rr && rr.data) || []).forEach(x=>{ RADAR_UI.resolvidos[x.student_id+'|'+x.chave] = x; });
@@ -23623,20 +23663,79 @@ const AE_COMPETENCIAS = {
   FINALIZAR:{prazo:'1 mês', itens:[['Revisar toda a jornada','Diagnóstico final'],['Identificar lacunas e resultados','Pendências e resultados mapeados']]},
 };
 
-/* Cada competência aponta para a tarefa do Dashboard que a comprova (módulo do Dashboard e número do item,
-   contando a partir de 1). Quando o aluno marca a tarefa no Dashboard, a competência aparece marcada
-   sozinha no acompanhamento. */
-const AE_COMP_DASH = {
-  ABERTURA:   ['introducao', [4,5,6]],
-  SER:        ['ser', [7,10,13,14,17,20,23,24,29,32,35,38,41,42]],
-  CONECTAR:   ['conectar', [6,7,8,9,10,11,21,26,33,48,51,52,53,54,55,56,57,58,59,60,61,62]],
-  TRANSFORMAR:['transformar', [7,10,13,20,27]],
-  GERENCIAR:  ['gerenciar', [3,6,9,12,15,18,21,24,30,33]],
+/* Cada competência é um pacote do Dashboard: assistir e resumir as aulas do tema, a aula REC (quando
+   existe, conferida pelo botão "Concluída" da própria aula, porque a REC não é item do Dashboard) e a
+   tarefa prática. Números = posição do item no checklist do módulo, contando a partir de 1.
+   A competência só fica marcada sozinha quando o aluno faz o pacote inteiro. */
+const AE_COMP_REQ = {
+  ABERTURA:   ['introducao', [{d:[1,2,4]},{d:[5]},{d:[3,6]}]],
+  SER:        ['ser', [
+    {d:[1,2,3,4,5,6,7], r:['O Seu Cliente Ideal','Nicho']}, {d:[8,9,10], r:['Dados Sociodemográficos']},
+    {d:[11,12,13], r:['Dores, Desejos, Medos e Crenças']}, {d:[14]},
+    {d:[15,16,17], r:['Princípios do Seu Negócio']}, {d:[18,19,20], r:['Identidade de Valor']},
+    {d:[21,22,23], r:['A Transformação que Você Gera']}, {d:[24]},
+    {d:[25,26,27,28,29], r:['Visual que Vende','Arquétipos de Marca']}, {d:[30,31,32], r:['Moodboard']},
+    {d:[33,34,35]}, {d:[36,37,38]}, {d:[39,40,41]}, {d:[42]} ]],
+  CONECTAR:   ['conectar', [
+    {d:[1,2,3,4,5,6]}, {d:[3,4,7]}, {d:[3,4,8]}, {d:[3,4,9]}, {d:[3,4,10]}, {d:[3,4,11]},
+    {d:[12,13,14,15,16,17,18,19,20,21]}, {d:[22,23,24,25,26]}, {d:[27,28,29,30,31,32,33]},
+    {d:[34,35,36,37,38,39,40,41,42,43,44,45,46,47,48]},
+    {d:[49,50,51]}, {d:[49,50,52]}, {d:[49,50,53]}, {d:[49,50,54]}, {d:[49,50,55]},
+    {d:[49,50,56]}, {d:[49,50,57]}, {d:[49,50,58]}, {d:[49,50,59]}, {d:[49,50,60]},
+    {d:[61]}, {d:[62]} ]],
+  TRANSFORMAR:['transformar', [{d:[1,2,3,4,5,6,7]}, {d:[8,9,10]}, {d:[11,12,13]}, {d:[14,15,16,17,18,19,20]}, {d:[21,22,23,24,25,26,27]}]],
+  GERENCIAR:  ['gerenciar', [{d:[1,2,3]}, {d:[4,5,6]}, {d:[7,8,9]}, {d:[10,11,12]}, {d:[13,14,15]}, {d:[16,17,18]}, {d:[19,20,21]}, {d:[22,23,24]}, {d:[25,26,27,28,29,30]}, {d:[31,32,33]}]],
 };
-function aeFeitoNoDashboard(sid, mod, i){
-  const m = AE_COMP_DASH[mod]; if(!m) return false;
-  const item = m[1][i]; if(!item) return false;
-  try{ const st = getModuleChecklistState(sid, m[0]); return !!(st && st[item-1]); }catch(e){ return false; }
+const AE_MOD_DO_DASH = { introducao:'ABERTURA', ser:'SER', conectar:'CONECTAR', transformar:'TRANSFORMAR', gerenciar:'GERENCIAR' };
+function aeRecCurso(tema){
+  const alvo = stripAccents(String(tema+' | REC').toLowerCase()).replace(/\s+/g,' ').trim();
+  return COURSES.find(c=>stripAccents(String(c.title||'').toLowerCase()).replace(/\s+/g,' ').trim()===alvo) || null;
+}
+/* Situação do pacote de uma competência para o aluno: o que já fez e o que falta. */
+function aeCompPacote(sid, mod, i){
+  const m = AE_COMP_REQ[mod]; const req = m && m[1][i];
+  if(!req) return { total:0, feitos:0, completo:false, faltam:[] };
+  let st = []; try{ st = getModuleChecklistState(sid, m[0]) || []; }catch(e){}
+  const labels = MODULE_CHECKLIST[m[0]] || [];
+  const s = getStudent(sid);
+  const itens = [];
+  (req.d||[]).forEach(n=>itens.push({ ok:!!st[n-1], txt:String(labels[n-1]||('Item '+n)).replace(/^TAREFA:\s*/i,'Tarefa: ').replace(/\.$/,'') }));
+  (req.r||[]).forEach(t=>{ const c = aeRecCurso(t); if(c) itens.push({ ok: !!(s && (s.courseProgress||{})[c.id]===100), txt:'Aula '+c.title+' concluída' }); });
+  const feitos = itens.filter(x=>x.ok).length;
+  return { total:itens.length, feitos, completo: itens.length>0 && feitos===itens.length, faltam: itens.filter(x=>!x.ok).map(x=>x.txt) };
+}
+function aeFeitoNoDashboard(sid, mod, i){ return aeCompPacote(sid, mod, i).completo; }
+/* Competências marcadas pela equipe (acompanhamento_evolucao.competencias). Valor true (marcações antigas,
+   sem data) ou a data ISO da marcação. A equipe lê direto; o aluno lê pela função competencias_equipe. */
+const EQUIPE_COMP = {};
+const EQUIPE_COMP_CARREGANDO = {};
+function aeCompEquipe(sid){ return (AE_UI.sid===sid && AE_UI.dados) ? (AE_UI.dados.competencias||{}) : (EQUIPE_COMP[sid]||{}); }
+function aeEquipeMarcou(sid, mod, i){ return !!aeCompEquipe(sid)[mod+'-'+i]; }
+function aeCompCompleta(sid, mod, i){ return aeFeitoNoDashboard(sid, mod, i) || aeEquipeMarcou(sid, mod, i); }
+async function equipeCompCarregar(sid, depois){
+  if(!sid || EQUIPE_COMP_CARREGANDO[sid] || (sid in EQUIPE_COMP)) return;
+  EQUIPE_COMP_CARREGANDO[sid] = true;
+  try{
+    const { data, error } = await sb.rpc('competencias_equipe', { p_sid: sid });
+    if(!error){ EQUIPE_COMP[sid] = data || {}; if(depois) depois(); }
+  }catch(e){ console.error('competencias_equipe', e); }
+  EQUIPE_COMP_CARREGANDO[sid] = false;
+}
+/* Itens do Dashboard (índice a partir de 0) que o aluno ainda não marcou, mas que fazem parte de uma
+   competência marcada pela equipe: aparecem no Dashboard como "avançado pela equipe", em outra cor,
+   sem contar como feitos pelo aluno (nem pontos, nem liberação de aulas). */
+function dashItensEquipe(sid, modId){
+  const mod = AE_MOD_DO_DASH[modId]; const m = AE_COMP_REQ[mod]; const out = new Set();
+  if(!m) return out;
+  const comp = aeCompEquipe(sid);
+  let st = []; try{ st = getModuleChecklistState(sid, modId) || []; }catch(e){}
+  m[1].forEach((req,i)=>{ if(comp[mod+'-'+i]) (req.d||[]).forEach(n=>{ if(!st[n-1]) out.add(n-1); }); });
+  return out;
+}
+/* Data mais recente de uma marcação da equipe (só as que têm data). */
+function aeEquipeUltimaMarcacao(sid){
+  const vals = Object.values(aeCompEquipe(sid)).filter(v=>typeof v==='string' && /^\d{4}-\d\d-\d\d/.test(v)).sort();
+  return vals.length ? vals[vals.length-1] : null;
 }
 const AE_NIVEIS = ['Não iniciado','Em desenvolvimento','Concluído','Precisa de apoio'];
 const AE_PRIORIDADES = ['Baixa','Média','Alta','Urgente'];
