@@ -13434,8 +13434,12 @@ function intEncontroLabel(s, id){
   const c = (s.contatos||[]).find(x=>String(x.id)===String(id)); if(!c) return ''; return `${c.data||'sem data'} · ${contatoTipoLabel(c)}${c.responsavel ? ' · '+c.responsavel : ''}`;
 }
 function intEncontroSelect(s, idSel, sel, opcional){
-  const ags = intAgendamentos(s), lista = intEncontros(s);
-  const op = (v, txt)=>`<option value="${escapeAttr(v)}" ${String(v)===String(sel)?'selected':''}>${escapeHtml(txt)}</option>`;
+  const lista = intEncontros(s);
+  /* Agendamento cujo dia já tem encontro registrado é o mesmo encontro: some da lista para não aparecer duas vezes
+     (continua só quando é o vínculo já escolhido de um item antigo). */
+  const diasReg = new Set(lista.map(c=>intDataIso(c.data)).filter(Boolean));
+  const ags = intAgendamentos(s).filter(l=> 'a:'+l.id===String(sel||'') || !diasReg.has(String(l._eventDate||'').slice(0,10)));
+  const op =(v, txt)=>`<option value="${escapeAttr(v)}" ${String(v)===String(sel)?'selected':''}>${escapeHtml(txt)}</option>`;
   return `<select class="ps-input" id="${idSel}"><option value="">${opcional ? 'Sem encontro vinculado' : 'Escolha o encontro…'}</option>${ags.length ? `<optgroup label="Agendamentos de encontro 1:1">${ags.map(l=>op('a:'+l.id, intEncontroLabel(s, 'a:'+l.id))).join('')}</optgroup>` : ''}${lista.length ? `<optgroup label="Encontros registrados">${lista.map(c=>op(c.id, intEncontroLabel(s, c.id))).join('')}</optgroup>` : ''}</select>`;
 }
 function intTemVinculos(s){ return (s.contatos||[]).length > 0 || intAgendamentos(s).length > 0; }
