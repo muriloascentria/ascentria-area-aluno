@@ -756,6 +756,11 @@
   .course-info .cat{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.4px;}
   .course-info .title{font-size:13.5px;font-weight:700;margin:3px 0 4px;line-height:1.3;}
   .course-info .meta{font-size:11.5px;color:var(--text-dim);}
+  /* Todos os cards de aula com a mesma altura, em qualquer módulo: título e linha de baixo com até 2 linhas, sempre ocupando o espaço de 2. */
+  .row-scroll .course-tile{display:flex;flex-direction:column;}
+  .row-scroll .course-info{flex:1;}
+  .row-scroll .course-info .title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em;}
+  .row-scroll .course-info .meta{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em;line-height:1.3;}
 
   .category-block{margin-bottom:8px;}
 
@@ -919,6 +924,10 @@
   .modal-body h3{font-size:18px;margin:6px 0 8px;}
   .modal-body p.desc{font-size:13.5px;color:var(--text-dim);line-height:1.55;margin-bottom:16px;}
   .modal-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .aula-acoes > .btn-accent,.aula-acoes > .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;line-height:1.2;}
+  .aula-acoes .icon{width:15px;height:15px;flex:0 0 auto;}
+  #ep-salvar{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  #ep-salvar .icon{flex:0 0 auto;}
   .btn-outline{padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-dim);}
   .btn-outline:hover{border-color:var(--accent);color:var(--text);}
   .btn-accent{padding:10px 16px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;font-weight:700;}
@@ -8574,7 +8583,7 @@ function openCourseModal(id){
       <div class="cat">${c.cat}</div>
       <h3>${c.title}</h3>
       <p class="desc">${linkify(c.desc)} <br><br>${escapeHtml(c.duration)}.</p>
-      <div class="modal-actions">
+      <div class="modal-actions aula-acoes">
         ${s? `<button class="btn-accent ${done?'done':''}" id="modal-toggle-done">${done? icon('check')+' Concluída' : 'Marcar como assistida'}</button>` : ''}
         ${(c.videoLink && !yt)? `<a class="btn-outline" href="${c.videoLink}" target="_blank" rel="noopener">${icon('video')} Assistir no link</a>` : ''}
         ${currentUserRole==='staff' ? `<button class="btn-outline" id="modal-copiar-link" title="Link direto desta aula, para usar em PDFs e mensagens">${icon('copy')} Copiar link da aula</button>` : ''}
