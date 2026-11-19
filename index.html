@@ -2362,6 +2362,16 @@
   .rot-prova-item .btn-mini{margin-left:6px;}
   .rot-prova-aviso{color:var(--danger);margin-left:4px;}
   .tf-rot-aviso{font-size:12px;color:var(--text-mute);margin:2px 0 6px;}
+  .tf-partes{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--text-dim);padding:1px 7px;border-radius:999px;border:1px solid var(--line);}
+  .tf-partes.todas{color:var(--success);border-color:var(--success);}
+  .tf-partes-box{margin:10px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg-2, rgba(255,255,255,.02));}
+  .tf-partes-tit{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);font-weight:700;margin-bottom:6px;}
+  .tf-parte{padding:7px 0;border-top:1px solid var(--line);}
+  .tf-parte:first-of-type{border-top:0;}
+  .tf-parte-topo{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .tf-parte-st{font-size:12px;color:var(--text-mute);display:inline-flex;align-items:center;gap:4px;}
+  .tf-parte.ok .tf-parte-st{color:var(--success);}
+  .tf-parte-just{margin:5px 0 0 26px;font-size:13px;color:var(--text);white-space:pre-wrap;}
   .rot-just-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;}
   .rot-just-box{background:var(--bg-elev);color:var(--text);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.25);}
   .rot-just-box h3{margin:0 0 6px;font-size:17px;}
@@ -14689,7 +14699,18 @@ function tarefasSouDono(t){ return tarefasSouAdmin() || t.criadorId===tarefasEu(
 function tarefaResps(t){ return [t.responsavelId, ...((t.coresponsaveis||[]).filter(u=>u && u!==t.responsavelId))].filter(Boolean); }
 function tarefaEhResp(t, uid){ return !!uid && tarefaResps(t).includes(uid); }
 function tarefasPossoEditar(t){ return !t.excluida && (tarefasSouDono(t) || tarefaEhResp(t, tarefasEu())); }
-function tarefaAberta(t){ return !t.excluida && t.status!=='concluida' && t.status!=='cancelada'; }
+/* Tarefa compartilhada (mais de um responsável): cada um conclui a sua parte, com justificativa.
+   Ela só fica concluída quando todos concluíram; até lá continua pendente para quem ainda não fez. */
+function tarefaCompartilhada(t){ return tarefaResps(t).length > 1; }
+function tarefaParteDe(t, uid){ return (t.partes||{})[uid] || null; }
+function tarefaMinhaParteOk(t){ return !!tarefaParteDe(t, tarefasEu()); }
+function tarefaCheckOk(t){ return t.status==='concluida' || (tarefaCompartilhada(t) && tarefaEhResp(t, tarefasEu()) && tarefaMinhaParteOk(t)); }
+function tarefaPartesResumo(t){
+  if(!tarefaCompartilhada(t)) return '';
+  const rs = tarefaResps(t); const ok = rs.filter(u=>tarefaParteDe(t,u)).length;
+  return `<span class="tf-partes ${ok===rs.length?'todas':''}" title="Partes concluídas pelos responsáveis">${icon('check','tiny')} ${ok}/${rs.length}</span>`;
+}
+function tarefaAberta(t){ return !t.excluida && t.status!=='concluida' && t.status!=='cancelada' && !(tarefaCompartilhada(t) && tarefaEhResp(t, tarefasEu()) && tarefaMinhaParteOk(t)); }
 function tarefaAtrasada(t){ return tarefaAberta(t) && !!t.prazoData && t.prazoData < tzHojeISO(); }
 function tarefaVenceHoje(t){ return tarefaAberta(t) && t.prazoData===tzHojeISO(); }
 function tarefaNova(t){ // recém-atribuída a mim (últimas 48h, por outra pessoa) ou com aviso de atribuição ainda não lido
@@ -14705,6 +14726,7 @@ function mapTarefaRow(r){
   return { id:r.id, titulo:r.titulo||'', descricao:r.descricao||'', responsavelId:r.responsavel_id, coresponsaveis:Array.isArray(r.coresponsaveis)?r.coresponsaveis:[], criadorId:r.criador_id,
     prazoData:r.prazo_data||'', prazoHora:r.prazo_hora||'', prioridade:r.prioridade||'media', status:r.status||'pendente',
     concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null, excluida:!!r.excluida, excluidaEm:r.excluida_em||null,
+    partes:(r.partes && typeof r.partes==='object') ? r.partes : {},
     createdAt:r.created_at, updatedAt:r.updated_at };
 }
 function mapTarefaMembroRow(r){
@@ -14792,7 +14814,7 @@ function tarefasBase(){
   let lista = TAREFAS.filter(t=>!t.excluida);
   if(tarefasUI.aba==='minhas') lista = lista.filter(t=>tarefaEhResp(t, eu));
   else if(tarefasUI.aba==='delegadas') lista = lista.filter(t=>t.criadorId===eu && !tarefaEhResp(t, eu));
-  else if(tarefasUI.aba==='concluidas') lista = lista.filter(t=>t.status==='concluida' || t.status==='cancelada');
+  else if(tarefasUI.aba==='concluidas') lista = lista.filter(t=>t.status==='concluida' || t.status==='cancelada' || (!t.excluida && tarefaCompartilhada(t) && tarefaEhResp(t, tarefasEu()) && tarefaMinhaParteOk(t)));
   return lista;
 }
 function tarefasFiltradas(){
@@ -14875,7 +14897,7 @@ function tarefaCardHtml(t, opts){
   return `
     <div class="${cls}" data-tf-abrir="${t.id}">
       <div class="tf-card-topo">
-        <button type="button" class="tf-check ${t.status==='concluida'?'ok':''}" data-tf-concluir="${t.id}" title="${t.status==='concluida'?'Reabrir':'Concluir'}" ${tarefasPossoEditar(t)?'':'disabled'}>${icon('check','tiny')}</button>
+        <button type="button" class="tf-check ${tarefaCheckOk(t)?'ok':''}" data-tf-concluir="${t.id}" title="${t.status==='concluida'?'Reabrir':(tarefaCheckOk(t)?'Sua parte está concluída (clique para reabrir)':(tarefaCompartilhada(t)?'Concluir a minha parte':'Concluir'))}" ${tarefasPossoEditar(t)?'':'disabled'}>${icon('check','tiny')}</button>
         <div class="tf-card-titulo">${escapeHtml(t.titulo)}</div>
         ${tarefaPrioHtml(t.prioridade)}
       </div>
@@ -14883,6 +14905,7 @@ function tarefaCardHtml(t, opts){
         ${o.semResponsavel ? '' : tarefaPessoasHtml(t, 18)}
         ${tarefaPrazoHtml(t)}
         ${tarefaSubProgresso(t)}
+        ${tarefaPartesResumo(t)}
         ${tarefaStatusSelect(t)}
       </div>
       ${tarefaSinais(t) ? `<div class="tf-card-sinais">${tarefaSinais(t)}</div>` : ''}
@@ -14891,9 +14914,9 @@ function tarefaCardHtml(t, opts){
 function tarefaLinhaHtml(t){
   return `
     <tr class="${tarefaAtrasada(t)?'tf-linha-atrasada':''}" data-tf-abrir="${t.id}">
-      <td><button type="button" class="tf-check ${t.status==='concluida'?'ok':''}" data-tf-concluir="${t.id}" ${tarefasPossoEditar(t)?'':'disabled'}>${icon('check','tiny')}</button></td>
+      <td><button type="button" class="tf-check ${tarefaCheckOk(t)?'ok':''}" data-tf-concluir="${t.id}" ${tarefasPossoEditar(t)?'':'disabled'}>${icon('check','tiny')}</button></td>
       <td style="min-width:220px"><strong>${escapeHtml(t.titulo)}</strong>${tarefaSinais(t)? `<div class="tf-card-sinais">${tarefaSinais(t)}</div>` : ''}</td>
-      <td>${tarefaPessoasHtml(t, 20)}</td>
+      <td>${tarefaPessoasHtml(t, 20)} ${tarefaPartesResumo(t)}</td>
       <td>${tarefaPessoaHtml(t.criadorId, 20)}</td>
       <td style="white-space:nowrap">${tarefaPrazoHtml(t)}</td>
       <td>${tarefaPrioHtml(t.prioridade)}</td>
@@ -15108,7 +15131,7 @@ function bindTarefas(el){
   el.querySelectorAll('[data-tf-recolher]').forEach(h=>h.addEventListener('click', e=>{ if(e.target.closest('[data-tf-nova-para]')) return; const k = h.dataset.tfRecolher; tarefasUI.recolhidos[k] = !tarefasUI.recolhidos[k]; renderTarefas(); }));
   el.querySelectorAll('[data-tf-abrir]').forEach(c=>c.addEventListener('click', e=>{ if(e.target.closest('select,button,input,a')) return; openTarefaModal(c.dataset.tfAbrir); }));
   el.querySelectorAll('[data-tf-status]').forEach(s=>s.addEventListener('change', async ()=>{ await tarefaMudarStatus(s.dataset.tfStatus, s.value); renderTarefas(); }));
-  el.querySelectorAll('[data-tf-concluir]').forEach(b=>b.addEventListener('click', async e=>{ e.stopPropagation(); const t = TAREFAS.find(x=>x.id===b.dataset.tfConcluir); if(!t) return; await tarefaMudarStatus(t.id, t.status==='concluida' ? 'pendente' : 'concluida'); renderTarefas(); }));
+  el.querySelectorAll('[data-tf-concluir]').forEach(b=>b.addEventListener('click', async e=>{ e.stopPropagation(); const t = TAREFAS.find(x=>x.id===b.dataset.tfConcluir); if(!t) return; await tarefaMudarStatus(t.id, tarefaCheckOk(t) ? 'pendente' : 'concluida'); renderTarefas(); }));
   const mais = el.querySelector('#tf-mais-concluidas'); if(mais) mais.addEventListener('click', async ()=>{ mais.disabled = true; await carregarTarefasConcluidas(true); renderTarefas(); });
   el.querySelectorAll('[data-tf-membro]').forEach(cb=>cb.addEventListener('change', async ()=>{
     const campo = cb.dataset.campo, valor = cb.checked;
@@ -15275,11 +15298,67 @@ async function rotinaMarcarComProva(sub){
 }
 async function tarefaMudarStatus(id, status){
   const t = TAREFAS.find(x=>x.id===id);
-  if(!t || t.status===status) return;
+  if(!t) return;
+  if(tarefaCompartilhada(t) && tarefaEhResp(t, tarefasEu())){
+    if(status==='concluida' && !tarefaMinhaParteOk(t)){ await tarefaConcluirParte(t); return; }
+    if(status==='pendente' && tarefaMinhaParteOk(t)){ await tarefaReabrirParte(t); return; }
+  }
+  if(t.status===status) return;
   if(status==='concluida' && !(await rotinaGarantirJustificativas(t))){ await recarregarTarefa(id); return; }
   const { error } = await sb.from('tarefas').update({status}).eq('id', id);
   if(error){ alert('Não foi possível alterar a situação: '+(error.message||'')); return; }
   await recarregarTarefa(id);
+}
+
+/* Concluir a minha parte de uma tarefa compartilhada: pede a justificativa do que foi feito. */
+function tarefaPedirJustificativa(t){
+  return new Promise(resolve=>{
+    const outros = tarefaResps(t).filter(u=>u!==tarefasEu() && !tarefaParteDe(t,u)).map(u=>{ const m = tarefasMembro(u) || getPerson(u); return m ? (m.name||'').split(' ')[0] : ''; }).filter(Boolean);
+    const ov = document.createElement('div');
+    ov.className = 'rot-just-ov';
+    ov.innerHTML = `<div class="rot-just-box" role="dialog" aria-modal="true">
+      <h3>Concluir a sua parte</h3>
+      <p class="desc">Esta tarefa é compartilhada. Conte o que você fez: fica registrado na tarefa para todos os responsáveis verem.${outros.length ? ` Ela continua pendente para ${escapeHtml(outros.join(', ').replace(/, ([^,]*)$/, ' e $1'))} até ${outros.length>1?'cada um concluir a sua parte':'concluir a parte dele(a)'}.` : ' Você é o último a concluir: a tarefa será concluída.'}</p>
+      <textarea class="ps-input" rows="4" maxlength="1000" data-tf-just placeholder="O que eu fiz nesta tarefa…" style="width:100%;resize:vertical"></textarea>
+      <div class="rot-just-erro" hidden></div>
+      <div class="rot-just-acoes"><button type="button" class="btn-outline" data-tf-just-voltar>Voltar</button><button type="button" class="btn-primary" data-tf-just-ok>Concluir minha parte</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    const ta = ov.querySelector('[data-tf-just]'); setTimeout(()=>ta.focus(), 30);
+    const fechar = v=>{ ov.remove(); resolve(v); };
+    ov.querySelector('[data-tf-just-voltar]').addEventListener('click', ()=>fechar(null));
+    ov.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(null); });
+    ov.querySelector('[data-tf-just-ok]').addEventListener('click', ()=>{
+      const v = ta.value.trim();
+      if(v.length < 3){ const er = ov.querySelector('.rot-just-erro'); er.hidden = false; er.textContent = 'Escreva a justificativa do que você fez.'; ta.classList.add('erro'); ta.focus(); return; }
+      fechar(v);
+    });
+  });
+}
+async function tarefaConcluirParte(t){
+  if(!(await rotinaGarantirJustificativas(t))){ await recarregarTarefa(t.id); return false; }
+  const just = await tarefaPedirJustificativa(t);
+  if(!just) return false;
+  const { data, error } = await sb.rpc('tarefa_concluir_parte', { p_id: t.id, p_just: just });
+  if(error){ alert('Não foi possível concluir a sua parte: '+(error.message||'')); return false; }
+  await recarregarTarefa(t.id);
+  return true;
+}
+async function tarefaReabrirParte(t){
+  if(!(await showAppConfirm('Reabrir a sua parte? A sua justificativa sai da tarefa e ela volta a ficar pendente para você.', {title:'Reabrir minha parte', confirmLabel:'Reabrir', cancelLabel:'Voltar'}))) return false;
+  const { error } = await sb.rpc('tarefa_reabrir_parte', { p_id: t.id });
+  if(error){ alert('Não foi possível reabrir: '+(error.message||'')); return false; }
+  await recarregarTarefa(t.id); return true;
+}
+function tarefaPartesHtml(t){
+  if(!tarefaCompartilhada(t)) return '';
+  const rs = tarefaResps(t);
+  return `<div class="tf-partes-box"><div class="tf-partes-tit">Parte de cada responsável</div>${rs.map(u=>{
+    const m = tarefasMembro(u) || getPerson(u); const nome = m ? (m.name||'') : '—'; const pt = tarefaParteDe(t,u);
+    return `<div class="tf-parte ${pt?'ok':''}">
+      <div class="tf-parte-topo">${tarefaPessoaHtml(u, 20)}<span class="tf-parte-st">${pt ? `${icon('check','tiny')} Concluiu em ${escapeHtml(fmtDataHora(pt.em))}` : 'Pendente'}</span></div>
+      ${pt && pt.just ? `<div class="tf-parte-just">${escapeHtml(pt.just)}</div>` : ''}
+    </div>`; }).join('')}</div>`;
 }
 
 /* ---- modal da tarefa (nova / detalhes) ---- */
@@ -15360,6 +15439,7 @@ async function openTarefaModal(id, defaults){
       <div class="tf-coresp" id="tf-m-coresp">${ativos.map(m=>{ const on = (t.coresponsaveis||[]).includes(m.userId); const bloq = !(dono && (podeDelegarAgora || nova)) || (!podeDelegarAgora && m.userId!==eu && !on); return `<label class="tf-coresp-item ${on?'on':''} ${m.userId===t.responsavelId?'principal':''}"><input type="checkbox" value="${m.userId}" ${on?'checked':''} ${bloq?'disabled':''}> ${escapeHtml((m.name||'').split(' ')[0])}</label>`; }).join('')}</div>
       <label class="ps-label">Descrição</label>
       <textarea class="ps-input" id="tf-m-desc" rows="3" placeholder="Detalhes, contexto, links…" ${ro(dono)}>${escapeHtml(t.descricao)}</textarea>
+      ${nova ? '' : tarefaPartesHtml(t)}
 
       <h4 class="tf-h">${icon('check','tiny')} Subtarefas ${subs.length? `<span class="qtd">${subs.filter(s=>s.concluida).length}/${subs.length}</span>` : ''}</h4>
       ${rotina && t.status!=='concluida' && t.status!=='cancelada' ? `<p class="tf-rot-aviso">Para concluir a rotina, marque o que foi feito. O que não deu para fazer hoje, use "Adiar": vira uma tarefa própria para o próximo dia útil. O que não foi feito nem adiado pede uma justificativa curta na hora de concluir.</p>` : ''}
@@ -15399,8 +15479,9 @@ async function openTarefaModal(id, defaults){
       <div class="modal-actions tf-m-acoes">
         ${nova ? `<button class="btn-accent" id="tf-m-salvar">Criar tarefa</button>` : `
           ${(dono) ? `<button class="btn-accent" id="tf-m-salvar">Salvar</button>` : ''}
-          ${podeEditar && t.status!=='concluida' && !t.excluida ? `<button class="btn-outline" id="tf-m-concluir">${icon('check','tiny')} Concluir</button>` : ''}
-          ${podeEditar && t.status==='concluida' ? `<button class="btn-outline" id="tf-m-reabrir">Reabrir</button>` : ''}
+          ${podeEditar && t.status!=='concluida' && !t.excluida && !(tarefaCompartilhada(t) && tarefaEhResp(t, eu) && tarefaMinhaParteOk(t)) ? `<button class="btn-outline" id="tf-m-concluir">${icon('check','tiny')} ${tarefaCompartilhada(t) && tarefaEhResp(t, eu) ? 'Concluir minha parte' : 'Concluir'}</button>` : ''}
+          ${podeEditar && !t.excluida && tarefaCompartilhada(t) && tarefaEhResp(t, eu) && tarefaMinhaParteOk(t) ? `<button class="btn-outline" id="tf-m-reabrir-parte">Reabrir minha parte</button>` : ''}
+          ${podeEditar && t.status==='concluida' && !(tarefaCompartilhada(t) && tarefaEhResp(t, eu)) ? `<button class="btn-outline" id="tf-m-reabrir">Reabrir</button>` : ''}
           ${tarefasSouMembro() && !t.excluida ? `<button class="btn-outline" id="tf-m-duplicar">${icon('copy','tiny')} Duplicar</button>` : ''}
           ${dono && t.status!=='cancelada' && !t.excluida ? `<button class="btn-outline" id="tf-m-cancelar">Cancelar tarefa</button>` : ''}
           ${dono && !t.excluida ? `<button class="btn-outline danger-text" id="tf-m-excluir">${icon('trash','tiny')} Excluir</button>` : ''}
@@ -15537,7 +15618,8 @@ async function openTarefaModal(id, defaults){
   $('#tf-hist-toggle').addEventListener('click', ()=>{ const h = $('#tf-hist'); h.hidden = !h.hidden; });
   // ações
   const acao = async (payload, msg)=>{ const { error } = await sb.from('tarefas').update(payload).eq('id', t.id); if(error){ alert((msg||'Não foi possível')+': '+error.message); return false; } await recarregarTarefa(t.id); return true; };
-  const b1 = $('#tf-m-concluir'); if(b1) b1.addEventListener('click', async ()=>{ if(!(await rotinaGarantirJustificativas(t))){ await recarregarTarefa(t.id); openTarefaModal(t.id); return; } if(await acao({status:'concluida'})){ closeModal(); renderTarefas(); } });
+  const b1 = $('#tf-m-concluir'); if(b1) b1.addEventListener('click', async ()=>{ if(tarefaCompartilhada(t) && tarefaEhResp(t, eu)){ if(await tarefaConcluirParte(t)){ closeModal(); renderTarefas(); } return; } if(!(await rotinaGarantirJustificativas(t))){ await recarregarTarefa(t.id); openTarefaModal(t.id); return; } if(await acao({status:'concluida'})){ closeModal(); renderTarefas(); } });
+  const b2p = $('#tf-m-reabrir-parte'); if(b2p) b2p.addEventListener('click', async ()=>{ if(await tarefaReabrirParte(t)){ closeModal(); renderTarefas(); } });
   const b2 = $('#tf-m-reabrir'); if(b2) b2.addEventListener('click', async ()=>{ if(await acao({status:'pendente'})){ closeModal(); renderTarefas(); } });
   const b3 = $('#tf-m-cancelar'); if(b3) b3.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Cancelar esta tarefa? Ela sai das pendências e fica no histórico.', {title:'Cancelar tarefa', confirmLabel:'Cancelar tarefa', cancelLabel:'Voltar'}))) return; if(await acao({status:'cancelada'})){ closeModal(); renderTarefas(); } });
   const b4 = $('#tf-m-excluir'); if(b4) b4.addEventListener('click', async ()=>{ if(!(await showAppConfirm('Excluir esta tarefa? Ela some das listas, mas o registro fica guardado para auditoria.', {title:'Excluir tarefa', confirmLabel:'Excluir', cancelLabel:'Voltar'}))) return; if(await acao({excluida:true})){ TAREFAS = TAREFAS.filter(x=>x.id!==t.id); closeModal(); renderTarefas(); } });
