@@ -333,6 +333,9 @@
   .mej-etapa-h h3{margin:0;font-size:15px;letter-spacing:.4px;text-transform:uppercase;}
   .mej-breve{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--accent);background:color-mix(in srgb, var(--accent) 14%, transparent);border-radius:20px;padding:3px 10px;}
   .mej-breve .icon{width:12px;height:12px;}
+  .mej-aula{margin-top:12px;position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--border);box-shadow:0 10px 28px rgba(0,0,0,.28);}
+  .mej-aula iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .mej-aula + .mej-itens{margin-top:14px;}
   .mej-itens{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
   .mej-item{border-radius:var(--radius-sm);padding:8px 10px;background:var(--bg);}
   .mej-item-h{display:flex;align-items:center;gap:8px;font-size:13.5px;}
@@ -11913,7 +11916,7 @@ function meDataTxt(iso){ return iso ? prazoIsoParaTexto(String(iso).slice(0,10))
    me_jornada_respostas). Em Vendas, o Roteiro de Vendas abre o material publicado em Materiais. */
 const ME_JORNADA = [
   { t:'Abertura', itens:[] },
-  { t:'Produto', itens:[
+  { t:'Produto', aula:'SYWPI24cshs', itens:[
     { n:'Dores, Desejos, Medos e Crenças', campo:'dores', dica:'Quais são as dores, os desejos, os medos e as crenças do seu cliente ideal?' },
     { n:'Transformação', campo:'transformacao', dica:'Qual transformação você gera na vida do seu cliente? De onde ele sai e aonde chega com você?' },
     { n:'Oferta', campo:'oferta', dica:'Como é a sua oferta: o que entrega, em quanto tempo, o formato e o valor?' } ] },
@@ -12049,7 +12052,8 @@ function renderMeJornada(){
       <section class="mej-etapa">
         <div class="mej-ponto">${i+1}</div>
         <div class="mej-corpo">
-          <div class="mej-etapa-h"><h3>${escapeHtml(e.t)}</h3><span class="mej-breve">${icon('calendar','tiny')} Aula disponível em breve</span></div>
+          <div class="mej-etapa-h"><h3>${escapeHtml(e.t)}</h3>${e.aula ? '' : `<span class="mej-breve">${icon('calendar','tiny')} Aula disponível em breve</span>`}</div>
+          ${e.aula ? `<div class="mej-aula"><iframe src="https://www.youtube.com/embed/${escapeAttr(e.aula)}?rel=0&modestbranding=1" title="Aula: ${escapeAttr(e.t)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}
           ${e.itens.length ? `<div class="mej-itens">${e.itens.map(item).join('')}</div>` : ''}
         </div>
       </section>`).join('')}
