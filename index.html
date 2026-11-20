@@ -335,6 +335,14 @@
   .mej-breve .icon{width:12px;height:12px;}
   .mej-aula{margin-top:12px;position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--border);box-shadow:0 10px 28px rgba(0,0,0,.28);}
   .mej-aula iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .mej-aula-capa{display:block;padding:0;cursor:pointer;}
+  .mej-aula-capa img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s ease;}
+  .mej-aula-capa::before{content:'';position:absolute;inset:0;z-index:1;background:rgba(0,0,0,0.18);transition:background .3s;}
+  .mej-aula-capa:hover img{transform:scale(1.03);}
+  .mej-aula-capa:hover::before{background:rgba(0,0,0,0.08);}
+  .mej-aula-play{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;transition:transform .25s,background .25s;}
+  .mej-aula-capa:hover .mej-aula-play{transform:translate(-50%,-50%) scale(1.08);background:rgba(0,0,0,0.65);}
+  .mej-aula-play .play-fill{width:28px;height:28px;color:#fff;margin-left:3px;}
   .mej-aula + .mej-itens{margin-top:14px;}
   .mej-mats{margin-top:14px;padding-top:12px;}
   .mej-mats + .mej-itens{margin-top:14px;}
@@ -12055,7 +12063,9 @@ function renderMeJornada(){
         <div class="mej-ponto">${i+1}</div>
         <div class="mej-corpo">
           <div class="mej-etapa-h"><h3>${escapeHtml(e.t)}</h3>${e.aula ? '' : `<span class="mej-breve">${icon('calendar','tiny')} Aula disponível em breve</span>`}</div>
-          ${e.aula ? `<div class="mej-aula"><iframe src="https://www.youtube.com/embed/${escapeAttr(e.aula)}?rel=0&modestbranding=1" title="Aula: ${escapeAttr(e.t)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}
+          ${e.aula ? `<button type="button" class="mej-aula mej-aula-capa" data-mej-aula="${escapeAttr(e.aula)}" data-mej-aula-t="${escapeAttr(e.t)}" aria-label="Assistir à aula de ${escapeAttr(e.t)}">
+            <img src="https://img.youtube.com/vi/${escapeAttr(e.aula)}/maxresdefault.jpg" alt="" loading="lazy" onerror="this.onerror=null;this.src='https://img.youtube.com/vi/${escapeAttr(e.aula)}/hqdefault.jpg'">
+            <span class="mej-aula-play">${fillIcon('play','play-fill')}</span></button>` : ''}
           ${(e.materiais||[]).length ? `<div class="course-materials mej-mats"><div class="ps-h">Materiais desta aula</div>${e.materiais.map(m=>`
             <div class="material-link-row"><span class="title">${escapeHtml(m.t)}</span><a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Baixar</a></div>`).join('')}</div>` : ''}
           ${e.itens.length ? `<div class="mej-itens">${e.itens.map(item).join('')}</div>` : ''}
@@ -12085,6 +12095,11 @@ function renderMeJornada(){
     const { data, error } = await sb.from('me_jornada_respostas').upsert({ aluno_id:sid, chave:k, texto:v, atualizado_em:new Date().toISOString(), atualizado_por:currentUser.id }, { onConflict:'aluno_id,chave' }).select('chave,texto,atualizado_em').single();
     if(error){ console.error('me_jornada salvar', error); b.disabled = false; b.querySelector('span').textContent = 'Salvar'; showAppAviso('Não foi possível salvar. Tente de novo em instantes.'); return; }
     resp[k] = data; MEJ.editando[k] = false; renderMeJornada();
+  }));
+  el.querySelectorAll('[data-mej-aula]').forEach(b=>b.addEventListener('click', ()=>{
+    const box = document.createElement('div'); box.className = 'mej-aula';
+    box.innerHTML = `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(b.dataset.mejAula)}?autoplay=1&rel=0&modestbranding=1" title="Aula: ${escapeAttr(b.dataset.mejAulaT)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    b.replaceWith(box);
   }));
   el.querySelectorAll('[data-mej-material]').forEach(b=>b.addEventListener('click', async ()=>{
     if(ME.materiais===null) await meCarregarMateriais();
