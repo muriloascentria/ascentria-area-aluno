@@ -37,6 +37,7 @@ self.addEventListener('fetch', (e)=>{
   let url;
   try{ url = new URL(req.url); }catch(err){ return; }
   if(url.origin !== self.location.origin) return; // Supabase e CDNs: direto para a rede
+  if(/\.(mp4|webm|mov)$/i.test(url.pathname)) return; // vídeo: direto para a rede (o navegador pede por partes)
 
   const ehPagina = req.mode === 'navigate' || req.destination === 'document';
   if(ehPagina){

@@ -2089,6 +2089,27 @@
   .sync-ok{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--success);}
   /* ---- Formulário Diagnóstico Inicial (wizard uma-pergunta-por-vez) ---- */
   .wf-shell{max-width:640px;margin:0 auto;padding:4px 0 40px;}
+  body.gate-aluno .sidebar .nav-item:not(#logout-btn), body.gate-aluno .sidebar .nav-group-label{display:none !important;}
+  .bv-gate{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;
+    background:radial-gradient(120% 90% at 50% 0%, #26281f 0%, #17180f 60%, #121309 100%);animation:bvEntra .4s ease;}
+  .bv-gate.bv-saindo{opacity:0;transition:opacity .35s;}
+  @keyframes bvEntra{from{opacity:0}to{opacity:1}}
+  .bv-card{width:100%;max-width:880px;text-align:center;color:#f2f0e8;}
+  .bv-tag{display:inline-block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#bec6b1;border:1px solid rgba(190,198,177,.35);border-radius:999px;padding:4px 12px;}
+  .bv-card h2{margin:14px 0 6px;font-size:clamp(22px,3.4vw,32px);letter-spacing:.3px;}
+  .bv-card > p{margin:0 0 18px;color:#c9cbbd;font-size:14px;}
+  .bv-video{position:relative;width:100%;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.45);}
+  .bv-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;}
+  .bv-play{position:absolute;inset:0;margin:auto;width:76px;height:76px;border-radius:50%;border:0;cursor:pointer;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;transition:transform .25s,background .25s;}
+  .bv-play:hover{transform:scale(1.08);background:rgba(0,0,0,.7);}
+  .bv-play .play-fill{width:32px;height:32px;color:#fff;margin-left:4px;}
+  .bv-rodape{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap;}
+  .bv-prog{flex:1 1 200px;height:4px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden;}
+  .bv-prog-fill{height:100%;width:0;background:#bec6b1;transition:width .4s linear;}
+  .bv-falta{font-size:12px;color:#c9cbbd;min-width:110px;text-align:left;}
+  .bv-continuar{display:inline-flex;align-items:center;gap:8px;}
+  .bv-continuar[disabled]{opacity:.45;cursor:not-allowed;}
+  @media (max-width:560px){ .bv-falta{min-width:0;flex:1;} .bv-continuar{width:100%;justify-content:center;} }
   .wf-progress{height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:26px;}
   .wf-progress-fill{height:100%;background:linear-gradient(135deg,var(--accent),var(--accent-2));transition:width .3s ease;}
   .wf-step-label{font-size:12px;color:var(--text-mute);margin-bottom:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
@@ -5248,6 +5269,71 @@ function diagRespostaHtml(v, sid){
   const p = diagParse(v);
   return (p.texto ? `<div class="diag-txt">${escapeHtml(p.texto)}</div>` : '') + (p.audio ? `<div class="diag-audio-resp">${diagAudioHtml(p.audio, sid)}</div>` : '');
 }
+/* ================= PRIMEIRO ACESSO DO MENTORADO (obrigatório) =================
+   1) Vídeo de boas-vindas do Essência PLAT, em tela cheia, sem pular nem adiantar: o botão Continuar
+      só libera quando o vídeo chega ao fim. Fica registrado em profiles.video_boas_vindas_em.
+   2) Logo depois, o Formulário de Abertura: enquanto não for enviado, o menu fica escondido e qualquer
+      tela leva de volta para ele. Vale só para o aluno da mentoria (tier mentorado) na própria conta;
+      a equipe vendo como aluno e o aluno do Curso Gravado não passam por isso. */
+const BV_VIDEO = 'boas-vindas.mp4';
+let BV_ABERTO = false;
+function alunoGateEu(){ return (currentUserRole==='aluno' && currentUser) ? getStudent(currentUser.id) : null; }
+function videoBoasVindasPendente(s){ return currentUserRole==='aluno' && !!s && s.tier==='mentorado' && !s.videoBoasVindasEm; }
+function formAberturaObrigatorio(s){ return currentUserRole==='aluno' && !!s && s.tier==='mentorado' && needsWispform(s); }
+function gateAlunoAtivo(){ const s = alunoGateEu(); return !!s && (videoBoasVindasPendente(s) || formAberturaObrigatorio(s)); }
+function gateAtualizarCorpo(){ document.body.classList.toggle('gate-aluno', gateAlunoAtivo()); }
+function bvMostrar(s){
+  if(BV_ABERTO) return; BV_ABERTO = true;
+  const chave = 'ascentria-bv-visto:'+s.id;
+  let visto = 0; try{ visto = Number(localStorage.getItem(chave)) || 0; }catch(e){}
+  const el = document.createElement('div');
+  el.className = 'bv-gate'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label','Vídeo de boas-vindas');
+  el.innerHTML = `<div class="bv-card">
+      <div class="bv-tag">Primeiro acesso</div>
+      <h2>Boas-vindas ao Essência PLAT</h2>
+      <p>Assista ao vídeo até o final para liberar o seu acesso à plataforma.</p>
+      <div class="bv-video"><video id="bv-video" src="${BV_VIDEO}" playsinline preload="auto" controls controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture></video>
+        <button type="button" class="bv-play" id="bv-play" aria-label="Assistir">${fillIcon('play','play-fill')}</button></div>
+      <div class="bv-rodape">
+        <div class="bv-prog"><div class="bv-prog-fill" id="bv-prog"></div></div>
+        <span class="bv-falta" id="bv-falta">Vídeo obrigatório</span>
+        <button type="button" class="btn-accent bv-continuar" id="bv-continuar" disabled>${icon('lock','tiny')}<span>Continuar</span></button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  const v = el.querySelector('#bv-video'), play = el.querySelector('#bv-play'), btn = el.querySelector('#bv-continuar');
+  const prog = el.querySelector('#bv-prog'), falta = el.querySelector('#bv-falta');
+  let max = visto, ok = false, ultimoSalvo = 0;
+  const liberar = ()=>{ if(ok) return; ok = true; btn.disabled = false; btn.innerHTML = `${icon('check','tiny')}<span>Continuar</span>`; falta.textContent = 'Vídeo assistido'; prog.style.width = '100%'; };
+  const atualizar = ()=>{
+    const d = v.duration || 0; if(!d) return;
+    prog.style.width = Math.min(100, max/d*100)+'%';
+    if(!ok){ const f = Math.max(0, Math.ceil(d - max)); falta.textContent = f>=60 ? `Faltam ${Math.ceil(f/60)} min` : `Faltam ${f} s`; }
+  };
+  v.addEventListener('loadedmetadata', ()=>{ if(visto > 0 && visto < v.duration - 1) v.currentTime = visto; atualizar(); });
+  v.addEventListener('play', ()=>{ play.hidden = true; });
+  v.addEventListener('pause', ()=>{ if(!v.ended) play.hidden = false; });
+  play.addEventListener('click', ()=>{ v.play().catch(()=>{}); });
+  v.addEventListener('timeupdate', ()=>{
+    if(!v.seeking && v.currentTime > max && v.currentTime - max < 1.5) max = v.currentTime;
+    if(max - ultimoSalvo > 5){ ultimoSalvo = max; try{ localStorage.setItem(chave, String(Math.floor(max))); }catch(e){} }
+    atualizar();
+  });
+  /* Não deixa adiantar: voltar pode, avançar além do que já foi assistido não. */
+  v.addEventListener('seeking', ()=>{ if(v.currentTime > max + 0.5) v.currentTime = max; });
+  v.addEventListener('ratechange', ()=>{ if(v.playbackRate > 1) v.playbackRate = 1; });
+  v.addEventListener('ended', ()=>{ max = v.duration; liberar(); try{ localStorage.setItem(chave, String(Math.floor(max))); }catch(e){} });
+  btn.addEventListener('click', async ()=>{
+    if(!ok) return;
+    btn.disabled = true; btn.innerHTML = '<span>Liberando…</span>';
+    const quando = new Date().toISOString();
+    const { error } = await sb.from('profiles').update({ video_boas_vindas_em: quando }).eq('id', s.id);
+    if(error){ console.error('video boas-vindas', error); btn.disabled = false; btn.innerHTML = '<span>Continuar</span>'; showAppAviso('Não foi possível registrar agora. Tente de novo em instantes.'); return; }
+    s.videoBoasVindasEm = quando; try{ localStorage.removeItem(chave); }catch(e){}
+    el.classList.add('bv-saindo'); setTimeout(()=>{ el.remove(); BV_ABERTO = false; }, 350);
+    goTo('inicio');
+  });
+}
 function needsWispform(s){
   return currentUserRole==='aluno' && !!s && !s.diagnostico.wispformSubmittedAt;
 }
@@ -6039,6 +6125,7 @@ function mapProfileRow(p){
     libAte: (p.lib_ate===null || p.lib_ate===undefined) ? null : Number(p.lib_ate),
     mentorEssencia: !!p.mentor_essencia,
     meBoasVindasEm: p.me_boas_vindas_em || null,
+    videoBoasVindasEm: p.video_boas_vindas_em || null,
     genero: p.genero || null,
     profissao: p.profissao || 'enfermagem',
     /* Início real (para o NPS de 4, 8 e 12 meses): a data de matrícula; sem ela, o dia em que a conta foi criada. */
@@ -7833,6 +7920,7 @@ function goTo(view){
   if(view==='planner' && (currentRole!=='aluno' || getViewingTier()==='curso')) view = currentRole==='aluno' ? 'aulas' : 'equipe';
   if(view==='comunicacao' && currentUserRole!=='staff') view = 'equipe';
   if(view==='embarque' && currentUserRole!=='staff') view = 'equipe';
+  if(gateAlunoAtivo()) view = 'inicio';   // primeiro acesso do mentorado: vídeo e Formulário de Abertura antes de tudo
   currentView = view;
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
   if(view==='painel') panelQuadrantId = null;
@@ -7858,6 +7946,8 @@ function renderCurrentView(){
                me_jornada:renderMeJornada, me_aulas:renderMeAulas, me_sessoes:renderMeSessoes, me_metas:renderMeMetas, me_materiais:renderMeMateriais};
   const NEEDS_STUDENT = ['inicio','dashboard','painel','planner','sessoes','metas','interno','me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'];
   meAtualizarMenu();
+  gateAtualizarCorpo();
+  if(gateAlunoAtivo() && currentView!=='inicio'){ goTo('inicio'); return; }
   if(NEEDS_STUDENT.includes(currentView) && !getStudent(currentStudentId)){
     document.getElementById('view-'+currentView).innerHTML = '<div class="empty-state">Nenhum mentorado cadastrado ainda. Assim que um aluno criar a conta, os dados aparecerão aqui.</div>';
     return;
@@ -8019,6 +8109,7 @@ function renderInicioCurso(s){
 function renderInicio(){
   const s = getStudent(currentStudentId);
   if(s && s.tier==='curso' && currentRole==='aluno'){ renderInicioCurso(s); return; }
+  if(videoBoasVindasPendente(s) && s.id===(currentUser&&currentUser.id)){ document.getElementById('view-inicio').innerHTML = ''; bvMostrar(s); return; }
   if(needsWispform(s)){ renderWispformWizard(s); return; }
   const overall = overallProgress(s);
   const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
@@ -8561,6 +8652,7 @@ function aulaDoLinkGuardar(){
   if(m){ try{ sessionStorage.setItem('aula_link', decodeURIComponent(m[1])); }catch(e){} }
 }
 function aulaDoLinkAbrir(){
+  if(gateAlunoAtivo()) return;
   let id = null;
   const m = /^#aula=([^&]+)/.exec(location.hash||'');
   if(m) id = decodeURIComponent(m[1]);
@@ -8942,6 +9034,7 @@ function pwaAvisarVersaoNova(registro){
 
 /* Convite para instalar — some assim que a pessoa instala e não volta se ela dispensar. */
 function pwaConvidarInstalar(){
+  if(gateAlunoAtivo()) return;
   if(pwaInstalado() || pwaDispensado('ascentria-pwa-nao')) return;
   if(pwaEhIOS()){
     const el = pwaBarra('pwa-instalar', `
@@ -9077,6 +9170,7 @@ function pushBindPerfil(){
 }
 /* Convite discreto, uma vez só, para quem ainda não decidiu. */
 function pushConvidar(){
+  if(gateAlunoAtivo()) return;
   if(pushEstado() !== 'perguntar') return;
   if(pwaDispensado('ascentria-push-nao')) return;
   if(!pwaInstalado() && pwaEhIOS()) return; // no iPhone só funciona com o app instalado
@@ -11865,6 +11959,7 @@ function meBoasVindasTexto(g, prof){
   return t;
 }
 function meBoasVindasTalvez(){
+  if(gateAlunoAtivo()) return;
   if(ME_BV_MOSTRADA || currentUserRole!=='aluno' || !currentUser) return;
   const st = getStudent(currentUser.id);
   if(!st || !st.mentorEssencia || st.meBoasVindasEm) return;
