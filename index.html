@@ -23480,8 +23480,12 @@ function rdAvaliar(s, r){
   // 5. Contato pessoal da equipe (sem contar o checkpoint automático)
   const waCob = metasCobrUltima(s.id, 'whatsapp');
   const dHumano = [rdDiasDesde(r.ult_contato_humano), waCob ? rdDiasDesde(waCob.enviado_em) : null].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
-  if(dHumano===null) add(1, 'Nenhum contato pessoal da equipe no Acompanhamento');
-  else if(dHumano>=14) add(1, `Equipe sem contato pessoal há ${dHumano} dias`);
+  /* Para a Mentoria o acompanhamento é pelo WhatsApp: o contato registrado no Registro de Contatos
+     (WhatsApp, Meet ou presencial) também conta como contato pessoal. */
+  const dContato = rdUltContatoDias(s);
+  const dPessoal = [dHumano, dContato].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
+  if(dPessoal===null) add(1, 'Nenhum contato pessoal da equipe registrado (WhatsApp ou encontro)', 'contato');
+  else if(dPessoal>=14) add(1, `Sem contato pessoal da equipe há ${dPessoal} dias (WhatsApp ou encontro)`, 'contato');
   // 6. Pagamento (só para quem tem acesso ao Financeiro)
   if(rdVerFinanceiro() && r.pag_atrasados>0) add(2, `${r.pag_atrasados} pagamento${r.pag_atrasados>1?'s':''} em atraso`);
   // 7. Ritmo no método
@@ -23510,8 +23514,20 @@ function rdAvaliar(s, r){
   if(r.prazo && r.prazo < hojeISO) add(1, `Próxima ação vencida em ${tzDataCurta(r.prazo)}`);
   const nivel = motivos.reduce((a,m)=>Math.max(a,m.nivel),0);
   motivos.sort((a,b)=>b.nivel-a.nivel);
-  return { nivel, motivos, dAcesso, dAvanco, hEspera, dHumano, esp, real, semAcao:!(r.proxima_acao||'').trim() };
+  return { nivel, motivos, dAcesso, dAvanco, hEspera, dHumano: dPessoal, esp, real, semAcao:!(r.proxima_acao||'').trim() };
 }
+function rdUltContatoDias(s){
+  let melhor = null;
+  (s.contatos||[]).forEach(c=>{ const iso = intDataIso(c.data); if(!iso) return; const d = rdDiasDesde(iso+'T12:00:00-03:00'); if(d!==null && d>=0 && (melhor===null || d<melhor)) melhor = d; });
+  return melhor;
+}
+const RD_MSG_CONTATO = `Oi, NOME! Tudo bem? 😊
+
+Passando aqui só para saber como você está e como anda a sua jornada na Mentoria Essência.
+
+Como está a sua rotina com as aulas e as tarefas desta etapa? Tem alguma dúvida, dificuldade ou algo em que eu possa te ajudar agora?
+
+Pode me responder por aqui, por texto ou áudio, do jeito que for melhor para você 🤝`;
 function rdVerFinanceiro(){ return !staffBloqueios().has('financeiro'); }
 /* Momentos-chave dos próximos dias: 30 dias de entrada, troca de módulo pelo cronograma e fim da mentoria. */
 function rdMomentos(s){
@@ -23908,7 +23924,7 @@ function renderRadar(){
           </div>
           ${rdNaoRespSemanas(s.id)>=3 ? `<div class="rd-nr-alerta"><span>${icon('users','tiny')} <strong>${rdNaoRespSemanas(s.id)} SEMANAS SEGUIDAS NO CINZA</strong> · tentar outros canais e levar para o Desenvolvimento</span><button type="button" class="btn-mini" data-rd-dev="${s.id}">${icon('copy','tiny')}<span>Copiar mensagem para o Desenvolvimento</span></button></div>` : ''}
           ${a.naoResp ? `<div class="rd-nr-aviso">NÃO RESPONSIVO · marcado em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].marcado_em))}${PEOPLE[RADAR_UI.naoResp[s.id].por] ? ' por '+escapeHtml(PEOPLE[RADAR_UI.naoResp[s.id].por].name.split(' ')[0]) : ''} · volta ao vermelho em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].ate))}</div>` : ''}
-          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
+          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : m.chave==='contato' ? ` <button type="button" class="rd-espera-ok" data-rd-contato-copiar="${s.id}" title="Mensagem de contato pessoal para o WhatsApp, já com o nome">${icon('copy','tiny')} <span>Copiar mensagem</span></button> <button type="button" class="rd-espera-ok" data-rd-contato-ok="${s.id}" title="Registra no Registro de Contatos um contato pelo WhatsApp com a data de hoje">${icon('check','tiny')} Contato feito hoje</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
           <button type="button" class="rd-mais" data-rd-abrir="${s.id}">${icon(aberto?'up':'down','tiny')} ${aberto?'Esconder detalhes':'Ver detalhes'}</button>
           ${aberto ? `
           <div class="rd-dados">
@@ -23927,7 +23943,7 @@ function renderRadar(){
         </div>`; }).join('') || `<div class="empty-state">${lista.length ? 'Ninguém nesse filtro.' : 'Nenhum mentorado ainda.'}</div>`}
     </div>
     ${rdMsgsPadraoHtml()}
-    <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', pagamento em atraso':''} ou nota de 0 a 6 no último NPS (amarelo com 7 ou 8). Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal há 14 dias (o checkpoint automático não conta) e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
+    <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', pagamento em atraso':''} ou nota de 0 a 6 no último NPS (amarelo com 7 ou 8). Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal da equipe há 14 dias, contando o Registro de Contatos (WhatsApp ou encontro); o checkpoint automático não conta, e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
   el.querySelectorAll('[data-rd-filtro]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.filtro = RADAR_UI.filtro===b.dataset.rdFiltro ? 'todos' : b.dataset.rdFiltro; renderRadar(); }));
   const lim = document.getElementById('rd-limpar'); if(lim) lim.addEventListener('click', ()=>{ RADAR_UI.filtro = 'todos'; RADAR_UI.busca = ''; renderRadar(); });
   document.getElementById('rd-atualizar').addEventListener('click', ()=>{ RADAR_UI.rows = null; renderRadar(); });
@@ -23949,6 +23965,21 @@ function renderRadar(){
     const m = rdMomentos(st).find(x=>x.chave===b.dataset.rdChave); if(m) rdResolverMomento(st, m);
   }));
   el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+  el.querySelectorAll('[data-rd-contato-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const st = getStudent(b.dataset.rdContatoCopiar); if(!st) return;
+    const txt = RD_MSG_CONTATO.replace(/NOME/g, String(st.name||'').trim().split(/\s+/)[0]); const lbl = b.querySelector('span');
+    try{ await navigator.clipboard.writeText(txt); }catch(e){ const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } ta.remove(); }
+    if(lbl){ lbl.textContent = 'Copiada'; setTimeout(()=>{ lbl.textContent = 'Copiar mensagem'; }, 1800); }
+  }));
+  el.querySelectorAll('[data-rd-contato-ok]').forEach(b=>b.addEventListener('click', async ()=>{
+    const st = getStudent(b.dataset.rdContatoOk); if(!st) return; b.disabled = true;
+    const nome = (currentUserProfile && currentUserProfile.name) || '';
+    const resp = RESPONSAVEL_CONTATO_OPTS.find(o=>normTxt(o.split(' ')[0])===normTxt(nome.split(' ')[0])) || nome;
+    const c = { data: intHojeTxt(), tipo:'whatsapp', responsavel: resp, resumo: 'Contato pessoal pelo WhatsApp (registrado pelo Radar).' };
+    try{ const id = await syncContatoInsert(st.id, c); st.contatos = (st.contatos||[]).concat([{ id, data:c.data, tipo:'whatsapp', responsavel:resp, resumo:c.resumo, linkGravacao:'', linkTranscricao:'', syncedToSessions:false }]); }
+    catch(e){ console.error(e); alert('Não foi possível registrar o contato: '+(e.message||'')); b.disabled = false; return; }
+    renderRadar();
+  }));
   el.querySelectorAll('[data-rd-dev]').forEach(b=>b.addEventListener('click', async ()=>{
     const st = getStudent(b.dataset.rdDev); if(!st) return;
     const txt = rdMsgDesenvolvimento(st); const lbl = b.querySelector('span');
