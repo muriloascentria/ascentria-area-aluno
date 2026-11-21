@@ -2236,6 +2236,11 @@
   .vac-item{margin-bottom:5px;}
   .vendas-alert-card .vac-empty{font-size:12.5px;color:var(--text-mute);}
   .vendas-meta{margin:0 0 16px;}
+  .eq-metas{margin:6px 0 22px;}
+  .eq-meta-bloco{margin-top:10px;}
+  .eq-meta-rot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-mute);margin:0 0 6px;}
+  .eq-meta-rot .link-btn{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-size:12px;}
+  .eq-meta-bloco .vendas-meta{margin-bottom:0;}
   .mt-card .mt-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
   .mt-card .mt-bloco.bad .vm-barra i{background:var(--danger);}
   .mt-card .mt-bloco.ok .vm-barra i{background:var(--success);}
@@ -19017,6 +19022,39 @@ function viewsDoPapel(){
   if(papel==='me_convidado') return ['me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'];
   return null; // equipe interna: tudo
 }
+/* Painel de metas no Início da equipe: só para os sócios (Murilo, Sandra, Carmem e Diego). Junta a meta
+   do CRM (Registro de Sessões 1:1), a do Financeiro e a do Desenvolvimento (Radar dos Mentorados). */
+const EQ_METAS = { carregando:false, ok:false };
+function eqMetasPode(){ return !!currentUser && currentUserRole==='staff' && REU_SOCIOS.includes(currentUser.id); }
+async function eqMetasCarregar(){
+  if(EQ_METAS.carregando || EQ_METAS.ok) return; EQ_METAS.carregando = true;
+  try{
+    const tarefas = [];
+    if(RADAR_UI.rows===null && !RADAR_UI.carregando) tarefas.push(radarCarregar());
+    if(typeof NPS_UI!=='undefined' && NPS_UI.rows===null && !NPS_UI.carregando) tarefas.push(npsCarregarEquipe());
+    if(METAS_COBR===null) tarefas.push(metasCobrCarregar());
+    if(!RF.dados && !RF.carregando) tarefas.push(rfCarregar());
+    await Promise.all(tarefas.map(t=>Promise.resolve(t).catch(e=>console.warn('metas inicio', e))));
+    if(RF.dados && MT_FIN_UI.venc90===null) await mtFinCarregar();
+  }catch(e){ console.warn('metas inicio', e); }
+  EQ_METAS.carregando = false; EQ_METAS.ok = true;
+  if(currentView==='equipe') renderEquipe();
+}
+function eqMetasHtml(){
+  if(!eqMetasPode()) return '';
+  if(!EQ_METAS.ok){ eqMetasCarregar(); return `<div class="eq-metas"><h2 class="section-title com-titulo">${icon('target')} PAINEL DE METAS</h2><p class="section-sub">Carregando as metas…</p></div>`; }
+  let dev = '';
+  try{
+    const lista = (RADAR_UI.rows||[]).map(r=>{ const st = getStudent(r.aluno_id); return st ? { s:st, a: rdAvaliar(st, r) } : null; }).filter(Boolean);
+    const momentos = lista.flatMap(x=>rdMomentos(x.s).map(m=>Object.assign({s:x.s}, m)));
+    dev = mtDevHtml(lista, momentos);
+  }catch(e){ console.warn('metas dev', e); }
+  let fin = ''; try{ fin = mtFinHtml(); }catch(e){ console.warn('metas fin', e); }
+  let crm = ''; try{ crm = vendasMetaHtml(); }catch(e){ console.warn('metas crm', e); }
+  const bloco = (rot, html, view)=> html ? `<div class="eq-meta-bloco"><div class="eq-meta-rot"><span>${rot}</span><button type="button" class="link-btn" data-equipe-go="${view}">Abrir ${icon('externallink','tiny')}</button></div>${html}</div>` : '';
+  const corpo = bloco('CRM · Registro de Sessões 1:1', crm, 'vendas') + bloco('Financeiro · Radar Financeiro', fin, 'radarfin') + bloco('Desenvolvimento · Radar dos Mentorados', dev, 'radar');
+  return `<div class="eq-metas"><h2 class="section-title com-titulo">${icon('target')} PAINEL DE METAS</h2>${corpo || '<p class="section-sub">Sem dados de metas no momento.</p>'}</div>`;
+}
 function renderEquipe(){
   const nome = ((currentUserProfile||{}).name||'').split(' ')[0];
   const permitidas = viewsDoPapel();
@@ -19026,6 +19064,7 @@ function renderEquipe(){
     <h2 class="section-title" style="margin-top:4px">${saud}${nome? ', '+escapeHtml(nome) : ''}.</h2>
     <p class="section-sub" style="margin-top:-6px">Escolha por onde começar — são as mesmas áreas do menu lateral.</p>
     ${aniversariantesEquipeHtml()}
+    ${eqMetasHtml()}
     <div class="equipe-grid">
       ${EQUIPE_ATALHOS.filter(a=> a.view==='ecrm' ? (()=>{ const e = document.getElementById('nav-ecrm'); return !!e && e.style.display!=='none'; })() : equipeViewPode(a.view)).map(a=>{ const [ic,label] = a.view==='ecrm' ? ['idcard','eCRM'] : NAV_LABELS[a.view]; return `
         <button type="button" class="equipe-card" data-equipe-go="${a.view}">
