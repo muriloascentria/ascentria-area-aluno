@@ -1431,6 +1431,17 @@
   .emb-vinc{flex-basis:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;max-width:520px;}
   .emb-vinc select,.emb-vinc button{height:40px;}
   .emb-vazio{color:var(--text-mute);font-size:12px;text-align:center;padding:8px;}
+  .emb-topo .emb-picker{flex-basis:100%;margin:0;}
+  .emb-topo .emb-picker .aluno-picker-btn{background:transparent;border-color:transparent;padding:4px 6px;margin:-4px -6px;}
+  .emb-topo .emb-picker .aluno-picker-btn:hover{border-color:var(--border);}
+  .emb-topo .emb-picker .ap-nome strong{font-size:18px;}
+  .emb-picker-grupo{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-mute);padding:8px 8px 4px;}
+  .emb-picker-grupo[hidden]{display:none;}
+  .emb-topo > .emb-topo-prog{flex-basis:100%;max-width:none;margin-top:0;}
+  .emb-topo > .emb-topo-prog .module-bar{max-width:360px;}
+  .emb-topo > .emb-topo-prog .emb-salvo{margin-left:auto;font-weight:500;color:var(--text-mute);}
+  .emb-vinc-linha select{max-width:none !important;flex:1 1 auto !important;}
+  .emb-fora-largo{flex-basis:100%;height:42px;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
   .emb-lead-linha{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;color:var(--text-dim);}
   .emb-ponto{color:var(--text-mute);}
   .emb-acoes-linha{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
@@ -24330,23 +24341,34 @@ function embRenderDetalhe(el, s){
     <datalist id="emb-pessoas">${pessoas.map(p=>`<option value="${escapeAttr(p)}">`).join('')}</datalist>
     <div class="back-row"><button class="back-btn" id="emb-voltar">${icon('back')} Voltar ao quadro</button></div>
     <div class="emb-topo">
-      ${initialsAvatar(s.initials,s.color,52,s.avatarUrl)}
-      <div class="emb-topo-txt">
-        <h2>${escapeHtml(s.name)}</h2>
-        <small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30 da mentoria` : `Dia ${dia} da mentoria`) : 'Sem data de matrícula'} · ${r.concluido ? 'Embarque concluído' : 'Etapa atual: '+escapeHtml(r.atual.titulo)}</small>
-        <div class="emb-topo-prog"><div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div><span>${r.feitas}/${r.total}</span></div>
+      <div class="aluno-picker emb-picker" id="emb-picker">
+        <button type="button" class="aluno-picker-btn" id="emb-picker-btn" aria-expanded="false">
+          ${initialsAvatar(s.initials,s.color,44,s.avatarUrl)}
+          <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30 da mentoria` : `Dia ${dia} da mentoria`) : 'Sem data de matrícula'} · ${r.concluido ? 'Embarque concluído' : 'Etapa atual: '+escapeHtml(r.atual.titulo)} · clique para trocar</small></span>
+          ${icon('down')}
+        </button>
+        <div class="aluno-picker-menu" id="emb-picker-menu" hidden>
+          <input class="ps-input" type="text" id="emb-picker-busca" placeholder="Buscar pelo nome..." autocomplete="off">
+          <div class="aluno-picker-lista">
+            ${(()=>{ const item = (m)=>{ const rr = embResumo(m.id); return `<button type="button" class="ap-item ${m.id===sid?'atual':''}" data-ap-id="${m.id}" data-ap-nome="${escapeAttr(normTxt(m.name))}">
+                ${initialsAvatar(m.initials, m.color, 28, m.avatarUrl)}
+                <span>${escapeHtml(m.name)}<small>${m.lead ? 'Aguardando conta · ' : ''}${rr.concluido ? 'Embarque concluído' : escapeHtml(rr.atual.titulo)}</small></span>
+                ${m.id===sid? icon('check','tiny') : ''}</button>`; };
+              const abertos = mentorados.filter(m=>!embResumo(m.id).concluido), fim = mentorados.filter(m=>embResumo(m.id).concluido);
+              return `<div class="emb-picker-grupo">Ainda na Rota de Embarque · ${abertos.length}</div>${abertos.map(item).join('')}${fim.length ? `<div class="emb-picker-grupo">Embarque concluído · ${fim.length}</div>${fim.map(item).join('')}` : ''}`; })()}
+            <div class="ap-vazio" id="emb-picker-vazio" hidden>Nenhum mentorado com esse nome.</div>
+          </div>
+        </div>
       </div>
+      <div class="emb-topo-prog"><div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div><span>${r.feitas}/${r.total} etapas</span><span class="emb-salvo" id="emb-salvo">Salvo</span></div>
       ${s.lead ? `<div class="emb-lead-linha">
           <span class="emb-tag-lead">AGUARDANDO CONTA NO ePLAT</span>
           <span>Vendido no CRM${s.lead.vendedor? ' por '+escapeHtml(s.lead.vendedor) : ''}${s.lead.data_venda? ' em '+escapeHtml(embDataBR(s.lead.data_venda)) : ''}</span>
           ${s.lead.whatsapp? `<span class="emb-ponto">•</span><span>${escapeHtml(fmtWhatsLead(s.lead.whatsapp))}</span>` : ''}${s.lead.email? `<span class="emb-ponto">•</span><span>${escapeHtml(s.lead.email)}</span>` : ''}
+        </div>
+        <div class="emb-acoes-linha emb-vinc-linha">
+          <select class="ps-input" id="emb-vinc-sel" title="Assim que a pessoa criar a conta, o ePLAT liga sozinho pelo e-mail, WhatsApp ou CPF. Use só se não ligar."><option value="">Vincular a um aluno do ePLAT…</option>${alunosVinc.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select><button type="button" class="btn-accent" id="emb-vinc-btn">Vincular aluno</button>
         </div>` : ''}
-      <div class="emb-acoes-linha">
-        ${s.lead ? `<select class="ps-input" id="emb-vinc-sel" title="Assim que a pessoa criar a conta, o ePLAT liga sozinho pelo e-mail, WhatsApp ou CPF. Use só se não ligar."><option value="">Vincular a um aluno do ePLAT…</option>${alunosVinc.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select><button type="button" class="btn-accent" id="emb-vinc-btn">Vincular aluno</button>` : ''}
-        <select class="ps-input" id="emb-trocar" title="Abrir o card de outro mentorado">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}${m.lead?' (aguardando conta)':''}</option>`).join('')}</select>
-        <button type="button" class="btn-outline" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('check','tiny')+' Mover para Embarque concluído'}</button>
-        <span class="emb-salvo" id="emb-salvo">Salvo</span>
-      </div>
       ${(()=>{ const c = (EMB[sid]||{}).__contato || {}; return `<div class="emb-contato">
         <div class="emb-contato-tit"><strong>PAUSOU O CICLO INICIAL POR ALGUM MOTIVO?</strong><span>${icon('calendar','tiny')} Dia para entrar em contato <small style="font-weight:500">(aparece como tag no card do quadro)</small></span></div>
         <label class="emb-campo"><span>Data</span><input class="ps-input" type="date" min="2020-01-01" max="2100-12-31" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
@@ -24354,6 +24376,7 @@ function embRenderDetalhe(el, s){
         ${c.data ? `<button type="button" class="btn-outline" id="emb-ct-tirar" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">${icon('x','tiny')} Tirar tag</button>` : ''}
         ${c.data ? embContatoTagHtml(sid) : ''}
       </div>`; })()}
+      <button type="button" class="btn-outline emb-fora-largo" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('check','tiny')+' Mover para Embarque concluído'}</button>
     </div>
     ${embGuiaHtml(s)}
     <div class="emb-fluxo">
@@ -24382,7 +24405,18 @@ function embRenderDetalhe(el, s){
     </div>`;
   embGuiaBind(el, s);
   el.querySelector('#emb-voltar').addEventListener('click', ()=>{ embAluno = null; renderEmbarque(); });
-  el.querySelector('#emb-trocar').addEventListener('change', e=>embAbrir(e.target.value));
+  { const btn = el.querySelector('#emb-picker-btn'), menu = el.querySelector('#emb-picker-menu'), busca = el.querySelector('#emb-picker-busca');
+    const fechar = ()=>{ menu.hidden = true; btn.setAttribute('aria-expanded','false'); document.removeEventListener('click', fora); };
+    const fora = (e)=>{ const pk = document.getElementById('emb-picker'); if(!pk || !pk.contains(e.target)) fechar(); };
+    const filtrar = ()=>{ const q = normTxt(busca.value).trim(); let n = 0;
+      menu.querySelectorAll('.ap-item').forEach(it=>{ const ok = !q || it.dataset.apNome.includes(q); it.hidden = !ok; if(ok) n++; });
+      menu.querySelectorAll('.emb-picker-grupo').forEach(g=>{ g.hidden = !!q; });
+      el.querySelector('#emb-picker-vazio').hidden = n>0; };
+    btn.addEventListener('click', ()=>{ if(menu.hidden){ menu.hidden = false; btn.setAttribute('aria-expanded','true'); busca.value = ''; filtrar(); setTimeout(()=>{ busca.focus(); document.addEventListener('click', fora); }, 0); } else fechar(); });
+    busca.addEventListener('input', filtrar);
+    busca.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(); if(e.key==='Enter'){ const f = [...menu.querySelectorAll('.ap-item')].find(it=>!it.hidden); if(f) f.click(); } });
+    menu.querySelectorAll('.ap-item').forEach(it=>it.addEventListener('click', ()=>{ fechar(); embAbrir(it.dataset.apId); }));
+  }
   el.querySelector('#emb-fora-btn').addEventListener('click', ()=>{ embMarcarFora(sid, !embFora(sid)); embRenderDetalhe(el, s); });
   const ctSalvar = ()=>{
     const data = el.querySelector('#emb-ct-data').value, nota = el.querySelector('#emb-ct-nota').value.trim();
