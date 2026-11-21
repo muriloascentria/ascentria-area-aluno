@@ -1431,6 +1431,15 @@
   .emb-vinc{flex-basis:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;max-width:520px;}
   .emb-vinc select,.emb-vinc button{height:40px;}
   .emb-vazio{color:var(--text-mute);font-size:12px;text-align:center;padding:8px;}
+  .emb-lead-linha{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;color:var(--text-dim);}
+  .emb-ponto{color:var(--text-mute);}
+  .emb-acoes-linha{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+  .emb-acoes-linha select{height:40px;flex:1 1 220px;max-width:340px;}
+  .emb-acoes-linha .btn-accent,.emb-acoes-linha .btn-outline{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;}
+  .emb-topo .emb-contato{flex-basis:100%;margin-top:0;}
+  .emb-contato-tit strong{display:block;font-size:12.5px;letter-spacing:.4px;color:var(--text);margin-bottom:2px;}
+  .emb-contato-tit{flex-direction:column;align-items:flex-start !important;}
+  .emb-contato-tit span{display:flex;align-items:center;gap:6px;}
   .emb-topo{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:8px 0 18px;}
   .emb-topo-txt{flex:1;min-width:220px;}
   .emb-topo-txt h2{margin:0;font-size:18px;}
@@ -1473,6 +1482,9 @@
   .emb-check.on{border-color:var(--accent);background:var(--accent-soft);}
   .emb-check.dev{border-style:dashed;}
   .emb-check input{margin:0;flex:0 0 auto;}
+  .emb-checks-passos .emb-linha{grid-template-columns:1fr !important;}
+  .emb-check-n{flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--bg-elev);border:1px solid var(--border);color:var(--text-dim);}
+  .emb-check.on .emb-check-n{background:var(--success);border-color:var(--success);color:#fff;}
   .emb-check:has(.emb-check-copiar){flex-wrap:wrap;row-gap:6px;}
   .emb-check:has(.emb-check-copiar) .emb-check-txt{flex:1 1 140px;min-width:0;}
   .emb-check-copiar{margin-left:auto;display:inline-flex;gap:4px;flex:0 0 auto;}
@@ -24323,26 +24335,25 @@ function embRenderDetalhe(el, s){
         <h2>${escapeHtml(s.name)}</h2>
         <small>${dia!=null ? (dia<=30 ? `Dia ${dia} de 30 da mentoria` : `Dia ${dia} da mentoria`) : 'Sem data de matrícula'} · ${r.concluido ? 'Embarque concluído' : 'Etapa atual: '+escapeHtml(r.atual.titulo)}</small>
         <div class="emb-topo-prog"><div class="module-bar"><div class="fill" style="width:${Math.round(r.feitas/r.total*100)}%"></div></div><span>${r.feitas}/${r.total}</span></div>
-        ${s.lead ? `<div class="emb-lead-info">
+      </div>
+      ${s.lead ? `<div class="emb-lead-linha">
           <span class="emb-tag-lead">AGUARDANDO CONTA NO ePLAT</span>
           <span>Vendido no CRM${s.lead.vendedor? ' por '+escapeHtml(s.lead.vendedor) : ''}${s.lead.data_venda? ' em '+escapeHtml(embDataBR(s.lead.data_venda)) : ''}</span>
-          ${s.lead.whatsapp? `<span>${escapeHtml(fmtWhatsLead(s.lead.whatsapp))}</span>` : ''}${s.lead.email? `<span>${escapeHtml(s.lead.email)}</span>` : ''}
-          <div class="emb-vinc"><select class="ps-input" id="emb-vinc-sel"><option value="">Vincular a um aluno do ePLAT…</option>${alunosVinc.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select><button type="button" class="btn-accent" id="emb-vinc-btn">Vincular aluno</button></div>
-          <small>Assim que a pessoa criar a conta, o ePLAT liga sozinho pelo e-mail, WhatsApp ou CPF. Use o botão só se não ligar.</small>
+          ${s.lead.whatsapp? `<span class="emb-ponto">•</span><span>${escapeHtml(fmtWhatsLead(s.lead.whatsapp))}</span>` : ''}${s.lead.email? `<span class="emb-ponto">•</span><span>${escapeHtml(s.lead.email)}</span>` : ''}
         </div>` : ''}
-        ${(()=>{ const c = (EMB[sid]||{}).__contato || {}; return `<div class="emb-contato">
-          <div class="emb-contato-tit">${icon('calendar','tiny')} Dia para entrar em contato <small style="font-weight:500">(aparece como tag no card do quadro)</small></div>
-          <label class="emb-campo"><span>Data</span><input class="ps-input" type="date" min="2020-01-01" max="2100-12-31" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
-          <label class="emb-campo txt"><span>O que fazer</span><input class="ps-input" type="text" id="emb-ct-nota" maxlength="40" value="${escapeAttr(c.nota||'')}" placeholder="Ex.: Iniciar"></label>
-          ${c.data ? `<button type="button" class="btn-outline" id="emb-ct-tirar" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">${icon('x','tiny')} Tirar tag</button>` : ''}
-          ${c.data ? embContatoTagHtml(sid) : ''}
-        </div>`; })()}
-      </div>
-      <div class="emb-topo-acoes">
-        <select class="ps-input" id="emb-trocar">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}${m.lead?' (aguardando conta)':''}</option>`).join('')}</select>
+      <div class="emb-acoes-linha">
+        ${s.lead ? `<select class="ps-input" id="emb-vinc-sel" title="Assim que a pessoa criar a conta, o ePLAT liga sozinho pelo e-mail, WhatsApp ou CPF. Use só se não ligar."><option value="">Vincular a um aluno do ePLAT…</option>${alunosVinc.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select><button type="button" class="btn-accent" id="emb-vinc-btn">Vincular aluno</button>` : ''}
+        <select class="ps-input" id="emb-trocar" title="Abrir o card de outro mentorado">${mentorados.map(m=>`<option value="${m.id}" ${m.id===sid?'selected':''}>${escapeHtml(m.name)}${m.lead?' (aguardando conta)':''}</option>`).join('')}</select>
         <button type="button" class="btn-outline" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('check','tiny')+' Mover para Embarque concluído'}</button>
         <span class="emb-salvo" id="emb-salvo">Salvo</span>
       </div>
+      ${(()=>{ const c = (EMB[sid]||{}).__contato || {}; return `<div class="emb-contato">
+        <div class="emb-contato-tit"><strong>PAUSOU O CICLO INICIAL POR ALGUM MOTIVO?</strong><span>${icon('calendar','tiny')} Dia para entrar em contato <small style="font-weight:500">(aparece como tag no card do quadro)</small></span></div>
+        <label class="emb-campo"><span>Data</span><input class="ps-input" type="date" min="2020-01-01" max="2100-12-31" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
+        <label class="emb-campo txt"><span>O que fazer</span><input class="ps-input" type="text" id="emb-ct-nota" maxlength="40" value="${escapeAttr(c.nota||'')}" placeholder="Ex.: Iniciar"></label>
+        ${c.data ? `<button type="button" class="btn-outline" id="emb-ct-tirar" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">${icon('x','tiny')} Tirar tag</button>` : ''}
+        ${c.data ? embContatoTagHtml(sid) : ''}
+      </div>`; })()}
     </div>
     ${embGuiaHtml(s)}
     <div class="emb-fluxo">
@@ -24362,8 +24373,10 @@ function embRenderDetalhe(el, s){
             ${(()=>{ const rotulo = Object.fromEntries(et.checks); const linhas = EMB_LINHAS[et.k] || [et.checks.map(c=>c[0])];
               const usados = new Set(linhas.flat()); const resto = et.checks.map(c=>c[0]).filter(k=>!usados.has(k));
               const todas = resto.length ? [...linhas.slice(0,-1), resto, linhas[linhas.length-1]] : linhas;
-              return `<div class="emb-checks">${todas.map(lin=>`<div class="emb-linha" style="--n:${lin.length}">${lin.filter(ck=>rotulo[ck]).map(ck=>{ const label = rotulo[ck];
-                return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} ${et.auto && (ck!=='proximo' || !auto || auto.proximo) ? 'disabled title="Marca sozinho quando o mentorado cumpre a tarefa"' : ''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}${embCheckCopiarHtml(et.k, ck)}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
+              /* Um check por linha, numerado em ordem, como passos; a passagem fica por último, sem número. */
+              let nPasso = 0;
+              return `<div class="emb-checks emb-checks-passos">${todas.flat().filter(ck=>rotulo[ck]).map(ck=>[ck]).map(lin=>`<div class="emb-linha" style="--n:1">${lin.map(ck=>{ const label = rotulo[ck]; const num = ck==='proximo' ? '' : `<span class="emb-check-n">${++nPasso}</span>`;
+                return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} ${et.auto && (ck!=='proximo' || !auto || auto.proximo) ? 'disabled title="Marca sozinho quando o mentorado cumpre a tarefa"' : ''} data-emb-check="${et.chave}:${ck}"> ${num}${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}${embCheckCopiarHtml(et.k, ck)}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
           </div>
         </div>`; }).join('')}
     </div>`;
