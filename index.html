@@ -2242,6 +2242,10 @@
   .ct-link.ok{color:var(--success);border-color:var(--success);}
   .ct-link .icon{width:12px;height:12px;}
   .eq-metas{margin:6px 0 22px;}
+  .eq-meta-bloco .vendas-meta + .vendas-meta{margin-top:10px;}
+  .eq-leads-meta{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;}
+  .eq-leads-meta label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-mute);}
+  .eq-leads-meta input{width:140px;height:36px;}
   .eq-meta-bloco{margin-top:10px;}
   .eq-meta-rot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-mute);margin:0 0 6px;}
   .eq-meta-rot .link-btn{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-size:12px;}
@@ -19036,7 +19040,43 @@ function viewsDoPapel(){
 }
 /* Painel de metas no Início da equipe: só para os sócios (Murilo, Sandra, Carmem e Diego). Junta a meta
    do CRM (Registro de Sessões 1:1), a do Financeiro e a do Desenvolvimento (Radar dos Mentorados). */
-const EQ_METAS = { carregando:false, ok:false };
+const EQ_METAS = { carregando:false, ok:false, leads:null, metaLeads:null };
+/* Leads do mês: negócios novos no funil Mentoria do eCRM, trazidos pelo eCRM para crm_leads_mes.
+   A meta é definida pelos sócios aqui mesmo (metas_config, chave leads_mes). */
+async function eqLeadsCarregar(){
+  try{
+    const [a, b] = await Promise.all([ sb.from('crm_leads_mes').select('mes,leads,atualizado_em').order('mes', {ascending:false}).limit(6), sb.from('metas_config').select('valor').eq('chave','leads_mes').maybeSingle() ]);
+    EQ_METAS.leads = (a && a.data) || []; EQ_METAS.metaLeads = b && b.data && b.data.valor!=null ? Number(b.data.valor) : null;
+  }catch(e){ console.warn('leads crm', e); EQ_METAS.leads = []; }
+}
+function eqLeadsHtml(){
+  const L = EQ_METAS.leads || [];
+  const hoje = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Sao_Paulo'}));
+  const k = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const atual = L.find(x=>x.mes===k), ant = L.find(x=>x.mes < k);
+  const meta = EQ_METAS.metaLeads;
+  const n = atual ? atual.leads : null;
+  const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+  const editar = `<span class="eq-leads-meta"><label>Meta de leads do mês <input type="number" min="1" step="1" class="ps-input" id="eq-leads-meta" value="${meta||''}" placeholder="ex.: 400"></label><button type="button" class="btn-mini" id="eq-leads-salvar">${icon('check','tiny')} Salvar</button></span>`;
+  if(n===null) return `<div class="vendas-alert-card vendas-meta"><div class="vac-title">${icon('target')} Leads do mês <span class="vm-base">funil Mentoria do eCRM</span></div><div class="vm-falta" style="margin:6px 0 10px">Aguardando a primeira contagem do eCRM.</div>${editar}</div>`;
+  const esperado = meta ? Math.floor(meta*hoje.getDate()/ultimoDia) : null;
+  const ok = meta ? n>=meta : false;
+  const pct = meta ? Math.min(100, Math.round(n/meta*100)) : 100;
+  const ritmo = !meta ? 'Defina a meta de leads do mês ao lado' : ok ? 'Meta de leads batida! 🎉' : n>=esperado ? 'No ritmo da meta' : `Abaixo do ritmo: o esperado até hoje era ${esperado} leads`;
+  return `<div class="vendas-alert-card vendas-meta ${ok?'ok':''}">
+    <div class="vac-title">${icon('target')} Leads do mês <span class="vm-base">funil Mentoria do eCRM${atual && atual.atualizado_em ? ' · atualizado '+escapeHtml(tzDataHora(atual.atualizado_em, true)) : ''}</span></div>
+    <div class="vm-grid">
+      <div class="vm-bloco">
+        <div class="vm-rot">Leads novos</div>
+        <div class="vm-num"><b>${n}</b>${meta ? ` de ${meta}` : ''}</div>
+        <div class="vm-barra"><i style="width:${pct}%"></i></div>
+        <div class="vm-falta">${meta ? (ok ? 'Meta de leads batida' : `Faltam <b>${meta-n}</b> leads`) : 'Sem meta definida'}${ant ? ` · mês anterior: ${ant.leads}` : ''}</div>
+      </div>
+      <div class="vm-bloco">${editar}</div>
+    </div>
+    <div class="vm-rodape">${escapeHtml(ritmo)}</div>
+  </div>`;
+}
 function eqMetasPode(){ return !!currentUser && currentUserRole==='staff' && REU_SOCIOS.includes(currentUser.id); }
 async function eqMetasCarregar(){
   if(EQ_METAS.carregando || EQ_METAS.ok) return; EQ_METAS.carregando = true;
@@ -19047,6 +19087,7 @@ async function eqMetasCarregar(){
     if(METAS_COBR===null) tarefas.push(metasCobrCarregar());
     if(!RF.dados && !RF.carregando) tarefas.push(rfCarregar());
     await Promise.all(tarefas.map(t=>Promise.resolve(t).catch(e=>console.warn('metas inicio', e))));
+    await eqLeadsCarregar();
     if(RF.dados && MT_FIN_UI.venc90===null) await mtFinCarregar();
   }catch(e){ console.warn('metas inicio', e); }
   EQ_METAS.carregando = false; EQ_METAS.ok = true;
@@ -19062,7 +19103,7 @@ function eqMetasHtml(){
     dev = mtDevHtml(lista, momentos);
   }catch(e){ console.warn('metas dev', e); }
   let fin = ''; try{ fin = mtFinHtml(); }catch(e){ console.warn('metas fin', e); }
-  let crm = ''; try{ crm = vendasMetaHtml(); }catch(e){ console.warn('metas crm', e); }
+  let crm = ''; try{ crm = vendasMetaHtml() + eqLeadsHtml(); }catch(e){ console.warn('metas crm', e); }
   const bloco = (rot, html, view)=> html ? `<div class="eq-meta-bloco"><div class="eq-meta-rot"><span>${rot}</span><button type="button" class="link-btn" data-equipe-go="${view}">Abrir ${icon('externallink','tiny')}</button></div>${html}</div>` : '';
   const corpo = bloco('CRM · Registro de Sessões 1:1', crm, 'vendas') + bloco('Financeiro · Radar Financeiro', fin, 'radarfin') + bloco('Desenvolvimento · Radar dos Mentorados', dev, 'radar');
   return `<div class="eq-metas"><h2 class="section-title com-titulo">${icon('target')} PAINEL DE METAS</h2>${corpo || '<p class="section-sub">Sem dados de metas no momento.</p>'}</div>`;
@@ -19089,6 +19130,15 @@ function renderEquipe(){
   reuPreparar();
   polPreparar();
   anivEquipeLigar(document.getElementById('view-equipe'));
+  const lmBtn = document.getElementById('eq-leads-salvar');
+  if(lmBtn) lmBtn.addEventListener('click', async ()=>{
+    const v = Math.round(Number(document.getElementById('eq-leads-meta').value));
+    if(!(v>0)){ alert('Informe a meta de leads do mês (um número maior que zero).'); return; }
+    lmBtn.disabled = true;
+    const { error } = await sb.from('metas_config').upsert({ chave:'leads_mes', valor:v, atualizado_por:currentUser.id, atualizado_em:new Date().toISOString() }, { onConflict:'chave' });
+    if(error){ alert('Não foi possível salvar: '+(error.message||'')); lmBtn.disabled = false; return; }
+    EQ_METAS.metaLeads = v; renderEquipe();
+  });
   document.querySelectorAll('#view-equipe [data-equipe-go]').forEach(b=>b.addEventListener('click', ()=>{
     const v = b.dataset.equipeGo;
     if(v==='ecrm'){ window.open('https://www.ecrm.digital', '_blank', 'noopener'); return; }
