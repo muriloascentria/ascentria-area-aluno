@@ -1440,7 +1440,8 @@
   .emb-topo > .emb-topo-prog{flex-basis:100%;max-width:none;margin-top:0;}
   .emb-topo > .emb-topo-prog .module-bar{max-width:360px;}
   .emb-topo > .emb-topo-prog .emb-salvo{margin-left:auto;font-weight:500;color:var(--text-mute);}
-  .emb-vinc-linha select{max-width:none !important;flex:1 1 auto !important;}
+  .emb-vinc-linha{flex-wrap:nowrap;}
+  .emb-vinc-linha select{max-width:none !important;flex:1 1 0 !important;min-width:0;}
   .emb-fora-largo{flex-basis:100%;height:42px;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
   .emb-lead-linha{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;color:var(--text-dim);}
   .emb-ponto{color:var(--text-mute);}
@@ -1450,7 +1451,12 @@
   .emb-topo .emb-contato{flex-basis:100%;margin-top:0;}
   .emb-contato-tit strong{display:block;font-size:12.5px;letter-spacing:.4px;color:var(--text);margin-bottom:2px;}
   .emb-contato-tit{flex-direction:column;align-items:flex-start !important;}
-  .emb-contato-tit span{display:flex;align-items:center;gap:6px;}
+  .emb-contato-tit span{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .emb-contato-tit .emb-tag-contato{margin-left:4px;}
+  .emb-contato-linha{flex-basis:100%;display:flex;align-items:flex-end;gap:8px 10px;flex-wrap:wrap;}
+  .emb-contato-linha .emb-campo{min-width:150px;}
+  .emb-contato-linha .emb-campo.txt{flex:1;min-width:200px;}
+  .emb-contato-linha #emb-ct-tirar{height:40px;}
   .emb-topo{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:8px 0 18px;}
   .emb-topo-txt{flex:1;min-width:220px;}
   .emb-topo-txt h2{margin:0;font-size:18px;}
@@ -24370,11 +24376,10 @@ function embRenderDetalhe(el, s){
           <select class="ps-input" id="emb-vinc-sel" title="Assim que a pessoa criar a conta, o ePLAT liga sozinho pelo e-mail, WhatsApp ou CPF. Use só se não ligar."><option value="">Vincular a um aluno do ePLAT…</option>${alunosVinc.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select><button type="button" class="btn-accent" id="emb-vinc-btn">Vincular aluno</button>
         </div>` : ''}
       ${(()=>{ const c = (EMB[sid]||{}).__contato || {}; return `<div class="emb-contato">
-        <div class="emb-contato-tit"><strong>PAUSOU O CICLO INICIAL POR ALGUM MOTIVO?</strong><span>${icon('calendar','tiny')} Dia para entrar em contato <small style="font-weight:500">(aparece como tag no card do quadro)</small></span></div>
-        <label class="emb-campo"><span>Data</span><input class="ps-input" type="date" min="2020-01-01" max="2100-12-31" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
+        <div class="emb-contato-tit"><strong>PAUSOU O CICLO INICIAL POR ALGUM MOTIVO?</strong><span>${icon('calendar','tiny')} Dia para entrar em contato <small style="font-weight:500">(aparece como tag no card do quadro)</small>${c.data ? embContatoTagHtml(sid) : ''}</span></div>
+        <div class="emb-contato-linha"><label class="emb-campo"><span>Data</span><input class="ps-input" type="date" min="2020-01-01" max="2100-12-31" id="emb-ct-data" value="${escapeAttr(c.data||'')}"></label>
         <label class="emb-campo txt"><span>O que fazer</span><input class="ps-input" type="text" id="emb-ct-nota" maxlength="40" value="${escapeAttr(c.nota||'')}" placeholder="Ex.: Iniciar"></label>
-        ${c.data ? `<button type="button" class="btn-outline" id="emb-ct-tirar" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">${icon('x','tiny')} Tirar tag</button>` : ''}
-        ${c.data ? embContatoTagHtml(sid) : ''}
+        ${c.data ? `<button type="button" class="btn-outline" id="emb-ct-tirar" style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap">${icon('x','tiny')} Tirar tag</button>` : ''}</div>
       </div>`; })()}
       <button type="button" class="btn-outline emb-fora-largo" id="emb-fora-btn">${embFora(sid) ? icon('back','tiny')+' Voltar ao funil' : icon('check','tiny')+' Mover para Embarque concluído'}</button>
     </div>
