@@ -2825,6 +2825,9 @@
   .rd-marc-msgs{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
   .rd-msg-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text-dim);}
   .rd-msg-acoes{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .rd-ep-tag{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border:1px solid var(--border);color:var(--text-mute);vertical-align:middle;}
+  .rd-ep-tag .icon{width:11px;height:11px;}
+  .rd-ep-tag.ok{border-color:var(--success);color:var(--success);}
   .rd-msg-btn{width:112px;height:32px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .15s,background .15s;}
   .rd-msg-btn:hover{border-color:var(--text-mute);}
   .rd-msg-btn .icon{width:13px;height:13px;}
@@ -24112,7 +24115,7 @@ function renderRadar(){
             ${initialsAvatar(s.initials, s.color, 34, s.avatarUrl)}
             <div class="rd-nome">
               <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
-              <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método</small>
+              <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método${rdTemEplanner(s) ? ` <span class="rd-ep-tag ok" title="Já montou a rotina de estudos no ePLANNER">${icon('calendar','tiny')} usa o ePLANNER</span>` : ` <span class="rd-ep-tag" title="Ainda não montou a rotina no ePLANNER">${icon('calendar','tiny')} sem ePLANNER</span>`}</small>
             </div>
             <div class="rd-acoes">
               ${msgAcompBloqueado(msgChaveAcomp(s.id)) ? '' : `<button type="button" class="btn-mini" data-rd-conversa="${s.id}">${icon('comment','tiny')}<span> Conversa</span></button>`}
