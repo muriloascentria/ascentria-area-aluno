@@ -1473,6 +1473,13 @@
   .emb-check.on{border-color:var(--accent);background:var(--accent-soft);}
   .emb-check.dev{border-style:dashed;}
   .emb-check input{margin:0;flex:0 0 auto;}
+  .emb-check:has(.emb-check-copiar){flex-wrap:wrap;row-gap:6px;}
+  .emb-check:has(.emb-check-copiar) .emb-check-txt{flex:1 1 140px;min-width:0;}
+  .emb-check-copiar{margin-left:auto;display:inline-flex;gap:4px;flex:0 0 auto;}
+  .emb-copiar-mini{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text-mute);cursor:pointer;white-space:nowrap;}
+  .emb-copiar-mini:hover{color:var(--text);border-color:var(--text-mute);}
+  .emb-copiar-mini.ok{color:var(--success);border-color:var(--success);}
+  .emb-copiar-mini .icon{width:12px;height:12px;}
   .emb-check.passagem{border-color:var(--accent);font-weight:700;}
   .emb-check.passagem .icon{width:13px;height:13px;transform:rotate(90deg);color:var(--accent);flex:0 0 auto;}
   .emb-check.passagem small{margin-left:auto;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);}
@@ -24071,7 +24078,7 @@ const EMB_ETAPAS = [
   {k:'grupo', titulo:'Grupo criado', ic:'users', campos:[['data','Quando?','date'],['por','Quem criou?','pessoa']],
    checks:[['todos','Todos inclusos'],['proximo','Grupo pronto: seguir para as Mensagens iniciais']]},
   {k:'mensagens', titulo:'Mensagens iniciais', ic:'comment', campos:[],
-   checks:[['murilo','Murilo: boas-vindas e apresentação da equipe'],['mariane','Mariane: orientações iniciais e formulários'],['viviane','Viviane: boas-vindas e acesso inicial'],['proximo','Agendamento do Onboarding ePLAT realizado']]},
+   checks:[['murilo','Murilo: boas-vindas e apresentação da Mari'],['mariane','Mari: apresentação e convite para o encontro com a Viviane'],['acesso','Mari: acesso ao Essência PLAT'],['antes','Mari: orientações antes do encontro com a Viviane'],['viviane','Viviane: boas-vindas na véspera do encontro'],['proximo','Agendamento do Onboarding ePLAT realizado']]},
   /* Tarefas iniciais: as 5 metas automáticas do primeiro acesso (metas_iniciais_criar no banco). Os
      checks se marcam sozinhos conforme o mentorado cumpre; com as 5 feitas, o card passa sozinho para o
      Onboarding ePLAT. Mentorado antigo, que não tem essas metas, pula esta etapa. */
@@ -24089,7 +24096,7 @@ const EMB_DEV = {titulo:'Mentoria de Desenvolvimento', ic:'target', agenda:true,
 /* Como as caixas de cada etapa se arrumam em linhas (cada linha vai de ponta a ponta, caixas iguais). */
 const EMB_LINHAS = {
   grupo:[['todos'],['proximo']],
-  mensagens:[['murilo','mariane','viviane'],['proximo']],
+  mensagens:[['murilo','mariane'],['acesso','antes','viviane'],['proximo']],
   tarefas:[['video_eplat','diagnostico','eplanner'],['intro_aulas','apresentacao'],['proximo']],
   eplat:[['agendado','concluido','tarefas','analise'],['dev'],['proximo']],
   expert:[['agendado','concluido','anteriores','tarefas'],['analise','dev'],['proximo']],
@@ -24356,7 +24363,7 @@ function embRenderDetalhe(el, s){
               const usados = new Set(linhas.flat()); const resto = et.checks.map(c=>c[0]).filter(k=>!usados.has(k));
               const todas = resto.length ? [...linhas.slice(0,-1), resto, linhas[linhas.length-1]] : linhas;
               return `<div class="emb-checks">${todas.map(lin=>`<div class="emb-linha" style="--n:${lin.length}">${lin.filter(ck=>rotulo[ck]).map(ck=>{ const label = rotulo[ck];
-                return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} ${et.auto && (ck!=='proximo' || !auto || auto.proximo) ? 'disabled title="Marca sozinho quando o mentorado cumpre a tarefa"' : ''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
+                return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} ${et.auto && (ck!=='proximo' || !auto || auto.proximo) ? 'disabled title="Marca sozinho quando o mentorado cumpre a tarefa"' : ''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}${embCheckCopiarHtml(et.k, ck)}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
           </div>
         </div>`; }).join('')}
     </div>`;
@@ -24528,7 +24535,7 @@ No encontro com a Viviane, você poderá trazer as dúvidas que surgirem durante
       'Com as 5 feitas, o card passa sozinho para o Onboarding ePLAT. Ninguém da equipe precisa marcar nada.',
       'No Onboarding ePLAT, a Viviane confere o que ficou pendente e ajuda a concluir.']},
   ]},
-  {etapa:'eplat', titulo:'Viviane se apresenta', quem:'Viviane (Navegadora / Customer Success)', quando:'1 dia antes do Onboarding ePLAT', itens:[
+  {etapa:'tarefas', titulo:'Viviane se apresenta', quem:'Viviane (Navegadora / Customer Success)', quando:'1 dia antes do Onboarding ePLAT', itens:[
     {tipo:'msg', titulo:'Vivi: boas-vindas na véspera', texto:`Oi, NOME! Tudo bem?
 
 Eu sou a Vivi, a sua navegadora na Mentoria Essência. Vou te acompanhar neste início, te apresentando a plataforma e ajudando no que precisar para você dar os primeiros passos com tranquilidade.
@@ -24631,6 +24638,31 @@ Podemos seguir com o agendamento do seu encontro com a Sandra?`},
     {tipo:'nota', texto:'Na Rota, a Mentoria de Desenvolvimento aparece logo depois do onboarding que a pediu. Depois dela, a Mari reagenda o onboarding seguinte.'},
   ]},
 ];
+/* Cada check que corresponde a uma mensagem do passo a passo ganha, no card, o botão de copiar dela
+   (com o nome do mentorado já no texto). Chave: etapa:check -> [título do passo, título da mensagem]. */
+const EMB_CHECK_MSGS = {
+  'grupo:todos':      [['Grupo do WhatsApp','Consultor: abertura do grupo']],
+  'mensagens:murilo': [['Boas-vindas do Murilo','Murilo: boas-vindas e apresentação da Mari']],
+  'mensagens:mariane':[['Orientações iniciais e agendamento com a Viviane','Mari: apresentação'],['Orientações iniciais e agendamento com a Viviane','Mari: apresenta a Viviane e pede horário']],
+  'mensagens:acesso': [['Acesso ao Essência PLAT','Mari: criar o acesso ao ePLAT']],
+  'mensagens:antes':  [['Acesso ao Essência PLAT','Mari: o que fazer antes do encontro com a Viviane']],
+  'mensagens:viviane':[['Viviane se apresenta','Vivi: boas-vindas na véspera']],
+  'mensagens:proximo':[['Orientações iniciais e agendamento com a Viviane','Mari: confirmação do agendamento e formulário']],
+  'eplat:agendado':   [['Onboarding ePLAT','Vivi: link da reunião (10 min antes)']],
+  'eplat:tarefas':    [['Onboarding ePLAT','Tarefas para postar no ePLAT (prazo: 10 dias)'],['Onboarding ePLAT','Vivi: aviso no grupo depois de postar as tarefas']],
+  'eplat:proximo':    [['Acesso ao eSIS e agendamento com o Murilo','Mari: acesso ao eSIS'],['Acesso ao eSIS e agendamento com o Murilo','Mari: convite para o Onboarding Expert'],['Acesso ao eSIS e agendamento com o Murilo','Mari: confirmação']],
+  'expert:tarefas':   [['Onboarding Expert','Tarefas para postar no ePLAT (prazo: 10 dias)'],['Onboarding Expert','Aviso no Acompanhamento do Essência PLAT']],
+  'expert:proximo':   [['Agendamento do Onboarding eSIS','Mari: convite para o Onboarding eSIS'],['Agendamento do Onboarding eSIS','Mari: confirmação']],
+  'dev:agendado':     [['Se precisar: encontro com a Sandra','Mari: convite para a Mentoria de Desenvolvimento']],
+};
+function embCheckCopiarHtml(k, ck){
+  const lista = (EMB_CHECK_MSGS[k+':'+ck] || []).map(([passo, msg])=>{
+    const i = EMB_GUIA.findIndex(p=>p.titulo===passo); if(i<0) return null;
+    const j = EMB_GUIA[i].itens.findIndex(it=>it.tipo==='msg' && it.titulo===msg); return j<0 ? null : { i, j, msg };
+  }).filter(Boolean);
+  if(!lista.length) return '';
+  return `<span class="emb-check-copiar">${lista.map((x,n)=>`<button type="button" class="emb-copiar-mini" data-emb-copiar="${x.i}:${x.j}" data-lbl="${lista.length>1 ? 'Copiar '+(n+1) : 'Copiar'}" title="Copiar: ${escapeAttr(x.msg)}">${icon('copy','tiny')}<span>${lista.length>1 ? 'Copiar '+(n+1) : 'Copiar'}</span></button>`).join('')}</span>`;
+}
 let embGuiaAberto = (()=>{ try{ return localStorage.getItem('eplat_emb_guia')==='1'; }catch(e){ return false; } })();
 const embGuiaPassosAbertos = new Set();
 const EMB_GUIA_MARCAS = /(?<![A-Za-zÀ-ú])(QUEM CONDUZIU|HORÁRIOS|CÓDIGO|DATA|HORA|LINK|NOME)(?![A-Za-zÀ-ú])/g;
@@ -24673,7 +24705,8 @@ function embGuiaBind(root, s){
     if(d.open){ embGuiaPassosAbertos.add(i); embGuiaPassosAbertos.delete('x'+i); }
     else { embGuiaPassosAbertos.delete(i); embGuiaPassosAbertos.add('x'+i); }
   }));
-  root.querySelectorAll('[data-emb-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
+  root.querySelectorAll('[data-emb-copiar]').forEach(b=>b.addEventListener('click', async (ev)=>{
+    ev.preventDefault(); ev.stopPropagation();   // dentro do check do card: copiar não marca a caixa
     const [i,j] = b.dataset.embCopiar.split(':').map(Number);
     const texto = embGuiaTexto(EMB_GUIA[i].itens[j], nome);
     const lbl = b.querySelector('span');
@@ -24683,7 +24716,7 @@ function embGuiaBind(root, s){
       document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } ta.remove();
     }
     b.classList.add('ok'); if(lbl) lbl.textContent = 'Copiado';
-    setTimeout(()=>{ b.classList.remove('ok'); if(lbl) lbl.textContent = 'Copiar'; }, 1800);
+    setTimeout(()=>{ b.classList.remove('ok'); if(lbl) lbl.textContent = b.dataset.lbl || 'Copiar'; }, 1800);
   }));
 }
 /* Célula da Visão Geral: em que etapa do embarque o mentorado está. */
