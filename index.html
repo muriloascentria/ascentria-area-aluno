@@ -2814,6 +2814,10 @@
   .ep-inicio-mais{padding-left:54px;}
   .rd-kpis .rd-kpi{cursor:pointer;text-align:left;font:inherit;color:inherit;}
   .rd-kpi .value{font-size:24px;font-weight:800;}
+  .rd-kpi-cinza .value{color:var(--text-mute);}
+  .rd-card.rd-cinza{border-left-color:#8a8f98;opacity:.92;} .rd-cinza .rd-sinal{background:#8a8f98;}
+  .rd-nr-btn.on{border-color:#8a8f98;color:var(--text);}
+  .rd-nr-aviso{margin:8px 0 0;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text-mute);}
   .rd-kpi-vermelho .value{color:var(--danger);} .rd-kpi-amarelo .value{color:var(--individual);} .rd-kpi-verde .value{color:var(--success);}
   .rd-kpi.ativo{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
   .rd-momentos{margin-top:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
@@ -15393,7 +15397,7 @@ async function rotinaMarcarRadar(sub, nivel){
   await radarCarregar();
   if(!RADAR_UI.rows){ alert('Não consegui carregar o Radar agora. Tente de novo em instantes.'); return false; }
   const casos = RADAR_UI.rows.map(r=>{ const st = getStudent(r.aluno_id); return st ? { s:st, a: rdAvaliar(st, r) } : null; })
-    .filter(x=>x && x.a.nivel===nivel).sort((x,y)=>x.s.name.localeCompare(y.s.name,'pt-BR'));
+    .filter(x=>x && x.a.nivel===nivel && !(nivel===2 && rdNaoRespAtivo(x.s.id))).sort((x,y)=>x.s.name.localeCompare(y.s.name,'pt-BR'));
   const nomeNivel = nivel===2 ? 'RISCO' : 'ATENÇÃO';
   if(!casos.length){ alert(`Nenhum mentorado em ${nomeNivel} no Radar agora. Deixe este item desmarcado e, ao concluir a rotina, justifique: "nenhum caso hoje".`); return false; }
   const dias = rotinaDiasUteisRestantes();
@@ -23182,7 +23186,11 @@ function renderFormDocs(){
 const RADAR_UIDS = ['8b4539a4-4c0e-4be5-a9d3-0b13eba7c8c3','a29026ae-d252-4456-bb26-eec09ba778c4','e5c2dc7b-bdcb-41a3-bebf-ee416d96fd28'];
 const RADAR_INICIO_MEDICAO = '2026-10-03'; // o registro de quando cada item é marcado começou neste dia
 const RADAR_ESTAGIOS = ['Abertura','Módulo Ser','Módulo Conectar','Módulo Transformar','Módulo Gerenciar','Fechamento'];
-const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, resolvidos:{} };
+const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busca:'', abertos:{}, resolvidos:{}, naoResp:{} };
+/* Não responsivo (cinza): mentorado em vermelho que, mesmo estimulado, não responde. A equipe marca e ele sai
+   do vermelho por 7 dias (tabela radar_nao_responsivo). Passada a semana, volta sozinho ao vermelho para uma
+   nova tentativa; dá para marcar de novo. Só vale enquanto ele estiver em vermelho. */
+function rdNaoRespAtivo(id){ const m = RADAR_UI.naoResp[id]; return !!(m && new Date(m.ate).getTime() > Date.now()); }
 /* ================= PROGRAMA DE INDICAÇÃO =================
    O aluno vê só as próprias indicações (RLS: indicador_id = ele). A gestão (Murilo, Diego, Carmem, Sandra,
    Mariane e Viviane) vincula quem indicou quem e acompanha o nível de cada um.
@@ -23629,7 +23637,7 @@ async function scPreencherCasos(){
         titulo = esc.length ? sub.titulo.replace(SC_MARCA, scNomes(esc.map(x=>x.name))) : 'Momentos-Chave: nenhum caso pendente hoje.';
       } else {
         const peso = x=>x.a.motivos.filter(m=>m.nivel===2).length*10 + x.a.motivos.length;
-        const pick = nv=>{ const c = lista.filter(x=>x.a.nivel===nv).sort((a,b)=>peso(b)-peso(a)); return c.find(x=>!recentes.has(x.s.id)) || c[0] || null; };
+        const pick = nv=>{ const c = lista.filter(x=>x.a.nivel===nv && !(nv===2 && rdNaoRespAtivo(x.s.id))).sort((a,b)=>peso(b)-peso(a)); return c.find(x=>!recentes.has(x.s.id)) || c[0] || null; };
         const v = pick(2), l = pick(1);
         const partes = [v ? v.s.name+' (vermelho)' : null, l ? l.s.name+' (laranja)' : null].filter(Boolean);
         tipo = 'radar'; ids = [v ? v.s.id : null, l ? l.s.id : null];
@@ -23654,6 +23662,8 @@ async function radarCarregar(){
     const rr = await sb.from('radar_momentos_resolvidos').select('student_id,chave,resolvido_por,resolvido_em');
     RADAR_UI.resolvidos = {};
     ((rr && rr.data) || []).forEach(x=>{ RADAR_UI.resolvidos[x.student_id+'|'+x.chave] = x; });
+    const nr = await sb.from('radar_nao_responsivo').select('aluno_id,marcado_em,ate,por');
+    RADAR_UI.naoResp = {}; ((nr && nr.data) || []).forEach(x=>{ RADAR_UI.naoResp[x.aluno_id] = x; });
   }catch(e){ console.error('radar_mentorados', e); RADAR_UI.erro = true; RADAR_UI.rows = null; }
   RADAR_UI.carregando = false;
   if(currentView==='radar') renderRadar();
@@ -23804,13 +23814,15 @@ function renderRadar(){
     return;
   }
   const verFin = rdVerFinanceiro();
-  const lista = (RADAR_UI.rows||[]).map(r=>{ const s = getStudent(r.aluno_id); return s ? { s, r, a: rdAvaliar(s, r) } : null; }).filter(Boolean);
-  lista.sort((x,y)=> y.a.nivel-x.a.nivel || y.a.motivos.filter(m=>m.nivel===2).length - x.a.motivos.filter(m=>m.nivel===2).length || y.a.motivos.length-x.a.motivos.length || x.s.name.localeCompare(y.s.name,'pt-BR'));
-  const qtd = n=>lista.filter(x=>x.a.nivel===n).length;
+  const lista = (RADAR_UI.rows||[]).map(r=>{ const s = getStudent(r.aluno_id); if(!s) return null; const a = rdAvaliar(s, r); a.naoResp = a.nivel===2 && rdNaoRespAtivo(s.id); return { s, r, a }; }).filter(Boolean);
+  const ord = a=> a.naoResp ? -1 : a.nivel;
+  lista.sort((x,y)=> ord(y.a)-ord(x.a) || y.a.motivos.filter(m=>m.nivel===2).length - x.a.motivos.filter(m=>m.nivel===2).length || y.a.motivos.length-x.a.motivos.length || x.s.name.localeCompare(y.s.name,'pt-BR'));
+  const qtd = n=>lista.filter(x=>x.a.nivel===n && !x.a.naoResp).length;
+  const qtdCinza = lista.filter(x=>x.a.naoResp).length;
   const semAcao = lista.filter(x=>x.a.semAcao).length;
   const nBusca = normTxt(RADAR_UI.busca).trim();
   const f = RADAR_UI.filtro;
-  const visiveis = lista.filter(x=>(f==='todos' || (f==='vermelho' && x.a.nivel===2) || (f==='amarelo' && x.a.nivel===1) || (f==='verde' && x.a.nivel===0) || (f==='semacao' && x.a.semAcao))
+  const visiveis = lista.filter(x=>(f==='todos' || (f==='vermelho' && x.a.nivel===2 && !x.a.naoResp) || (f==='cinza' && x.a.naoResp) || (f==='amarelo' && x.a.nivel===1) || (f==='verde' && x.a.nivel===0) || (f==='semacao' && x.a.semAcao))
     && (!nBusca || normTxt(x.s.name).includes(nBusca) || normTxt((x.s.cadastro||{}).nomeCompleto).includes(nBusca)));
   const momentos = lista.flatMap(x=>rdMomentos(x.s).map(m=>Object.assign({s:x.s}, m))).sort((a,b)=>a.em-b.em);
   const cor = n=> n===2 ? 'vermelho' : n===1 ? 'amarelo' : 'verde';
@@ -23828,6 +23840,7 @@ function renderRadar(){
       ${tile('vermelho','Em risco', qtd(2), 'Mostrar só os mentorados em vermelho')}
       ${tile('amarelo','Atenção', qtd(1), 'Mostrar só os mentorados em amarelo')}
       ${tile('verde','Em dia', qtd(0), 'Mostrar só os mentorados em verde')}
+      ${tile('cinza','Não responsivos', qtdCinza, 'Mentorados em vermelho que, mesmo estimulados, não respondem. Voltam sozinhos ao vermelho depois de 7 dias')}
       ${tile('semacao','Sem próxima ação', semAcao, 'Mentorados sem próxima ação registrada no acompanhamento')}
     </div>
     ${momentos.length ? (()=>{ const todosRes = momentos.every(m=>RADAR_UI.resolvidos[m.s.id+'|'+m.chave]); const fechado = todosRes && !RADAR_UI.momAberto; return `
@@ -23854,9 +23867,9 @@ function renderRadar(){
         const resp = r.proxima_acao_resp && PEOPLE[r.proxima_acao_resp] ? PEOPLE[r.proxima_acao_resp].name.split(' ')[0] : '';
         const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
         return `
-        <div class="rd-card rd-${cor(a.nivel)}">
+        <div class="rd-card rd-${a.naoResp ? 'cinza' : cor(a.nivel)}">
           <div class="rd-topo">
-            <span class="rd-sinal" title="${a.nivel===2?'Em risco':a.nivel===1?'Atenção':'Em dia'}"></span>
+            <span class="rd-sinal" title="${a.naoResp ? 'Não responsivo' : a.nivel===2?'Em risco':a.nivel===1?'Atenção':'Em dia'}"></span>
             ${initialsAvatar(s.initials, s.color, 34, s.avatarUrl)}
             <div class="rd-nome">
               <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
@@ -23865,8 +23878,11 @@ function renderRadar(){
             <div class="rd-acoes">
               ${msgAcompBloqueado(msgChaveAcomp(s.id)) ? '' : `<button type="button" class="btn-mini" data-rd-conversa="${s.id}">${icon('comment','tiny')}<span> Conversa</span></button>`}
               <button type="button" class="btn-mini" data-rd-acomp="${s.id}">${icon('chart','tiny')}<span> Acompanhamento</span></button>
+              ${a.naoResp ? `<button type="button" class="btn-mini rd-nr-btn on" data-rd-nr="${s.id}" data-rd-nr-v="0" title="Volta sozinho ao vermelho em ${escapeAttr(tzDataCurta(RADAR_UI.naoResp[s.id].ate))}">${icon('back','tiny')}<span> Voltar ao vermelho</span></button>`
+                : a.nivel===2 ? `<button type="button" class="btn-mini rd-nr-btn" data-rd-nr="${s.id}" data-rd-nr-v="1" title="Estimulado e sem resposta: tira do vermelho por 7 dias">${icon('xcircle','tiny')}<span> Não responsivo</span></button>` : ''}
             </div>
           </div>
+          ${a.naoResp ? `<div class="rd-nr-aviso">NÃO RESPONSIVO · marcado em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].marcado_em))}${PEOPLE[RADAR_UI.naoResp[s.id].por] ? ' por '+escapeHtml(PEOPLE[RADAR_UI.naoResp[s.id].por].name.split(' ')[0]) : ''} · volta ao vermelho em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].ate))}</div>` : ''}
           ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
           <button type="button" class="rd-mais" data-rd-abrir="${s.id}">${icon(aberto?'up':'down','tiny')} ${aberto?'Esconder detalhes':'Ver detalhes'}</button>
           ${aberto ? `
@@ -23908,6 +23924,20 @@ function renderRadar(){
     const m = rdMomentos(st).find(x=>x.chave===b.dataset.rdChave); if(m) rdResolverMomento(st, m);
   }));
   el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+  el.querySelectorAll('[data-rd-nr]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id = b.dataset.rdNr, marcar = b.dataset.rdNrV==='1'; b.disabled = true;
+    if(marcar){
+      const agora = new Date(), ate = new Date(agora.getTime() + 7*86400000);
+      const { data, error } = await sb.from('radar_nao_responsivo').upsert({ aluno_id:id, marcado_em:agora.toISOString(), ate:ate.toISOString(), por:currentUser.id }, { onConflict:'aluno_id' }).select('aluno_id,marcado_em,ate,por').single();
+      if(error){ alert('Não foi possível marcar: '+(error.message||'')); b.disabled = false; return; }
+      RADAR_UI.naoResp[id] = data;
+    } else {
+      const { error } = await sb.from('radar_nao_responsivo').update({ ate:new Date().toISOString() }).eq('aluno_id', id);
+      if(error){ alert('Não foi possível desfazer: '+(error.message||'')); b.disabled = false; return; }
+      if(RADAR_UI.naoResp[id]) RADAR_UI.naoResp[id].ate = new Date().toISOString();
+    }
+    renderRadar();
+  }));
   el.querySelectorAll('[data-open-staff]').forEach(b=>b.addEventListener('click', ()=>{ currentStudentId = b.dataset.openStaff; panelQuadrantId = null; setRole('aluno'); }));
 }
 
