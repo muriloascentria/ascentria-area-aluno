@@ -2236,6 +2236,11 @@
   .vac-item{margin-bottom:5px;}
   .vendas-alert-card .vac-empty{font-size:12.5px;color:var(--text-mute);}
   .vendas-meta{margin:0 0 16px;}
+  .ct-nome-linha{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .ct-link{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text-mute);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .ct-link:hover{color:var(--text);border-color:var(--text-mute);}
+  .ct-link.ok{color:var(--success);border-color:var(--success);}
+  .ct-link .icon{width:12px;height:12px;}
   .eq-metas{margin:6px 0 22px;}
   .eq-meta-bloco{margin-top:10px;}
   .eq-meta-rot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-mute);margin:0 0 6px;}
@@ -14480,7 +14485,7 @@ function courseRowHtml(c, isFirst, isLast){
   return `
     <div class="course-row" draggable="true" data-course-row="${c.id}">
       <span class="drag-handle" title="Arraste para reordenar">${icon('drag')}</span>
-      <div class="ct-title">${c.title}<span class="dur">${c.duration}${c.materiais&&c.materiais.length? ' · '+c.materiais.length+' material(is)':''}</span></div>
+      <div class="ct-title"><span class="ct-nome-linha">${c.title}<button type="button" class="ct-link" data-copiar-link-aula="${c.id}" title="${escapeAttr(aulaLinkDireto(c.id))}">${icon('copy','tiny')}<span>Copiar link da aula</span></button></span><span class="dur">${c.duration}${c.materiais&&c.materiais.length? ' · '+c.materiais.length+' material(is)':''}</span></div>
       <div class="ct-actions">
         <button class="reorder-btn" data-move-up="${c.id}" ${isFirst?'disabled':''} title="Mover para cima">${icon('up')}</button>
         <button class="reorder-btn" data-move-down="${c.id}" ${isLast?'disabled':''} title="Mover para baixo">${icon('down')}</button>
@@ -14490,6 +14495,13 @@ function courseRowHtml(c, isFirst, isLast){
     </div>`;
 }
 function bindConteudoCourseEvents(){
+  /* Link direto de cada aula (o aluno entra e a aula já abre), para mandar no WhatsApp, PDFs e mensagens. */
+  document.querySelectorAll('[data-copiar-link-aula]').forEach(btn=>btn.addEventListener('click', async (e)=>{
+    e.stopPropagation(); const url = aulaLinkDireto(btn.dataset.copiarLinkAula); const lbl = btn.querySelector('span');
+    try{ await navigator.clipboard.writeText(url); }catch(_){ prompt('Copie o link da aula:', url); return; }
+    btn.classList.add('ok'); if(lbl) lbl.textContent = 'Link copiado';
+    setTimeout(()=>{ btn.classList.remove('ok'); if(lbl) lbl.textContent = 'Copiar link da aula'; }, 1800);
+  }));
   document.querySelectorAll('[data-move-up]').forEach(btn=>{
     btn.addEventListener('click',()=>{ moveCourseInModule(btn.dataset.moveUp, -1); syncCourseOrder(COURSES); renderConteudo(); });
   });
