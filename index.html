@@ -2817,6 +2817,9 @@
   .rd-kpi-cinza .value{color:var(--text-mute);}
   .rd-card.rd-cinza{border-left-color:#8a8f98;opacity:.92;} .rd-cinza .rd-sinal{background:#8a8f98;}
   .rd-nr-btn.on{border-color:#8a8f98;color:var(--text);}
+  .rd-nr-alerta{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid #8a8f98;background:rgba(138,143,152,.12);font-size:12px;color:var(--text);}
+  .rd-nr-alerta strong{letter-spacing:.4px;}
+  .rd-nr-alerta > span{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .rd-nr-aviso{margin:8px 0 0;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text-mute);}
   .rd-kpi-vermelho .value{color:var(--danger);} .rd-kpi-amarelo .value{color:var(--individual);} .rd-kpi-verde .value{color:var(--success);}
   .rd-kpi.ativo{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
@@ -23191,6 +23194,27 @@ const RADAR_UI = { rows:null, carregando:false, erro:false, filtro:'todos', busc
    do vermelho por 7 dias (tabela radar_nao_responsivo). Passada a semana, volta sozinho ao vermelho para uma
    nova tentativa; dá para marcar de novo. Só vale enquanto ele estiver em vermelho. */
 function rdNaoRespAtivo(id){ const m = RADAR_UI.naoResp[id]; return !!(m && new Date(m.ate).getTime() > Date.now()); }
+/* 3 semanas seguidas no cinza (contadas no banco, gatilho tg_rnr_semanas): sinal para levar o caso ao
+   Desenvolvimento e tentar outros canais. Vale enquanto ele está no cinza e na semana seguinte à volta. */
+function rdNaoRespSemanas(id){ const m = RADAR_UI.naoResp[id]; if(!m || m.respondeu) return 0; return new Date(m.ate).getTime() > Date.now() - 7*86400000 ? (m.semanas||1) : 0; }
+function rdMsgDesenvolvimento(s){
+  const m = RADAR_UI.naoResp[s.id] || {}; const n = m.semanas || 3;
+  return `📍 *CASO PARA O DESENVOLVIMENTO: MENTORADO NÃO RESPONSIVO*
+
+*Mentorado(a):* ${s.name}
+*Situação:* ${n} semanas seguidas como não responsivo(a) no Radar dos Mentorados (desde ${tzDataCurta(new Date(new Date(m.marcado_em||Date.now()).getTime() - (n-1)*7*86400000).toISOString())}).
+
+*Já tentamos:*
+✅ Mensagem no Acompanhamento do Essência PLAT
+✅ WhatsApp
+✅ Convite para encontro
+
+Mesmo assim, segue sem resposta e sem avançar no método.
+
+*Proposta:* tentar outros canais e outra pessoa do time (ligação, áudio pessoal do Murilo, contato da Sandra ou da consultora que fez a venda) e definir juntos a próxima abordagem.
+
+Quem assume esse contato e até quando?`;
+}
 /* ================= PROGRAMA DE INDICAÇÃO =================
    O aluno vê só as próprias indicações (RLS: indicador_id = ele). A gestão (Murilo, Diego, Carmem, Sandra,
    Mariane e Viviane) vincula quem indicou quem e acompanha o nível de cada um.
@@ -23662,7 +23686,7 @@ async function radarCarregar(){
     const rr = await sb.from('radar_momentos_resolvidos').select('student_id,chave,resolvido_por,resolvido_em');
     RADAR_UI.resolvidos = {};
     ((rr && rr.data) || []).forEach(x=>{ RADAR_UI.resolvidos[x.student_id+'|'+x.chave] = x; });
-    const nr = await sb.from('radar_nao_responsivo').select('aluno_id,marcado_em,ate,por');
+    const nr = await sb.from('radar_nao_responsivo').select('aluno_id,marcado_em,ate,por,semanas,respondeu');
     RADAR_UI.naoResp = {}; ((nr && nr.data) || []).forEach(x=>{ RADAR_UI.naoResp[x.aluno_id] = x; });
   }catch(e){ console.error('radar_mentorados', e); RADAR_UI.erro = true; RADAR_UI.rows = null; }
   RADAR_UI.carregando = false;
@@ -23882,6 +23906,7 @@ function renderRadar(){
                 : a.nivel===2 ? `<button type="button" class="btn-mini rd-nr-btn" data-rd-nr="${s.id}" data-rd-nr-v="1" title="Estimulado e sem resposta: tira do vermelho por 7 dias">${icon('xcircle','tiny')}<span> Não responsivo</span></button>` : ''}
             </div>
           </div>
+          ${rdNaoRespSemanas(s.id)>=3 ? `<div class="rd-nr-alerta"><span>${icon('users','tiny')} <strong>${rdNaoRespSemanas(s.id)} SEMANAS SEGUIDAS NO CINZA</strong> · tentar outros canais e levar para o Desenvolvimento</span><button type="button" class="btn-mini" data-rd-dev="${s.id}">${icon('copy','tiny')}<span>Copiar mensagem para o Desenvolvimento</span></button></div>` : ''}
           ${a.naoResp ? `<div class="rd-nr-aviso">NÃO RESPONSIVO · marcado em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].marcado_em))}${PEOPLE[RADAR_UI.naoResp[s.id].por] ? ' por '+escapeHtml(PEOPLE[RADAR_UI.naoResp[s.id].por].name.split(' ')[0]) : ''} · volta ao vermelho em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].ate))}</div>` : ''}
           ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
           <button type="button" class="rd-mais" data-rd-abrir="${s.id}">${icon(aberto?'up':'down','tiny')} ${aberto?'Esconder detalhes':'Ver detalhes'}</button>
@@ -23924,17 +23949,23 @@ function renderRadar(){
     const m = rdMomentos(st).find(x=>x.chave===b.dataset.rdChave); if(m) rdResolverMomento(st, m);
   }));
   el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+  el.querySelectorAll('[data-rd-dev]').forEach(b=>b.addEventListener('click', async ()=>{
+    const st = getStudent(b.dataset.rdDev); if(!st) return;
+    const txt = rdMsgDesenvolvimento(st); const lbl = b.querySelector('span');
+    try{ await navigator.clipboard.writeText(txt); }catch(e){ const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } ta.remove(); }
+    if(lbl){ lbl.textContent = 'Copiada'; setTimeout(()=>{ lbl.textContent = 'Copiar mensagem para o Desenvolvimento'; }, 1800); }
+  }));
   el.querySelectorAll('[data-rd-nr]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = b.dataset.rdNr, marcar = b.dataset.rdNrV==='1'; b.disabled = true;
     if(marcar){
       const agora = new Date(), ate = new Date(agora.getTime() + 7*86400000);
-      const { data, error } = await sb.from('radar_nao_responsivo').upsert({ aluno_id:id, marcado_em:agora.toISOString(), ate:ate.toISOString(), por:currentUser.id }, { onConflict:'aluno_id' }).select('aluno_id,marcado_em,ate,por').single();
+      const { data, error } = await sb.from('radar_nao_responsivo').upsert({ aluno_id:id, marcado_em:agora.toISOString(), ate:ate.toISOString(), por:currentUser.id }, { onConflict:'aluno_id' }).select('aluno_id,marcado_em,ate,por,semanas,respondeu').single();
       if(error){ alert('Não foi possível marcar: '+(error.message||'')); b.disabled = false; return; }
       RADAR_UI.naoResp[id] = data;
     } else {
-      const { error } = await sb.from('radar_nao_responsivo').update({ ate:new Date().toISOString() }).eq('aluno_id', id);
+      const { error } = await sb.from('radar_nao_responsivo').update({ ate:new Date().toISOString(), respondeu:true }).eq('aluno_id', id);
       if(error){ alert('Não foi possível desfazer: '+(error.message||'')); b.disabled = false; return; }
-      if(RADAR_UI.naoResp[id]) RADAR_UI.naoResp[id].ate = new Date().toISOString();
+      if(RADAR_UI.naoResp[id]){ RADAR_UI.naoResp[id].ate = new Date().toISOString(); RADAR_UI.naoResp[id].respondeu = true; }
     }
     renderRadar();
   }));
