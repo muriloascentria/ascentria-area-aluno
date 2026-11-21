@@ -24101,14 +24101,14 @@ const EMB_ETAPAS = [
   {k:'grupo', titulo:'Grupo criado', ic:'users', campos:[['data','Quando?','date'],['por','Quem criou?','pessoa']],
    checks:[['todos','Todos inclusos'],['proximo','Grupo pronto: seguir para as Mensagens iniciais']]},
   {k:'mensagens', titulo:'Mensagens iniciais', ic:'comment', campos:[],
-   checks:[['murilo','Murilo: boas-vindas e apresentação da Mari'],['mariane','Mari: apresentação e convite para o encontro com a Viviane'],['acesso','Mari: acesso ao Essência PLAT'],['antes','Mari: orientações antes do encontro com a Viviane'],['viviane','Viviane: boas-vindas na véspera do encontro'],['proximo','Agendamento do Onboarding ePLAT realizado']]},
+   checks:[['murilo','Murilo: boas-vindas e apresentação da Mari'],['mariane','Mari: apresentação e convite para o encontro com a Viviane'],['acesso','Mari: acesso ao Essência PLAT'],['antes','Mari: orientações antes do encontro com a Viviane'],['proximo','Agendamento do Onboarding ePLAT realizado']]},
   /* Tarefas iniciais: as 5 metas automáticas do primeiro acesso (metas_iniciais_criar no banco). Os
      checks se marcam sozinhos conforme o mentorado cumpre; com as 5 feitas, o card passa sozinho para o
      Onboarding ePLAT. Mentorado antigo, que não tem essas metas, pula esta etapa. */
   {k:'tarefas', titulo:'Tarefas iniciais', ic:'target', auto:true, campos:[],
    checks:[['video_eplat','Vídeo de instrução do ePLAT'],['diagnostico','Diagnóstico de Abertura'],['eplanner','Rotina no ePLANNER'],['intro_aulas','Aulas da Introdução'],['apresentacao','Apresentação na Comunidade'],['proximo','Tarefas iniciais concluídas: seguir para o Onboarding ePLAT']]},
   {k:'eplat', titulo:'Onboarding ePLAT', ic:'home', agenda:true,
-   checks:[['agendado','Agendado'],['concluido','Concluído'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Tarefas iniciais postadas no ePLAT'],['analise','Análise postada'],['proximo','Agendamento do Onboarding Expert (com Murilo) realizado']]},
+   checks:[['agendado','Agendado'],['vespera','Viviane: boas-vindas na véspera do encontro'],['concluido','Concluído'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Tarefas iniciais postadas no ePLAT'],['analise','Análise postada'],['proximo','Agendamento do Onboarding Expert (com Murilo) realizado']]},
   {k:'expert', titulo:'Onboarding Expert', ic:'award', agenda:true,
    checks:[['agendado','Agendado'],['concluido','Concluído'],['anteriores','Tarefas anteriores realizadas'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Novas tarefas postadas no ePLAT'],['analise','Análise postada'],['proximo','Agendamento do Onboarding eSIS realizado']]},
   {k:'esis', titulo:'Onboarding eSIS', ic:'file', agenda:true,
@@ -24119,9 +24119,9 @@ const EMB_DEV = {titulo:'Mentoria de Desenvolvimento', ic:'target', agenda:true,
 /* Como as caixas de cada etapa se arrumam em linhas (cada linha vai de ponta a ponta, caixas iguais). */
 const EMB_LINHAS = {
   grupo:[['todos'],['proximo']],
-  mensagens:[['murilo','mariane'],['acesso','antes','viviane'],['proximo']],
+  mensagens:[['murilo','mariane'],['acesso','antes'],['proximo']],
   tarefas:[['video_eplat','diagnostico','eplanner'],['intro_aulas','apresentacao'],['proximo']],
-  eplat:[['agendado','concluido','tarefas','analise'],['dev'],['proximo']],
+  eplat:[['agendado','vespera','concluido','tarefas','analise'],['dev'],['proximo']],
   expert:[['agendado','concluido','anteriores','tarefas'],['analise','dev'],['proximo']],
   esis:[['agendado','concluido','anteriores','tarefas'],['analise','dev'],['proximo']],
   dev:[['agendado','concluido','tarefas','analise'],['proximo']],
@@ -24582,7 +24582,7 @@ No encontro com a Viviane, você poderá trazer as dúvidas que surgirem durante
       'Com as 5 feitas, o card passa sozinho para o Onboarding ePLAT. Ninguém da equipe precisa marcar nada.',
       'No Onboarding ePLAT, a Viviane confere o que ficou pendente e ajuda a concluir.']},
   ]},
-  {etapa:'tarefas', titulo:'Viviane se apresenta', quem:'Viviane (Navegadora / Customer Success)', quando:'1 dia antes do Onboarding ePLAT', itens:[
+  {etapa:'eplat', titulo:'Viviane se apresenta', quem:'Viviane (Navegadora / Customer Success)', quando:'1 dia antes do Onboarding ePLAT', itens:[
     {tipo:'msg', titulo:'Vivi: boas-vindas na véspera', texto:`Oi, NOME! Tudo bem?
 
 Eu sou a Vivi, a sua navegadora na Mentoria Essência. Vou te acompanhar neste início, te apresentando a plataforma e ajudando no que precisar para você dar os primeiros passos com tranquilidade.
@@ -24693,9 +24693,9 @@ const EMB_CHECK_MSGS = {
   'mensagens:mariane':[['Orientações iniciais e agendamento com a Viviane','Mari: apresentação'],['Orientações iniciais e agendamento com a Viviane','Mari: apresenta a Viviane e pede horário']],
   'mensagens:acesso': [['Acesso ao Essência PLAT','Mari: criar o acesso ao ePLAT']],
   'mensagens:antes':  [['Acesso ao Essência PLAT','Mari: o que fazer antes do encontro com a Viviane']],
-  'mensagens:viviane':[['Viviane se apresenta','Vivi: boas-vindas na véspera']],
   'mensagens:proximo':[['Orientações iniciais e agendamento com a Viviane','Mari: confirmação do agendamento e formulário']],
-  'eplat:agendado':   [['Onboarding ePLAT','Vivi: link da reunião (10 min antes)']],
+  'eplat:vespera':    [['Viviane se apresenta','Vivi: boas-vindas na véspera']],
+  'eplat:concluido':  [['Onboarding ePLAT','Vivi: link da reunião (10 min antes)']],
   'eplat:tarefas':    [['Onboarding ePLAT','Tarefas para postar no ePLAT (prazo: 10 dias)'],['Onboarding ePLAT','Vivi: aviso no grupo depois de postar as tarefas']],
   'eplat:proximo':    [['Acesso ao eSIS e agendamento com o Murilo','Mari: acesso ao eSIS'],['Acesso ao eSIS e agendamento com o Murilo','Mari: convite para o Onboarding Expert'],['Acesso ao eSIS e agendamento com o Murilo','Mari: confirmação']],
   'expert:tarefas':   [['Onboarding Expert','Tarefas para postar no ePLAT (prazo: 10 dias)'],['Onboarding Expert','Aviso no Acompanhamento do Essência PLAT']],
