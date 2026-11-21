@@ -2829,8 +2829,9 @@
   .rd-trat-tag .icon{width:11px;height:11px;}
   .rd-card.rd-em-trat{background-image:repeating-linear-gradient(135deg, transparent 0 14px, rgba(79,125,74,.05) 14px 28px);}
   .rd-kpi-trat{display:block;font-size:11px;font-weight:600;color:var(--success);margin-top:2px;}
-  .rd-ep-tag{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border:1px solid var(--border);color:var(--text-mute);vertical-align:middle;}
-  .rd-ep-tag .icon{width:11px;height:11px;}
+  .rd-nome-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .rd-ep-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border:1px solid var(--border);color:var(--text-mute);vertical-align:middle;}
+  .rd-ep-tag .icon{width:12px;height:12px;}
   .rd-ep-tag.ok{border-color:var(--success);color:var(--success);}
   .rd-msg-btn{width:112px;height:32px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .15s,background .15s;}
   .rd-msg-btn:hover{border-color:var(--text-mute);}
@@ -24126,9 +24127,9 @@ function renderRadar(){
             <span class="rd-sinal" title="${a.naoResp ? 'Não responsivo' : a.nivel===2?'Em risco':a.nivel===1?'Atenção':'Em dia'}"></span>
             ${initialsAvatar(s.initials, s.color, 34, s.avatarUrl)}
             <div class="rd-nome">
-              <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
+              <div class="rd-nome-linha"><button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>${rdTemEplanner(s) ? `<span class="rd-ep-tag ok" title="Já montou a rotina de estudos no ePLANNER">${icon('calendar','tiny')} usa o ePLANNER</span>` : `<span class="rd-ep-tag" title="Ainda não montou a rotina no ePLANNER">${icon('calendar','tiny')} sem ePLANNER</span>`}</div>
               ${trat ? `<span class="rd-trat-tag" title="Mensagem do marcador principal enviada nos últimos 7 dias. A cor só muda quando a situação mudar.">${icon('check','tiny')} EM TRATAMENTO · enviada ${escapeHtml(tzDataCurta(trat.enviado_em))}${PEOPLE[trat.enviado_por] ? ' por '+escapeHtml(PEOPLE[trat.enviado_por].name.split(' ')[0]) : ''} · aguardando o mentorado</span>` : ''}
-              <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método${rdTemEplanner(s) ? ` <span class="rd-ep-tag ok" title="Já montou a rotina de estudos no ePLANNER">${icon('calendar','tiny')} usa o ePLANNER</span>` : ` <span class="rd-ep-tag" title="Ainda não montou a rotina no ePLANNER">${icon('calendar','tiny')} sem ePLANNER</span>`}</small>
+              <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método</small>
             </div>
             <div class="rd-acoes">
               ${msgAcompBloqueado(msgChaveAcomp(s.id)) ? '' : `<button type="button" class="btn-mini" data-rd-conversa="${s.id}">${icon('comment','tiny')}<span> Conversa</span></button>`}
