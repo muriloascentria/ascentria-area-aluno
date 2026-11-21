@@ -2825,6 +2825,10 @@
   .rd-marc-msgs{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
   .rd-msg-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text-dim);}
   .rd-msg-acoes{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .rd-trat-tag{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;margin:2px 0 3px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.4px;background:rgba(79,125,74,.16);color:var(--success);border:1px solid var(--success);}
+  .rd-trat-tag .icon{width:11px;height:11px;}
+  .rd-card.rd-em-trat{background-image:repeating-linear-gradient(135deg, transparent 0 14px, rgba(79,125,74,.05) 14px 28px);}
+  .rd-kpi-trat{display:block;font-size:11px;font-weight:600;color:var(--success);margin-top:2px;}
   .rd-ep-tag{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border:1px solid var(--border);color:var(--text-mute);vertical-align:middle;}
   .rd-ep-tag .icon{width:11px;height:11px;}
   .rd-ep-tag.ok{border-color:var(--success);color:var(--success);}
@@ -23696,6 +23700,14 @@ function rdMarcMsgTexto(s, chave, i){
     .replace(/\*META\*/g, meta.meta ? `*${meta.meta}*` : '*META*')
     .replace(/\*DATA\*/g, meta.data ? `*${meta.data}*` : '*DATA*');
 }
+/* Em tratamento: a equipe já enviou, nos últimos 7 dias, alguma mensagem do marcador principal. A cor
+   não muda (só a situação real tira do vermelho), mas o card avisa que alguém está cuidando. */
+function rdEmTratamento(s, a){
+  const lst = a.naoResp ? [{chave:'nao_resp'}] : (a.motivos||[]); if(!lst.length) return null;
+  const ch = lst[0].chave; let melhor = null;
+  Object.entries(RADAR_UI.envios||{}).forEach(([k,e])=>{ const [sid,c] = k.split('|'); if(sid===s.id && c===ch && Date.now()-new Date(e.enviado_em).getTime() < 7*86400000 && (!melhor || e.enviado_em > melhor.enviado_em)) melhor = e; });
+  return melhor;
+}
 function rdEnvioUlt(sid, chave, i){ return (RADAR_UI.envios||{})[sid+'|'+chave+'|'+i] || null; }
 /* Um marcador com as mensagens dele: Copiar (já com os dados do mentorado) e Enviado (registra). */
 function rdMarcadorHtml(s, m, principal){
@@ -24057,7 +24069,8 @@ function renderRadar(){
   const verFin = rdVerFinanceiro();
   const lista = (RADAR_UI.rows||[]).map(r=>{ const s = getStudent(r.aluno_id); if(!s) return null; const a = rdAvaliar(s, r); a.naoResp = a.nivel===2 && rdNaoRespAtivo(s.id); return { s, r, a }; }).filter(Boolean);
   const ord = a=> a.naoResp ? -1 : a.nivel;
-  lista.sort((x,y)=> ord(y.a)-ord(x.a) || y.a.motivos.filter(m=>m.nivel===2).length - x.a.motivos.filter(m=>m.nivel===2).length || y.a.motivos.length-x.a.motivos.length || x.s.name.localeCompare(y.s.name,'pt-BR'));
+  lista.forEach(x=>{ x.trat = rdEmTratamento(x.s, x.a); });
+  lista.sort((x,y)=> ord(y.a)-ord(x.a) || (!!x.trat - !!y.trat) || y.a.motivos.filter(m=>m.nivel===2).length - x.a.motivos.filter(m=>m.nivel===2).length || y.a.motivos.length-x.a.motivos.length || x.s.name.localeCompare(y.s.name,'pt-BR'));
   const qtd = n=>lista.filter(x=>x.a.nivel===n && !x.a.naoResp).length;
   const qtdCinza = lista.filter(x=>x.a.naoResp).length;
   const semAcao = lista.filter(x=>x.a.semAcao).length;
@@ -24078,8 +24091,8 @@ function renderRadar(){
     <p class="section-sub" style="margin-top:0">Vermelhos primeiro, com o motivo escrito ao lado. Os números se atualizam sozinhos ao abrir a tela e a cada 5 minutos com ela aberta.
       <button type="button" class="link-btn" id="rd-atualizar">Atualizar</button></p>
     <div class="kpi-row rd-kpis">
-      ${tile('vermelho','Em risco', qtd(2), 'Mostrar só os mentorados em vermelho')}
-      ${tile('amarelo','Atenção', qtd(1), 'Mostrar só os mentorados em amarelo')}
+      ${tile('vermelho','Em risco', qtd(2) + (lista.filter(x=>x.a.nivel===2 && !x.a.naoResp && x.trat).length ? `<small class="rd-kpi-trat">${lista.filter(x=>x.a.nivel===2 && !x.a.naoResp && x.trat).length} em tratamento</small>` : ''), 'Mostrar só os mentorados em vermelho')}
+      ${tile('amarelo','Atenção', qtd(1) + (lista.filter(x=>x.a.nivel===1 && x.trat).length ? `<small class="rd-kpi-trat">${lista.filter(x=>x.a.nivel===1 && x.trat).length} em tratamento</small>` : ''), 'Mostrar só os mentorados em amarelo')}
       ${tile('verde','Em dia', qtd(0), 'Mostrar só os mentorados em verde')}
       ${tile('cinza','Não responsivos', qtdCinza, 'Mentorados em vermelho que, mesmo estimulados, não respondem. Voltam sozinhos ao vermelho depois de 7 dias')}
       ${tile('semacao','Sem próxima ação', semAcao, 'Mentorados sem próxima ação registrada no acompanhamento')}
@@ -24103,17 +24116,18 @@ function renderRadar(){
       ${f!=='todos' || RADAR_UI.busca.trim() ? `<button type="button" class="btn-outline" id="rd-limpar">${icon('x','tiny')} Mostrar todos</button>` : ''}
     </div>
     <div class="rd-lista">
-      ${visiveis.map(({s,r,a})=>{
+      ${visiveis.map(({s,r,a,trat})=>{
         const aberto = !!RADAR_UI.abertos[s.id];
         const resp = r.proxima_acao_resp && PEOPLE[r.proxima_acao_resp] ? PEOPLE[r.proxima_acao_resp].name.split(' ')[0] : '';
         const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
         return `
-        <div class="rd-card rd-${a.naoResp ? 'cinza' : cor(a.nivel)}">
+        <div class="rd-card rd-${a.naoResp ? 'cinza' : cor(a.nivel)} ${trat?'rd-em-trat':''}">
           <div class="rd-topo">
             <span class="rd-sinal" title="${a.naoResp ? 'Não responsivo' : a.nivel===2?'Em risco':a.nivel===1?'Atenção':'Em dia'}"></span>
             ${initialsAvatar(s.initials, s.color, 34, s.avatarUrl)}
             <div class="rd-nome">
               <button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>
+              ${trat ? `<span class="rd-trat-tag" title="Mensagem do marcador principal enviada nos últimos 7 dias. A cor só muda quando a situação mudar.">${icon('check','tiny')} EM TRATAMENTO · enviada ${escapeHtml(tzDataCurta(trat.enviado_em))}${PEOPLE[trat.enviado_por] ? ' por '+escapeHtml(PEOPLE[trat.enviado_por].name.split(' ')[0]) : ''} · aguardando o mentorado</span>` : ''}
               <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método${rdTemEplanner(s) ? ` <span class="rd-ep-tag ok" title="Já montou a rotina de estudos no ePLANNER">${icon('calendar','tiny')} usa o ePLANNER</span>` : ` <span class="rd-ep-tag" title="Ainda não montou a rotina no ePLANNER">${icon('calendar','tiny')} sem ePLANNER</span>`}</small>
             </div>
             <div class="rd-acoes">
