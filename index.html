@@ -2817,6 +2817,16 @@
   .rd-kpi-cinza .value{color:var(--text-mute);}
   .rd-card.rd-cinza{border-left-color:#8a8f98;opacity:.92;} .rd-cinza .rd-sinal{background:#8a8f98;}
   .rd-nr-btn.on{border-color:#8a8f98;color:var(--text);}
+  .rd-marc{margin-top:8px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--bg-card);}
+  .rd-marc.rd-m2{border-left-color:var(--danger);} .rd-marc.rd-m1{border-left-color:var(--individual);} .rd-marc.rd-mc{border-left-color:#8a8f98;}
+  .rd-marc-h{font-size:12.5px;font-weight:700;}
+  .rd-marc.rd-m2 .rd-marc-h{color:var(--danger);} .rd-marc.rd-m1 .rd-marc-h{color:var(--individual);} .rd-marc.rd-mc .rd-marc-h{color:var(--text-mute);}
+  .rd-marc-h .rd-metas-link{color:inherit;font-weight:700;}
+  .rd-marc-msgs{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+  .rd-msg-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text-dim);}
+  .rd-msg-acoes{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .rd-msg-env{color:var(--success);display:inline-flex;align-items:center;gap:4px;font-size:11px;}
+  .rd-outros-tit{margin-top:8px;font-size:11.5px;color:var(--text-mute);}
   .rd-nr-alerta{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid #8a8f98;background:rgba(138,143,152,.12);font-size:12px;color:var(--text);}
   .rd-nr-alerta strong{letter-spacing:.4px;}
   .rd-nr-alerta > span{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
@@ -23446,75 +23456,256 @@ function rdEstagioEsperado(s){
   let idx = RADAR_REGUA.findIndex(lim=>r<=lim); if(idx<0) idx = 5;
   return { idx, dias };
 }
+/* Marcadores do Radar (documento MARCADOR, 21/11/2026): cada um tem uma cor só e um lugar na
+   hierarquia, do mais grave ao menos grave. O card mostra só o mais grave; os outros ficam em
+   "Ver detalhes". A cor do card é a do marcador mais grave. */
+const RD_ORDEM = ['acesso','dashboard','metodo2','nps_det','nao_responde','metodo1','metas','contato','nps_neu'];
 function rdAvaliar(s, r){
-  const motivos = []; // nivel 2 = vermelho, 1 = amarelo
+  const motivos = []; // nivel 2 = vermelho, 1 = laranja
   const add = (nivel, txt, chave)=>motivos.push({nivel, txt, chave});
-  // 1. Acesso
+  // VERMELHO 1. Sem entrar no Plat
   const dAcesso = rdDiasDesde(r.ultimo_acesso);
-  if(dAcesso===null) add(2, 'Nunca entrou no Plat');
-  else if(dAcesso>=14) add(2, `${dAcesso} dias sem entrar no Plat`);
-  else if(dAcesso>=7) add(1, `${dAcesso} dias sem entrar no Plat`);
-  // 2. Avanço no dashboard (a medição começou em 03/10)
+  if(dAcesso===null) add(2, 'Nunca entrou no Plat', 'acesso');
+  else if(dAcesso>=14) add(2, `${dAcesso} dias sem entrar no Plat`, 'acesso');
+  // VERMELHO 2. Parado no Dashboard (30 dias ou mais; a medição começou em 03/10)
   const dAvanco = rdDiasDesde(r.ultimo_avanco || RADAR_INICIO_MEDICAO+'T00:00:00-03:00');
-  const txtAv = r.ultimo_avanco ? `${dAvanco} dias sem avançar no dashboard` : `Sem avançar no dashboard desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`;
-  /* Quem já concluiu todas as tarefas do dashboard não tem mais o que marcar: não entra como parado. */
-  /* Marcação recente da equipe no Acompanhamento Interno conta como avanço, mas o alerta não some:
-     fica amarelo e diz que o avanço foi da equipe, para não esconder o aluno que não está executando. */
-  const ultEq = aeEquipeUltimaMarcacao(s.id);
-  const dEquipe = ultEq ? rdDiasDesde(ultEq) : null;
-  if(!rdDashboardCompleto(s)){
-    if(dAvanco>=14 && dEquipe!==null && dEquipe<14) add(1, `Avanço registrado pela equipe ${dEquipe===0?'hoje':'há '+dEquipe+' dia'+(dEquipe>1?'s':'')}; aluno sem avançar no Dashboard ${r.ultimo_avanco ? 'há '+dAvanco+' dias' : 'desde '+tzDataCurta(RADAR_INICIO_MEDICAO)}`);
-    else if(dAvanco>=30) add(2, txtAv); else if(dAvanco>=14) add(1, txtAv);
-  }
-  // 3. Mensagem do aluno esperando a equipe
-  const semMsg = msgAcompBloqueado(msgChaveAcomp(s.id));
-  const hEspera = semMsg ? null : rdHorasDesde(r.aguardando_desde);
-  if(hEspera!==null && hEspera>=48) add(2, `Esperando resposta da equipe há ${rdTempo(hEspera)}`, 'espera');
-  else if(hEspera!==null && hEspera>=24) add(1, `Esperando resposta da equipe há ${rdTempo(hEspera)}`, 'espera');
-  // 4. Aluno que parou de responder
-  if(!semMsg && r.ult_msg_equipe && (!r.ult_msg_aluno || new Date(r.ult_msg_aluno) < new Date(r.ult_msg_equipe))){
-    const d = r.ult_msg_aluno ? rdDiasDesde(r.ult_msg_aluno) : null;
-    if(d===null) add(1, 'Nunca respondeu no Acompanhamento');
-    else if(d>=14) add(1, `Não responde a equipe há ${d} dias`);
-  }
-  // 5. Contato pessoal da equipe (sem contar o checkpoint automático)
-  const waCob = metasCobrUltima(s.id, 'whatsapp');
-  const dHumano = [rdDiasDesde(r.ult_contato_humano), waCob ? rdDiasDesde(waCob.enviado_em) : null].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
-  /* Para a Mentoria o acompanhamento é pelo WhatsApp: o contato registrado no Registro de Contatos
-     (WhatsApp, Meet ou presencial) também conta como contato pessoal. */
-  const dContato = rdUltContatoDias(s);
-  const dPessoal = [dHumano, dContato].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
-  if(dPessoal===null) add(1, 'Nenhum contato pessoal da equipe registrado (WhatsApp ou encontro)', 'contato');
-  else if(dPessoal>=14) add(1, `Sem contato pessoal da equipe há ${dPessoal} dias (WhatsApp ou encontro)`, 'contato');
-  // 6. Pagamento (só para quem tem acesso ao Financeiro)
-  if(rdVerFinanceiro() && r.pag_atrasados>0) add(2, `${r.pag_atrasados} pagamento${r.pag_atrasados>1?'s':''} em atraso`);
-  // 7. Ritmo no método
+  if(!rdDashboardCompleto(s) && dAvanco>=30) add(2, r.ultimo_avanco ? `Parado no Dashboard há ${dAvanco} dias` : `Parado no Dashboard desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`, 'dashboard');
+  // VERMELHO 3 / LARANJA. Ritmo no método
   const esp = rdEstagioEsperado(s), real = rdEstagioReal(s);
   if(esp && diasRestantes(s)>=0){
     const atraso = esp.idx - real.idx;
-    const txt = `Atrasado no método: deveria estar em ${RADAR_ESTAGIOS[esp.idx]}, está em ${RADAR_ESTAGIOS[real.idx]}${real.viaEquipe?' (contando módulo concluído pela equipe)':''}`;
-    if(atraso>=2) add(2, txt); else if(atraso===1) add(1, txt);
+    const txt = `deveria estar em ${RADAR_ESTAGIOS[esp.idx]}, está em ${RADAR_ESTAGIOS[real.idx]}${real.viaEquipe?' (contando módulo concluído pela equipe)':''}`;
+    if(atraso>=2) add(2, 'Muito atrasado no método: '+txt, 'metodo2'); else if(atraso===1) add(1, 'Atrasado no método: '+txt, 'metodo1');
   }
-  // 8. NPS: nota de 0 a 6 na última pesquisa respondida
+  // VERMELHO 4 / LARANJA. NPS da última pesquisa
   const ultNps = (NPS_UI.rows||[]).filter(x=>x.aluno_id===s.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
-  if(ultNps && ultNps.nota<=6) add(2, `NPS ${ultNps.nota} aos ${ultNps.marco} meses (detrator)`);
-  else if(ultNps && ultNps.nota<=8) add(1, `NPS ${ultNps.nota} aos ${ultNps.marco} meses (neutro)`);
-  // 8b. Dashboard x Painel do Método: tarefa marcada com o quadro do Painel vazio
-  const incoer = dashPainelIncoerencias(s);
-  if(incoer.length) add(1, `Painel do Método incoerente: tarefa marcada no Dashboard, mas ${incoer.length>1 ? 'os quadros '+incoer.map(a=>a.t.title).join(', ')+' estão vazios' : 'o quadro '+incoer[0].t.title+' está vazio'}`);
-  // 8c. Metas do mentorado com prazo vencido. Por 7 dias depois da cobrança (ePLAT ou WhatsApp), fica como tratado.
-  const vencidas = (s.checklist||[]).filter(metaVencida).length;
-  if(vencidas){
-    const cob = metasCobrRecente(s.id);
-    if(cob) add(0, `${vencidas} meta${vencidas>1?'s':''} vencida${vencidas>1?'s':''} · cobrança enviada ${metasCobrTxt(cob)}`, 'metas');
-    else add(1, `${vencidas} meta${vencidas>1?'s':''} vencida${vencidas>1?'s':''} sem cobrança da equipe`, 'metas');
+  if(ultNps && ultNps.nota<=6) add(2, `NPS detrator: nota ${ultNps.nota} aos ${ultNps.marco} meses`, 'nps_det');
+  else if(ultNps && ultNps.nota<=8) add(1, `NPS neutro: nota ${ultNps.nota} aos ${ultNps.marco} meses`, 'nps_neu');
+  // LARANJA. Não responde a equipe (mensagens do ePLAT, quando ligadas para o aluno)
+  const semMsg = msgAcompBloqueado(msgChaveAcomp(s.id));
+  const hEspera = semMsg ? null : rdHorasDesde(r.aguardando_desde);
+  if(!semMsg && r.ult_msg_equipe && (!r.ult_msg_aluno || new Date(r.ult_msg_aluno) < new Date(r.ult_msg_equipe))){
+    const d = r.ult_msg_aluno ? rdDiasDesde(r.ult_msg_aluno) : null;
+    if(d===null) add(1, 'Não responde a equipe: nunca respondeu', 'nao_responde');
+    else if(d>=14) add(1, `Não responde a equipe há ${d} dias`, 'nao_responde');
   }
-  // 9. Próxima ação vencida
-  const hojeISO = new Date(Date.now()-3*3600000).toISOString().slice(0,10);
-  if(r.prazo && r.prazo < hojeISO) add(1, `Próxima ação vencida em ${tzDataCurta(r.prazo)}`);
+  // LARANJA. Meta vencida sem cobrança (cobrança registrada nos últimos 7 dias tira o alerta)
+  const vencidas = (s.checklist||[]).filter(metaVencida).length;
+  if(vencidas && !metasCobrRecente(s.id)) add(1, `${vencidas} meta${vencidas>1?'s':''} vencida${vencidas>1?'s':''} sem cobrança`, 'metas');
+  // LARANJA. Sem contato pessoal da equipe (WhatsApp ou encontro no Registro de Contatos, cobrança pelo WhatsApp)
+  const waCob = metasCobrUltima(s.id, 'whatsapp');
+  const dHumano = [rdDiasDesde(r.ult_contato_humano), waCob ? rdDiasDesde(waCob.enviado_em) : null].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
+  const dContato = rdUltContatoDias(s);
+  const dPessoal = [dHumano, dContato].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
+  if(dPessoal===null) add(1, 'Sem contato pessoal da equipe registrado', 'contato');
+  else if(dPessoal>=14) add(1, `Sem contato pessoal da equipe há ${dPessoal} dias`, 'contato');
   const nivel = motivos.reduce((a,m)=>Math.max(a,m.nivel),0);
-  motivos.sort((a,b)=>b.nivel-a.nivel);
+  motivos.sort((a,b)=>RD_ORDEM.indexOf(a.chave)-RD_ORDEM.indexOf(b.chave));
   return { nivel, motivos, dAcesso, dAvanco, hEspera, dHumano: dPessoal, esp, real, semAcao:!(r.proxima_acao||'').trim() };
+}
+/* Mensagens de WhatsApp de cada marcador. NOME, TAREFA, LINK, TEMA, MÓDULO, META e DATA são preenchidos
+   com os dados do mentorado ao copiar; HORÁRIOS fica para quem envia. */
+const RD_MARC_MSGS = {
+  acesso: [
+    { rot:'Conseguiu acessar?', txt:`Oi, NOME! Tudo bem? Aqui é a Vivi 😊
+
+Passando para saber: você conseguiu acessar o *Essência PLAT*?
+
+Pergunto porque notei que faz alguns dias que você não entra, e lá estão as suas aulas, as suas metas e tudo o que preparamos para esta etapa da sua jornada.
+
+Se aconteceu alguma dificuldade no acesso (senha, código, login ou qualquer outra coisa), me conta por aqui que eu te ajudo a resolver rapidinho 🤝` },
+    { rot:'Suporte técnico', txt:`Obrigada por me contar, NOME! 🙏
+
+Vamos resolver isso juntos agora. Posso te dar um *suporte técnico*. Você está disponível agora para que eu possa te orientar daqui?
+
+É rapidinho, leva poucos minutos.
+
+Se preferir, me diz um horário bom para você hoje ou amanhã que eu te chamo. 😉` } ],
+  dashboard: [
+    { rot:'Próxima tarefa e aula', txt:`Oi, NOME! Tudo bem? 😊
+
+Vi que o seu Dashboard está parado há algum tempo e quero te ajudar a retomar com um passo simples.
+
+A sua próxima tarefa é: *TAREFA*
+
+▶️ Assista à aula aqui: LINK
+
+Depois de assistir e fazer a tarefa, é só marcar no seu Dashboard do Essência PLAT.
+
+Um passo de cada vez já faz toda a diferença 💪 Qualquer dúvida, me chama!` },
+    { rot:'Travou: Mentoria de Desenvolvimento', txt:`Oi, NOME! Tudo bem?
+
+Percebi que você parou na etapa de *TEMA* e quero te ajudar a destravar. Às vezes um ponto do método pede uma conversa mais próxima, e está tudo bem.
+
+Por isso, quero te convidar para um encontro de *MENTORIA DE DESENVOLVIMENTO* com a Sandra, para clarear esse ponto e montar com você um caminho possível para seguir.
+
+Temos estes horários:
+
+📅 HORÁRIOS
+
+Qual fica melhor para você?` },
+    { rot:'Fez fora do Plat', txt:`Oi, NOME! Tudo bem? 😊
+
+Para o seu progresso aparecer certinho no Essência PLAT, entra no seu Dashboard e marca essa tarefa como feita. Se tiver um quadro dela no Painel do Método, preenche também com o que você construiu.
+
+Assim você já libera as próximas etapas e avança no ePLAT. 🚀` } ],
+  metodo2: [
+    { rot:'Reajustar o ePLANNER', txt:`Oi, NOME! Tudo bem? 😊
+
+Acompanhando a sua jornada, vimos que você está um pouquinho atrasado(a) no método em relação ao tempo de mentoria. Isso acontece, e dá para ajustar com tranquilidade.
+
+Me conta: você já está usando o *ePLANNER*? Ele monta a sua rotina de estudos com as tarefas do método, nos dias e horários que cabem na sua semana.
+
+Que tal reajustarmos juntos? Se os dias e horários de hoje não estão funcionando, dá para trocar por outros mais realistas, mesmo que sejam menos horas. O importante é manter a constância 💪` },
+    { rot:'Reajustar a meta', txt:`Oi, NOME! Tudo bem?
+
+Para você retomar o ritmo sem se sobrecarregar, vamos reajustar a sua meta, ok?
+
+Vou deixar na sua área de *Minhas Metas* um passo mais curto e possível para os próximos dias: *META*, com prazo até *DATA*.
+
+Assim você avança um pouco de cada vez, e eu acompanho com você. Se esse prazo não fizer sentido para a sua rotina, me fala que ajustamos 😉` },
+    { rot:'Já domina o módulo', txt:`Oi, NOME! Tudo bem? 😊
+
+Pelo que conversamos, você já domina bem o conteúdo de *MÓDULO*, que ótimo!
+
+Para o seu progresso aparecer certinho no Essência PLAT, se possível:
+
+1. Faça o check das tarefas desse módulo no seu *Dashboard*;
+2. Suba no *Painel do Método* o que você já construiu em cada quadro.
+
+Assim o seu avanço fica registrado e as próximas etapas se liberam 🚀` } ],
+  nps_det: [
+    { rot:'Encontro com o Murilo', txt:`Olá, NOME! Tudo bem? 😊
+
+Recebemos a sua avaliação na nossa pesquisa de satisfação e agradecemos muito pela sinceridade. A sua opinião é muito importante para nós.
+
+O Murilo fez questão de conversar pessoalmente com você, para ouvir com calma o que não está sendo como você esperava e juntos ajustarmos o que for preciso na sua jornada na Mentoria Essência.
+
+Por isso, queremos agendar um encontro individual de *ACOMPANHAMENTO EXPERT* com ele.
+
+Temos estes horários:
+
+📅 HORÁRIOS
+
+Qual fica melhor para você?` } ],
+  metodo1: [
+    { rot:'Ainda não usa o ePLANNER', txt:`Oi, NOME! Tudo bem? 😊
+
+Passando para te dar um toque carinhoso: você está só uma etapa atrás do ritmo esperado no método. Nada preocupante, e se ajustarmos agora você retoma rapidinho.
+
+Vamos fazer assim:
+
+1. Monte a sua rotina no *ePLANNER*, no menu do Essência PLAT. Você escolhe os dias e os horários que cabem na sua semana, mesmo que sejam poucos, e ele organiza as tarefas do método para você. Leva uns 5 minutinhos.
+2. Já deixei a sua próxima meta em *Minhas Metas*: *META*, com prazo até *DATA*.
+
+Com esses dois passos, você volta para o ritmo certinho 💪 Se quiser ajuda para montar a rotina, me chama por aqui!` , so:'sem_eplanner' },
+    { rot:'Já usa o ePLANNER', txt:`Oi, NOME! Tudo bem? 😊
+
+Passando para te dar um toque carinhoso: você está só uma etapa atrás do ritmo esperado no método. Nada preocupante, e se ajustarmos agora você retoma rapidinho.
+
+Vamos fazer assim:
+
+1. Dá uma olhada no seu *ePLANNER* e me conta se os dias e horários que você escolheu ainda funcionam na sua rotina. Se não, ajustamos juntos.
+2. Já deixei a sua próxima meta em *Minhas Metas*: *META*, com prazo até *DATA*.
+
+Com esses dois passos, você volta para o ritmo certinho 💪 Qualquer coisa, me chama por aqui!`, so:'com_eplanner' } ],
+  nps_neu: [
+    { rot:'O que falta para o 10', txt:`Oi, NOME! Tudo bem? 😊
+
+Obrigada por responder a nossa pesquisa de satisfação! Ficamos muito felizes em saber que você está gostando da sua jornada na Mentoria Essência.
+
+E queremos ir além: o nosso compromisso é que essa experiência seja nota 10 para você.
+
+Por isso, te pergunto com sinceridade: *o que faltou para ser 10?* Pode ser algo no conteúdo, nos encontros, na plataforma, no atendimento ou no seu próprio ritmo. Qualquer detalhe nos ajuda muito.
+
+Pode me responder por aqui mesmo, do jeito que preferir, por texto ou áudio 🤝` } ],
+  contato: [
+    { rot:'Contato pessoal', txt:`Oi, NOME! Tudo bem? 😊
+
+Passando aqui só para saber como você está e como anda a sua jornada na Mentoria Essência.
+
+Como está a sua rotina com as aulas e as tarefas desta etapa? Tem alguma dúvida, dificuldade ou algo em que eu possa te ajudar agora?
+
+Pode me responder por aqui, por texto ou áudio, do jeito que for melhor para você 🤝` } ],
+  nao_responde: [
+    { rot:'Pergunta de 1 toque', txt:`Oi, NOME! Tudo bem? 😊
+
+Sentimos a sua falta por aqui! Só quero saber como você está. Me responde com um número, bem rapidinho:
+
+1️⃣ Está tudo bem, só estou numa fase corrida
+2️⃣ Estou com dificuldade em alguma etapa do método
+3️⃣ Preciso de ajuda com a plataforma
+4️⃣ Quero conversar com alguém do time
+
+Com a sua resposta, já consigo te ajudar do jeito certo 🤝` } ],
+  metas: [
+    { rot:'Cobrança da meta', txt:`Oi, NOME! Tudo bem? 😊
+
+Passei para olhar o seu andamento e vi que a meta *META* venceu em *DATA* e ainda está pendente em *Minhas Metas*, no Essência PLAT.
+
+Sei que a rotina aperta, e por isso quero te ajudar a destravar:
+
+✅ Se você já fez, é só marcar como concluída em Minhas Metas.
+⏳ Se ainda não deu, me conta o que está pegando: tempo, alguma dúvida ou o prazo não coube na sua realidade?
+
+Se precisar, ajustamos juntos um novo prazo que faça sentido para você 🤝` } ],
+  nao_resp: [
+    { rot:'Caso para o Desenvolvimento (grupo interno)', interno:true, txt:'' } ],
+};
+/* Próxima tarefa do Dashboard (a primeira não marcada) e a aula ligada a ela. */
+function rdProximaTarefa(s){
+  const L = libPassos();
+  for(const m of MODULES){
+    let st = []; try{ st = getModuleChecklistState(s.id, m.id) || []; }catch(e){}
+    const itens = MODULE_CHECKLIST[m.id] || [];
+    for(let i=0;i<itens.length;i++){
+      if(st[i]) continue;
+      const k = L.porItem[m.id+':'+i]; const passo = k!==undefined ? L.passos[k] : null;
+      const cid = passo && passo.courseId; const c = cid ? getCourse(cid) : null;
+      return { tarefa:String(itens[i]).replace(/\.$/,''), modulo:m.name, link: cid ? aulaLinkDireto(cid) : 'https://www.mentoriaessencia.online', aula: c ? c.title : '' };
+    }
+  }
+  return null;
+}
+function rdMetaDe(s, vencida){
+  const l = (s.checklist||[]).filter(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+  const c = (vencida ? l.filter(metaVencida) : l).map(t=>({t, iso:prazoTextoParaIso(t.prazo)})).sort((a,b)=>String(a.iso||'9').localeCompare(String(b.iso||'9')));
+  return c.length ? { meta:c[0].t.tarefa, data:c[0].t.prazo && c[0].t.prazo!=='—' ? c[0].t.prazo : '' } : null;
+}
+function rdTemEplanner(s){ try{ return epConfigurado(epConfig(s.id)); }catch(e){ return false; } }
+function rdMarcMsgTexto(s, chave, i){
+  const m = (RD_MARC_MSGS[chave]||[])[i]; if(!m) return '';
+  if(chave==='nao_resp') return rdMsgDesenvolvimento(s);
+  const prim = String(s.name||'').trim().split(/\s+/)[0];
+  const pt = rdProximaTarefa(s) || {};
+  const meta = rdMetaDe(s, chave==='metas') || {};
+  const real = rdEstagioReal(s); const mod = real ? RADAR_ESTAGIOS[real.idx] : (pt.modulo||'');
+  return m.txt.replace(/\bNOME\b/g, prim)
+    .replace(/\*TAREFA\*/g, pt.tarefa ? `*${pt.tarefa}*` : '*TAREFA*')
+    .replace(/\bLINK\b/g, pt.link || 'LINK')
+    .replace(/\*TEMA\*/g, `*${pt.modulo || mod || 'TEMA'}*`)
+    .replace(/\*MÓDULO\*/g, `*${mod || pt.modulo || 'MÓDULO'}*`)
+    .replace(/\*META\*/g, meta.meta ? `*${meta.meta}*` : '*META*')
+    .replace(/\*DATA\*/g, meta.data ? `*${meta.data}*` : '*DATA*');
+}
+function rdEnvioUlt(sid, chave, i){ return (RADAR_UI.envios||{})[sid+'|'+chave+'|'+i] || null; }
+/* Um marcador com as mensagens dele: Copiar (já com os dados do mentorado) e Enviado (registra). */
+function rdMarcadorHtml(s, m, principal){
+  const msgs = (RD_MARC_MSGS[m.chave]||[]).map((x,i)=>({x,i})).filter(({x})=>{
+    if(m.chave==='nao_resp') return rdNaoRespSemanas(s.id)>=3;
+    if(x.so==='sem_eplanner') return !rdTemEplanner(s);
+    if(x.so==='com_eplanner') return rdTemEplanner(s);
+    return true; });
+  const cls = m.chave==='nao_resp' ? 'rd-mc' : 'rd-m'+m.nivel;
+  return `<div class="rd-marc ${cls} ${principal?'principal':''}">
+    <div class="rd-marc-h">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : `<span>${escapeHtml(m.txt)}</span>`}</div>
+    ${msgs.length ? `<div class="rd-marc-msgs">${msgs.map(({x,i},n)=>{ const e = rdEnvioUlt(s.id, m.chave, i);
+      const quem = e && PEOPLE[e.enviado_por] ? PEOPLE[e.enviado_por].name.split(' ')[0] : '';
+      return `<div class="rd-msg-linha"><span class="rd-msg-rot">${msgs.length>1 ? `Mensagem ${n+1} · ` : ''}${escapeHtml(x.rot)}</span>
+        <span class="rd-msg-acoes">${e ? `<small class="rd-msg-env">${icon('check','tiny')} Enviada${quem?' por '+escapeHtml(quem):''} em ${escapeHtml(tzDataCurta(e.enviado_em))}</small>` : ''}
+        <button type="button" class="btn-mini" data-rd-cp="${s.id}|${m.chave}|${i}">${icon('copy','tiny')}<span>Copiar</span></button>
+        <button type="button" class="btn-mini rd-env-btn" data-rd-env="${s.id}|${m.chave}|${i}">${icon('check','tiny')}<span>Enviado</span></button></span></div>`; }).join('')}</div>` : ''}
+  </div>`;
 }
 function rdUltContatoDias(s){
   let melhor = null;
@@ -23704,6 +23895,8 @@ async function radarCarregar(){
     ((rr && rr.data) || []).forEach(x=>{ RADAR_UI.resolvidos[x.student_id+'|'+x.chave] = x; });
     const nr = await sb.from('radar_nao_responsivo').select('aluno_id,marcado_em,ate,por,semanas,respondeu');
     RADAR_UI.naoResp = {}; ((nr && nr.data) || []).forEach(x=>{ RADAR_UI.naoResp[x.aluno_id] = x; });
+    const en = await sb.from('radar_envios').select('aluno_id,marcador,msg,enviado_por,enviado_em').gte('enviado_em', new Date(Date.now()-30*86400000).toISOString()).order('enviado_em', {ascending:false});
+    RADAR_UI.envios = {}; ((en && en.data) || []).forEach(x=>{ const k = x.aluno_id+'|'+x.marcador+'|'+x.msg; if(!RADAR_UI.envios[k]) RADAR_UI.envios[k] = x; });
   }catch(e){ console.error('radar_mentorados', e); RADAR_UI.erro = true; RADAR_UI.rows = null; }
   RADAR_UI.carregando = false;
   if(currentView==='radar') renderRadar();
@@ -23922,9 +24115,11 @@ function renderRadar(){
                 : a.nivel===2 ? `<button type="button" class="btn-mini rd-nr-btn" data-rd-nr="${s.id}" data-rd-nr-v="1" title="Estimulado e sem resposta: tira do vermelho por 7 dias">${icon('xcircle','tiny')}<span> Não responsivo</span></button>` : ''}
             </div>
           </div>
-          ${rdNaoRespSemanas(s.id)>=3 ? `<div class="rd-nr-alerta"><span>${icon('users','tiny')} <strong>${rdNaoRespSemanas(s.id)} SEMANAS SEGUIDAS NO CINZA</strong> · tentar outros canais e levar para o Desenvolvimento</span><button type="button" class="btn-mini" data-rd-dev="${s.id}">${icon('copy','tiny')}<span>Copiar mensagem para o Desenvolvimento</span></button></div>` : ''}
+          ${rdNaoRespSemanas(s.id)>=3 ? `<div class="rd-nr-alerta"><span>${icon('users','tiny')} <strong>${rdNaoRespSemanas(s.id)} SEMANAS SEGUIDAS NO CINZA</strong> · tentar outros canais e levar para o Desenvolvimento</span></div>` : ''}
           ${a.naoResp ? `<div class="rd-nr-aviso">NÃO RESPONSIVO · marcado em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].marcado_em))}${PEOPLE[RADAR_UI.naoResp[s.id].por] ? ' por '+escapeHtml(PEOPLE[RADAR_UI.naoResp[s.id].por].name.split(' ')[0]) : ''} · volta ao vermelho em ${escapeHtml(tzDataCurta(RADAR_UI.naoResp[s.id].ate))}</div>` : ''}
-          ${a.motivos.length ? `<ul class="rd-motivos">${a.motivos.map(m=>`<li class="rd-m${m.nivel}">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : escapeHtml(m.txt)}${m.chave==='espera' ? ` <button type="button" class="rd-espera-ok" data-rd-espera-ok="${s.id}" title="A conversa já foi resolvida: tirar este alerta">${icon('check','tiny')} Já respondido</button>` : m.chave==='contato' ? ` <button type="button" class="rd-espera-ok" data-rd-contato-copiar="${s.id}" title="Mensagem de contato pessoal para o WhatsApp, já com o nome">${icon('copy','tiny')} <span>Copiar mensagem</span></button> <button type="button" class="rd-espera-ok" data-rd-contato-ok="${s.id}" title="Registra no Registro de Contatos um contato pelo WhatsApp com a data de hoje">${icon('check','tiny')} Contato feito hoje</button>` : ''}</li>`).join('')}</ul>` : `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`}
+          ${(()=>{ const lst = a.naoResp ? [{nivel:2, chave:'nao_resp', txt:`Não responsivo${rdNaoRespSemanas(s.id)>1 ? ' · '+rdNaoRespSemanas(s.id)+' semanas seguidas' : ''}`}].concat(a.motivos) : a.motivos;
+            if(!lst.length) return `<div class="rd-ok">${icon('check','tiny')} Tudo em dia</div>`;
+            return rdMarcadorHtml(s, lst[0], true) + (lst.length>1 ? `<div class="rd-outros-tit">${lst.length-1} outro${lst.length>2?'s':''} marcador${lst.length>2?'es':''} menos grave${lst.length>2?'s':''}${aberto ? '' : ': '+lst.slice(1).map(m=>escapeHtml(m.txt.split(':')[0])).join(' · ')}</div>` + (aberto ? lst.slice(1).map(m=>rdMarcadorHtml(s, m, false)).join('') : '') : ''); })()}
           <button type="button" class="rd-mais" data-rd-abrir="${s.id}">${icon(aberto?'up':'down','tiny')} ${aberto?'Esconder detalhes':'Ver detalhes'}</button>
           ${aberto ? `
           <div class="rd-dados">
@@ -23943,7 +24138,7 @@ function renderRadar(){
         </div>`; }).join('') || `<div class="empty-state">${lista.length ? 'Ninguém nesse filtro.' : 'Nenhum mentorado ainda.'}</div>`}
     </div>
     ${rdMsgsPadraoHtml()}
-    <p class="rd-legenda"><strong>Como o semáforo decide:</strong> vermelho com 14 dias ou mais sem entrar (amarelo com 7), 30 dias sem avançar no dashboard (amarelo com 14), mensagem do aluno esperando a equipe há 48h (amarelo com 24h), 2 etapas atrasado no método (amarelo com 1)${verFin?', pagamento em atraso':''} ou nota de 0 a 6 no último NPS (amarelo com 7 ou 8). Ficam em amarelo também: aluno sem responder a equipe há 14 dias, equipe sem contato pessoal da equipe há 14 dias, contando o Registro de Contatos (WhatsApp ou encontro); o checkpoint automático não conta, e próxima ação vencida. O ritmo usa a régua do acompanhamento: Abertura até o dia 30, Ser até 90, Conectar até 180, Transformar até 270, Gerenciar até 330 e depois Fechamento, esticada para contratos maiores que 12 meses. O aluno está no primeiro módulo que ainda não chegou a 80%.</p>`;
+    <p class="rd-legenda"><strong>Como o semáforo decide</strong> (do mais grave ao menos grave; o card mostra só o mais grave e os outros ficam em Ver detalhes). <strong>Vermelho:</strong> 1. sem entrar no Plat há 14 dias ou mais, ou nunca entrou; 2. parado no Dashboard há 30 dias ou mais; 3. duas etapas ou mais atrás no método; 4. NPS de 0 a 6. <strong>Laranja:</strong> 5. não responde a equipe há 14 dias; 6. uma etapa atrás no método; 7. meta vencida sem cobrança; 8. sem contato pessoal da equipe há 14 dias (WhatsApp ou encontro no Registro de Contatos); 9. NPS 7 ou 8. <strong>Cinza:</strong> não responsivo, marcado pela equipe, por 7 dias. Cada marcador traz as mensagens de WhatsApp: Copiar já vem com os dados do mentorado e Enviado registra o envio (e conta como contato pessoal).</p>`;
   el.querySelectorAll('[data-rd-filtro]').forEach(b=>b.addEventListener('click', ()=>{ RADAR_UI.filtro = RADAR_UI.filtro===b.dataset.rdFiltro ? 'todos' : b.dataset.rdFiltro; renderRadar(); }));
   const lim = document.getElementById('rd-limpar'); if(lim) lim.addEventListener('click', ()=>{ RADAR_UI.filtro = 'todos'; RADAR_UI.busca = ''; renderRadar(); });
   document.getElementById('rd-atualizar').addEventListener('click', ()=>{ RADAR_UI.rows = null; renderRadar(); });
@@ -23965,6 +24160,28 @@ function renderRadar(){
     const m = rdMomentos(st).find(x=>x.chave===b.dataset.rdChave); if(m) rdResolverMomento(st, m);
   }));
   el.querySelectorAll('[data-rd-acomp]').forEach(b=>b.addEventListener('click', ()=>abrirAcompanhamento(b.dataset.rdAcomp)));
+  el.querySelectorAll('[data-rd-cp]').forEach(b=>b.addEventListener('click', async ()=>{
+    const [sid, chave, i] = b.dataset.rdCp.split('|'); const st = getStudent(sid); if(!st) return;
+    const txt = rdMarcMsgTexto(st, chave, Number(i)); const lbl = b.querySelector('span');
+    try{ await navigator.clipboard.writeText(txt); }catch(e){ const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } ta.remove(); }
+    if(lbl){ lbl.textContent = 'Copiada'; setTimeout(()=>{ lbl.textContent = 'Copiar'; }, 1800); }
+  }));
+  el.querySelectorAll('[data-rd-env]').forEach(b=>b.addEventListener('click', async ()=>{
+    const [sid, chave, i] = b.dataset.rdEnv.split('|'); const st = getStudent(sid); if(!st) return; b.disabled = true;
+    const m = (RD_MARC_MSGS[chave]||[])[Number(i)] || {};
+    const { data, error } = await sb.from('radar_envios').insert({ aluno_id:sid, marcador:chave, msg:Number(i), enviado_por:currentUser.id }).select('aluno_id,marcador,msg,enviado_por,enviado_em').single();
+    if(error){ alert('Não foi possível registrar o envio: '+(error.message||'')); b.disabled = false; return; }
+    RADAR_UI.envios = RADAR_UI.envios || {}; RADAR_UI.envios[sid+'|'+chave+'|'+i] = data;
+    /* Mensagem ao mentorado conta como contato pessoal (Registro de Contatos); a de meta conta também como cobrança. */
+    if(!m.interno){
+      const nome = (currentUserProfile && currentUserProfile.name) || '';
+      const resp = RESPONSAVEL_CONTATO_OPTS.find(o=>normTxt(o.split(' ')[0])===normTxt(nome.split(' ')[0])) || nome;
+      const c = { data:intHojeTxt(), tipo:'whatsapp', responsavel:resp, resumo:`Mensagem enviada pelo WhatsApp pelo Radar: ${m.rot||chave}.` };
+      try{ const id = await syncContatoInsert(sid, c); st.contatos = (st.contatos||[]).concat([{ id, data:c.data, tipo:'whatsapp', responsavel:resp, resumo:c.resumo, linkGravacao:'', linkTranscricao:'', syncedToSessions:false }]); }catch(e){ console.error('contato radar', e); }
+      if(chave==='metas'){ try{ await metasCobrRegistrar(sid, 'whatsapp'); }catch(e){ console.error(e); } }
+    }
+    renderRadar();
+  }));
   el.querySelectorAll('[data-rd-contato-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
     const st = getStudent(b.dataset.rdContatoCopiar); if(!st) return;
     const txt = RD_MSG_CONTATO.replace(/NOME/g, String(st.name||'').trim().split(/\s+/)[0]); const lbl = b.querySelector('span');
