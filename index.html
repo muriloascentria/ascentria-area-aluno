@@ -1500,6 +1500,14 @@
   .emb-check.dev{border-style:dashed;}
   .emb-check input{margin:0;flex:0 0 auto;}
   .emb-checks-passos .emb-linha{grid-template-columns:1fr !important;}
+  .emb-seg-linha{cursor:default;}
+  .emb-seg{display:flex;flex:1;border:1px solid var(--border);border-radius:999px;padding:3px;gap:3px;background:var(--bg-card);}
+  .emb-seg button{flex:1;justify-content:center;}
+  .emb-seg button{border:0;background:transparent;color:var(--text-mute);font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:6px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .emb-seg button .icon{width:12px;height:12px;}
+  .emb-seg button:hover{color:var(--text);}
+  .emb-seg button.sel{background:var(--success);color:#fff;}
+  .emb-seg button.sel.dispensada{background:var(--text-mute);color:var(--bg);}
   .emb-check-n{flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--bg-elev);border:1px solid var(--border);color:var(--text-dim);}
   .emb-check.on .emb-check-n{background:var(--success);border-color:var(--success);color:#fff;}
   .emb-check:has(.emb-check-copiar){flex-wrap:wrap;row-gap:6px;}
@@ -24404,6 +24412,13 @@ function embRenderDetalhe(el, s){
               /* Um check por linha, numerado em ordem, como passos; a passagem fica por último, sem número. */
               let nPasso = 0;
               return `<div class="emb-checks emb-checks-passos">${todas.flat().filter(ck=>rotulo[ck]).map(ck=>[ck]).map(lin=>`<div class="emb-linha" style="--n:1">${lin.map(ck=>{ const label = rotulo[ck]; const num = ck==='proximo' ? '' : `<span class="emb-check-n">${++nPasso}</span>`;
+                /* Análise: chave de duas posições, Análise postada | Análise dispensada (clicar de novo desmarca). */
+                if(ck==='analise'){ const disp = !!ch.analise_dispensada, post = !!ch.analise && !disp;
+                  return `<div class="emb-check emb-seg-linha ${post||disp?'on':''}"><span class="emb-check-n">${num.replace(/<[^>]+>/g,'')}</span>
+                    <div class="emb-seg" role="group" aria-label="Análise">
+                      <button type="button" class="${post?'sel':''}" data-emb-seg="${et.chave}:postada">${icon('check','tiny')} Análise postada</button>
+                      <button type="button" class="${disp?'sel dispensada':''}" data-emb-seg="${et.chave}:dispensada">${icon('x','tiny')} Análise dispensada</button>
+                    </div></div>`; }
                 return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} ${et.auto && (ck!=='proximo' || !auto || auto.proximo) ? 'disabled title="Marca sozinho quando o mentorado cumpre a tarefa"' : ''} data-emb-check="${et.chave}:${ck}"> ${num}${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}${embCheckCopiarHtml(et.k, ck)}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
           </div>
         </div>`; }).join('')}
@@ -24470,6 +24485,13 @@ function embRenderDetalhe(el, s){
       inp.addEventListener('blur', ()=>{ if(pendente){ pendente = false; embRenderDetalhe(el, s); } });
     } else inp.addEventListener('change', ()=>{ aplicar(); embRenderDetalhe(el, s); });
   });
+  el.querySelectorAll('[data-emb-seg]').forEach(b=>b.addEventListener('click', ()=>{
+    const [chave, v] = b.dataset.embSeg.split(':'); const d = embDados(sid); d[chave] = d[chave] || {}; const c = d[chave].checks = d[chave].checks || {};
+    const atual = c.analise_dispensada ? 'dispensada' : c.analise ? 'postada' : '';
+    const novo = atual===v ? '' : v;
+    c.analise = novo==='postada'; c.analise_dispensada = novo==='dispensada';
+    embSalvar(sid); embRenderDetalhe(el, s);
+  }));
   el.querySelectorAll('[data-emb-check]').forEach(inp=>inp.addEventListener('change', ()=>{
     const [chave, ck] = inp.dataset.embCheck.split(':'); const d = embDados(sid); d[chave] = d[chave] || {}; d[chave].checks = d[chave].checks || {};
     d[chave].checks[ck] = inp.checked;
