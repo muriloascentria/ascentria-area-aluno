@@ -5331,9 +5331,25 @@ function bvMostrar(s){
     const { error } = await sb.from('profiles').update({ video_boas_vindas_em: quando }).eq('id', s.id);
     if(error){ console.error('video boas-vindas', error); btn.disabled = false; btn.innerHTML = '<span>Continuar</span>'; showAppAviso('Não foi possível registrar agora. Tente de novo em instantes.'); return; }
     s.videoBoasVindasEm = quando; try{ localStorage.removeItem(chave); }catch(e){}
+    setTimeout(()=>metasAutoRecarregar(true), 1200);
     el.classList.add('bv-saindo'); setTimeout(()=>{ el.remove(); BV_ABERTO = false; }, 350);
     goTo('inicio');
   });
+}
+/* Metas iniciais automáticas (banco: metas_iniciais_criar / metas_iniciais_avaliar): nascem quando o
+   mentorado termina o vídeo do primeiro acesso e se concluem sozinhas (vídeo, Diagnóstico de Abertura,
+   ePLANNER salvo, as duas aulas da Introdução e a apresentação na Comunidade). Como isso acontece no
+   banco, o aluno recarrega a própria lista ao abrir Início, Minhas Metas ou Dashboard. */
+let METAS_AUTO_EM = 0;
+async function metasAutoRecarregar(forcar){
+  if(currentUserRole!=='aluno' || !currentUser) return;
+  if(!forcar && Date.now() - METAS_AUTO_EM < 8000) return; METAS_AUTO_EM = Date.now();
+  const s = getStudent(currentUser.id); if(!s) return;
+  const { data, error } = await sb.from('checklist_items').select('*').eq('student_id', s.id).order('id');
+  if(error || !Array.isArray(data)) return;
+  const antes = JSON.stringify(s.checklist.map(t=>[t.id,t.status]));
+  s.checklist = data.map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null,criadoPor:t.criado_por||null,criadoEm:t.criado_em||null}));
+  if(JSON.stringify(s.checklist.map(t=>[t.id,t.status]))!==antes && ['inicio','metas','dashboard'].includes(currentView) && !gateAlunoAtivo()) renderCurrentView();
 }
 function needsWispform(s){
   return currentUserRole==='aluno' && !!s && !s.diagnostico.wispformSubmittedAt;
@@ -7923,6 +7939,7 @@ function goTo(view){
   if(view==='embarque' && currentUserRole!=='staff') view = 'equipe';
   if(gateAlunoAtivo()) view = 'inicio';   // primeiro acesso do mentorado: vídeo e Formulário de Abertura antes de tudo
   currentView = view;
+  if(['inicio','metas','dashboard'].includes(view)) setTimeout(()=>metasAutoRecarregar(false), 400);
   if(view==='mensagens' || view==='acompanhamento') msgUI.entrando = true;
   if(view==='painel') panelQuadrantId = null;
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -8425,6 +8442,7 @@ async function submitWispform(s, flat){
     INTERNAL_DIAG[s.id+':wispform'] = w; INTERNAL_DIAG[s.id+':abertura'] = d;
     delete INTERNAL_DIAG_EDITING[s.id+':wispform']; delete INTERNAL_DIAG_EDITING[s.id+':abertura'];
     s.diagnostico.wispformSubmittedAt = nowIso;
+    setTimeout(()=>metasAutoRecarregar(true), 1200);
     try{ localStorage.removeItem(wfChaveRascunho(s.id)); }catch(e){}
     wfDraft = null; wfStep = 0; wfPhase = 'fill';
     renderCurrentView();
