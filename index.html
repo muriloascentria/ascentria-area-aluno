@@ -5348,7 +5348,7 @@ async function metasAutoRecarregar(forcar){
   const { data, error } = await sb.from('checklist_items').select('*').eq('student_id', s.id).order('id');
   if(error || !Array.isArray(data)) return;
   const antes = JSON.stringify(s.checklist.map(t=>[t.id,t.status]));
-  s.checklist = data.map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null,criadoPor:t.criado_por||null,criadoEm:t.criado_em||null}));
+  s.checklist = data.map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null,criadoPor:t.criado_por||null,criadoEm:t.criado_em||null,autoChave:t.auto_chave||null}));
   if(JSON.stringify(s.checklist.map(t=>[t.id,t.status]))!==antes && ['inicio','metas','dashboard'].includes(currentView) && !gateAlunoAtivo()) renderCurrentView();
 }
 function needsWispform(s){
@@ -6174,7 +6174,7 @@ function mapProfileRow(p){
       objetivo12meses: diag.objetivo_12meses || '—', horasSemana: diag.horas_semana || '—',
       wispformSubmittedAt: diag.wispform_submitted_at || null,
     },
-    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null,criadoPor:t.criado_por||null,criadoEm:t.criado_em||null})),
+    checklist: (p.checklist_items||[]).map(t=>({id:t.id,tarefa:t.tarefa,responsavel:t.responsavel,prazo:t.prazo||'—',status:t.status,obs:t.obs||'',aulas:Array.isArray(t.aulas)? t.aulas.slice() : [],contatoId:t.contato_id||null,agendamentoId:t.agendamento_id||null,criadoPor:t.criado_por||null,criadoEm:t.criado_em||null,autoChave:t.auto_chave||null})),
     sessions: (p.sessions||[]).map(x=>({id:x.id,title:x.title,date:x.date,notes:x.notes,linkGravacao:x.link_gravacao||'',linkTranscricao:x.link_transcricao||'',responsavel:x.responsavel||''})),
     contatos: (p.contatos||[]).map(c=>({id:c.id,data:c.data,tipo:c.tipo||'',responsavel:c.responsavel,resumo:c.resumo,linkGravacao:c.link_gravacao,linkTranscricao:c.link_transcricao,syncedToSessions:c.synced_to_sessions,sessionId:c.session_id||null})),
     registrosInternos: [], // preenchido à parte em bootstrapData, só para equipe interna (nunca para o aluno)
@@ -24072,6 +24072,11 @@ const EMB_ETAPAS = [
    checks:[['todos','Todos inclusos'],['proximo','Grupo pronto: seguir para as Mensagens iniciais']]},
   {k:'mensagens', titulo:'Mensagens iniciais', ic:'comment', campos:[],
    checks:[['murilo','Murilo: boas-vindas e apresentação da equipe'],['mariane','Mariane: orientações iniciais e formulários'],['viviane','Viviane: boas-vindas e acesso inicial'],['proximo','Agendamento do Onboarding ePLAT realizado']]},
+  /* Tarefas iniciais: as 5 metas automáticas do primeiro acesso (metas_iniciais_criar no banco). Os
+     checks se marcam sozinhos conforme o mentorado cumpre; com as 5 feitas, o card passa sozinho para o
+     Onboarding ePLAT. Mentorado antigo, que não tem essas metas, pula esta etapa. */
+  {k:'tarefas', titulo:'Tarefas iniciais', ic:'target', auto:true, campos:[],
+   checks:[['video_eplat','Vídeo de instrução do ePLAT'],['diagnostico','Diagnóstico de Abertura'],['eplanner','Rotina no ePLANNER'],['intro_aulas','Aulas da Introdução'],['apresentacao','Apresentação na Comunidade'],['proximo','Tarefas iniciais concluídas: seguir para o Onboarding ePLAT']]},
   {k:'eplat', titulo:'Onboarding ePLAT', ic:'home', agenda:true,
    checks:[['agendado','Agendado'],['concluido','Concluído'],['dev','Solicitar Mentoria de Desenvolvimento'],['tarefas','Tarefas iniciais postadas no ePLAT'],['analise','Análise postada'],['proximo','Agendamento do Onboarding Expert (com Murilo) realizado']]},
   {k:'expert', titulo:'Onboarding Expert', ic:'award', agenda:true,
@@ -24085,6 +24090,7 @@ const EMB_DEV = {titulo:'Mentoria de Desenvolvimento', ic:'target', agenda:true,
 const EMB_LINHAS = {
   grupo:[['todos'],['proximo']],
   mensagens:[['murilo','mariane','viviane'],['proximo']],
+  tarefas:[['video_eplat','diagnostico','eplanner'],['intro_aulas','apresentacao'],['proximo']],
   eplat:[['agendado','concluido','tarefas','analise'],['dev'],['proximo']],
   expert:[['agendado','concluido','anteriores','tarefas'],['analise','dev'],['proximo']],
   esis:[['agendado','concluido','anteriores','tarefas'],['analise','dev'],['proximo']],
@@ -24135,12 +24141,23 @@ function embFluxo(sid){
 }
 /* A etapa só avança para a coluna seguinte quando o check de passagem ("proximo", o último de cada
    etapa) está marcado. Os outros checks mostram o andamento, mas não seguram o mentorado. */
+const EMB_TAREFAS_AUTO = ['video_eplat','diagnostico','eplanner','intro_aulas','apresentacao'];
+/* Situação das 5 tarefas iniciais do mentorado, lida das metas automáticas (null = mentorado sem elas). */
+function embTarefasAuto(sid){
+  const st = getStudent(sid); if(!st || !Array.isArray(st.checklist)) return null;
+  const itens = st.checklist.filter(t=>t.autoChave && EMB_TAREFAS_AUTO.includes(t.autoChave)); if(!itens.length) return null;
+  const out = {}; EMB_TAREFAS_AUTO.forEach(k=>{ out[k] = itens.some(t=>t.autoChave===k && t.status==='Concluída'); });
+  out.proximo = EMB_TAREFAS_AUTO.every(k=>out[k]);
+  return out;
+}
 function embEtapaFeita(sid, et){
   const v = (EMB[sid]||{})[et.chave] || {};
+  if(et.auto){ const a = embTarefasAuto(sid); return !a || a.proximo || !!(v.checks||{}).proximo; }
   return !!(v.checks||{}).proximo;
 }
 function embEtapaIniciada(sid, et){
   const v = (EMB[sid]||{})[et.chave] || {};
+  if(et.auto){ const a = embTarefasAuto(sid); if(a && EMB_TAREFAS_AUTO.some(k=>a[k])) return true; }
   return Object.values(v.checks||{}).some(Boolean) || ['data','com','por'].some(k=>String(v[k]||'').trim());
 }
 function embResumo(sid){
@@ -24217,9 +24234,9 @@ async function renderEmbarque(){
   embAluno = null;
   const lista = embMentorados();
   const colunas = [
-    ...EMB_ETAPAS.slice(0,3).map(e=>({id:e.k, titulo:e.titulo, ic:e.ic})),
+    ...EMB_ETAPAS.slice(0,4).map(e=>({id:e.k, titulo:e.titulo, ic:e.ic})),
     {id:'dev', titulo:'Mentoria de Desenvolvimento', ic:'target'},
-    ...EMB_ETAPAS.slice(3).map(e=>({id:e.k, titulo:e.titulo, ic:e.ic})),
+    ...EMB_ETAPAS.slice(4).map(e=>({id:e.k, titulo:e.titulo, ic:e.ic})),
     {id:'fim', titulo:'Embarque concluído', ic:'check'},
   ];
   const porCol = {}; colunas.forEach(c=>porCol[c.id]=[]);
@@ -24324,7 +24341,9 @@ function embRenderDetalhe(el, s){
     <div class="emb-fluxo">
       ${r.fluxo.map((et,i)=>{
         const feita = embEtapaFeita(sid, et); const atual = r.atual && r.atual.chave===et.chave; const iniciada = embEtapaIniciada(sid, et);
-        const ch = (((EMB[sid]||{})[et.chave])||{}).checks || {};
+        let ch = (((EMB[sid]||{})[et.chave])||{}).checks || {};
+        const auto = et.auto ? embTarefasAuto(sid) : null;
+        if(et.auto) ch = auto ? { ...auto, proximo: auto.proximo || !!ch.proximo } : { proximo:true };
         const estado = feita ? 'feita' : atual ? 'atual' : iniciada ? 'andamento' : 'pendente';
         const pill = feita ? 'Concluída' : atual ? 'Etapa atual' : iniciada ? 'Em andamento' : 'Pendente';
         const campos = et.agenda ? EMB_CAMPOS_AGENDA : (et.campos||[]);
@@ -24337,7 +24356,7 @@ function embRenderDetalhe(el, s){
               const usados = new Set(linhas.flat()); const resto = et.checks.map(c=>c[0]).filter(k=>!usados.has(k));
               const todas = resto.length ? [...linhas.slice(0,-1), resto, linhas[linhas.length-1]] : linhas;
               return `<div class="emb-checks">${todas.map(lin=>`<div class="emb-linha" style="--n:${lin.length}">${lin.filter(ck=>rotulo[ck]).map(ck=>{ const label = rotulo[ck];
-                return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
+                return `<label class="emb-check ${ch[ck]?'on':''} ${ck==='dev'?'dev':''} ${ck==='proximo'?'passagem':''}" ${ck==='proximo'?'title="Marcado, o mentorado passa para a próxima coluna do quadro"':''}><input type="checkbox" ${ch[ck]?'checked':''} ${et.auto && (ck!=='proximo' || !auto || auto.proximo) ? 'disabled title="Marca sozinho quando o mentorado cumpre a tarefa"' : ''} data-emb-check="${et.chave}:${ck}"> ${ck==='proximo'? icon('up','tiny')+' ' : ''}<span class="emb-check-txt">${escapeHtml(label)}</span>${ck==='proximo' ? '<small>avança para a próxima etapa</small>' : ''}</label>`; }).join('')}</div>`).join('')}</div>`; })()}
           </div>
         </div>`; }).join('')}
     </div>`;
