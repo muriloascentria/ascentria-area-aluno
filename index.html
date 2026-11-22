@@ -414,6 +414,7 @@
   .icon-btn:hover{color:var(--text);}
   #menu-btn{display:none;}
   #refresh-btn{display:none;}
+  .cel-titulo{display:none;}
   .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:45;}
   .sidebar-backdrop.open{display:block;}
   .dot-alert{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--danger);}
@@ -3964,7 +3965,9 @@
   #refresh-btn{display:flex;border-radius:50%;}
   #refresh-btn.girando .icon{animation:rfGira .8s linear infinite;}
   @keyframes rfGira{to{transform:rotate(360deg);}}
-  .topbar-title{text-transform:uppercase;letter-spacing:.08em;font-size:14px!important;font-weight:800;}
+  /* no celular o nome da aba sai da barra de cima e vira o título do topo da tela, em caixa alta */
+  .topbar-title{visibility:hidden;}
+  .cel-titulo{display:block!important;margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
   #view-agenda .section-title:first-child{margin-top:4px;}
@@ -4339,6 +4342,7 @@
     </div>
 
     <div class="content">
+      <h1 class="cel-titulo" id="cel-titulo"></h1>
       <div class="view" id="view-inicio"></div>
       <div class="view" id="view-aulas"></div>
       <div class="view" id="view-comunidade"></div>
@@ -8398,6 +8402,7 @@ function goTo(view){
   const [,label] = NAV_LABELS[view];
   const badgeType = BADGE[view];
   document.getElementById('topbar-title').innerHTML = label + (badgeType? ` <span class="badge-${badgeType}">${BADGE_TEXT[badgeType]}</span>`:'');
+  { const ct = document.getElementById('cel-titulo'); if(ct) ct.textContent = String(label||''); }  /* celular: nome da aba no topo da tela */
   ajustarTituloTopo();
   renderCurrentView();
   document.getElementById('sidebar').classList.remove('open');
