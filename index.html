@@ -1061,6 +1061,16 @@
   .post:not(.com-aberto) > .comments{display:none;}
   .post.com-aberto [data-toggle-comments]{color:var(--accent);}
   .composer.comp2{flex-direction:column;gap:12px;}
+  .tagpick-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px;}
+  @media (min-width:600px){ .tagpick-ov{align-items:center;} }
+  .tagpick{width:100%;max-width:420px;background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:20px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.45);}
+  .tagpick-tit{font-size:15px;font-weight:700;}
+  .tagpick-sub{font-size:11.5px;color:var(--text-mute);margin-top:4px;}
+  .tagpick-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+  .tagpick-op{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:12px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .tagpick-op .icon{width:16px;height:16px;}
+  .tagpick-op.tag-duvida{color:var(--danger);} .tagpick-op.tag-interacao{color:var(--accent-2,var(--accent));} .tagpick-op.tag-conquista{color:var(--success);} .tagpick-op.tag-apresentacao{color:var(--shared);}
+  .tagpick-cancelar{display:block;width:100%;margin-top:12px;background:none;border:0;color:var(--text-mute);font:inherit;font-size:13px;padding:8px;cursor:pointer;}
   .comp2-topo{display:flex;align-items:center;gap:12px;}
   .comp2-convite{font-size:15px;font-weight:600;line-height:1.4;color:var(--text-dim);}
   .comp2-corpo{width:100%;}
@@ -10063,6 +10073,24 @@ function hasApresentacao(authorId){
   if(authorId===actingAuthorId() && EU_JA_APRESENTEI) return true;
   return COMMUNITY_POSTS.some(p=>p.type==='apresentacao' && p.authorId===authorId);
 }
+/* Janela para escolher a tag da publicação quando a pessoa toca em Publicar sem ter escolhido nenhuma. */
+function comEscolherTag(jaApresentou){
+  return new Promise(res=>{
+    const ov = document.createElement('div'); ov.className = 'tagpick-ov';
+    const ops = Object.keys(POST_TYPES).filter(k=>!(k==='apresentacao' && jaApresentou));
+    ov.innerHTML = `<div class="tagpick" role="dialog" aria-label="Escolha o tipo da publicação">
+      <div class="tagpick-tit">Sobre o que é a sua publicação?</div>
+      <div class="tagpick-sub">Escolha uma opção para publicar.</div>
+      <div class="tagpick-lista">${ops.map(k=>`<button type="button" class="tagpick-op tag-${POST_TYPES[k].css}" data-tp="${k}">${icon(POST_TYPES[k].icon,'tiny')}<span>${POST_TYPES[k].label}</span></button>`).join('')}</div>
+      <button type="button" class="tagpick-cancelar">Cancelar</button>
+    </div>`;
+    const fim = v=>{ ov.remove(); res(v); };
+    ov.addEventListener('click', e=>{ if(e.target===ov) fim(null); });
+    ov.querySelector('.tagpick-cancelar').addEventListener('click', ()=>fim(null));
+    ov.querySelectorAll('[data-tp]').forEach(b=>b.addEventListener('click', ()=>fim(b.dataset.tp)));
+    document.body.appendChild(ov);
+  });
+}
 let COMP_TAG_ABERTA = false;  /* no composer da Comunidade: alguma tag foi tocada (mostra o nome dela e encolhe o Publicar) */
 function renderComunidade(){
   const me = getPerson(actingAuthorId());
@@ -10105,7 +10133,7 @@ function renderComunidade(){
           <div class="type-select" id="type-select">
             ${Object.keys(POST_TYPES).map(k=>{
               const disabled = k==='apresentacao' && alreadyApresentou;
-              return `<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}" ${disabled?'disabled title="Você já publicou sua apresentação — exclua a anterior pra postar uma nova."':''}>${icon(POST_TYPES[k].icon,'tiny')}<span class="tp-rot">${POST_TYPES[k].label}</span></button>`;
+              return `<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${COMP_TAG_ABERTA && selectedPostType===k?'active':''}" data-type="${k}" ${disabled?'disabled title="Você já publicou sua apresentação — exclua a anterior pra postar uma nova."':''}>${icon(POST_TYPES[k].icon,'tiny')}<span class="tp-rot">${POST_TYPES[k].label}</span></button>`;
             }).join('')}
           </div>
           <button type="button" class="emoji-btn" data-emoji-for="#new-post" title="Emoji">😊</button>
@@ -10162,7 +10190,15 @@ function renderComunidade(){
   if(postBtn){
     postBtn.addEventListener('click', async ()=>{
       const ta = root.querySelector('#new-post');
-      if(!ta.value.trim()) return;
+      if(!ta.value.trim()){ ta.focus(); return; }
+      /* Nenhuma tag escolhida: pergunta numa janela antes de publicar (pedido em 22/11/2026). */
+      if(!COMP_TAG_ABERTA){
+        const tipo = await comEscolherTag(hasApresentacao(actingAuthorId()));
+        if(!tipo) return;
+        selectedPostType = tipo; COMP_TAG_ABERTA = true;
+        root.querySelectorAll('#type-select [data-type]').forEach(b=>b.classList.toggle('active', b.dataset.type===tipo));
+        const cx = root.querySelector('.comp2'); if(cx) cx.classList.add('tag-aberta');
+      }
       if(selectedPostType==='apresentacao' && hasApresentacao(actingAuthorId())){
         selectedPostType = 'interacao';
         renderComunidade();
@@ -10174,6 +10210,7 @@ function renderComunidade(){
         const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim(), null, currentCommunityAudience, extractMentions(ta));
         COMMUNITY_POSTS.unshift(post);
         if(post.type==='apresentacao' && post.authorId===actingAuthorId()) EU_JA_APRESENTEI = true;
+        COMP_TAG_ABERTA = false;
         refreshPendencias();
         renderComunidade();
       }catch(e){ console.error(e); postBtn.disabled = false; }
