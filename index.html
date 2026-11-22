@@ -1076,6 +1076,18 @@
   .tagpick-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px;}
   .tagpick{width:100%;max-width:420px;background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:20px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.45);}
   .tagpick-tit{font-size:15px;font-weight:700;}
+  @media (max-width:640px){ .rank-table tbody tr[data-rank-sid]{cursor:pointer;} }
+  .rank-det-cab{display:flex;align-items:center;gap:12px;}
+  .rank-det-nome{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .rank-det-nome strong{font-size:15px;}
+  .rank-det-nome small{font-size:11.5px;color:var(--text-mute);}
+  .rank-det-voce{font-weight:400;color:var(--text-mute);font-size:12px;}
+  .rank-det-lista{display:flex;flex-direction:column;margin-top:16px;border-top:1px solid var(--border);}
+  .rank-det-item{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border);font-size:13.5px;}
+  .rank-det-ic{width:28px;height:28px;border-radius:50%;background:var(--bg-elev);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:var(--accent);}
+  .rank-det-ic .icon{width:14px;height:14px;}
+  .rank-det-rot{flex:1;color:var(--text-dim);}
+  .rank-det-item b{font-weight:800;}
   .tagpick-sub{font-size:11.5px;color:var(--text-mute);margin-top:4px;}
   .tagpick-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
   .tagpick-op{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:12px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;}
@@ -10359,7 +10371,7 @@ function renderRanking(){
             const rank = i+1;
             const isMe = r.s.id===meId;
             const rankCls = rank<=3 ? ` rank-top rank-${rank}` : '';
-            return `<tr class="${isMe?'rank-me':''}">
+            return `<tr class="${isMe?'rank-me':''}" data-rank-sid="${r.s.id}" data-rank-pos="${rank}">
               <td><span class="rank-num${rankCls}">${rank}</span></td>
               <td>
                 <div style="display:flex;align-items:center;gap:9px">
@@ -10382,6 +10394,37 @@ function renderRanking(){
       </table>
     </div>
   `;
+  /* Celular: tocar na linha abre, dentro do app, o detalhe da pontuação daquela pessoa. */
+  root.querySelectorAll('[data-rank-sid]').forEach(tr=>tr.addEventListener('click', ()=>{
+    if(!window.matchMedia('(max-width:640px)').matches) return;
+    const r = rows.find(x=>x.s.id===tr.dataset.rankSid); if(r) rankDetalhe(r.s, r.pts, +tr.dataset.rankPos, r.s.id===meId);
+  }));
+}
+function rankDetalhe(st, pts, pos, eu){
+  const itens = [
+    ['award','Conquistas', pts.conquistas||0],
+    ['file','Apresentação', pts.apresentacao ? 'Feita' : '—'],
+    ['users','Boas-vindas', pts.boasVindas||0],
+    ['comment','Comunidade', pts.comunidade||0],
+    ['heart','Curtidas na comunidade', pts.comunidadeLikes||0],
+    ['film','Aulas', pts.aulas||0],
+    ['heart','Curtidas nas aulas', pts.aulasLikes||0],
+    ['check','Checklists', (pts.dashboardChecks||0)+(pts.metasChecks||0)],
+  ];
+  const ov = document.createElement('div'); ov.className = 'tagpick-ov';
+  ov.innerHTML = `<div class="tagpick rank-det" role="dialog" aria-label="Pontuação de ${escapeAttr(st.name)}">
+    <div class="rank-det-cab">
+      <span class="rank-num${pos<=3?' rank-top rank-'+pos:''}">${pos}</span>
+      ${initialsAvatar(st.initials, st.color, 40, st.avatarUrl)}
+      <div class="rank-det-nome"><strong>${escapeHtml(st.name)}${eu ? ' <span class="rank-det-voce">(você)</span>' : ''}</strong><small>${formatPts(pts.total||0)} pontos</small></div>
+    </div>
+    <div class="rank-det-lista">${itens.map(([ic,rot,v])=>`<div class="rank-det-item"><span class="rank-det-ic">${icon(ic,'tiny')}</span><span class="rank-det-rot">${rot}</span><b>${v}</b></div>`).join('')}</div>
+    <button type="button" class="tagpick-cancelar">Fechar</button>
+  </div>`;
+  const fim = ()=>ov.remove();
+  ov.addEventListener('click', e=>{ if(e.target===ov) fim(); });
+  ov.querySelector('.tagpick-cancelar').addEventListener('click', fim);
+  document.body.appendChild(ov);
 }
 
 /* ================= VIEW: AGENDA ================= */
