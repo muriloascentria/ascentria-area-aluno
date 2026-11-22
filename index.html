@@ -1667,7 +1667,7 @@
   @media (max-width:560px){ .player-alt-bts{width:100%;} }
   body.player-aberto{overflow:hidden;}
   @media (max-width:560px){ .player-ov{padding:0;align-items:center;} .player-box{border-radius:0;border-left:0;border-right:0;} }
-  .pl-drive-curto{display:none;}
+  .pl-drive-curto{display:none;} .pl-dica-curta{display:none;}
   /* Celular em pé: vídeo inteiro (16:9 sem cortar), aviso e botões arrumados */
   @media (max-width:640px){
     /* em pé: a janela ocupa a tela toda e o vídeo fica com todo o espaço livre (o player do Drive centraliza o vídeo
@@ -1686,6 +1686,13 @@
     .player-alt-bts{width:100%;grid-template-columns:1fr 1fr;gap:8px;}
     .player-alt-bts > *{height:40px;padding:0 10px;font-size:12.5px;border-radius:10px;min-width:0;}
     .pl-drive-longo{display:none;} .pl-drive-curto{display:inline;}
+    /* janela harmônica: mesmo respiro de 16px em volta de tudo, textos no tamanho das explicações, cantos 14 por fora e 10 nos botões */
+    .pl-dica-longa{display:none;} .pl-dica-curta{display:inline;}
+    .player-hd{padding:12px 12px 12px 16px;}
+    .player-hd strong{font-size:13.5px;white-space:normal;line-height:1.35;}
+    .player-x{width:34px;height:34px;}
+    .player-dica{padding:14px 16px 0!important;font-size:11.5px!important;color:var(--text-mute);}
+    .player-alt{padding:8px 16px 16px!important;gap:12px!important;font-size:11.5px!important;color:var(--text-mute);}
   }
   /* Celular deitado: o vídeo ocupa a tela toda, só com o X por cima (nada fica cortado embaixo) */
   @media (orientation:landscape) and (max-height:520px){
@@ -21281,9 +21288,9 @@ function playerAbrir(url, titulo){
     <div class="player-box" role="dialog" aria-label="${escapeAttr(titulo||'Gravação')}">
       <div class="player-hd"><strong>${escapeHtml(titulo||'Gravação')}</strong><button type="button" class="player-x" id="player-x" title="Fechar">${icon('x','tiny')}</button></div>
       <div class="player-video"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe></div>
-      <p class="player-dica">Toque no play para assistir aqui mesmo, sem baixar. Vídeos longos podem levar alguns segundos para começar. Para tela cheia, use o botão do canto do vídeo ou gire o celular.</p>
+      <p class="player-dica"><span class="pl-dica-longa">Toque no play para assistir aqui mesmo, sem baixar. Vídeos longos podem levar alguns segundos para começar. Para tela cheia, use o botão do canto do vídeo ou gire o celular.</span><span class="pl-dica-curta">Toque no play para assistir. Para tela cheia, gire o celular.</span></p>
       <div class="player-alt">
-        <span>Apareceu "An unexpected error occurred" ou o vídeo não carregou?</span>
+        <span><span class="pl-dica-longa">Apareceu "An unexpected error occurred" ou o vídeo não carregou?</span><span class="pl-dica-curta">O vídeo não carregou?</span></span>
         <div class="player-alt-bts">
           <button type="button" class="btn-outline" id="player-recarregar">${icon('play','tiny')} Tentar de novo</button>
           <a class="btn-accent" href="${escapeAttr(url)}" target="_blank" rel="noopener">${icon('externallink','tiny')} <span class="pl-drive-longo">Assistir no Google Drive</span><span class="pl-drive-curto">Abrir no Drive</span></a>
