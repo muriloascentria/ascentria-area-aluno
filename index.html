@@ -1053,6 +1053,8 @@
   }
   .composer textarea:focus{outline:none;border-color:var(--accent);}
   /* Composer da Comunidade: foto + convite numa linha, texto de fora a fora, e tags, emoji e Publicar numa linha só */
+  .post:not(.com-aberto) > .comments{display:none;}
+  .post.com-aberto [data-toggle-comments]{color:var(--accent);}
   .composer.comp2{flex-direction:column;gap:12px;}
   .comp2-topo{display:flex;align-items:center;gap:12px;}
   .comp2-convite{font-size:15px;font-weight:600;line-height:1.4;color:var(--text-dim);}
@@ -7851,6 +7853,7 @@ async function notifAbrirComunidade(x){
     post = COMMUNITY_POSTS.find(p=>String(p.id)===String(x.post_id));
   }
   if(post) markVisiblePostsSeen([post]);
+  POST_ABERTOS.add(String(x.post_id));
   if(x.motivo!=='duvida' && x.motivo!=='boasvindas'){ PENDENCIAS = PENDENCIAS.filter(p=>!(String(p.post_id)===String(x.post_id) && p.motivo===x.motivo)); updateNotifBadge(); }
   if(x.course_id){ openCourseModal(x.course_id); return; }
   communityFilter = 'todas';
@@ -9975,6 +9978,14 @@ function openCadastroModal(){
 }
 
 /* ================= VIEW: COMUNIDADE ================= */
+/* Publicações mostram só curtidas e número de comentários; tocar no ícone de comentários abre os comentários e o campo de resposta. */
+const POST_ABERTOS = new Set();
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-toggle-comments]'); if(!b) return;
+  const id = String(b.dataset.toggleComments); const post = b.closest('.post');
+  if(POST_ABERTOS.has(id)) POST_ABERTOS.delete(id); else POST_ABERTOS.add(id);
+  if(post){ post.classList.toggle('com-aberto', POST_ABERTOS.has(id)); if(POST_ABERTOS.has(id)){ const i = post.querySelector('[data-comment-input]'); if(i) setTimeout(()=>i.focus({preventScroll:true}), 50); } }
+});
 function postHtml(p,compact,showCourseTag){
   const author = getPerson(p.authorId);
   if(!author) return '';
@@ -9987,7 +9998,7 @@ function postHtml(p,compact,showCourseTag){
   const isMine = p.authorId===actingAuthorId();
   const canDeletePost = isMine || iAmStaff;
   return `
-    <div class="post post-border-${t.css}${((isMine && p.notifyAuthor) || fuiMencionadoEm(p.id))?' post-unseen':''}" data-post-id="${p.id}">
+    <div class="post post-border-${t.css}${((isMine && p.notifyAuthor) || fuiMencionadoEm(p.id))?' post-unseen':''}${(POST_ABERTOS.has(String(p.id)) || replyTargets[p.id] || (isMine && p.notifyAuthor) || fuiMencionadoEm(p.id))?' com-aberto':''}" data-post-id="${p.id}">
       <div class="post-head">
         ${initialsAvatar(author.initials,author.color,undefined,author.avatarUrl)}
         <div class="who"><div class="name">${author.name}${nameTag(author)}</div><div class="time">${p.time}</div></div>
@@ -10003,7 +10014,7 @@ function postHtml(p,compact,showCourseTag){
         : `<div class="staff-note">${icon('bell','tiny')} Equipe interna notificada — vamos responder em breve.</div>`) : ''}
       <div class="post-actions">
         <button class="post-action ${p.liked?'liked':''}" data-like="${p.id}">${p.liked?fillIcon('heart'):icon('heart')} <span>${p.likes}</span></button>
-        <button class="post-action">${icon('comment')} <span>${p.comments.length}</span></button>
+        <button type="button" class="post-action" ${compact?'':`data-toggle-comments="${p.id}" title="Ver comentários"`}>${icon('comment')} <span>${p.comments.length}</span></button>
       </div>
       ${!compact? `
         <div class="comments">
