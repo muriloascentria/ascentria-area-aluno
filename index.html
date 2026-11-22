@@ -722,7 +722,7 @@
   .ini-al .stat-row > .stat-card{flex:1 1 0;min-width:0;}
   .ini-al .im-meta{margin-top:var(--ini-g)!important;}
   .ini-al .aniv-bloco, .ini-al .ep-inicio, .ini-al .ee-banner, .ini-al .premio-banner{margin-top:var(--ini-r)!important;margin-bottom:0!important;}
-  .ini-al .ee-banner + .premio-banner{margin-top:var(--ini-r)!important;}
+  .ini-al .ee-banner + .premio-banner{margin-top:var(--ini-g)!important;}
   .ini-al .section-title.ini-sec{margin-top:var(--ini-r)!important;margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em;}
   .ini-al .kpi-row{margin-top:0;}
   .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
@@ -22583,11 +22583,11 @@ function epInicioHtml(s){
     </div>`;
   const ag = epAgenda(s, cfg, 1);
   const hoje = ag.dias[0];
-  const lista = hoje.blocos.slice(0,3);
+  const lista = hoje.blocos;  /* lista completa do dia (pedido em 22/11/2026) */
   return `
     <div class="ep-inicio col" data-goto="planner">
       <div class="ep-inicio-topo"><span class="ep-inicio-ic">${icon('calendar')}</span><strong>Hoje no seu ePLANNER</strong><span class="btn-mini">Abrir</span></div>
-      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span>${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</div>`).join('') + (hoje.blocos.length>3 ? `<small class="ep-inicio-mais">e mais ${hoje.blocos.length-3}</small>` : '')
+      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span>${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</div>`).join('')
         : `<small>${ag.feitos.length ? 'Tudo de hoje feito. Muito bem!' : hoje.ativo ? 'Nada pendente para hoje.' : 'Hoje é dia de descanso.'}</small>`}
     </div>`;
 }
