@@ -730,7 +730,7 @@
   .im-tit{font-size:15px!important;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;}
   .im-prazo{font-size:11.5px;font-weight:600;color:var(--text-mute);}
   .im-prazo.atrasada{color:#ef4444;}
-  .im-barra{position:relative;height:10px;border-radius:999px;background:rgba(220,38,38,.55);overflow:hidden;margin-top:12px;}
+  .im-barra{position:relative;height:10px;border-radius:999px;overflow:hidden;margin-top:12px;opacity:.85;box-shadow:inset 0 1px 2px rgba(0,0,0,.25);}
   .im-barra i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width .6s ease;}
   .im-pct{font-size:11.5px;font-weight:700;color:#22c55e;margin-top:6px;text-align:right;}
   .im-com-item{cursor:pointer;border-radius:var(--radius,14px);}
@@ -8303,6 +8303,13 @@ function renderInicioCurso(s){
   eeBindBanner(document.getElementById('view-inicio'));
   anivAlunoBind(document.getElementById('view-inicio'));
 }
+/* Degradê suave: verde até onde chegou, passando aos poucos para o vermelho do que falta (sem corte marcado). */
+function imBarraFundo(pct){
+  if(pct>=100) return 'linear-gradient(90deg,#15803d,#22c55e)';
+  if(pct<=0) return 'linear-gradient(90deg,#b91c1c,#ef4444 60%,#f87171)';
+  const a = Math.max(0, pct-18), b = Math.min(100, pct+18);
+  return `linear-gradient(90deg,#15803d 0%,#22c55e ${a}%,#eab308 ${pct}%,#ef4444 ${b}%,#b91c1c 100%)`;
+}
 /* Início do mentorado: a meta ocupa a linha inteira, como barra. Verde = metas concluídas; vermelho = o que falta. */
 function inicioMetaBarraHtml(s, nextTask){
   const todas = (s.checklist||[]).filter(t=>t.responsavel==='Mentorado');
@@ -8313,7 +8320,7 @@ function inicioMetaBarraHtml(s, nextTask){
   return `<div class="stat-card clickable im-meta" data-goto="metas">
     <div class="im-topo"><div class="label">Próxima meta</div>${visivel}</div>
     <div class="value im-tit">${nextTask ? escapeHtml(nextTask.tarefa) : 'Tudo em dia 🎉'}${nextTask && nextTask.prazo && nextTask.prazo!=='—' ? `<span class="im-prazo ${atrasada?'atrasada':''}">${atrasada ? 'Atrasada · ' : 'Prazo: '}${escapeHtml(nextTask.prazo)}</span>` : ''}</div>
-    <div class="im-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+    <div class="im-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" style="background:${imBarraFundo(pct)}"></div>
     <div class="im-pct">${pct}%</div>
   </div>`;
 }
