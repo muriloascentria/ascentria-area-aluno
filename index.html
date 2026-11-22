@@ -413,6 +413,7 @@
   .icon-btn{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-card);color:var(--text-dim);position:relative;flex-shrink:0;}
   .icon-btn:hover{color:var(--text);}
   #menu-btn{display:none;}
+  #refresh-btn{display:none;}
   .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:45;}
   .sidebar-backdrop.open{display:block;}
   .dot-alert{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--danger);}
@@ -3959,6 +3960,11 @@
 .int-hab-auto{padding:10px 12px;border:1px solid var(--line, rgba(255,255,255,.08));border-radius:8px;background:rgba(255,255,255,.03);line-height:1.5;white-space:pre-line}
   /* ===== Ajustes de layout de 22/11/2026: valem SÓ no celular (pedido do Murilo). No computador fica como era. ===== */
   @media (max-width:640px){
+  /* botão redondo de atualizar ao lado do menu, e nome da tela em caixa alta no topo */
+  #refresh-btn{display:flex;border-radius:50%;}
+  #refresh-btn.girando .icon{animation:rfGira .8s linear infinite;}
+  @keyframes rfGira{to{transform:rotate(360deg);}}
+  .topbar-title{text-transform:uppercase;letter-spacing:.08em;font-size:14px!important;font-weight:800;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
   #view-agenda .section-title:first-child{margin-top:4px;}
@@ -4290,6 +4296,9 @@
     <div class="topbar">
       <button class="icon-btn" id="menu-btn" title="Menu">
         <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <button class="icon-btn" id="refresh-btn" title="Atualizar" aria-label="Atualizar o aplicativo">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
       </button>
       <div class="topbar-title" id="topbar-title">Início</div>
       <div class="topbar-right">
@@ -7820,6 +7829,13 @@ function setupNav(){
   document.getElementById('sidebar-backdrop').addEventListener('click',()=>{
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-backdrop').classList.remove('open');
+  });
+  /* Celular: botão de atualizar o aplicativo (recarrega a página e busca a versão mais nova). */
+  const rfb = document.getElementById('refresh-btn');
+  if(rfb) rfb.addEventListener('click', async ()=>{
+    rfb.classList.add('girando');
+    try{ if(navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.update().catch(()=>{}))); } }catch(e){}
+    location.reload();
   });
   /* Celular: arrastar o dedo da esquerda para a direita abre o menu; da direita para a esquerda, com o menu aberto, fecha.
      Não atrapalha o que já rola para os lados (fileiras de aulas, tabelas), campos de texto nem janelas abertas. */
