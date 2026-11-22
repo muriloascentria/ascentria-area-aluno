@@ -21305,7 +21305,7 @@ function playerAbrir(url, titulo){
     </div>`;
   document.body.appendChild(el);
   document.body.classList.add('player-aberto');
-  el.addEventListener('click', e=>{ if(e.target===el) playerFechar(); });
+  /* só fecha no X: tocar fora da janela não fecha mais (pedido em 22/11/2026) */
   el.querySelector('#player-x').addEventListener('click', playerFechar);
   /* O player do Drive dentro do site às vezes falha no Safari do iPhone (bloqueio de cookies de outro
      site) e mostra "An unexpected error occurred". Recarregar ou abrir direto no Drive resolve. */
