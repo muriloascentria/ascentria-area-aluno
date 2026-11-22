@@ -1275,6 +1275,14 @@
   .agenda-card.past .agenda-date{background:var(--bg-elev);color:var(--text-mute);}
   .agenda-card.past.watched{opacity:1;border-color:var(--success);}
   .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;}
+  /* Card da agenda: nome + tag no canto direito / "com Fulano" / horário e link; botões de fora a fora embaixo */
+  #view-agenda .agenda-info .title{display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px 6px;}
+  #view-agenda .agenda-info .title .ag-nome{flex:1 1 0;min-width:0;order:0;}
+  #view-agenda .agenda-info .title .pill{order:1;flex:0 0 auto;margin:0;}
+  #view-agenda .agenda-info .title .ag-com{flex:0 0 100%;order:2;font-size:12.5px;font-weight:600;color:var(--text-dim);}
+  #view-agenda .agenda-info .meta{margin-top:4px;}
+  #view-agenda .agenda-actions{flex:0 0 100%;width:100%;margin-left:0;justify-content:stretch;}
+  #view-agenda .agenda-actions > *{flex:1 1 0;justify-content:center;text-align:center;}
   /* Garante que o ícone fique do lado do texto (não empilhado em cima) nos botões de ação da gravação,
      já que .icon é display:block por padrão — sem isso "Assistir" e "Assistido" ficavam com alturas diferentes. */
   .agenda-actions .btn-outline{display:inline-flex;align-items:center;gap:5px;}
@@ -5389,6 +5397,13 @@ function formatHoraBR(hhmm){
   if(!hhmm) return '';
   const [h,m] = hhmm.split(':');
   return `${h}h${m}`;
+}
+/* Agenda: nome do encontro na 1ª linha (com a tag Ao vivo/Gravação no canto direito) e "com Fulano" na 2ª;
+   horário e link ficam sempre na 3ª. */
+function agTituloHtml(t){
+  const txt = String(t||''); const i = txt.search(/\s+com\s+/i);
+  if(i<0) return `<span class="ag-nome">${escapeHtml(txt)}</span>`;
+  return `<span class="ag-nome">${escapeHtml(txt.slice(0,i))}</span><span class="ag-com">${escapeHtml(txt.slice(i).trim())}</span>`;
 }
 function mapLiveSessionRow(row){
   const [y,m,d] = row.event_date.split('-').map(Number);
@@ -10541,7 +10556,7 @@ function renderAgenda(){
     <div class="agenda-card ${l.type==='past'?'past':''} agenda-locked" title="Exclusivo para mentorados da Mentoria Essência">
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
       <div class="agenda-info">
-        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}</div>
+        <div class="title">${agTituloHtml(l.title)} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}</div>
         <div class="meta">${l.time} — <span style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle">${icon('lock','tiny')} Exclusivo para mentorados da Mentoria Essência</span></div>
       </div>
       <span class="btn-outline disabled" style="display:inline-flex;align-items:center;gap:6px">${icon('lock','tiny')} Bloqueado</span>
@@ -10551,7 +10566,7 @@ function renderAgenda(){
     <div class="agenda-card ${l.type==='past'?'past':''} ${watched?'watched':''}">
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
       <div class="agenda-info">
-        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}${watched? '<span class="pill watched">'+icon('check','tiny')+' Assistido</span>' : ''}</div>
+        <div class="title">${agTituloHtml(l.title)} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}${watched? '<span class="pill watched">'+icon('check','tiny')+' Assistido</span>' : ''}</div>
         <div class="meta">${l.time} — ${linkify(l.desc)}${l.studentId && l.modalidade==='presencial' && l.local ? ` · <strong>Local:</strong> ${escapeHtml(l.local)}` : ''}</div>
       </div>
       ${l.type==='upcoming'
