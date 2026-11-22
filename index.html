@@ -3967,7 +3967,9 @@
   @keyframes rfGira{to{transform:rotate(360deg);}}
   /* no celular o nome da aba sai da barra de cima e vira o título do topo da tela, em caixa alta */
   .topbar-title{visibility:hidden;}
-  .cel-titulo{display:block!important;margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
+  .cel-titulo[hidden]{display:none!important;}
+  .cel-titulo:not([hidden]){display:block!important;}
+  .cel-titulo{margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
   #view-agenda .section-title:first-child{margin-top:4px;}
@@ -8402,7 +8404,7 @@ function goTo(view){
   const [,label] = NAV_LABELS[view];
   const badgeType = BADGE[view];
   document.getElementById('topbar-title').innerHTML = label + (badgeType? ` <span class="badge-${badgeType}">${BADGE_TEXT[badgeType]}</span>`:'');
-  { const ct = document.getElementById('cel-titulo'); if(ct) ct.textContent = String(label||''); }  /* celular: nome da aba no topo da tela */
+  { const ct = document.getElementById('cel-titulo'); if(ct){ ct.textContent = String(label||''); ct.hidden = (view==='inicio'); } }  /* Início não tem título */  /* celular: nome da aba no topo da tela */
   ajustarTituloTopo();
   renderCurrentView();
   document.getElementById('sidebar').classList.remove('open');
