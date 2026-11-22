@@ -10172,7 +10172,6 @@ function renderComunidade(){
   const visible = communityFilter==='todas' ? communityOnly : communityOnly.filter(p=>p.type===communityFilter);
   const root = document.getElementById('view-comunidade');
   root.innerHTML = `
-    <p class="section-sub com-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
     ${currentRole==='staff'? `
     <div class="community-filters" id="community-audience-tabs" style="margin-bottom:10px">
       <button class="filter-tab ${currentCommunityAudience==='mentorado'?'active':''}" data-audience="mentorado">Comunidade Mentorados</button>
