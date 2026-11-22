@@ -455,7 +455,18 @@
   h2.section-title:first-child{margin-top:0;}
   .section-sub{color:var(--text-dim);font-size:13px;margin-top:-8px;margin-bottom:16px;}
   /* Ranking no celular: só posição, foto + nome e pontuação */
-  @media (max-width:640px){ .rank-table th:nth-child(n+3):not(:last-child), .rank-table td:nth-child(n+3):not(:last-child){display:none;} .rank-table{min-width:0!important;width:100%;} .rank-table th:last-child, .rank-table td:last-child{text-align:right;white-space:nowrap;font-weight:800;} .rank-table td{vertical-align:middle;} }
+  @media (max-width:640px){ .rank-table th:nth-child(n+3):not(:last-child), .rank-table td:nth-child(n+3):not(:last-child){display:none;} .rank-table{min-width:0!important;width:100%;} .rank-table th:last-child, .rank-table td:last-child{text-align:center;white-space:nowrap;}
+    .rank-table td{vertical-align:middle;}
+    .rank-table .rank-nome{display:flex;flex-direction:column;justify-content:center;line-height:1.25;}
+    .rank-table .rn1, .rank-table .rn2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36vw;}
+    .rank-table .rn1{font-weight:700;} .rank-table .rn2{font-size:12px;color:var(--text-dim);}
+    .rank-table td:first-child{width:34px;}
+    .rank-table .rank-pts{display:inline-flex;flex-direction:column;align-items:center;gap:3px;background:none!important;padding:0!important;}
+    .rank-table .rank-pts-n{display:inline-flex;align-items:center;justify-content:center;min-width:54px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);font-weight:800;font-size:13px;color:var(--text);}
+    .rank-table .rank-pts-u{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);font-weight:600;}
+    .rank-table .rank-pts-u::before{content:'';}
+  }
+  .rank-voce{font-weight:400;color:var(--text-mute);font-size:11.5px;}
   /* Explicação do topo de cada tela: mesmo tamanho, cor e respiro em todas (padrão do Início, Aulas e Comunidade) */
   .view > p.section-sub:first-child, .view > div:first-child > p.section-sub:first-child{font-size:11.5px!important;color:var(--text-mute)!important;font-style:normal;line-height:1.5;margin:4px 0 24px!important;}
 
@@ -10334,8 +10345,9 @@ function renderComunidade(){
 /* ================= VIEW: RANKING ================= */
 /* Formata pontos: inteiro sem casas decimais, fracionário com 2 casas e vírgula (padrão pt-BR). */
 function formatPts(n){
+  /* padrão brasileiro: ponto nos milhares e vírgula nos centavos (1.250,50) */
   n = Math.round((n||0)*100)/100;
-  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
 }
 function renderRanking(){
   const root = document.getElementById('view-ranking');
@@ -10376,7 +10388,7 @@ function renderRanking(){
               <td>
                 <div style="display:flex;align-items:center;gap:9px">
                   ${initialsAvatar(r.s.initials, r.s.color, 26, r.s.avatarUrl)}
-                  <span>${escapeHtml(r.s.name)}${isMe? ` <span class="section-sub" style="margin:0;display:inline">(você)</span>`:''}</span>
+                  <span class="rank-nome">${(()=>{ const ps = String(r.s.name||'').trim().split(/\s+/); const a = ps.shift()||''; return `<span class="rn1">${escapeHtml(a)}${isMe? ` <span class="rank-voce">(você)</span>`:''}</span> <span class="rn2">${escapeHtml(ps.join(' '))}</span>`; })()}</span>
                 </div>
               </td>
               <td>${r.pts.conquistas}</td>
@@ -10387,7 +10399,7 @@ function renderRanking(){
               <td>${r.pts.aulas}</td>
               <td>${r.pts.aulasLikes}</td>
               <td>${r.pts.dashboardChecks + r.pts.metasChecks}</td>
-              <td><span class="rank-pts">${formatPts(r.pts.total)} pts</span></td>
+              <td><span class="rank-pts"><span class="rank-pts-n">${formatPts(r.pts.total)}</span><span class="rank-pts-u"> pontos</span></span></td>
             </tr>`;
           }).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
         </tbody>
