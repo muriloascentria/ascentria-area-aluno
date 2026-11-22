@@ -2841,6 +2841,14 @@
   .rd-card.rd-em-trat{background-image:repeating-linear-gradient(135deg, transparent 0 14px, rgba(79,125,74,.05) 14px 28px);}
   .rd-kpi-trat{display:block;font-size:11px;font-weight:600;color:var(--success);margin-top:2px;}
   .rd-nome-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .rl-aviso{display:flex;align-items:flex-start;gap:8px;border:1px solid rgba(190,150,70,.45);background:rgba(190,150,70,.10);border-radius:10px;padding:9px 12px;font-size:12.5px;margin:0 0 12px;line-height:1.45;}
+  .rl-tag{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.5px;background:rgba(140,140,140,.18);color:var(--text-mute);}
+  .rl-tag.vez{background:rgba(190,150,70,.22);color:var(--accent,#c9a25a);}
+  .goal-card.rl-oculta{opacity:.55;}
+  .goal-card.rl-vez{outline:1.5px solid rgba(190,150,70,.6);}
+  .rd-rl{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;border-radius:10px;border:1px dashed rgba(190,150,70,.5);font-size:12.5px;line-height:1.4;}
+  .rd-rl.on{border-style:solid;background:rgba(190,150,70,.10);}
+  .rd-rl-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.5px;background:rgba(190,150,70,.22);color:var(--accent,#c9a25a);}
   .rd-ep-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border:1px solid var(--border);color:var(--text-mute);vertical-align:middle;}
   .rd-ep-tag .icon{width:12px;height:12px;}
   .rd-ep-tag.ok{border-color:var(--success);color:var(--success);}
@@ -6226,6 +6234,9 @@ function mapProfileRow(p){
     /* Aluno do curso com TODAS as aulas liberadas de uma vez (sem o bloqueio sequencial) — a equipe liga na Visão Geral. */
     aulasLiberadas: !!p.aulas_liberadas,
     libAte: (p.lib_ate===null || p.lib_ate===undefined) ? null : Number(p.lib_ate),
+    /* Ritmo lento (botão do Radar dos Mentorados, para quem está atrasado no método): aulas abrem de 1 em 1
+       e o mentorado vê só uma meta por vez. A equipe continua vendo tudo. */
+    ritmoLento: !!p.ritmo_lento, ritmoLentoEm: p.ritmo_lento_em || null, ritmoLentoPor: p.ritmo_lento_por || null,
     mentorEssencia: !!p.mentor_essencia,
     meBoasVindasEm: p.me_boas_vindas_em || null,
     videoBoasVindasEm: p.video_boas_vindas_em || null,
@@ -8216,7 +8227,7 @@ function renderInicio(){
   if(videoBoasVindasPendente(s) && s.id===(currentUser&&currentUser.id)){ document.getElementById('view-inicio').innerHTML = ''; bvMostrar(s); return; }
   if(needsWispform(s)){ renderWispformWizard(s); return; }
   const overall = overallProgress(s);
-  const nextTask = s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+  const nextTask = s.ritmoLento ? metaDaVez(s) : s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
   const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming' && (l.studentId===s.id || (l.studentId==null && l.audience===(s.tier||'mentorado'))));
   const inProgress = COURSES.filter(c=>s.courseProgress[c.id]>0 && s.courseProgress[c.id]<100);
   const continueList = inProgress.length? inProgress : COURSES.filter(c=>s.courseProgress[c.id]===0).slice(0,3);
@@ -8556,7 +8567,7 @@ function courseTileHtml(c){
       <div class="course-info">
         <div class="cat">${c.cat}</div>
         <div class="title">${c.title}</div>
-        <div class="meta">${locked? 'Abre quando você concluir as 3 etapas liberadas agora' : c.duration}</div>
+        <div class="meta">${locked? (getStudent(currentStudentId)||{}).ritmoLento ? 'Abre quando você concluir a etapa liberada agora' : 'Abre quando você concluir as 3 etapas liberadas agora' : c.duration}</div>
       </div>
     </button>`;
 }
@@ -8564,7 +8575,7 @@ function bindCourseTiles(){
   document.querySelectorAll('.course-tile').forEach(el=>{
     el.addEventListener('click',()=>{
       if(el.dataset.locked){
-        alert(LIB_MSG_TRAVADA);
+        alert(libMsgTravada());
         return;
       }
       openCourseModal(el.dataset.id);
@@ -8644,9 +8655,12 @@ function libAte(s){
   ate = Math.max(LIB_BLOCO, ate);
   while(ate < N && L.passos.slice(ate-LIB_BLOCO, ate).every(p=>libPassoFeito(s, p))) ate += LIB_BLOCO;
   ate = Math.min(ate, N);
-  if(ate!==s.libAte && currentUser && currentUser.id===s.id && currentRole==='aluno' && !LIB_SALVANDO[s.id]){
-    s.libAte = ate; LIB_SALVANDO[s.id] = true;
-    sb.from('profiles').update({ lib_ate: ate }).eq('id', s.id).then(({error})=>{ LIB_SALVANDO[s.id] = false; if(error) console.error('lib_ate', error); });
+  const salvo = ate;
+  /* Ritmo lento: só a primeira etapa ainda incompleta fica aberta (as anteriores, já completas, continuam abertas). */
+  if(s.ritmoLento){ const k = L.passos.findIndex(p=>!libPassoFeito(s, p)); ate = Math.min(ate, k<0 ? N : k+1); }
+  if(salvo!==s.libAte && currentUser && currentUser.id===s.id && currentRole==='aluno' && !LIB_SALVANDO[s.id]){
+    s.libAte = salvo; LIB_SALVANDO[s.id] = true;
+    sb.from('profiles').update({ lib_ate: salvo }).eq('id', s.id).then(({error})=>{ LIB_SALVANDO[s.id] = false; if(error) console.error('lib_ate', error); });
   }
   return ate;
 }
@@ -8670,6 +8684,11 @@ function isItemLocked(modId, idx, student){
   if(k===undefined) return false;
   return k >= libAte(student);
 }
+function libMsgTravada(){
+  const st = getStudent(currentStudentId);
+  return st && st.ritmoLento ? LIB_MSG_TRAVADA_LENTO : LIB_MSG_TRAVADA;
+}
+const LIB_MSG_TRAVADA_LENTO = 'Esta etapa ainda está bloqueada.\n\nNeste momento, suas aulas abrem uma de cada vez, para você conseguir colocar cada passo em prática com calma antes de seguir.\n\nConclua a etapa liberada agora (aula, resumo e tarefa no Dashboard) e a próxima abre automaticamente.';
 const LIB_MSG_TRAVADA = 'Esta etapa ainda está bloqueada.\n\nNós nos preocupamos com o seu avanço de verdade. Por isso, as aulas abrem de 3 em 3: assim você não fica sobrecarregado(a) com muito conteúdo de uma vez e tem tempo de colocar em prática cada passo antes de seguir.\n\nConclua as 3 etapas liberadas agora (aula, resumo e tarefa no Dashboard) e as próximas 3 abrem automaticamente.';
 /* Busca da aba Aulas: acha pelo título da aula ou pelo nome de qualquer material anexado a ela
    (parte do nome basta; ignora maiúsculas e acentos). */
@@ -8779,7 +8798,7 @@ function openCourseModal(id){
   /* Segurança extra: mesmo que algo chame openCourseModal fora do clique no card (ex.: um link "sobre
      esta aula" antigo em cache), uma aula travada pro aluno do curso nunca abre. */
   if(isLessonLocked(id, s)){
-    alert(LIB_MSG_TRAVADA);
+    alert(libMsgTravada());
     return;
   }
   const pct = s ? (s.courseProgress[id]||0) : 0;
@@ -10459,7 +10478,7 @@ function openModuleChecklist(modId, hlIdx){
     document.querySelectorAll('.mod-check-item').forEach(el=>{
       el.addEventListener('click',()=>{
         const idx = +el.dataset.idx;
-        if(el.dataset.travado){ alert(LIB_MSG_TRAVADA); return; }
+        if(el.dataset.travado){ alert(libMsgTravada()); return; }
         if(!state[idx]){
           const faltam = dashPainelFaltando(s, modId, idx);
           if(faltam.length){ dashPainelAvisoBloqueio(faltam, null, s); return; }
@@ -12725,18 +12744,31 @@ function metasEnvioBind(s){
     else { b.disabled = false; b.innerHTML = icon('comment','tiny')+' Enviar pelo Mensagens do ePLAT'; }
   });
 }
+/* Ritmo lento: a meta da vez é a pendente de prazo mais próximo (sem prazo vai por último, na ordem do mural). */
+function metaDaVez(s){
+  const l = (s.checklist||[]).filter(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+  return l.map((t,i)=>({t, i, iso:prazoTextoParaIso(t.prazo)||'9'})).sort((a,b)=>String(a.iso).localeCompare(String(b.iso)) || a.i-b.i).map(x=>x.t)[0] || null;
+}
 function renderMetas(){
   const s = getStudent(currentStudentId);
-  const minhas = s.checklist.filter(t=>t.responsavel==='Mentorado');
-  const done = minhas.filter(t=>t.status==='Concluída').length;
+  const todas = s.checklist.filter(t=>t.responsavel==='Mentorado');
+  const equipe = currentUserRole==='staff';
+  const vez = s.ritmoLento ? metaDaVez(s) : null;
+  /* No ritmo lento o mentorado vê só a meta da vez; a equipe vê todas, com as ocultas marcadas. */
+  const minhas = s.ritmoLento && !equipe ? (vez ? [vez] : []) : todas;
+  const done = todas.filter(t=>t.status==='Concluída').length;
+  const oculta = t=> s.ritmoLento && equipe && t!==vez && t.status!=='Concluída';
   document.getElementById('view-metas').innerHTML = `
-    <p class="section-sub">Tarefas definidas pela equipe interna a partir do seu acompanhamento — ${done}/${minhas.length} concluídas.</p>
+    ${s.ritmoLento && equipe ? `<div class="rl-aviso">${icon('lock','tiny')}<span><strong>RITMO LENTO ATIVO</strong> · o mentorado vê só a meta da vez (destacada) e as aulas abrem de 1 em 1. As outras ficam ocultas para ele. Para desativar, use o Radar dos Mentorados.</span></div>` : ''}
+    <p class="section-sub">${s.ritmoLento && !equipe
+      ? (vez ? `Uma meta por vez: quando você concluir esta, a próxima aparece aqui. ${done ? `Você já concluiu ${done} meta${done>1?'s':''}. 💪` : ''}` : `Você concluiu todas as suas metas${done ? ` (${done})` : ''}. 🎉`)
+      : `Tarefas definidas pela equipe interna a partir do seu acompanhamento — ${done}/${todas.length} concluídas.`}</p>
     ${minhas.map(t=>`
-      <div class="goal-card">
+      <div class="goal-card ${oculta(t)?'rl-oculta':''} ${s.ritmoLento && equipe && t===vez ? 'rl-vez' : ''}">
         <button class="goal-check ${t.status==='Concluída'?'checked':''}" data-goal="${t.id}">${icon('check')}</button>
         <div class="goal-body">
           <div class="title ${t.status==='Concluída'?'done':''}">${t.tarefa}</div>
-          <div class="due">Prazo: ${t.prazo} ${t.status==='Atrasada'?'<span class="status-pill status-Atrasada" style="margin-left:6px">Atrasada</span>':''}</div>
+          <div class="due">Prazo: ${t.prazo} ${t.status==='Atrasada'?'<span class="status-pill status-Atrasada" style="margin-left:6px">Atrasada</span>':''}${s.ritmoLento && equipe ? (t===vez ? '<span class="rl-tag vez">META DA VEZ · o mentorado vê</span>' : t.status==='Concluída' ? '' : '<span class="rl-tag">OCULTA PARA O MENTORADO</span>') : ''}</div>
           ${goalAulasHtml(t.aulas, s)}
         </div>
       </div>
@@ -13476,7 +13508,7 @@ function goalAulasHtml(ids, s){
   return `<div class="goal-aulas-label">${temA && temC ? 'Aulas e atividades que vão ajudar na tarefa:' : temA ? 'Atividades que vão ajudar na tarefa:' : 'Aulas que vão ajudar na tarefa:'}</div><div class="goal-aulas">${itens.map(({c,a})=>{
     if(c){
       const locked = isLessonLocked(c.id, s);
-      return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?'Aula ainda bloqueada: abre quando as 3 etapas liberadas forem concluídas':'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
+      return `<button type="button" class="goal-aula ${locked?'locked':''}" data-goal-aula="${escapeAttr(c.id)}" title="${locked?((s&&s.ritmoLento)?'Aula ainda bloqueada: abre quando a etapa liberada for concluída':'Aula ainda bloqueada: abre quando as 3 etapas liberadas forem concluídas'):'Abrir aula'}">${icon(locked?'lock':'play','tiny')} ${escapeHtml(c.title)}</button>`;
     }
     let feito = false; try{ feito = !!(getModuleChecklistState(s.id, a.modId)||[])[a.idx]; }catch(e){}
     return `<button type="button" class="goal-aula ativ ${feito?'feito':''}" data-goal-ativ="${escapeAttr(a.id)}" title="Abrir no Dashboard (módulo ${escapeAttr(a.modNome)})">${icon(feito?'tick':'check','tiny')} ${escapeHtml(a.label)}</button>`;
@@ -23789,6 +23821,24 @@ function rdEmTratamento(s, a){
 }
 function rdEnvioUlt(sid, chave, i){ return (RADAR_UI.envios||{})[sid+'|'+chave+'|'+i] || null; }
 /* Um marcador com as mensagens dele: Copiar (já com os dados do mentorado) e Enviado (registra). */
+/* Botão "Ritmo lento" nos marcadores de atraso no método (3, vermelho, e 6, laranja). */
+function rdRitmoLentoHtml(s){
+  if(s.ritmoLento){
+    const quem = PEOPLE[s.ritmoLentoPor] ? PEOPLE[s.ritmoLentoPor].name.split(' ')[0] : '';
+    return `<div class="rd-rl on"><span><span class="rd-rl-tag">${icon('lock','tiny')} RITMO LENTO ATIVO</span> aulas de 1 em 1 e uma meta por vez${s.ritmoLentoEm ? ` · desde ${escapeHtml(tzDataCurta(s.ritmoLentoEm))}` : ''}${quem ? ' por '+escapeHtml(quem) : ''}</span><button type="button" class="btn-mini" data-rd-rl="${s.id}" data-rd-rl-v="0">Desativar</button></div>`;
+  }
+  return `<div class="rd-rl"><span><strong>Ritmo lento</strong> · aulas e tarefas abrem de 1 em 1 (em vez de 3 em 3) e o mentorado passa a ver só uma meta por vez</span><button type="button" class="btn-mini" data-rd-rl="${s.id}" data-rd-rl-v="1">${icon('lock','tiny')} Ativar ritmo lento</button></div>`;
+}
+async function rdRitmoLentoSalvar(sid, on, btn){
+  const st = getStudent(sid); if(!st) return;
+  if(on && !confirm(`Ativar o ritmo lento para ${st.name}?\n\n• As aulas e tarefas do Dashboard passam a abrir de 1 em 1.\n• No mural de metas, ${st.name.split(' ')[0]} passa a ver só uma meta por vez (a de prazo mais próximo). Ao concluir, aparece a próxima.\n• A equipe continua vendo todas as metas.`)) return;
+  if(btn) btn.disabled = true;
+  const upd = on ? { ritmo_lento:true, ritmo_lento_em:new Date().toISOString(), ritmo_lento_por:currentUser.id } : { ritmo_lento:false, ritmo_lento_em:null, ritmo_lento_por:null };
+  const { error } = await sb.from('profiles').update(upd).eq('id', sid);
+  if(error){ alert('Não foi possível salvar: '+(error.message||'')); if(btn) btn.disabled = false; return; }
+  st.ritmoLento = on; st.ritmoLentoEm = upd.ritmo_lento_em; st.ritmoLentoPor = upd.ritmo_lento_por;
+  if(currentView==='radar') renderRadar(); else if(currentView==='metas') renderMetas();
+}
 function rdMarcadorHtml(s, m, principal){
   const msgs = (RD_MARC_MSGS[m.chave]||[]).map((x,i)=>({x,i})).filter(({x})=>{
     if(m.chave==='nao_resp') return rdNaoRespSemanas(s.id)>=3;
@@ -23798,6 +23848,7 @@ function rdMarcadorHtml(s, m, principal){
   const cls = m.chave==='nao_resp' ? 'rd-mc' : 'rd-m'+m.nivel;
   return `<div class="rd-marc ${cls} ${principal?'principal':''}">
     <div class="rd-marc-h">${m.chave==='metas' ? `<button type="button" class="rd-metas-link" data-open-meta-rd="${s.id}">${escapeHtml(m.txt)}</button>` : `<span>${escapeHtml(m.txt)}</span>`}</div>
+    ${(m.chave==='metodo2' || m.chave==='metodo1') ? rdRitmoLentoHtml(s) : ''}
     ${msgs.length ? `<div class="rd-marc-msgs">${msgs.map(({x,i},n)=>{ const e = rdEnvioUlt(s.id, m.chave, i);
       const quem = e && PEOPLE[e.enviado_por] ? PEOPLE[e.enviado_por].name.split(' ')[0] : '';
       return `<div class="rd-msg-linha"><span class="rd-msg-rot">${msgs.length>1 ? `Mensagem ${n+1} · ` : ''}${escapeHtml(x.rot)}</span>
@@ -24205,7 +24256,7 @@ function renderRadar(){
             <span class="rd-sinal" title="${a.naoResp ? 'Não responsivo' : a.nivel===2?'Em risco':a.nivel===1?'Atenção':'Em dia'}"></span>
             ${initialsAvatar(s.initials, s.color, 34, s.avatarUrl)}
             <div class="rd-nome">
-              <div class="rd-nome-linha"><button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>${rdTemEplanner(s) ? `<span class="rd-ep-tag ok" title="Já montou a rotina de estudos no ePLANNER">${icon('calendar','tiny')} usa o ePLANNER</span>` : `<span class="rd-ep-tag" title="Ainda não montou a rotina no ePLANNER">${icon('calendar','tiny')} sem ePLANNER</span>`}</div>
+              <div class="rd-nome-linha"><button type="button" class="vg-nome-btn" data-open-staff="${s.id}" title="Ver a plataforma como ${escapeAttr(s.name)} vê">${escapeHtml(s.name)}</button>${rdTemEplanner(s) ? `<span class="rd-ep-tag ok" title="Já montou a rotina de estudos no ePLANNER">${icon('calendar','tiny')} usa o ePLANNER</span>` : `<span class="rd-ep-tag" title="Ainda não montou a rotina no ePLANNER">${icon('calendar','tiny')} sem ePLANNER</span>`}${s.ritmoLento ? `<span class="rd-rl-tag" title="Aulas de 1 em 1 e uma meta por vez">${icon('lock','tiny')} RITMO LENTO</span>` : ''}</div>
               ${trat ? `<span class="rd-trat-tag" title="Mensagem do marcador principal enviada nos últimos 7 dias. A cor só muda quando a situação mudar.">${icon('check','tiny')} EM TRATAMENTO · enviada ${escapeHtml(tzDataCurta(trat.enviado_em))}${PEOPLE[trat.enviado_por] ? ' por '+escapeHtml(PEOPLE[trat.enviado_por].name.split(' ')[0]) : ''} · aguardando o mentorado</span>` : ''}
               <small>${a.real ? `${RADAR_ESTAGIOS[a.real.idx]}${a.real.idx<5?` · ${a.real.pct}%`:''}` : ''} · ${overallProgress(s)}% do método</small>
             </div>
@@ -24246,6 +24297,7 @@ function renderRadar(){
   bindBuscaInput('rd-busca', v=>{ RADAR_UI.busca = v; }, renderRadar);
   el.querySelectorAll('[data-rd-abrir]').forEach(b=>b.addEventListener('click', ()=>{ const id = b.dataset.rdAbrir; RADAR_UI.abertos[id] = !RADAR_UI.abertos[id]; renderRadar(); }));
   rdMsgBindCopiar(el);
+  el.querySelectorAll('[data-rd-rl]').forEach(b=>b.addEventListener('click', ()=>rdRitmoLentoSalvar(b.dataset.rdRl, b.dataset.rdRlV==='1', b)));
   const momT = document.getElementById('rd-mom-toggle'); if(momT) momT.addEventListener('click', ()=>{ RADAR_UI.momAberto = !RADAR_UI.momAberto; renderRadar(); });
   el.querySelectorAll('[data-open-meta-rd]').forEach(b=>b.addEventListener('click', ()=>{ currentStudentId = b.dataset.openMetaRd; renderProfile(); goTo('metas'); }));
   el.querySelectorAll('[data-rd-conversa]').forEach(b=>b.addEventListener('click', ()=>msgAbrirConversa(msgChaveAcomp(b.dataset.rdConversa))));
