@@ -2851,8 +2851,11 @@
   .ep-inicio small{font-size:12px;color:var(--text-mute);}
   .ep-inicio-ic{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
   .ep-inicio-ic .icon{width:18px;height:18px;color:var(--accent);}
-  .ep-inicio-topo{display:flex;align-items:center;gap:10px;}
-  .ep-inicio-topo strong{flex:1;}
+  /* cabeçalho do card na mesma linha: bolinha do ícone, título e botão Abrir (a regra ".ep-inicio > div" empilhava tudo) */
+  .ep-inicio > .ep-inicio-topo{display:flex;flex-direction:row;align-items:center;gap:12px;flex:0 0 auto;text-align:left;}
+  .ep-inicio-topo strong{flex:1;min-width:0;font-size:15px;}
+  .ep-inicio-topo .btn-mini{flex:0 0 auto;border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:6px 14px;font-weight:700;}
+  .ep-inicio > .ep-inicio-item{flex-direction:row;gap:10px;flex:0 0 auto;align-items:baseline;}
   .ep-inicio-item{display:flex;gap:10px;font-size:13px;line-height:1.35;}
   .ep-inicio-item span{font-weight:700;min-width:44px;}
   .ep-inicio-mais{padding-left:54px;}
