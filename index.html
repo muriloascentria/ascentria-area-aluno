@@ -10539,9 +10539,9 @@ function renderAgenda(){
     return `<h4 class="ps-h" style="margin-top:18px">${g.label}</h4><div class="agenda-list">${items.map(card).join('')}</div>`;
   }).join('');
   document.getElementById('view-agenda').innerHTML = `
-    <p class="section-sub">${bonusView
-      ? 'Como aluno do Método + Bônus, você participa dos encontros ao vivo da mentoria de <strong>terça-feira</strong> (Plantão de Dúvidas) e <strong>sexta-feira</strong> (Consultório Simulado). Os demais encontros aparecem com cadeado — são exclusivos da Mentoria Essência.'
-      : 'Encontros coletivos e individuais com os mentores.'}</p>
+    ${bonusView
+      ? '<p class="section-sub">'+'Como aluno do Método + Bônus, você participa dos encontros ao vivo da mentoria de <strong>terça-feira</strong> (Plantão de Dúvidas) e <strong>sexta-feira</strong> (Consultório Simulado). Os demais encontros aparecem com cadeado — são exclusivos da Mentoria Essência.</p>'
+      : ''}
     <h2 class="section-title">${icon('calendar')} Próximos encontros</h2>
     <div class="agenda-list">${upcoming.map(card).join('') || '<p class="section-sub">Nenhum encontro agendado no momento.</p>'}</div>
     <h2 class="section-title">${icon('video')} Gravações anteriores</h2>
