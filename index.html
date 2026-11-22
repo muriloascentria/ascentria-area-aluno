@@ -7612,6 +7612,33 @@ function setupNav(){
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-backdrop').classList.remove('open');
   });
+  /* Celular: arrastar o dedo da esquerda para a direita abre o menu; da direita para a esquerda, com o menu aberto, fecha.
+     Não atrapalha o que já rola para os lados (fileiras de aulas, tabelas), campos de texto nem janelas abertas. */
+  (function(){
+    let x0 = null, y0 = 0, t0 = 0, ok = false;
+    const rolaLado = (el)=>{
+      for(let n = el; n && n!==document.body; n = n.parentElement){
+        if(n.matches && n.matches('input, textarea, select, [contenteditable="true"], .modal, .modal-overlay, [role="dialog"], video, iframe, canvas')) return true;
+        const cs = getComputedStyle(n);
+        if((cs.overflowX==='auto' || cs.overflowX==='scroll') && n.scrollWidth > n.clientWidth + 4) return true;
+      }
+      return false;
+    };
+    const menuMovel = ()=>{ const b = document.getElementById('menu-btn'); return !!(b && b.offsetParent !== null); };
+    document.addEventListener('touchstart', e=>{
+      if(e.touches.length!==1 || !menuMovel()){ x0 = null; return; }
+      const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+      ok = !rolaLado(e.target) || document.getElementById('sidebar').classList.contains('open');
+    }, {passive:true});
+    document.addEventListener('touchend', e=>{
+      if(x0===null || !ok) return;
+      const t = e.changedTouches[0]; const dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+      if(Date.now()-t0 > 800 || Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx)*0.6) return;
+      const sb = document.getElementById('sidebar'), bd = document.getElementById('sidebar-backdrop');
+      if(dx > 0 && !sb.classList.contains('open')){ sb.classList.add('open'); bd.classList.add('open'); }
+      else if(dx < 0 && sb.classList.contains('open')){ sb.classList.remove('open'); bd.classList.remove('open'); }
+    }, {passive:true});
+  })();
   /* eCRM abre em outra aba; no celular a gaveta do menu fecha junto, pra ninguém voltar e achar o menu aberto. */
   document.getElementById('nav-ecrm').addEventListener('click',()=>{
     document.getElementById('sidebar').classList.remove('open');
