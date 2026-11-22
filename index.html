@@ -1052,6 +1052,24 @@
     color:var(--text);padding:10px 12px;font-size:13.5px;resize:vertical;min-height:92px;font-family:inherit;
   }
   .composer textarea:focus{outline:none;border-color:var(--accent);}
+  /* Composer da Comunidade: foto + convite numa linha, texto de fora a fora, e tags, emoji e Publicar numa linha só */
+  .composer.comp2{flex-direction:column;gap:12px;}
+  .comp2-topo{display:flex;align-items:center;gap:12px;}
+  .comp2-convite{font-size:13.5px;line-height:1.45;color:var(--text-dim);}
+  .comp2-corpo{width:100%;}
+  .comp2 textarea{min-height:84px;}
+  .comp2 .composer-footer{flex-wrap:nowrap;gap:8px;margin-top:10px;}
+  .comp2 .type-select{flex-wrap:nowrap;gap:6px;flex:1;min-width:0;overflow:hidden;}
+  .comp2 .type-pill{padding:7px;gap:0;flex:0 0 auto;justify-content:center;transition:padding .2s;}
+  .comp2 .type-pill .icon{width:14px;height:14px;}
+  .comp2 .type-pill .tp-rot{display:none;}
+  .comp2.tag-aberta .type-pill.active{padding:6px 11px;gap:5px;}
+  .comp2.tag-aberta .type-pill.active .tp-rot{display:inline;}
+  .comp2 .emoji-btn{flex:0 0 auto;}
+  .comp2 #post-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .comp2.tag-aberta #post-btn .pb-rot{display:none;}
+  .comp2.tag-aberta #post-btn{padding-left:12px;padding-right:12px;}
+  #view-comunidade > .com-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
   .composer-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap;}
   .type-select{display:flex;gap:6px;flex-wrap:wrap;}
   .type-pill{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim);background:var(--bg-elev);}
@@ -10011,6 +10029,7 @@ function hasApresentacao(authorId){
   if(authorId===actingAuthorId() && EU_JA_APRESENTEI) return true;
   return COMMUNITY_POSTS.some(p=>p.type==='apresentacao' && p.authorId===authorId);
 }
+let COMP_TAG_ABERTA = false;  /* no composer da Comunidade: alguma tag foi tocada (mostra o nome dela e encolhe o Publicar) */
 function renderComunidade(){
   const me = getPerson(actingAuthorId());
   /* A equipe interna, navegando como equipe (currentRole 'staff'), acompanha as duas comunidades e
@@ -10034,26 +10053,29 @@ function renderComunidade(){
   const visible = communityFilter==='todas' ? communityOnly : communityOnly.filter(p=>p.type===communityFilter);
   const root = document.getElementById('view-comunidade');
   root.innerHTML = `
-    <p class="section-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
+    <p class="section-sub com-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
     ${currentRole==='staff'? `
     <div class="community-filters" id="community-audience-tabs" style="margin-bottom:10px">
       <button class="filter-tab ${currentCommunityAudience==='mentorado'?'active':''}" data-audience="mentorado">Comunidade Mentorados</button>
       <button class="filter-tab ${currentCommunityAudience==='curso'?'active':''}" data-audience="curso">Comunidade do Curso</button>
     </div>` : ''}
     ${me? `
-    <div class="composer">
-      ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
-      <div style="flex:1">
-        <textarea id="new-post" placeholder="Compartilhe algo com a turma..."></textarea>
+    <div class="composer comp2 ${COMP_TAG_ABERTA ? 'tag-aberta' : ''}">
+      <div class="comp2-topo">
+        ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
+        <span class="comp2-convite">Compartilhe uma conquista, tire suas dúvidas, peça ajuda, interaja e, se você acabou de chegar, apresente-se!</span>
+      </div>
+      <div class="comp2-corpo">
+        <textarea id="new-post" placeholder="Escreva aqui…"></textarea>
         <div class="composer-footer">
           <div class="type-select" id="type-select">
             ${Object.keys(POST_TYPES).map(k=>{
               const disabled = k==='apresentacao' && alreadyApresentou;
-              return `<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}" ${disabled?'disabled title="Você já publicou sua apresentação — exclua a anterior pra postar uma nova."':''}>${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`;
+              return `<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}" ${disabled?'disabled title="Você já publicou sua apresentação — exclua a anterior pra postar uma nova."':''}>${icon(POST_TYPES[k].icon,'tiny')}<span class="tp-rot">${POST_TYPES[k].label}</span></button>`;
             }).join('')}
           </div>
           <button type="button" class="emoji-btn" data-emoji-for="#new-post" title="Emoji">😊</button>
-          <button class="btn-accent" id="post-btn">Publicar</button>
+          <button class="btn-accent" id="post-btn" title="Publicar">${icon('send','tiny')}<span class="pb-rot">Publicar</span></button>
         </div>
       </div>
     </div>` : ''}
@@ -10070,7 +10092,12 @@ function renderComunidade(){
   bindOpenCourseTags(root);
   root.querySelectorAll('#type-select [data-type]').forEach(btn=>{
     if(btn.disabled) return;
-    btn.addEventListener('click',()=>{ selectedPostType = btn.dataset.type; renderComunidade(); });
+    /* Sem redesenhar a tela (o texto digitado não se perde): a tag tocada abre o nome e o Publicar vira só o ícone. */
+    btn.addEventListener('click',()=>{
+      selectedPostType = btn.dataset.type; COMP_TAG_ABERTA = true;
+      root.querySelectorAll('#type-select [data-type]').forEach(b=>b.classList.toggle('active', b===btn));
+      const c = root.querySelector('.comp2'); if(c) c.classList.add('tag-aberta');
+    });
   });
   root.querySelectorAll('#community-filters [data-filter]').forEach(btn=>{
     btn.addEventListener('click',()=>{ communityFilter = btn.dataset.filter; renderComunidade(); });
