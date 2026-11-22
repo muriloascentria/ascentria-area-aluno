@@ -415,6 +415,7 @@
   #menu-btn{display:none;}
   #refresh-btn{display:none;}
   .cel-titulo{display:none;}
+  .topbar-esq{display:contents;}
   .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:45;}
   .sidebar-backdrop.open{display:block;}
   .dot-alert{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--danger);}
@@ -3963,12 +3964,16 @@
   @media (max-width:640px){
   /* botão redondo de atualizar ao lado do menu, e nome da tela em caixa alta no topo */
   #refresh-btn{display:flex;border-radius:50%;}
+  /* menu e atualizar sempre juntos, com o mesmo espaço pequeno entre eles em todas as telas */
+  .topbar-esq{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
   #refresh-btn.girando .icon{animation:rfGira .8s linear infinite;}
   @keyframes rfGira{to{transform:rotate(360deg);}}
   /* no celular o nome da aba sai da barra de cima e vira o título do topo da tela, em caixa alta */
   .topbar-title{visibility:hidden;}
   .cel-titulo[hidden]{display:none!important;}
   .cel-titulo:not([hidden]){display:block!important;}
+  .dash-al .section-title.dash-sec1{margin-top:0!important;}
+  .dash-al .progress-hero{justify-content:center;}
   .cel-titulo{margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
@@ -4307,12 +4312,14 @@
 
   <div class="main">
     <div class="topbar">
+      <div class="topbar-esq">
       <button class="icon-btn" id="menu-btn" title="Menu">
         <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <button class="icon-btn" id="refresh-btn" title="Atualizar" aria-label="Atualizar o aplicativo">
         <svg class="icon" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
       </button>
+      </div>
       <div class="topbar-title" id="topbar-title">Início</div>
       <div class="topbar-right">
         <div class="role-toggle" id="role-toggle">
@@ -11271,20 +11278,22 @@ function renderDashboard(){
   equipeCompCarregar(s && s.id, ()=>{ if(currentView==='dashboard') renderDashboard(); });
   const eqPorMod = {}; let eqTotal = 0;
   MODULES.forEach(m=>{ const n = s ? dashItensEquipe(s.id, m.id).size : 0; eqPorMod[m.id] = n; eqTotal += n; });
-  document.getElementById('view-dashboard').innerHTML = `
+  const cel = ehCel();
+  document.getElementById('view-dashboard').innerHTML = `${cel ? '<div class="ini-al dash-al">' : ''}
     <p class="section-sub">Visão geral do progresso no Método Essência. Esse é o mesmo painel que você e a equipe interna acompanham.</p>
+    ${cel ? '<h2 class="section-title ini-sec dash-sec1">Progresso no Método Essência</h2>' : ''}
     <div class="progress-hero">
       <div class="ring" style="background:conic-gradient(var(--shared) ${overall*3.6}deg, var(--bg-card) 0deg)">
         <div class="ring-inner"><div class="pct">${overall}%</div><div class="lbl">concluído</div></div>
       </div>
-      <div>
+      ${cel ? '' : `<div>
         <h2 style="font-size:18px;margin-bottom:6px;">Progresso no Método Essência</h2>
         <p style="color:var(--text-dim);font-size:13.5px;max-width:380px;">Calculado a partir de ${TOTAL_ITEMS} itens de checklist (aulas assistidas, resumos e tarefas) distribuídos nos 5 módulos do método.</p>
-      </div>
+      </div>`}
     </div>
 
-    <h2 class="section-title">Progresso por módulo</h2>
-    <p class="section-sub" style="margin-top:-6px;">Clique em um módulo para abrir o checklist item a item — igual à aba "Método Essência" do Dashboard.</p>
+    <h2 class="section-title${cel ? ' ini-sec' : ''}">Progresso por módulo</h2>
+    ${cel ? '' : `<p class="section-sub" style="margin-top:-6px;">Clique em um módulo para abrir o checklist item a item — igual à aba "Método Essência" do Dashboard.</p>`}
     ${eqTotal ? `<div class="dash-eq-legenda"><i></i> Em roxo: itens avançados pela equipe no seu acompanhamento. Eles não contam como feitos por você; quando você fizer, marque normalmente.</div>` : ''}
     <div class="module-bars">
       ${MODULES.map(m=>{
@@ -11303,7 +11312,7 @@ function renderDashboard(){
     ${painelBloqueado
       ? `<button class="btn-accent" id="goto-painel" style="display:inline-flex;align-items:center;gap:8px;opacity:.85" title="Exclusivo para mentorados da Mentoria Essência">${icon('lock','tiny')} Abrir Painel do Método</button>`
       : `<button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>`}
-  `;
+  ${cel ? '</div>' : ''}`;
   document.getElementById('goto-painel').addEventListener('click',()=>goTo('painel'));
   document.querySelectorAll('.module-bar-row[data-mod]').forEach(el=>{
     el.addEventListener('click',()=>openModuleChecklist(el.dataset.mod));
