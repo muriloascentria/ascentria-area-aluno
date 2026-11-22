@@ -745,6 +745,11 @@
   .aulas-al .category-block .section-title.ini-sec{margin-top:0!important;}
   .mat-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 0;}
   .mat-al .materials-grid{margin-top:0;}
+  /* cards equidistantes: mesmo espaço entre todos e todos com a mesma altura */
+  .mat-al .materials-grid{gap:12px!important;grid-auto-rows:1fr;align-items:stretch;}
+  .mat-al .material-card{margin:0!important;height:100%;box-sizing:border-box;align-items:center;}
+  .mat-al .material-card .mi{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .mat-al .material-card .btn-mini{align-self:flex-start;margin-top:4px;}
   .mat-al .materials-grid.mat-todos{margin-top:18px;}
   /* mesmo tamanho de fonte em todos os cards de material: nome, tipo/aula e botão */
   .mat-al .material-card .title, .mat-al .material-card .meta, .mat-al .material-card .btn-mini{font-size:12.5px!important;line-height:1.35;}
