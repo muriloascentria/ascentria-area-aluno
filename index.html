@@ -734,6 +734,15 @@
   .ini-al .ep-inicio-item, .ini-al .post-text{font-size:13.5px;}
   .ini-al .im-prazo, .ini-al .im-conta, .ini-al .im-pct, .ini-al .kpi-note, .ini-al .im-com-abrir{font-size:11.5px;}
   .ini-al .kpi-note{font-style:normal;}
+  /* Aulas: mesma escala do Início (explicação = nota de apoio, busca = texto, módulos = título de seção) */
+  .aulas-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
+  .aulas-al .busca-bar{margin-bottom:0;}
+  .aulas-al .busca-bar .ps-input{font-size:13.5px;}
+  .aulas-al .busca-bar .ps-input::placeholder{font-size:13.5px;color:var(--text-mute);}
+  .aulas-al .busca-bar .btn-outline{font-size:12px;}
+  .aulas-al .busca-info{font-size:11.5px;color:var(--text-mute);margin-top:10px;}
+  .aulas-al .category-block{margin-top:var(--ini-r);}
+  .aulas-al .category-block .section-title.ini-sec{margin-top:0!important;}
   .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
   .im-conta{font-size:11.5px;color:var(--text-mute);}
   .im-tit{font-size:15px!important;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;}
@@ -8826,7 +8835,7 @@ function renderAulas(){
   const q = normTxt(aulasBusca).trim();
   const visiveis = COURSES.filter(c=>aulaCombina(c,q));
   const cats = orderedCourseCats().filter(cat=>visiveis.some(c=>c.cat===cat));
-  document.getElementById('view-aulas').innerHTML = `
+  document.getElementById('view-aulas').innerHTML = `<div class="ini-al aulas-al">
     <p class="section-sub">Biblioteca de aulas do Método Essência, organizada pelos mesmos módulos do seu Dashboard — assista no seu ritmo.</p>
     <div class="busca-bar">
       <input class="ps-input" type="text" id="aulas-busca" value="${escapeAttr(aulasBusca)}" placeholder="Buscar aula ou material (ex.: precificação, planilha…)">
@@ -8835,7 +8844,7 @@ function renderAulas(){
     ${q? `<div class="busca-info">${visiveis.length} aula(s) encontrada(s) para <strong>"${escapeHtml(aulasBusca.trim())}"</strong>${visiveis.some(c=>!normTxt(c.title).includes(q))? ' — algumas por causa do material anexado' : ''}</div>` : ''}
     ${cats.map((cat,i)=>`
       <div class="category-block">
-        <h2 class="section-title">${cat}</h2>
+        <h2 class="section-title ini-sec">${cat}</h2>
         <div class="row-scroll-wrap">
           <button type="button" class="row-scroll-btn left is-hidden" aria-label="Rolar para a esquerda">${icon('back')}</button>
           <div class="row-scroll" id="row-scroll-${i}">${visiveis.filter(c=>c.cat===cat).map(c=>courseTileHtml(c)).join('')}</div>
@@ -8843,7 +8852,7 @@ function renderAulas(){
         </div>
       </div>
     `).join('') || (q? `<div class="empty-state">Nenhuma aula ou material com "${escapeHtml(aulasBusca.trim())}". Tente outra palavra.</div>` : '')}
-  `;
+  </div>`;
   bindBuscaInput('aulas-busca', v=>{ aulasBusca = v; }, renderAulas);
   const limpar = document.getElementById('aulas-busca-limpar');
   if(limpar) limpar.addEventListener('click', ()=>{ aulasBusca=''; renderAulas(); });
