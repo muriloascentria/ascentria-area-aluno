@@ -745,6 +745,7 @@
   .aulas-al .category-block .section-title.ini-sec{margin-top:0!important;}
   .mat-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 0;}
   .mat-al .materials-grid{margin-top:0;}
+  .mat-al .materials-grid.mat-todos{margin-top:18px;}
   /* mesmo tamanho de fonte em todos os cards de material: nome, tipo/aula e botão */
   .mat-al .material-card .title, .mat-al .material-card .meta, .mat-al .material-card .btn-mini{font-size:12.5px!important;line-height:1.35;}
   .mat-al .material-card .title{font-weight:700;}
@@ -10501,16 +10502,15 @@ function renderMateriais(){
           </div>
         </div>`;
   document.getElementById('view-materiais').innerHTML = `<div class="ini-al mat-al">
-    <p class="section-sub">Todos os materiais de apoio do Método Essência num lugar só, organizados pelos mesmos módulos das Aulas.</p>
+    <p class="section-sub">Todos os materiais de apoio do Método Essência num lugar só. Em cada um aparece o módulo e a aula de onde ele é.</p>
     ${MATERIALS.length ? `<h2 class="section-title ini-sec">Materiais gerais</h2>
     <div class="materials-grid">${MATERIALS.map(m=>card(m.title, m.type+(m.size?' · '+m.size:''), '', 'folder', m.link
       ? `<a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`
       : `<button class="btn-mini" data-dl="${m.id}">${icon('download')} Baixar</button>`)).join('')}</div>` : ''}
-    ${secoes.map(sec=>`<h2 class="section-title ini-sec">${escapeHtml(sec.cat)}</h2>
-    <div class="materials-grid">${sec.itens.map(({m,c,locked})=>{ const [tipo, ic] = matTipo(m.link);
-      return card(m.title, `${tipo} · Aula: ${c.title}`, tipo, locked ? 'lock' : ic, locked
+    ${secoes.length ? `<div class="materials-grid mat-todos">${secoes.flatMap(sec=>sec.itens).map(({m,c,locked})=>{ const [tipo, ic] = matTipo(m.link);
+      return card(m.title, `${tipo} · ${c.cat} · Aula: ${c.title}`, tipo, locked ? 'lock' : ic, locked
         ? `<button type="button" class="btn-mini mat-trava" data-mat-trava="${c.id}" title="Abre quando a aula for liberada">${icon('lock','tiny')} Libera com a aula</button>`
-        : `<a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`); }).join('')}</div>`).join('')}
+        : `<a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`); }).join('')}</div>` : ''}
     ${!MATERIALS.length && !secoes.length ? '<div class="empty-state">Nenhum material disponível ainda.</div>' : ''}
   </div>`;
   document.querySelectorAll('#view-materiais [data-dl]').forEach(btn=>{
