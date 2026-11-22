@@ -1055,20 +1055,23 @@
   /* Composer da Comunidade: foto + convite numa linha, texto de fora a fora, e tags, emoji e Publicar numa linha só */
   .composer.comp2{flex-direction:column;gap:12px;}
   .comp2-topo{display:flex;align-items:center;gap:12px;}
-  .comp2-convite{font-size:13.5px;line-height:1.45;color:var(--text-dim);}
+  .comp2-convite{font-size:15px;font-weight:600;line-height:1.4;color:var(--text-dim);}
   .comp2-corpo{width:100%;}
   .comp2 textarea{min-height:84px;}
   .comp2 .composer-footer{flex-wrap:nowrap;gap:8px;margin-top:10px;}
   .comp2 .type-select{flex-wrap:nowrap;gap:6px;flex:1;min-width:0;overflow:hidden;}
-  .comp2 .type-pill{padding:7px;gap:0;flex:0 0 auto;justify-content:center;transition:padding .2s;}
+  .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #post-btn{height:36px;min-height:36px;box-sizing:border-box;margin:0;}
+  .comp2 .type-pill{width:36px;padding:0;gap:0;flex:0 0 auto;justify-content:center;transition:width .2s,padding .2s;}
+  .comp2 .emoji-btn{width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:17px;line-height:1;}
+  .comp2 #post-btn{padding:0 14px;}
   .comp2 .type-pill .icon{width:14px;height:14px;}
   .comp2 .type-pill .tp-rot{display:none;}
-  .comp2.tag-aberta .type-pill.active{padding:6px 11px;gap:5px;}
+  .comp2.tag-aberta .type-pill.active{width:auto;padding:0 12px;gap:5px;}
   .comp2.tag-aberta .type-pill.active .tp-rot{display:inline;}
   .comp2 .emoji-btn{flex:0 0 auto;}
   .comp2 #post-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .comp2.tag-aberta #post-btn .pb-rot{display:none;}
-  .comp2.tag-aberta #post-btn{padding-left:12px;padding-right:12px;}
+  .comp2.tag-aberta #post-btn{width:36px;padding:0;justify-content:center;}
   #view-comunidade > .com-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
   .composer-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap;}
   .type-select{display:flex;gap:6px;flex-wrap:wrap;}
@@ -10063,10 +10066,10 @@ function renderComunidade(){
     <div class="composer comp2 ${COMP_TAG_ABERTA ? 'tag-aberta' : ''}">
       <div class="comp2-topo">
         ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
-        <span class="comp2-convite">Compartilhe uma conquista, tire suas dúvidas, peça ajuda, interaja e, se você acabou de chegar, apresente-se!</span>
+        <span class="comp2-convite">No que você está pensando?</span>
       </div>
       <div class="comp2-corpo">
-        <textarea id="new-post" placeholder="Escreva aqui…"></textarea>
+        <textarea id="new-post" placeholder="Compartilhe uma conquista, tire suas dúvidas, peça ajuda, interaja e, se você acabou de chegar, apresente-se!"></textarea>
         <div class="composer-footer">
           <div class="type-select" id="type-select">
             ${Object.keys(POST_TYPES).map(k=>{
