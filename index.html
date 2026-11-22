@@ -5404,6 +5404,7 @@ let VENDA_SESSOES = []; // Registro de Sessões 1:1 (vendas) — só carregado/v
 let ANALISE_SESSOES = []; // Análise Sessões 1:1 — uma linha por sessão registrada (ver bootstrapData)
 let analiseBusca = '';
 let analiseNovoId = null; // lead recém-adicionado à mão: aparece mesmo antes de ter análise
+let matBusca = '';                         // busca na aba Materiais (celular)
 let aulasBusca = '';                       // busca na aba Aulas (título da aula ou nome de material anexado)
 let vgBusca = { mentorados:'', curso:'', pos:'' }; // busca por nome nas listas da Visão Geral
 /* 18/11/2026: alunos com acesso cancelado saem da Visão Geral; o botão no fim de cada lista mostra de novo. */
@@ -11158,6 +11159,11 @@ function renderMateriais_cel(){
     });
     return { cat, itens };
   }).filter(x=>x.itens.length);
+  /* busca: nome do material, tipo, módulo ou aula */
+  const q = normTxt(matBusca).trim();
+  const bate = (...t)=> !q || t.some(x=>normTxt(String(x||'')).includes(q));
+  const extras = MATERIALS.filter(m=>bate(m.title, m.type));
+  const daAulas = secoes.flatMap(sec=>sec.itens).filter(({m,c})=>bate(m.title, matTipo(m.link)[0], c.cat, c.title));
   const card = (titulo, sub, tipo, ic, acao)=>`
         <div class="material-card">
           <div class="material-icon">${icon(ic)}</div>
@@ -11167,18 +11173,26 @@ function renderMateriais_cel(){
             ${acao}
           </div>
         </div>`;
-  document.getElementById('view-materiais').innerHTML = `<div class="ini-al mat-al">
-    <p class="section-sub">Todos os materiais de apoio do Método Essência num lugar só. Em cada um aparece o módulo e a aula de onde ele é.</p>
-    ${MATERIALS.length ? `<h2 class="section-title ini-sec">Materiais gerais</h2>
-    <div class="materials-grid">${MATERIALS.map(m=>card(m.title, m.type+(m.size?' · '+m.size:''), '', 'folder', m.link
+  document.getElementById('view-materiais').innerHTML = `<div class="ini-al mat-al aulas-al">
+    <div class="busca-bar">
+      <label class="aulas-busca-campo"><svg class="aulas-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input class="ps-input" type="text" id="mat-busca" value="${escapeAttr(matBusca)}" placeholder="Buscar material (ex.: contrato, planilha, POP…)"></label>
+      ${q? `<button type="button" class="btn-outline" id="mat-busca-limpar">${icon('x','tiny')} Limpar</button>` : ''}
+    </div>
+    ${q ? `<div class="busca-info">${extras.length+daAulas.length} material${extras.length+daAulas.length===1?'':'is'} encontrado${extras.length+daAulas.length===1?'':'s'}</div>` : ''}
+    ${extras.length ? `<h2 class="section-title ini-sec">Materiais extras</h2>
+    <div class="materials-grid">${extras.map(m=>card(m.title, m.type+(m.size?' · '+m.size:''), '', 'folder', m.link
       ? `<a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`
       : `<button class="btn-mini" data-dl="${m.id}">${icon('download')} Baixar</button>`)).join('')}</div>` : ''}
-    ${secoes.length ? `<div class="materials-grid mat-todos">${secoes.flatMap(sec=>sec.itens).map(({m,c,locked})=>{ const [tipo, ic] = matTipo(m.link);
+    ${daAulas.length ? `<h2 class="section-title ini-sec">Materiais das aulas</h2>
+    <div class="materials-grid">${daAulas.map(({m,c,locked})=>{ const [tipo, ic] = matTipo(m.link);
       return card(m.title, `${tipo} · ${c.cat} · Aula: ${c.title}`, tipo, locked ? 'lock' : ic, locked
         ? `<button type="button" class="btn-mini mat-trava" data-mat-trava="${c.id}" title="Abre quando a aula for liberada">${icon('lock','tiny')} Libera com a aula</button>`
         : `<a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`); }).join('')}</div>` : ''}
-    ${!MATERIALS.length && !secoes.length ? '<div class="empty-state">Nenhum material disponível ainda.</div>' : ''}
+    ${!extras.length && !daAulas.length ? (q ? `<div class="empty-state">Nenhum material com "${escapeHtml(matBusca.trim())}". Tente outra palavra.</div>` : '<div class="empty-state">Nenhum material disponível ainda.</div>') : ''}
   </div>`;
+  bindBuscaInput('mat-busca', v=>{ matBusca = v; }, renderMateriais);
+  const mLimpar = document.getElementById('mat-busca-limpar');
+  if(mLimpar) mLimpar.addEventListener('click', ()=>{ matBusca = ''; renderMateriais(); });
   document.querySelectorAll('#view-materiais [data-dl]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const m = MATERIALS.find(x=>x.id==btn.dataset.dl);
