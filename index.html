@@ -5442,6 +5442,13 @@ function agTituloHtml(t){
   if(i<0) return `<span class="ag-nome">${escapeHtml(txt)}</span>`;
   return `<span class="ag-nome">${escapeHtml(txt.slice(0,i))}</span><span class="ag-com">${escapeHtml(txt.slice(i).trim())}</span>`;
 }
+/* Título do player da gravação: "00/00/0000 | Nome do encontro com Nome da Pessoa" (pedido em 22/11/2026). */
+function gravTituloPlayer(l){
+  const [y,m,d] = String(l._eventDate||'').split('-');
+  const dt = y ? `${d}/${m}/${y}` : '';
+  const t = l.title || 'Gravação';
+  return dt ? `${dt} | ${t}` : t;
+}
 function mapLiveSessionRow(row){
   const [y,m,d] = row.event_date.split('-').map(Number);
   /* Corte "próximo" -> "passado": quando há horário estruturado (event_hour), o encontro só sai de
@@ -10941,7 +10948,7 @@ function renderAgenda_cel(){
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
       <div class="agenda-actions grav-acoes" title="${escapeAttr(dataExt(l._eventDate))}">
         ${l.linkGravacao
-          ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>`
+          ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(gravTituloPlayer(l))}">${icon('play','tiny')} Assistir</a>`
           : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
         ${drive
           ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Abrir a gravação no Google Drive">${icon('externallink','tiny')} Drive</a>`
@@ -10975,7 +10982,7 @@ function renderAgenda_cel(){
         ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">${icon('calendar','tiny')} Adicionar ao Google Agenda</a></div>`
         : `<div class="agenda-actions">
             ${l.linkGravacao
-              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>${playerDriveId(l.linkGravacao) ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Se o vídeo der erro aqui dentro, abra direto no Google Drive">${icon('externallink','tiny')} Abrir no Drive</a>` : ''}`
+              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(gravTituloPlayer(l))}">${icon('play','tiny')} Assistir</a>${playerDriveId(l.linkGravacao) ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Se o vídeo der erro aqui dentro, abra direto no Google Drive">${icon('externallink','tiny')} Abrir no Drive</a>` : ''}`
               : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
             <button type="button" class="btn-outline watched-btn ${watched?'active':''}" data-watched="${l.id}">${watched? icon('check','tiny') : ''} Assistido</button>
           </div>`}
@@ -11072,7 +11079,7 @@ function renderAgenda_web(){
         ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a></div>`
         : `<div class="agenda-actions">
             ${l.linkGravacao
-              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>${playerDriveId(l.linkGravacao) ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Se o vídeo der erro aqui dentro, abra direto no Google Drive">${icon('externallink','tiny')} Abrir no Drive</a>` : ''}`
+              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(gravTituloPlayer(l))}">${icon('play','tiny')} Assistir</a>${playerDriveId(l.linkGravacao) ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Se o vídeo der erro aqui dentro, abra direto no Google Drive">${icon('externallink','tiny')} Abrir no Drive</a>` : ''}`
               : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
             <button type="button" class="btn-outline watched-btn ${watched?'active':''}" data-watched="${l.id}">${watched? icon('check','tiny') : ''} Assistido</button>
           </div>`}
