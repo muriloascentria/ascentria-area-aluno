@@ -1675,11 +1675,13 @@
     .player-ov{padding:16px;background:rgba(0,0,0,.82);align-items:center;}
     .player-box{width:100%;height:auto;max-height:calc(100dvh - 32px);border:1px solid var(--border);border-radius:14px;overflow-y:auto;}
     /* janela no centro (não em tela cheia): o vídeo inteiro em 16:9 + a faixa de cima do player do Drive, que fica escondida */
-    .player-video{padding-top:0;aspect-ratio:auto;flex:0 0 auto;height:calc((100vw - 34px) * 0.5625 + 64px);min-height:0;}
+    .player-video{padding-top:0;aspect-ratio:auto;flex:0 0 auto;height:calc((100vw - 34px) * 0.5625 + 40px);min-height:0;}
     /* o próprio player do Drive põe um botão de "abrir em outra janela" no canto de cima; em pé ele fica escondido
        (a faixa de cima do player sai da área visível, onde só há fundo preto) e o acesso ao Drive fica só no botão de baixo */
     .player-video{overflow:hidden;}
-    .player-video iframe{top:-64px;height:calc(100% + 64px);bottom:auto;}
+    /* o player do Drive é desenhado maior e encolhido para 62%: os botões dele (play, barra, configurações) ficam
+       menores na tela, e a faixa de cima dele continua fora da área visível */
+    .player-video iframe{top:-40px;left:0;width:calc(100% / 0.62);height:calc((100% + 40px) / 0.62);bottom:auto;right:auto;transform:scale(.62);transform-origin:0 0;}
     .player-dica{padding:12px 16px 10px;font-size:11.5px;}
     .player-alt{flex-direction:column;align-items:stretch;gap:10px;padding:0 16px 16px;font-size:11.5px;}
     .player-alt > span{line-height:1.45;}
@@ -1700,7 +1702,7 @@
     .player-box{width:100%;height:100dvh;max-height:100dvh;border:0;border-radius:0;background:#000;position:relative;overflow:hidden;}
     /* deitado: o X vai para o canto esquerdo, porque o canto direito fica com o botão de abrir no Drive do próprio player */
     .player-hd{position:absolute;top:6px;left:6px;right:auto;z-index:2;padding:0;background:none;}
-    .player-video iframe{top:0!important;height:100%!important;}
+    .player-video iframe{top:0!important;height:100%!important;width:100%!important;transform:none!important;}
     .player-hd strong{display:none;}
     .player-video{flex:1 1 auto;height:100dvh;max-height:100dvh;padding-top:0;aspect-ratio:auto;}
     .player-dica, .player-alt{display:none;}
