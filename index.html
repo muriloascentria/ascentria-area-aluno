@@ -745,8 +745,10 @@
   .aulas-al .category-block .section-title.ini-sec{margin-top:0!important;}
   .mat-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 0;}
   .mat-al .materials-grid{margin-top:0;}
-  .mat-al .material-card .title{font-size:13.5px;}
-  .mat-al .material-card .meta{font-size:11.5px;color:var(--text-mute);}
+  /* mesmo tamanho de fonte em todos os cards de material: nome, tipo/aula e botão */
+  .mat-al .material-card .title, .mat-al .material-card .meta, .mat-al .material-card .btn-mini{font-size:12.5px!important;line-height:1.35;}
+  .mat-al .material-card .title{font-weight:700;}
+  .mat-al .material-card .meta{color:var(--text-mute);}
   .mat-al .mat-trava{opacity:.75;}
   .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
   .im-conta{font-size:11.5px;color:var(--text-mute);}
@@ -10485,7 +10487,7 @@ function renderMateriais(){
   const secoes = cats.map(cat=>{
     const itens = [];
     COURSES.filter(c=>c.cat===cat).forEach(c=>{
-      (c.materiais||[]).filter(m=>m.link && (!m.somenteCurso || tier==='curso')).forEach(m=>itens.push({ m, c, locked: isLessonLocked(c.id, st) }));
+      (c.materiais||[]).filter(m=>m.link && (!m.somenteCurso || tier==='curso')).forEach(m=>itens.push({ m, c, locked: false })); /* todos liberados (pedido em 22/11/2026) */
     });
     return { cat, itens };
   }).filter(x=>x.itens.length);
