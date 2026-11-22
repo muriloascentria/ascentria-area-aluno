@@ -459,7 +459,7 @@
     .rank-table td{vertical-align:middle;}
     .rank-table .rank-nome{display:flex;flex-direction:column;justify-content:center;line-height:1.25;}
     .rank-table .rn1, .rank-table .rn2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36vw;}
-    .rank-table .rn1{font-weight:700;} .rank-table .rn2{font-size:12px;color:var(--text-dim);}
+    .rank-table .rn1{font-weight:700;} .rank-table .rn2{font-size:11.5px;color:var(--text-mute);}
     .rank-table td:first-child{width:34px;}
     .rank-table .rank-pts{display:inline-flex;flex-direction:column;align-items:center;gap:3px;background:none!important;padding:0!important;}
     .rank-table .rank-pts-n{display:inline-flex;align-items:center;justify-content:center;width:92px;box-sizing:border-box;height:28px;padding:0 8px;border-radius:999px;font-variant-numeric:tabular-nums;border:1px solid var(--border);background:var(--bg-elev);font-weight:800;font-size:13px;color:var(--text);}
@@ -4974,6 +4974,7 @@ const STUDENTS = []; // populado em runtime a partir do Supabase (ver bootstrapD
 /* Pontuação do ranking, calculada ao vivo pela view "student_points" (Supabase) a partir das
    próprias publicações/comentários/curtidas — nunca fica desatualizada e some sozinha se algo for
    excluído. +1 ponto por dúvida, interação, comentário ou curtida · +10 por conquista. */
+let RANK_CANC = new Set(); // quem cancelou a mentoria não aparece no Ranking (ranking_cancelados)
 let STUDENT_POINTS = {}; // chave: student id -> {total, posts, conquistas, comments, likes}
 
 /* Mapa com TODAS as pessoas (alunos + equipe interna), usado para resolver autoria de posts/comentários
@@ -6677,6 +6678,7 @@ async function bootstrapData(){
        então a consulta extra é inofensiva e evita depender da ordem em que o app descobre o tier. */
     carregarMural('mentorado'),
     carregarMural('curso'),
+    sb.rpc('ranking_cancelados').then(({data})=>{ RANK_CANC = new Set((data||[]).map(x=>typeof x==='string' ? x : (x && (x.ranking_cancelados||x.aluno_id)))); if(currentView==='ranking') renderRanking(); }, ()=>{}),
     lerTudo('student_points', q=>q.order('student_id')).then((spRows)=>{
       (spRows||[]).forEach(r=>{
         STUDENT_POINTS[r.student_id] = {
@@ -10356,7 +10358,7 @@ function renderRanking(){
   // Ranking é uma dinâmica da mentoria completa — alunos do curso gravado nem veem esta página (não têm
   // Dashboard/Metas pra pontuar), então não fazem sentido misturados no placar dos mentorados.
   const rows = STUDENTS
-    .filter(s=>s.tier!=='curso')
+    .filter(s=>s.tier!=='curso' && !RANK_CANC.has(s.id) && !(typeof acessoCancelado==='function' && acessoCancelado(s.id)))
     .map(s=>({s, pts: STUDENT_POINTS[s.id] || empty}))
     .sort((a,b)=>b.pts.total-a.pts.total);
   root.innerHTML = `
