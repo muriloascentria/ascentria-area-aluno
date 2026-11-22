@@ -715,6 +715,20 @@
   .pe-decl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--success);margin-top:8px;}
   .pe-decl .icon{width:13px;height:13px;stroke:var(--success);}
   .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px;}
+  .im-meta{display:block;width:100%;margin-top:14px;box-sizing:border-box;}
+  .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .im-conta{font-size:11.5px;color:var(--text-mute);}
+  .im-tit{font-size:15px!important;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;}
+  .im-prazo{font-size:11.5px;font-weight:600;color:var(--text-mute);}
+  .im-prazo.atrasada{color:#ef4444;}
+  .im-barra{position:relative;height:10px;border-radius:999px;background:rgba(220,38,38,.55);overflow:hidden;margin-top:12px;}
+  .im-barra i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width .6s ease;}
+  .im-pct{font-size:11.5px;font-weight:700;color:#22c55e;margin-top:6px;text-align:right;}
+  .im-com-item{cursor:pointer;border-radius:var(--radius,14px);}
+  .im-com-item .post{margin-bottom:4px;}
+  .im-com-item:hover .post{border-color:var(--accent);}
+  .im-com-abrir{font-size:11.5px;color:var(--accent);font-weight:700;text-align:right;margin:0 4px 14px;}
+  .im-com-vazio{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px;border:1px dashed var(--border);border-radius:12px;color:var(--text-dim);font-size:13px;}
   .stat-card{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
     padding:14px 16px;min-width:150px;flex:1;
@@ -8270,6 +8284,29 @@ function renderInicioCurso(s){
   eeBindBanner(document.getElementById('view-inicio'));
   anivAlunoBind(document.getElementById('view-inicio'));
 }
+/* Início do mentorado: a meta ocupa a linha inteira, como barra. Verde = metas concluídas; vermelho = o que falta. */
+function inicioMetaBarraHtml(s, nextTask){
+  const todas = (s.checklist||[]).filter(t=>t.responsavel==='Mentorado');
+  const feitas = todas.filter(t=>t.status==='Concluída').length;
+  const pct = todas.length ? Math.round(feitas/todas.length*100) : 100;
+  const atrasada = nextTask && nextTask.status==='Atrasada';
+  const visivel = s.ritmoLento && currentUserRole!=='staff' ? '' : `<span class="im-conta">${feitas} de ${todas.length} metas concluídas</span>`;
+  return `<div class="stat-card clickable im-meta" data-goto="metas">
+    <div class="im-topo"><div class="label">Próxima meta</div>${visivel}</div>
+    <div class="value im-tit">${nextTask ? escapeHtml(nextTask.tarefa) : 'Tudo em dia 🎉'}${nextTask && nextTask.prazo && nextTask.prazo!=='—' ? `<span class="im-prazo ${atrasada?'atrasada':''}">${atrasada ? 'Atrasada · ' : 'Prazo: '}${escapeHtml(nextTask.prazo)}</span>` : ''}</div>
+    <div class="im-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+    <div class="im-pct">${pct}%</div>
+  </div>`;
+}
+/* Últimos na comunidade: só publicações com que a pessoa ainda não interagiu (não é dela, não curtiu, não comentou),
+   da mais recente para a mais antiga. Tocar abre a Comunidade já na publicação. */
+function inicioComunidadeHtml(){
+  const eu = actingAuthorId();
+  const lista = COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===getViewingTier());
+  const novas = lista.filter(p=>p.authorId!==eu && !p.liked && !(p.comments||[]).some(c=>c.authorId===eu)).slice(0,2);
+  if(!novas.length) return `<div class="im-com-vazio">${lista.length ? 'Você já interagiu com as publicações mais recentes da Comunidade. 💬' : 'Ainda não há publicações na Comunidade.'} <button type="button" class="btn-mini" data-goto="comunidade">Abrir a Comunidade</button></div>`;
+  return `<div class="im-com">${novas.map(p=>`<div class="im-com-item" data-inicio-post="${p.id}" data-aud="${escapeAttr(p.audience)}" role="button" tabindex="0" title="Abrir na Comunidade">${postHtml(p,true,true)}<div class="im-com-abrir">Toque para abrir na Comunidade ›</div></div>`).join('')}</div>`;
+}
 function renderInicio(){
   const s = getStudent(currentStudentId);
   if(s && s.tier==='curso' && currentRole==='aluno'){ renderInicioCurso(s); return; }
@@ -8299,10 +8336,9 @@ function renderInicio(){
     </div>
     <div class="stat-row">
       <div class="stat-card clickable" data-goto="dashboard"><div class="label">Progresso geral</div><div class="value shared">${overall}%</div></div>
-      <div class="stat-card clickable" data-goto="metas"><div class="label">Próxima meta</div><div class="value" style="font-size:14px">${nextTask? nextTask.tarefa : 'Tudo em dia'}</div></div>
       <div class="stat-card"><div class="label">Próximo encontro ao vivo</div><div class="value accent" style="font-size:14px">${nextLive? nextLive.date+' · '+nextLive.time.split('·')[0] : '—'}</div></div>
-      <div class="stat-card"><div class="label">Turma</div><div class="value" style="font-size:14px">${s.turma}</div></div>
     </div>
+    ${inicioMetaBarraHtml(s, nextTask)}
 
     ${aniversariantesAlunoHtml()}
 
@@ -8324,8 +8360,13 @@ function renderInicio(){
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
 
     <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
-    <div>${COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===getViewingTier()).slice(0,2).map(p=>postHtml(p,true,true)).join('')}</div>
+    ${inicioComunidadeHtml()}
   `;
+  document.querySelectorAll('#view-inicio [data-inicio-post]').forEach(el=>el.addEventListener('click', ev=>{
+    if(ev.target.closest('[data-open-course],[data-del-post],a')) return;
+    ev.preventDefault(); ev.stopPropagation();
+    notifAbrirComunidade({ post_id: el.dataset.inicioPost, audience: el.dataset.aud, motivo:'abrir' });
+  }));
   bindCourseTiles();
   document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
   bindOpenCourseTags(document.getElementById('view-inicio'));
