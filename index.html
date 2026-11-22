@@ -1286,7 +1286,8 @@
   #view-agenda .grav-card{gap:12px 14px;}
   #view-agenda .grav-card .agenda-date{width:48px;height:48px;}
   #view-agenda .grav-data{font-size:13.5px;font-weight:700;}
-  #view-agenda .grav-acoes{flex-wrap:nowrap;gap:6px;}
+  #view-agenda .grav-card{flex-wrap:nowrap;align-items:center;}
+  #view-agenda .grav-acoes{flex:1 1 auto!important;width:auto!important;min-width:0;flex-wrap:nowrap;gap:6px;}
   #view-agenda .grav-acoes > *{height:34px;padding:0 8px;font-size:12px;white-space:nowrap;gap:5px;}
   /* Garante que o ícone fique do lado do texto (não empilhado em cima) nos botões de ação da gravação,
      já que .icon é display:block por padrão — sem isso "Assistir" e "Assistido" ficavam com alturas diferentes. */
@@ -10563,8 +10564,7 @@ function renderAgenda(){
     return `
     <div class="agenda-card past grav-card ${watched?'watched':''}">
       <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
-      <div class="agenda-info"><div class="grav-data">${escapeHtml(dataExt(l._eventDate))}</div></div>
-      <div class="agenda-actions grav-acoes">
+      <div class="agenda-actions grav-acoes" title="${escapeAttr(dataExt(l._eventDate))}">
         ${l.linkGravacao
           ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>`
           : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
