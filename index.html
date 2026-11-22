@@ -11309,7 +11309,7 @@ function renderDashboard(){
       }).join('')}
     </div>
 
-    <h2 class="section-title">${icon('compass')} Continue no Painel do Método</h2>
+    <h2 class="section-title${cel ? ' ini-sec' : ''}">${icon('compass')} Continue no Painel do Método</h2>
     ${painelBloqueado
       ? `<button class="btn-accent" id="goto-painel" style="display:inline-flex;align-items:center;gap:8px;opacity:.85" title="Exclusivo para mentorados da Mentoria Essência">${icon('lock','tiny')} Abrir Painel do Método</button>`
       : `<button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>`}
