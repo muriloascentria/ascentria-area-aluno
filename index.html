@@ -1118,6 +1118,9 @@
   .comment-composer .cc-enviar{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px!important;border-radius:10px!important;border:1px solid var(--border)!important;background:var(--bg-elev)!important;color:var(--accent)!important;font-size:12.5px;font-weight:700;flex:0 0 auto;}
   .comment-composer .cc-enviar .icon{width:15px;height:15px;}
   .comment-composer{gap:6px;align-items:center;}
+  /* mesma altura exata para campo, emoji e Enviar no comentário */
+  .comment-composer input[data-comment-input], .comment-composer .emoji-btn, .comment-composer .cc-enviar{height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;}
+  .comment-composer .emoji-btn{width:36px!important;min-width:36px!important;}
   /* Filtros da Comunidade numa linha só: dividem a largura; se não couber, rolam para o lado */
   .com-mural-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;}
   .com-mural-cab .section-title.ini-sec{margin:0!important;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
