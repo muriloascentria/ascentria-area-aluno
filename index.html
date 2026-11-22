@@ -2247,6 +2247,11 @@
   .eq-meta-rot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-mute);margin:0 0 6px;}
   .eq-meta-rot .link-btn{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-size:12px;}
   .eq-meta-bloco .vendas-meta{margin-bottom:0;}
+  /* Início dos sócios: toda meta já batida fica verde (o bloco e, se todas do card estiverem batidas, o card inteiro). */
+  .eq-metas .vm-bloco{border-radius:10px;padding:10px 12px;border:1px solid transparent;}
+  .eq-metas .vm-bloco.ok{background:var(--success-soft);border-color:rgba(34,197,94,0.35);}
+  .eq-metas .vm-bloco.ok .vm-rot, .eq-metas .vm-bloco.ok .vm-num b, .eq-metas .vm-bloco.ok .vm-falta, .eq-metas .vm-bloco.ok .vm-falta b{color:var(--success);}
+  .eq-metas .vm-bloco.ok .vm-barra i{background:var(--success);}
   .mt-card .mt-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
   .mt-card .mt-bloco.bad .vm-barra i{background:var(--danger);}
   .mt-card .mt-bloco.ok .vm-barra i{background:var(--success);}
@@ -19082,9 +19087,10 @@ function eqCrmMetasHtml(){
   const d = r.dados, M = d.metas || {}, fm = M.feito_mes || {}, mm = M.mes || {};
   const velha = Date.now() - Date.parse(r.atualizado_em) > 6*3600e3;
   const bloco = (rot, n, meta, sub)=>{ const ok = meta ? n>=meta : false; const pct = meta ? Math.min(100, Math.round(n/meta*100)) : 100;
-    return `<div class="vm-bloco"><div class="vm-rot">${rot}</div><div class="vm-num"><b>${n}</b>${meta!=null ? ` de ${meta}` : ''}</div><div class="vm-barra"><i style="width:${pct}%"></i></div><div class="vm-falta">${meta ? (ok ? 'Meta batida' : `Faltam <b>${meta-n}</b>`) : ''}${sub ? ` · ${sub}` : ''}</div></div>`; };
+    return `<div class="vm-bloco ${ok?'ok':''}"><div class="vm-rot">${rot}</div><div class="vm-num"><b>${n}</b>${meta!=null ? ` de ${meta}` : ''}</div><div class="vm-barra"><i style="width:${pct}%"></i></div><div class="vm-falta">${meta ? (ok ? 'Meta batida' : `Faltam <b>${meta-n}</b>`) : ''}${sub ? ` · ${sub}` : ''}</div></div>`; };
   const ini2 = d.semana_ini ? d.semana_ini.slice(8,10)+'/'+d.semana_ini.slice(5,7) : '';
-  return `<div class="vendas-alert-card vendas-meta">
+  const M0 = (r.dados||{}).metas || {}, tudo = [['leads','leads'],['agendadas','agendadas'],['realizadas','realizadas'],['vendas_mes','vendas_mes']].every(([k,m])=>M0[m] && ((r.dados||{})[k]||0)>=M0[m]);
+  return `<div class="vendas-alert-card vendas-meta ${tudo?'ok':''}">
     <div class="vac-title">${icon('target')} Metas da semana <span class="vm-base">eCRM${ini2 ? ' · semana desde '+ini2 : ''} · atualizado ${escapeHtml(tzDataHora(r.atualizado_em, true))}</span></div>
     <div class="vm-grid">
       ${bloco('Leads novos', d.leads||0, M.leads, mm.leads ? `${fm.leads||0} de ${mm.leads} no mês` : '')}
@@ -19562,13 +19568,13 @@ function vendasMetaHtml(){
   return `<div class="vendas-alert-card vendas-meta ${batida?'ok':''}">
     <div class="vac-title">${icon('target')} Meta de ${escapeHtml(vendaMesLabel(mesAtual))} <span class="vm-base">igual ao resultado de ${escapeHtml(vendaMesLabel(VENDAS_META_MES_BASE).toLowerCase())}</span></div>
     <div class="vm-grid">
-      <div class="vm-bloco">
+      <div class="vm-bloco ${faltaQtd?'':'ok'}">
         <div class="vm-rot">Vendas</div>
         <div class="vm-num"><b>${qtd}</b> de ${metaQtd}</div>
         ${barra(pctQtd)}
         <div class="vm-falta">${faltaQtd ? `Faltam <b>${faltaQtd}</b> venda${faltaQtd===1?'':'s'}` : 'Meta de vendas batida'}</div>
       </div>
-      <div class="vm-bloco">
+      <div class="vm-bloco ${faltaFat?'':'ok'}">
         <div class="vm-rot">Faturamento</div>
         <div class="vm-num"><b>${formatBRL(fat)}</b> de ${formatBRL(metaFat)}</div>
         ${barra(pctFat)}
