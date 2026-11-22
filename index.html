@@ -454,6 +454,8 @@
   h2.section-title{font-size:19px;font-weight:700;margin:30px 0 14px;display:flex;align-items:center;gap:8px;}
   h2.section-title:first-child{margin-top:0;}
   .section-sub{color:var(--text-dim);font-size:13px;margin-top:-8px;margin-bottom:16px;}
+  /* Ranking: explicação de como pontua dentro de uma área com borda */
+  .view > p.section-sub.rank-explica:first-child{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);padding:14px 16px;margin:4px 0 24px!important;}
   /* Ranking no celular: só posição, foto + nome e pontuação */
   @media (max-width:640px){ .rank-table th:nth-child(n+3):not(:last-child), .rank-table td:nth-child(n+3):not(:last-child){display:none;} .rank-table{min-width:0!important;width:100%;} .rank-table th:last-child, .rank-table td:last-child{text-align:center;white-space:nowrap;}
     .rank-table td{vertical-align:middle;}
@@ -10375,7 +10377,7 @@ function renderRanking(){
     .map(s=>({s, pts: STUDENT_POINTS[s.id] || empty}))
     .sort((a,b)=>b.pts.total-a.pts.total);
   root.innerHTML = `
-    <p class="section-sub">Ranking da turma do Método Essência — cada conquista compartilhada vale <strong>+600 pontos</strong>; publicar sua apresentação vale <strong>+10 pontos</strong> (uma vez só — some se você excluir a publicação, e volta se publicar de novo); dar as boas-vindas a um mentorado que acabou de chegar, comentando na apresentação dele, vale <strong>+20 pontos</strong>; comentar ou curtir na comunidade e nas aulas vale <strong>+0,01 ponto</strong> cada; marcar um item no checklist do Dashboard ou em Minhas Metas vale <strong>+10 pontos</strong> cada.</p>
+    <p class="section-sub rank-explica">Ranking da turma do Método Essência — cada conquista compartilhada vale <strong>+600 pontos</strong>; publicar sua apresentação vale <strong>+10 pontos</strong> (uma vez só — some se você excluir a publicação, e volta se publicar de novo); dar as boas-vindas a um mentorado que acabou de chegar, comentando na apresentação dele, vale <strong>+20 pontos</strong>; comentar ou curtir na comunidade e nas aulas vale <strong>+0,01 ponto</strong> cada; marcar um item no checklist do Dashboard ou em Minhas Metas vale <strong>+10 pontos</strong> cada.</p>
     <div class="table-wrap">
       <table class="check-table rank-table">
         <thead>
