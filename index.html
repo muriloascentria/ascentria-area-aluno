@@ -458,7 +458,15 @@
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
   #view-agenda .section-title:first-child{margin-top:4px;}
   /* Ranking: explicação de como pontua dentro de uma área com borda */
-  .view > p.section-sub.rank-explica:first-child{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);padding:14px 16px;margin:4px 0 24px!important;}
+  .rank-explica-box{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);padding:14px 16px;margin:4px 0 24px;}
+  .rank-explica-box > p.section-sub.rank-explica{font-size:11.5px!important;color:var(--text-mute)!important;line-height:1.5;margin:0!important;}
+  .rank-premio{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .rank-premio-foto{width:84px;height:84px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35));}
+  .rank-premio-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .rank-premio-rot{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);}
+  .rank-premio-txt strong{font-size:20px;font-weight:800;line-height:1.2;}
+  .rank-premio-txt small{font-size:11.5px;color:var(--text-mute);}
+  .rank-premio-falta{align-self:flex-start;margin-top:6px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--accent);color:var(--accent);}
   /* Ranking no celular: só posição, foto + nome e pontuação */
   @media (max-width:640px){ .rank-table th:nth-child(n+3):not(:last-child), .rank-table td:nth-child(n+3):not(:last-child){display:none;} .rank-table{min-width:0!important;width:100%;} .rank-table th:last-child, .rank-table td:last-child{text-align:center;white-space:nowrap;}
     .rank-table td{vertical-align:middle;}
@@ -10380,7 +10388,10 @@ function renderRanking(){
     .map(s=>({s, pts: STUDENT_POINTS[s.id] || empty}))
     .sort((a,b)=>b.pts.total-a.pts.total);
   root.innerHTML = `
+    <div class="rank-explica-box">
     <p class="section-sub rank-explica">Ranking da turma do Método Essência — cada conquista compartilhada vale <strong>+600 pontos</strong>; publicar sua apresentação vale <strong>+10 pontos</strong> (uma vez só — some se você excluir a publicação, e volta se publicar de novo); dar as boas-vindas a um mentorado que acabou de chegar, comentando na apresentação dele, vale <strong>+20 pontos</strong>; comentar ou curtir na comunidade e nas aulas vale <strong>+0,01 ponto</strong> cada; marcar um item no checklist do Dashboard ou em Minhas Metas vale <strong>+10 pontos</strong> cada.</p>
+    ${rankPremioHtml()}
+    </div>
     <div class="table-wrap">
       <table class="check-table rank-table">
         <thead>
@@ -10431,6 +10442,23 @@ function renderRanking(){
     if(!window.matchMedia('(max-width:640px)').matches) return;
     const r = rows.find(x=>x.s.id===tr.dataset.rankSid); if(r) rankDetalhe(r.s, r.pts, +tr.dataset.rankPos, r.s.id===meId);
   }));
+}
+/* Prêmio do Ranking (pedido em 22/11/2026): iPhone 17 Pro, apuração em 23/12/2026 às 23h59 (Brasília).
+   A foto fica em premio-ranking.png no site; se o arquivo ainda não existir, o espaço da foto some sozinho. */
+const RANK_PREMIO = { nome:'iPhone 17 Pro', fim:'2026-12-23T23:59:00-03:00', foto:'premio-ranking.png' };
+function rankPremioHtml(){
+  const ms = Date.parse(RANK_PREMIO.fim) - Date.now();
+  const dias = Math.ceil(ms/864e5);
+  const falta = ms<=0 ? 'Ranking encerrado' : dias<=1 ? 'Termina hoje às 23h59' : `Faltam ${dias} dias`;
+  return `<div class="rank-premio">
+    <img class="rank-premio-foto" src="${RANK_PREMIO.foto}" alt="${escapeAttr(RANK_PREMIO.nome)}" onerror="this.remove()">
+    <div class="rank-premio-txt">
+      <span class="rank-premio-rot">Prêmio do Ranking</span>
+      <strong>${escapeHtml(RANK_PREMIO.nome)}</strong>
+      <small>Resultado em 23/12, às 23h59</small>
+      <span class="rank-premio-falta">${falta}</span>
+    </div>
+  </div>`;
 }
 function rankDetalhe(st, pts, pos, eu){
   const itens = [
