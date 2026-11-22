@@ -19087,17 +19087,28 @@ function eqCrmMetasHtml(){
   if(!r || !r.dados) return `<div class="vendas-alert-card vendas-meta"><div class="vac-title">${icon('target')} Metas da semana <span class="vm-base">eCRM</span></div><div class="vm-falta" style="margin:6px 0">Aguardando o eCRM: os números aparecem aqui depois que o funil do eCRM for aberto.</div></div>`;
   const d = r.dados, M = d.metas || {}, fm = M.feito_mes || {}, mm = M.mes || {};
   const velha = Date.now() - Date.parse(r.atualizado_em) > 6*3600e3;
-  const bloco = (rot, n, meta, sub)=>{ const ok = meta ? n>=meta : false; const pct = meta ? Math.min(100, Math.round(n/meta*100)) : 100;
-    return `<div class="vm-bloco ${ok?'ok':''}"><div class="vm-rot">${rot}</div><div class="vm-num"><b>${n}</b>${meta!=null ? ` de ${meta}` : ''}</div><div class="vm-barra"><i style="width:${pct}%"></i></div><div class="vm-falta">${meta ? (ok ? 'Meta batida' : `Faltam <b>${meta-n}</b>`) : ''}${sub ? ` · ${sub}` : ''}</div></div>`; };
+  /* Bloco verde quando bate a meta da semana ou quando a meta do mês já foi batida (aí a meta da semana do eCRM vira 0). */
+  const bloco = (rot, n, meta, feitoMes, metaMes, sub)=>{
+    const mesOk = !!metaMes && feitoMes>=metaMes;
+    const ok = mesOk || (meta ? n>=meta : meta===0);
+    const pct = mesOk || !meta ? 100 : Math.min(100, Math.round(n/meta*100));
+    const de = meta ? ` de ${meta}` : mesOk ? ` nesta semana` : '';
+    const falta = mesOk ? `Meta do mês batida: <b>${feitoMes} de ${metaMes}</b>` : meta ? (ok ? 'Meta da semana batida' : `Faltam <b>${meta-n}</b>`) : '';
+    return `<div class="vm-bloco ${ok?'ok':''}"><div class="vm-rot">${rot}</div><div class="vm-num"><b>${n}</b>${de}</div><div class="vm-barra"><i style="width:${pct}%"></i></div><div class="vm-falta">${falta}${sub ? ` · ${sub}` : ''}</div></div>`; };
   const ini2 = d.semana_ini ? d.semana_ini.slice(8,10)+'/'+d.semana_ini.slice(5,7) : '';
-  const M0 = (r.dados||{}).metas || {}, tudo = [['leads','leads'],['agendadas','agendadas'],['realizadas','realizadas'],['vendas_mes','vendas_mes']].every(([k,m])=>M0[m] && ((r.dados||{})[k]||0)>=M0[m]);
+  const blocos = [
+    bloco('Leads novos', d.leads||0, M.leads, fm.leads||0, mm.leads, ''),
+    bloco('Sessões agendadas', d.agendadas||0, M.agendadas, fm.agendadas||0, mm.agendadas, ''),
+    bloco('Sessões realizadas', d.realizadas||0, M.realizadas, fm.realizadas||0, mm.realizadas, ''),
+    bloco('Vendas do mês', d.vendas_mes||0, M.vendas_mes, d.vendas_mes||0, M.vendas_mes, d.vendas_semana ? `${d.vendas_semana} nesta semana` : ''),
+  ];
+  /* Quem ainda não bateu a do mês mostra "X de Y no mês" embaixo. */
+  const sub = (k)=> mm[k] && (fm[k]||0)<mm[k] ? ` · ${fm[k]||0} de ${mm[k]} no mês` : '';
+  const tudo = blocos.every(b=>b.startsWith('<div class="vm-bloco ok'));
   return `<div class="vendas-alert-card vendas-meta ${tudo?'ok':''}">
     <div class="vac-title">${icon('target')} Metas da semana <span class="vm-base">eCRM${ini2 ? ' · semana desde '+ini2 : ''} · atualizado ${escapeHtml(tzDataHora(r.atualizado_em, true))}</span></div>
     <div class="vm-grid">
-      ${bloco('Leads novos', d.leads||0, M.leads, mm.leads ? `${fm.leads||0} de ${mm.leads} no mês` : '')}
-      ${bloco('Sessões agendadas', d.agendadas||0, M.agendadas, mm.agendadas ? `${fm.agendadas||0} de ${mm.agendadas} no mês` : '')}
-      ${bloco('Sessões realizadas', d.realizadas||0, M.realizadas, mm.realizadas ? `${fm.realizadas||0} de ${mm.realizadas} no mês` : '')}
-      ${bloco('Vendas do mês', d.vendas_mes||0, M.vendas_mes, d.vendas_semana ? `${d.vendas_semana} nesta semana` : '')}
+      ${blocos.map((b,i)=>{ const k = ['leads','agendadas','realizadas',null][i]; return k ? b.replace(/<\/div><\/div>$/, sub(k)+'</div></div>') : b; }).join('')}
     </div>
     ${velha ? '<div class="vm-rodape">Números da última vez que o funil do eCRM foi aberto; abra o eCRM para atualizar.</div>' : ''}
   </div>`;
