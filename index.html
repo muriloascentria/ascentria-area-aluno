@@ -463,7 +463,7 @@
     .rank-table td:first-child{width:34px;}
     .rank-table .rank-pts{display:inline-flex;flex-direction:column;align-items:center;gap:3px;background:none!important;padding:0!important;}
     .rank-table .rank-pts-n{display:inline-flex;align-items:center;justify-content:center;min-width:54px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);font-weight:800;font-size:13px;color:var(--text);}
-    .rank-table .rank-pts-u{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);font-weight:600;}
+    .rank-table .rank-pts-u{display:none!important;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);font-weight:600;}
     .rank-table .rank-pts-u::before{content:'';}
   }
   .rank-voce{font-weight:400;color:var(--text-mute);font-size:11.5px;}
@@ -10399,7 +10399,7 @@ function renderRanking(){
               <td>${r.pts.aulas}</td>
               <td>${r.pts.aulasLikes}</td>
               <td>${r.pts.dashboardChecks + r.pts.metasChecks}</td>
-              <td><span class="rank-pts"><span class="rank-pts-n">${formatPts(r.pts.total)}</span><span class="rank-pts-u"> pontos</span></span></td>
+              <td><span class="rank-pts"><span class="rank-pts-n">${formatPts(r.pts.total)}</span><span class="rank-pts-u"> pts</span></span></td>
             </tr>`;
           }).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
         </tbody>
