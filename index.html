@@ -743,6 +743,11 @@
   .aulas-al .busca-info{font-size:11.5px;color:var(--text-mute);margin-top:10px;}
   .aulas-al .category-block{margin-top:var(--ini-r);}
   .aulas-al .category-block .section-title.ini-sec{margin-top:0!important;}
+  .mat-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 0;}
+  .mat-al .materials-grid{margin-top:0;}
+  .mat-al .material-card .title{font-size:13.5px;}
+  .mat-al .material-card .meta{font-size:11.5px;color:var(--text-mute);}
+  .mat-al .mat-trava{opacity:.75;}
   .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
   .im-conta{font-size:11.5px;color:var(--text-mute);}
   .im-tit{font-size:15px!important;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;}
@@ -10425,30 +10430,57 @@ function renderAgenda(){
 }
 
 /* ================= VIEW: MATERIAIS ================= */
+/* Materiais: além dos materiais gerais, reúne todos os documentos anexados às aulas (course_materials),
+   organizados pelos mesmos módulos das Aulas. Material de aula ainda bloqueada aparece com cadeado e abre
+   junto com a aula. Pedido em 22/11/2026. */
+function matTipo(link){
+  const l = String(link||'');
+  if(/docs\.google\.com\/spreadsheets/.test(l)) return ['Planilha','chart'];
+  if(/docs\.google\.com\/(document|presentation)/.test(l)) return ['Documento','file'];
+  if(/drive\.google\.com\/drive\/folders/.test(l)) return ['Pasta','folder'];
+  if(/wispform|forms\.gle|docs\.google\.com\/forms/.test(l)) return ['Formulário','check'];
+  return ['Arquivo','file'];
+}
 function renderMateriais(){
-  document.getElementById('view-materiais').innerHTML = `
-    <p class="section-sub">Materiais de apoio disponíveis para toda a turma.</p>
-    <div class="materials-grid">
-      ${MATERIALS.map(m=>`
+  const st = getStudent(currentStudentId);
+  const tier = getViewingTier();
+  const cats = orderedCourseCats();
+  const secoes = cats.map(cat=>{
+    const itens = [];
+    COURSES.filter(c=>c.cat===cat).forEach(c=>{
+      (c.materiais||[]).filter(m=>m.link && (!m.somenteCurso || tier==='curso')).forEach(m=>itens.push({ m, c, locked: isLessonLocked(c.id, st) }));
+    });
+    return { cat, itens };
+  }).filter(x=>x.itens.length);
+  const card = (titulo, sub, tipo, ic, acao)=>`
         <div class="material-card">
-          <div class="material-icon">${icon('folder')}</div>
+          <div class="material-icon">${icon(ic)}</div>
           <div class="mi">
-            <div class="title">${m.title}</div>
-            <div class="meta">${m.type}${m.size? ' · '+m.size:''}</div>
-            ${m.link
-              ? `<a class="btn-mini" href="${m.link}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`
-              : `<button class="btn-mini" data-dl="${m.id}">${icon('download')} Baixar</button>`}
+            <div class="title">${escapeHtml(titulo)}</div>
+            <div class="meta">${escapeHtml(sub)}</div>
+            ${acao}
           </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  document.querySelectorAll('[data-dl]').forEach(btn=>{
+        </div>`;
+  document.getElementById('view-materiais').innerHTML = `<div class="ini-al mat-al">
+    <p class="section-sub">Todos os materiais de apoio do Método Essência num lugar só, organizados pelos mesmos módulos das Aulas.</p>
+    ${MATERIALS.length ? `<h2 class="section-title ini-sec">Materiais gerais</h2>
+    <div class="materials-grid">${MATERIALS.map(m=>card(m.title, m.type+(m.size?' · '+m.size:''), '', 'folder', m.link
+      ? `<a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`
+      : `<button class="btn-mini" data-dl="${m.id}">${icon('download')} Baixar</button>`)).join('')}</div>` : ''}
+    ${secoes.map(sec=>`<h2 class="section-title ini-sec">${escapeHtml(sec.cat)}</h2>
+    <div class="materials-grid">${sec.itens.map(({m,c,locked})=>{ const [tipo, ic] = matTipo(m.link);
+      return card(m.title, `${tipo} · Aula: ${c.title}`, tipo, locked ? 'lock' : ic, locked
+        ? `<button type="button" class="btn-mini mat-trava" data-mat-trava="${c.id}" title="Abre quando a aula for liberada">${icon('lock','tiny')} Libera com a aula</button>`
+        : `<a class="btn-mini" href="${escapeAttr(m.link)}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`); }).join('')}</div>`).join('')}
+    ${!MATERIALS.length && !secoes.length ? '<div class="empty-state">Nenhum material disponível ainda.</div>' : ''}
+  </div>`;
+  document.querySelectorAll('#view-materiais [data-dl]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const m = MATERIALS.find(x=>x.id==btn.dataset.dl);
       downloadPlaceholder(m.title.replace(/\s+/g,'_')+'.txt', m.title);
     });
   });
+  document.querySelectorAll('#view-materiais [data-mat-trava]').forEach(btn=>btn.addEventListener('click', ()=>alert(libMsgTravada())));
 }
 
 /* ================= VIEW: DASHBOARD (compartilhado aluno + equipe) ================= */
