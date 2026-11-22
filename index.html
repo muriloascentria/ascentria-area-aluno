@@ -6921,6 +6921,19 @@ async function enterApp(){
   if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); setTimeout(scPreencherCasos, 1500); }
   if(currentUserRole==='staff' && location.hash.startsWith('#termo=')) setTimeout(()=>termoVerArquivo(location.hash.slice(7)), 600);
   setTimeout(aulaDoLinkAbrir, 900);
+  /* Volta para a aba em que a pessoa estava quando tocou em Atualizar (o refresh não leva mais ao Início). */
+  try{
+    const raw = sessionStorage.getItem('voltar_aba'); sessionStorage.removeItem('voltar_aba');
+    const vb = raw ? JSON.parse(raw) : null;
+    if(vb && vb.v && document.getElementById('view-'+vb.v)) setTimeout(()=>{ try{
+      if(gateAlunoAtivo()) return;
+      if(currentUserRole==='staff'){
+        if(vb.s && getStudent(vb.s)) currentStudentId = vb.s;
+        if(vb.r && vb.r!==currentRole) setRole(vb.r);
+      }
+      goTo(vb.v);
+    }catch(e){} }, 300);
+  }catch(e){}
   if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
   setTimeout(pwaConvidarInstalar, 2500);
   setTimeout(pushConvidar, 6000);
@@ -7856,6 +7869,7 @@ function setupNav(){
   const rfb = document.getElementById('refresh-btn');
   if(rfb) rfb.addEventListener('click', async ()=>{
     rfb.classList.add('girando');
+    try{ if(typeof currentView!=='undefined' && currentView) sessionStorage.setItem('voltar_aba', JSON.stringify({ v:currentView, r:currentRole, s:currentStudentId })); }catch(e){}
     try{ if(navigator.serviceWorker){ const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.update().catch(()=>{}))); } }catch(e){}
     location.reload();
   });
