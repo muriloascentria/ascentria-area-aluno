@@ -1111,7 +1111,13 @@
   .comp2-corpo{width:100%;}
   /* campo 'Escreva um comentário' no tamanho das explicações (o celular forçava 16px) */
   .comment-composer input[data-comment-input], .comment-composer input[data-comment-input]::placeholder{font-size:11.5px!important;}
-  .comment-composer input[data-comment-input]{height:34px;padding-top:0;padding-bottom:0;}
+  .comment-composer input[data-comment-input]{height:34px;padding-top:0;padding-bottom:0;border-radius:10px!important;}
+  /* Raios em harmonia: card 14px · tudo que fica dentro dele (campo, emoji, enviar) 10px · tags redondas */
+  .comp2 textarea{border-radius:10px!important;}
+  .comment-composer .emoji-btn{width:34px;height:34px;min-width:34px;padding:0;margin:0!important;border-radius:10px!important;display:inline-flex;align-items:center;justify-content:center;font-size:15px;border:1px solid var(--border);background:var(--bg-elev);flex:0 0 auto;}
+  .comment-composer .cc-enviar{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px!important;border-radius:10px!important;border:1px solid var(--border)!important;background:var(--bg-elev)!important;color:var(--accent)!important;font-size:12.5px;font-weight:700;flex:0 0 auto;}
+  .comment-composer .cc-enviar .icon{width:15px;height:15px;}
+  .comment-composer{gap:6px;align-items:center;}
   /* Filtros da Comunidade numa linha só: dividem a largura; se não couber, rolam para o lado */
   .com-mural-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;}
   .com-mural-cab .section-title.ini-sec{margin:0!important;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
@@ -10106,7 +10112,7 @@ function postHtml(p,compact,showCourseTag){
               ${initialsAvatar(replyAuthor.initials,replyAuthor.color,22,replyAuthor.avatarUrl)}
               <input type="text" placeholder="${replyTargets[p.id]? 'Responder a '+escapeAttr(replyTargets[p.id].name)+'...' : 'Escreva um comentário...'}" data-comment-input="${p.id}">
               <button type="button" class="emoji-btn" title="Emoji">😊</button>
-              <button class="btn-mini" data-comment-send="${p.id}">Enviar</button>
+              <button class="btn-mini cc-enviar" data-comment-send="${p.id}">${icon('send','tiny')}<span>Enviar</span></button>
             </div>
           </div>` : ''}
         </div>`:''}
