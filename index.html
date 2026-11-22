@@ -6213,6 +6213,13 @@ let currentUserProfile = null; // linha de profiles do próprio usuário logado 
    - aluno logado → ele mesmo (currentStudentId já é o próprio auth.uid());
    - equipe interna → a própria conta da equipe interna (NUNCA o aluno selecionado em "Visão Geral"),
      pois author_id sempre precisa bater com auth.uid() no banco. */
+/* Conta "Teste Aluno (Murilo)": comentários e curtidas na Comunidade saem como Murilo Pedroso, equipe interna
+   (pedido em 22/11/2026). Publicações novas continuam saindo como a conta de teste. O banco libera isso
+   só para esta conta (teste_aluno_como_murilo). */
+const TESTE_ALUNO_MURILO = '7e570000-0000-4000-8000-0000000000a1';
+function interacaoAutorId(){
+  return (currentUser && currentUser.id===TESTE_ALUNO_MURILO) ? GT_MURILO_UID : actingAuthorId();
+}
 function actingAuthorId(){
   return (currentUserRole==='staff' && currentUserProfile) ? currentUserProfile.id : currentStudentId;
 }
@@ -6475,7 +6482,7 @@ async function bootstrapData(){
     sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
     sb.from('live_session_watched').select('live_session_id').eq('student_id', currentUser.id),
     // Só os ids do que EU curti — em vez das curtidas de todo mundo, linha por linha.
-    sb.from('community_likes').select('post_id').eq('student_id', currentUser.id),
+    sb.from('community_likes').select('post_id').eq('student_id', interacaoAutorId()),
     // Uma linha, só pra saber se a pessoa já publicou a apresentação dela (o mural vem paginado agora).
     sb.from('community_posts').select('id').eq('author_id', currentUser.id).eq('type','apresentacao').limit(1),
   ]);
@@ -8306,7 +8313,7 @@ function inicioMetaBarraHtml(s, nextTask){
 function inicioComunidadeHtml(){
   const eu = actingAuthorId();
   const lista = COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===getViewingTier());
-  const novas = lista.filter(p=>p.authorId!==eu && !p.liked && !(p.comments||[]).some(c=>c.authorId===eu)).slice(0,2);
+  const novas = lista.filter(p=>p.authorId!==eu && !p.liked && !(p.comments||[]).some(c=>c.authorId===eu || c.authorId===interacaoAutorId())).slice(0,2);
   if(!novas.length) return `<div class="im-com-vazio">${lista.length ? 'Você já interagiu com as publicações mais recentes da Comunidade. 💬' : 'Ainda não há publicações na Comunidade.'} <button type="button" class="btn-mini" data-goto="comunidade">Abrir a Comunidade</button></div>`;
   return `<div class="im-com">${novas.map(p=>`<div class="im-com-item" data-inicio-post="${p.id}" data-aud="${escapeAttr(p.audience)}" role="button" tabindex="0" title="Abrir na Comunidade">${postHtml(p,true,true)}<div class="im-com-abrir">Toque para abrir na Comunidade ›</div></div>`).join('')}</div>`;
 }
@@ -9043,7 +9050,7 @@ function bindCourseComments(c){
       p.liked = !p.liked;
       p.likes += p.liked? 1 : -1;
       if(p.liked) MEUS_LIKES.add(p.id); else MEUS_LIKES.delete(p.id);
-      syncCommunityLike(p.id, actingAuthorId(), p.liked);
+      syncCommunityLike(p.id, interacaoAutorId(), p.liked);
       openCourseModal(c.id);
     });
   });
@@ -9059,8 +9066,8 @@ function bindCourseComments(c){
       btn.disabled = true;
       try{
         const menc = extractMentions(input);
-        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text, rt? rt.commentId : null, menc);
-        p.comments.push({id:commentId, authorId:actingAuthorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false, mentions:menc.mentions, mentionAll:menc.mentionAll});
+        const commentId = await syncCommunityComment(p.id, interacaoAutorId(), text, rt? rt.commentId : null, menc);
+        p.comments.push({id:commentId, authorId:interacaoAutorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false, mentions:menc.mentions, mentionAll:menc.mentionAll});
         maybeNotifyPostAuthor(p);
         maybeNotifyCommentAuthor(p, rt? rt.commentId : null);
         delete replyTargets[pid];
@@ -9886,7 +9893,7 @@ function postHtml(p,compact,showCourseTag){
   if(!author) return '';
   const t = POST_TYPES[p.type] || POST_TYPES.interacao;
   const course = (showCourseTag && p.courseId) ? getCourse(p.courseId) : null;
-  const replyAuthor = getPerson(actingAuthorId());
+  const replyAuthor = getPerson(interacaoAutorId());
   const answered = isAnswered(p);
   const nameTag = (person)=> person.role==='staff' ? ` <span class="staff-tag">Equipe interna</span>` : '';
   const iAmStaff = getPerson(actingAuthorId())?.role==='staff';
@@ -9915,7 +9922,7 @@ function postHtml(p,compact,showCourseTag){
         <div class="comments">
           ${p.comments.map(c=>{
             const a=getPerson(c.authorId); if(!a) return '';
-            const canDeleteComment = c.authorId===actingAuthorId() || iAmStaff;
+            const canDeleteComment = c.authorId===interacaoAutorId() || iAmStaff;
             const replySrc = c.replyTo? p.comments.find(x=>x.id==c.replyTo) : null;
             const replySrcAuthor = replySrc? getPerson(replySrc.authorId) : null;
             const commentUnseen = c.authorId===actingAuthorId() && c.notifyAuthor;
@@ -10050,7 +10057,7 @@ function renderComunidade(){
       p.liked = !p.liked;
       p.likes += p.liked? 1 : -1;
       if(p.liked) MEUS_LIKES.add(p.id); else MEUS_LIKES.delete(p.id);
-      syncCommunityLike(p.id, actingAuthorId(), p.liked);
+      syncCommunityLike(p.id, interacaoAutorId(), p.liked);
       renderComunidade();
     });
   });
@@ -10066,8 +10073,8 @@ function renderComunidade(){
       btn.disabled = true;
       try{
         const menc = extractMentions(input);
-        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text, rt? rt.commentId : null, menc);
-        p.comments.push({id:commentId, authorId:actingAuthorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false, mentions:menc.mentions, mentionAll:menc.mentionAll});
+        const commentId = await syncCommunityComment(p.id, interacaoAutorId(), text, rt? rt.commentId : null, menc);
+        p.comments.push({id:commentId, authorId:interacaoAutorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false, mentions:menc.mentions, mentionAll:menc.mentionAll});
         maybeNotifyPostAuthor(p);
         maybeNotifyCommentAuthor(p, rt? rt.commentId : null);
         delete replyTargets[pid];
