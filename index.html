@@ -454,34 +454,6 @@
   h2.section-title{font-size:19px;font-weight:700;margin:30px 0 14px;display:flex;align-items:center;gap:8px;}
   h2.section-title:first-child{margin-top:0;}
   .section-sub{color:var(--text-dim);font-size:13px;margin-top:-8px;margin-bottom:16px;}
-  /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
-  #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
-  #view-agenda .section-title:first-child{margin-top:4px;}
-  /* Ranking: explicação de como pontua dentro de uma área com borda */
-  .rank-explica-box{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);padding:14px 16px;margin:4px 0 24px;}
-  .rank-explica-box > p.section-sub.rank-explica{font-size:11.5px!important;color:var(--text-mute)!important;line-height:1.5;margin:0!important;}
-  .rank-premio{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
-  .rank-premio-foto{width:84px;height:84px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35));}
-  .rank-premio-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
-  .rank-premio-rot{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);}
-  .rank-premio-txt strong{font-size:20px;font-weight:800;line-height:1.2;}
-  .rank-premio-txt small{font-size:11.5px;color:var(--text-mute);}
-  .rank-premio-falta{align-self:flex-start;margin-top:6px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--accent);color:var(--accent);}
-  /* Ranking no celular: só posição, foto + nome e pontuação */
-  @media (max-width:640px){ .rank-table th:nth-child(n+3):not(:last-child), .rank-table td:nth-child(n+3):not(:last-child){display:none;} .rank-table{min-width:0!important;width:100%;} .rank-table th:last-child, .rank-table td:last-child{text-align:center;white-space:nowrap;}
-    .rank-table td{vertical-align:middle;}
-    .rank-table .rank-nome{display:flex;flex-direction:column;justify-content:center;line-height:1.25;}
-    .rank-table .rn1, .rank-table .rn2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36vw;}
-    .rank-table .rn1{font-weight:700;} .rank-table .rn2{font-size:11.5px;color:var(--text-mute);}
-    .rank-table td:first-child{width:34px;}
-    .rank-table .rank-pts{display:inline-flex;flex-direction:column;align-items:center;gap:3px;background:none!important;padding:0!important;}
-    .rank-table .rank-pts-n{display:inline-flex;align-items:center;justify-content:center;width:92px;box-sizing:border-box;height:28px;padding:0 8px;border-radius:999px;font-variant-numeric:tabular-nums;border:1px solid var(--border);background:var(--bg-elev);font-weight:800;font-size:13px;color:var(--text);}
-    .rank-table .rank-pts-u{display:none!important;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);font-weight:600;}
-    .rank-table .rank-pts-u::before{content:'';}
-  }
-  .rank-voce{font-weight:400;color:var(--text-mute);font-size:11.5px;}
-  /* Explicação do topo de cada tela: mesmo tamanho, cor e respiro em todas (padrão do Início, Aulas e Comunidade) */
-  .view > p.section-sub:first-child, .view > div:first-child > p.section-sub:first-child{font-size:11.5px!important;color:var(--text-mute)!important;font-style:normal;line-height:1.5;margin:4px 0 24px!important;}
 
   /* Hero / greeting */
   .hero{
@@ -743,63 +715,6 @@
   .pe-decl{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--success);margin-top:8px;}
   .pe-decl .icon{width:13px;height:13px;stroke:var(--success);}
   .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px;}
-  .im-meta{display:block;width:100%;margin-top:14px;box-sizing:border-box;}
-  /* Início do mentorado: o mesmo espaço entre os três cards do topo (--ini-g) e o mesmo respiro entre as seções (--ini-r). */
-  .ini-al{--ini-g:12px;--ini-r:40px;}
-  .ini-al .stat-row{gap:var(--ini-g)!important;margin-top:var(--ini-g);}
-  .ini-al .stat-row > .stat-card{flex:1 1 0;min-width:0;}
-  .ini-al .im-meta{margin-top:var(--ini-g)!important;}
-  .ini-al .aniv-bloco, .ini-al .ep-inicio, .ini-al .ee-banner, .ini-al .premio-banner{margin-top:var(--ini-r)!important;margin-bottom:0!important;}
-  .ini-al .ee-banner + .premio-banner{margin-top:var(--ini-g)!important;}
-  .ini-al .section-title.ini-sec{margin-top:var(--ini-r)!important;margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em;}
-  .ini-al .kpi-row{margin-top:0;}
-  /* Escala única de fontes do Início: título 23 · seção 16 caixa alta · rótulo 11 caixa alta · número 20 · título de card 15 · texto 13,5 · apoio 11,5 */
-  .ini-al .hero p{font-size:14px;}
-  .ini-al .section-title.ini-sec{font-size:16px!important;font-weight:800;letter-spacing:.08em;}
-  .ini-al .stat-card .label, .ini-al .kpi-tile .label{font-size:11px!important;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-mute);}
-  .ini-al .stat-card .value:not(.im-tit), .ini-al .kpi-tile .value{font-size:20px!important;font-weight:800;line-height:1.2;}
-  .ini-al .im-tit, .ini-al .ep-inicio-topo strong{font-size:15px!important;font-weight:700;}
-  .ini-al .ep-inicio-item, .ini-al .post-text{font-size:13.5px;}
-  .ini-al .im-prazo, .ini-al .im-conta, .ini-al .im-pct, .ini-al .kpi-note, .ini-al .im-com-abrir{font-size:11.5px;}
-  .ini-al .kpi-note{font-style:normal;}
-  /* Aulas: mesma escala do Início (explicação = nota de apoio, busca = texto, módulos = título de seção) */
-  .aulas-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
-  .aulas-al .busca-bar{margin-bottom:0;margin-top:4px;}
-  .aulas-busca-campo{position:relative;flex:1;display:flex;align-items:center;min-width:0;}
-  .aulas-busca-campo .aulas-lupa{position:absolute;left:12px;width:15px;height:15px;color:var(--text-mute);pointer-events:none;}
-  .aulas-busca-campo .ps-input{flex:1;width:100%;padding-left:34px!important;}
-  .aulas-al .busca-bar .ps-input{font-size:11.5px!important;padding-top:10px;padding-bottom:10px;}
-  .aulas-al .busca-bar .ps-input::placeholder{font-size:11.5px;color:var(--text-mute);}
-  .aulas-al .busca-bar .btn-outline{font-size:12px;}
-  .aulas-al .busca-info{font-size:11.5px;color:var(--text-mute);margin-top:10px;}
-  .aulas-al .category-block{margin-top:var(--ini-r);}
-  .aulas-al .category-block .section-title.ini-sec{margin-top:0!important;}
-  .mat-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 0;}
-  .mat-al .materials-grid{margin-top:0;}
-  /* cards equidistantes: mesmo espaço entre todos e todos com a mesma altura */
-  .mat-al .materials-grid{gap:12px!important;grid-auto-rows:1fr;align-items:stretch;}
-  .mat-al .material-card{margin:0!important;height:100%;box-sizing:border-box;align-items:center;}
-  .mat-al .material-card .mi{display:flex;flex-direction:column;gap:4px;min-width:0;}
-  .mat-al .material-card .btn-mini{align-self:flex-start;margin-top:4px;}
-  .mat-al .materials-grid.mat-todos{margin-top:18px;}
-  /* mesmo tamanho de fonte em todos os cards de material: nome, tipo/aula e botão */
-  .mat-al .material-card .title, .mat-al .material-card .meta, .mat-al .material-card .btn-mini{font-size:12.5px!important;line-height:1.35;}
-  .mat-al .material-card .title{font-weight:700;}
-  .mat-al .material-card .meta{color:var(--text-mute);}
-  .mat-al .mat-trava{opacity:.75;}
-  .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
-  .im-conta{font-size:11.5px;color:var(--text-mute);}
-  .im-tit{font-size:15px!important;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;}
-  .im-prazo{font-size:11.5px;font-weight:600;color:var(--text-mute);}
-  .im-prazo.atrasada{color:#ef4444;}
-  .im-barra{position:relative;height:10px;border-radius:999px;overflow:hidden;margin-top:12px;opacity:.85;box-shadow:inset 0 1px 2px rgba(0,0,0,.25);}
-  .im-barra i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width .6s ease;}
-  .im-pct{font-size:11.5px;font-weight:700;color:#22c55e;margin-top:6px;text-align:right;}
-  .im-com-item{cursor:pointer;border-radius:var(--radius,14px);}
-  .im-com-item .post{margin-bottom:4px;}
-  .im-com-item:hover .post{border-color:var(--accent);}
-  .im-com-abrir{font-size:11.5px;color:var(--accent);font-weight:700;text-align:right;margin:0 4px 14px;}
-  .im-com-vazio{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px;border:1px dashed var(--border);border-radius:12px;color:var(--text-dim);font-size:13px;}
   .stat-card{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
     padding:14px 16px;min-width:150px;flex:1;
@@ -1096,85 +1011,6 @@
     color:var(--text);padding:10px 12px;font-size:13.5px;resize:vertical;min-height:92px;font-family:inherit;
   }
   .composer textarea:focus{outline:none;border-color:var(--accent);}
-  /* Composer da Comunidade: foto + convite numa linha, texto de fora a fora, e tags, emoji e Publicar numa linha só */
-  .post:not(.com-aberto) > .comments{display:none;}
-  .post.com-aberto [data-toggle-comments]{color:var(--accent);}
-  .composer.comp2{flex-direction:column;gap:12px;}
-  .tagpick-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px;}
-  .tagpick{width:100%;max-width:420px;background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:20px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.45);}
-  .tagpick-tit{font-size:15px;font-weight:700;}
-  @media (max-width:640px){ .rank-table tbody tr[data-rank-sid]{cursor:pointer;} }
-  .rank-det-cab{display:flex;align-items:center;gap:12px;}
-  .rank-det-nome{display:flex;flex-direction:column;gap:2px;min-width:0;}
-  .rank-det-nome strong{font-size:15px;}
-  .rank-det-nome small{font-size:11.5px;color:var(--text-mute);}
-  .rank-det-voce{font-weight:400;color:var(--text-mute);font-size:12px;}
-  .rank-det-lista{display:flex;flex-direction:column;margin-top:16px;border-top:1px solid var(--border);}
-  .rank-det-item{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border);font-size:13.5px;}
-  .rank-det-ic{width:28px;height:28px;border-radius:50%;background:var(--bg-elev);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:var(--accent);}
-  .rank-det-ic .icon{width:14px;height:14px;}
-  .rank-det-rot{flex:1;color:var(--text-dim);}
-  .rank-det-item b{font-weight:800;}
-  .tagpick-sub{font-size:11.5px;color:var(--text-mute);margin-top:4px;}
-  .tagpick-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
-  .tagpick-op{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:12px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;}
-  .tagpick-op .icon{width:16px;height:16px;}
-  .tagpick-op.tag-duvida{color:var(--danger);} .tagpick-op.tag-interacao{color:var(--accent-2,var(--accent));} .tagpick-op.tag-conquista{color:var(--success);} .tagpick-op.tag-apresentacao{color:var(--shared);}
-  .tagpick-cancelar{display:block;width:100%;height:42px;margin-top:14px;background:none;border:1px solid var(--border);border-radius:999px;color:var(--text-dim);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
-  .tagpick-cancelar:hover{border-color:var(--text-mute);color:var(--text);}
-  .comp2-topo{display:flex;align-items:center;gap:12px;}
-  .comp2-convite{font-size:15px;font-weight:600;line-height:1.4;color:var(--text-dim);}
-  .comp2-corpo{width:100%;}
-  /* campo 'Escreva um comentário' no tamanho das explicações (o celular forçava 16px) */
-  .comment-composer input[data-comment-input], .comment-composer input[data-comment-input]::placeholder{font-size:11.5px!important;}
-  .comment-composer input[data-comment-input]{height:34px;padding-top:0;padding-bottom:0;border-radius:10px!important;}
-  /* Raios em harmonia: card 14px · tudo que fica dentro dele (campo, emoji, enviar) 10px · tags redondas */
-  .comp2 textarea{border-radius:10px!important;}
-  .comment-composer .emoji-btn{width:34px;height:34px;min-width:34px;padding:0;margin:0!important;border-radius:10px!important;display:inline-flex;align-items:center;justify-content:center;font-size:15px;border:1px solid var(--border);background:var(--bg-elev);flex:0 0 auto;}
-  .comment-composer .cc-enviar{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px!important;border-radius:10px!important;border:1px solid var(--border)!important;background:var(--bg-elev)!important;color:var(--accent)!important;font-size:12.5px;font-weight:700;flex:0 0 auto;}
-  .comment-composer .cc-enviar .icon{width:15px;height:15px;}
-  .comment-composer{gap:6px;align-items:center;}
-  /* mesma altura exata para campo, emoji e Enviar no comentário */
-  .comment-composer input[data-comment-input], .comment-composer .emoji-btn, .comment-composer .cc-enviar{height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;}
-  .comment-composer .emoji-btn{width:36px!important;min-width:36px!important;}
-  /* Filtros da Comunidade numa linha só: dividem a largura; se não couber, rolam para o lado */
-  .com-mural-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;}
-  .com-mural-cab .section-title.ini-sec{margin:0!important;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
-  .com-filtro{position:relative;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto;}
-  .com-filtro.ativo{border-color:var(--accent);color:var(--accent);}
-  .com-filtro .icon{width:13px;height:13px;}
-  .com-filtro select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:inherit;font:inherit;font-size:12px!important;padding:0;cursor:pointer;outline:none;}
-  .com-filtro select option{color:#111;}
-  .com-filtro-seta{position:absolute;right:11px;pointer-events:none;font-size:10px;}
-  #community-filters{flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-  #community-filters::-webkit-scrollbar{display:none;}
-  #community-filters .filter-tab{flex:1 1 auto;white-space:nowrap;text-align:center;padding:7px 10px!important;font-size:11.5px!important;}
-  @media (max-width:520px){ #community-filters{gap:4px!important;} #community-filters .filter-tab{padding:7px 6px!important;font-size:10.5px!important;} }
-  .comp2 textarea{min-height:84px;}
-  .comp2 .composer-footer{flex-wrap:nowrap;gap:6px;margin-top:10px;justify-content:flex-start;}
-  .comp2 .type-select{flex-wrap:nowrap;gap:6px;flex:1;min-width:0;}
-  .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #post-btn{height:36px;min-height:36px;box-sizing:border-box;margin:0;}
-  .comp2 .type-pill{width:36px;padding:0;gap:0;flex:0 0 auto;justify-content:center;transition:width .2s,padding .2s;}
-  .comp2 .emoji-btn{width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;border-radius:10px;border:1px solid var(--border);background:var(--bg-elev);}
-  .comp2 #post-btn{height:36px;min-height:36px;max-height:36px;padding:0 14px!important;justify-content:center;border-radius:10px;font-size:13px;line-height:1;}
-  .comp2.tag-aberta #post-btn .pb-rot{display:none;}
-  /* enviar no mesmo estilo dos outros botões da linha: fundo neutro, contorno e ícone na cor de destaque */
-  .comp2 #post-btn{background:var(--bg-elev)!important;border:1px solid var(--border)!important;color:var(--accent)!important;box-shadow:none!important;}
-  .comp2 #post-btn:hover{border-color:var(--accent)!important;}
-  .comp2 #post-btn:disabled{opacity:.5;}
-  .comp2 .type-pill .icon, .comp2 #post-btn .icon{width:15px;height:15px;}
-  .comp2 .type-pill{border-radius:999px;}
-  .comp2 .type-pill .tp-rot{display:none;}
-  .comp2.tag-aberta .type-pill.active{width:auto;padding:0 10px;gap:5px;font-size:11.5px;white-space:nowrap;}
-  @media (max-width:520px){ .comp2 .type-select, .comp2 .composer-footer{gap:4px;} .comp2.tag-aberta .type-pill.active{font-size:10.5px;padding:0 8px;} }
-  .comp2.tag-aberta .type-pill.active .tp-rot{display:inline;}
-  .comp2 .emoji-btn{flex:0 0 auto;}
-  .comp2 #post-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
-  .comp2.tag-aberta #post-btn .pb-rot{display:none;}
-  .comp2.tag-aberta #post-btn{width:36px;min-width:36px;padding:0!important;justify-content:center;border-radius:10px;}
-  .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #post-btn{flex-shrink:0!important;}
-  .comp2 .emoji-btn{min-width:36px;margin:0!important;}
-  #view-comunidade > .com-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
   .composer-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap;}
   .type-select{display:flex;gap:6px;flex-wrap:wrap;}
   .type-pill{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim);background:var(--bg-elev);}
@@ -1274,21 +1110,7 @@
   .agenda-card.past{opacity:0.75;}
   .agenda-card.past .agenda-date{background:var(--bg-elev);color:var(--text-mute);}
   .agenda-card.past.watched{opacity:1;border-color:var(--success);}
-  .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;}
-  /* Card da agenda: nome + tag no canto direito / "com Fulano" / horário e link; botões de fora a fora embaixo */
-  #view-agenda .agenda-info .title{display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px 6px;}
-  #view-agenda .agenda-info .title .ag-nome{flex:1 1 0;min-width:0;order:0;}
-  #view-agenda .agenda-info .title .pill{order:1;flex:0 0 auto;margin:0;}
-  #view-agenda .agenda-info .title .ag-com{flex:0 0 100%;order:2;color:var(--text);}
-  #view-agenda .agenda-info .meta{margin-top:4px;}
-  #view-agenda .agenda-actions{flex:0 0 100%;width:100%;margin-left:0;justify-content:stretch;}
-  #view-agenda .agenda-actions > *{flex:1 1 0;justify-content:center;text-align:center;}
-  #view-agenda .grav-card{gap:12px 14px;}
-  #view-agenda .grav-card .agenda-date{width:48px;height:48px;}
-  #view-agenda .grav-data{font-size:13.5px;font-weight:700;}
-  #view-agenda .grav-card{flex-wrap:nowrap;align-items:center;}
-  #view-agenda .grav-acoes{flex:1 1 auto!important;width:auto!important;min-width:0;flex-wrap:nowrap;gap:6px;}
-  #view-agenda .grav-acoes > *{height:48px;box-sizing:border-box;padding:0 8px;font-size:12px;white-space:nowrap;gap:5px;border-radius:10px;}
+  .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
   /* Garante que o ícone fique do lado do texto (não empilhado em cima) nos botões de ação da gravação,
      já que .icon é display:block por padrão — sem isso "Assistir" e "Assistido" ficavam com alturas diferentes. */
   .agenda-actions .btn-outline{display:inline-flex;align-items:center;gap:5px;}
@@ -3015,11 +2837,8 @@
   .ep-inicio small{font-size:12px;color:var(--text-mute);}
   .ep-inicio-ic{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
   .ep-inicio-ic .icon{width:18px;height:18px;color:var(--accent);}
-  /* cabeçalho do card na mesma linha: bolinha do ícone, título e botão Abrir (a regra ".ep-inicio > div" empilhava tudo) */
-  .ep-inicio > .ep-inicio-topo{display:flex;flex-direction:row;align-items:center;gap:12px;flex:0 0 auto;text-align:left;}
-  .ep-inicio-topo strong{flex:1;min-width:0;font-size:15px;}
-  .ep-inicio-topo .btn-mini{flex:0 0 auto;border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:6px 14px;font-weight:700;}
-  .ep-inicio > .ep-inicio-item{flex-direction:row;gap:10px;flex:0 0 auto;align-items:baseline;}
+  .ep-inicio-topo{display:flex;align-items:center;gap:10px;}
+  .ep-inicio-topo strong{flex:1;}
   .ep-inicio-item{display:flex;gap:10px;font-size:13px;line-height:1.35;}
   .ep-inicio-item span{font-weight:700;min-width:44px;}
   .ep-inicio-mais{padding-left:54px;}
@@ -4094,6 +3913,197 @@
     /* No celular: Criação/Conclusão e as duas datas dividem a mesma linha, sem nada sair da tela. */
   }
 .int-hab-auto{padding:10px 12px;border:1px solid var(--line, rgba(255,255,255,.08));border-radius:8px;background:rgba(255,255,255,.03);line-height:1.5;white-space:pre-line}
+  /* ===== Ajustes de layout de 22/11/2026: valem SÓ no celular (pedido do Murilo). No computador fica como era. ===== */
+  @media (max-width:640px){
+  /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
+  #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
+  #view-agenda .section-title:first-child{margin-top:4px;}
+  /* respiro maior entre Próximos encontros e Gravações anteriores, e entre as subseções das gravações */
+  #view-agenda .section-title:not(:first-child){margin-top:44px!important;}
+  #view-agenda h4.ps-h{margin-top:32px!important;margin-bottom:10px;}
+  #view-agenda .section-title + h4.ps-h{margin-top:14px!important;}
+  /* Ranking: explicação de como pontua dentro de uma área com borda */
+  .rank-explica-box{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);padding:14px 16px;margin:4px 0 24px;}
+  .rank-explica-box > p.section-sub.rank-explica{font-size:11.5px!important;color:var(--text-mute)!important;line-height:1.5;margin:0!important;}
+  .rank-premio{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .rank-premio-foto{width:84px;height:84px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35));}
+  .rank-premio-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .rank-premio-rot{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);}
+  .rank-premio-txt strong{font-size:20px;font-weight:800;line-height:1.2;}
+  .rank-premio-txt small{font-size:11.5px;color:var(--text-mute);}
+  .rank-premio-falta{align-self:flex-start;margin-top:6px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--accent);color:var(--accent);}
+  /* Ranking no celular: só posição, foto + nome e pontuação */
+  @media (max-width:640px){ .rank-table th:nth-child(n+3):not(:last-child), .rank-table td:nth-child(n+3):not(:last-child){display:none;} .rank-table{min-width:0!important;width:100%;} .rank-table th:last-child, .rank-table td:last-child{text-align:center;white-space:nowrap;}
+    .rank-table td{vertical-align:middle;}
+    .rank-table .rank-nome{display:flex;flex-direction:column;justify-content:center;line-height:1.25;}
+    .rank-table .rn1, .rank-table .rn2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36vw;}
+    .rank-table .rn1{font-weight:700;} .rank-table .rn2{font-size:11.5px;color:var(--text-mute);}
+    .rank-table td:first-child{width:34px;}
+    .rank-table .rank-pts{display:inline-flex;flex-direction:column;align-items:center;gap:3px;background:none!important;padding:0!important;}
+    .rank-table .rank-pts-n{display:inline-flex;align-items:center;justify-content:center;width:92px;box-sizing:border-box;height:28px;padding:0 8px;border-radius:999px;font-variant-numeric:tabular-nums;border:1px solid var(--border);background:var(--bg-elev);font-weight:800;font-size:13px;color:var(--text);}
+    .rank-table .rank-pts-u{display:none!important;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);font-weight:600;}
+    .rank-table .rank-pts-u::before{content:'';}
+  }
+  .rank-voce{font-weight:400;color:var(--text-mute);font-size:11.5px;}
+  /* Explicação do topo de cada tela: mesmo tamanho, cor e respiro em todas (padrão do Início, Aulas e Comunidade) */
+  .view > p.section-sub:first-child, .view > div:first-child > p.section-sub:first-child{font-size:11.5px!important;color:var(--text-mute)!important;font-style:normal;line-height:1.5;margin:4px 0 24px!important;}
+  .im-meta{display:block;width:100%;margin-top:14px;box-sizing:border-box;}
+  /* Início do mentorado: o mesmo espaço entre os três cards do topo (--ini-g) e o mesmo respiro entre as seções (--ini-r). */
+  .ini-al{--ini-g:12px;--ini-r:40px;}
+  .ini-al .stat-row{gap:var(--ini-g)!important;margin-top:var(--ini-g);}
+  .ini-al .stat-row > .stat-card{flex:1 1 0;min-width:0;}
+  .ini-al .im-meta{margin-top:var(--ini-g)!important;}
+  .ini-al .aniv-bloco, .ini-al .ep-inicio, .ini-al .ee-banner, .ini-al .premio-banner{margin-top:var(--ini-r)!important;margin-bottom:0!important;}
+  .ini-al .ee-banner + .premio-banner{margin-top:var(--ini-g)!important;}
+  .ini-al .section-title.ini-sec{margin-top:var(--ini-r)!important;margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em;}
+  .ini-al .kpi-row{margin-top:0;}
+  /* Escala única de fontes do Início: título 23 · seção 16 caixa alta · rótulo 11 caixa alta · número 20 · título de card 15 · texto 13,5 · apoio 11,5 */
+  .ini-al .hero p{font-size:14px;}
+  .ini-al .section-title.ini-sec{font-size:16px!important;font-weight:800;letter-spacing:.08em;}
+  .ini-al .stat-card .label, .ini-al .kpi-tile .label{font-size:11px!important;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-mute);}
+  .ini-al .stat-card .value:not(.im-tit), .ini-al .kpi-tile .value{font-size:20px!important;font-weight:800;line-height:1.2;}
+  .ini-al .im-tit, .ini-al .ep-inicio-topo strong{font-size:15px!important;font-weight:700;}
+  .ini-al .ep-inicio-item, .ini-al .post-text{font-size:13.5px;}
+  .ini-al .im-prazo, .ini-al .im-conta, .ini-al .im-pct, .ini-al .kpi-note, .ini-al .im-com-abrir{font-size:11.5px;}
+  .ini-al .kpi-note{font-style:normal;}
+  /* Aulas: mesma escala do Início (explicação = nota de apoio, busca = texto, módulos = título de seção) */
+  .aulas-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
+  .aulas-al .busca-bar{margin-bottom:0;margin-top:4px;}
+  .aulas-busca-campo{position:relative;flex:1;display:flex;align-items:center;min-width:0;}
+  .aulas-busca-campo .aulas-lupa{position:absolute;left:12px;width:15px;height:15px;color:var(--text-mute);pointer-events:none;}
+  .aulas-busca-campo .ps-input{flex:1;width:100%;padding-left:34px!important;}
+  .aulas-al .busca-bar .ps-input{font-size:11.5px!important;padding-top:10px;padding-bottom:10px;}
+  .aulas-al .busca-bar .ps-input::placeholder{font-size:11.5px;color:var(--text-mute);}
+  .aulas-al .busca-bar .btn-outline{font-size:12px;}
+  .aulas-al .busca-info{font-size:11.5px;color:var(--text-mute);margin-top:10px;}
+  .aulas-al .category-block{margin-top:var(--ini-r);}
+  .aulas-al .category-block .section-title.ini-sec{margin-top:0!important;}
+  .mat-al > .section-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 0;}
+  .mat-al .materials-grid{margin-top:0;}
+  /* cards equidistantes: mesmo espaço entre todos e todos com a mesma altura */
+  .mat-al .materials-grid{gap:12px!important;grid-auto-rows:1fr;align-items:stretch;}
+  .mat-al .material-card{margin:0!important;height:100%;box-sizing:border-box;align-items:center;}
+  .mat-al .material-card .mi{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .mat-al .material-card .btn-mini{align-self:flex-start;margin-top:4px;}
+  .mat-al .materials-grid.mat-todos{margin-top:18px;}
+  /* mesmo tamanho de fonte em todos os cards de material: nome, tipo/aula e botão */
+  .mat-al .material-card .title, .mat-al .material-card .meta, .mat-al .material-card .btn-mini{font-size:12.5px!important;line-height:1.35;}
+  .mat-al .material-card .title{font-weight:700;}
+  .mat-al .material-card .meta{color:var(--text-mute);}
+  .mat-al .mat-trava{opacity:.75;}
+  .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .im-conta{font-size:11.5px;color:var(--text-mute);}
+  .im-tit{font-size:15px!important;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;}
+  .im-prazo{font-size:11.5px;font-weight:600;color:var(--text-mute);}
+  .im-prazo.atrasada{color:#ef4444;}
+  .im-barra{position:relative;height:10px;border-radius:999px;overflow:hidden;margin-top:12px;opacity:.85;box-shadow:inset 0 1px 2px rgba(0,0,0,.25);}
+  .im-barra i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width .6s ease;}
+  .im-pct{font-size:11.5px;font-weight:700;color:#22c55e;margin-top:6px;text-align:right;}
+  .im-com-item{cursor:pointer;border-radius:var(--radius,14px);}
+  .im-com-item .post{margin-bottom:4px;}
+  .im-com-item:hover .post{border-color:var(--accent);}
+  .im-com-abrir{font-size:11.5px;color:var(--accent);font-weight:700;text-align:right;margin:0 4px 14px;}
+  .im-com-vazio{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px;border:1px dashed var(--border);border-radius:12px;color:var(--text-dim);font-size:13px;}
+  /* Composer da Comunidade: foto + convite numa linha, texto de fora a fora, e tags, emoji e Publicar numa linha só */
+  .post:not(.com-aberto) > .comments{display:none;}
+  .post.com-aberto [data-toggle-comments]{color:var(--accent);}
+  .composer.comp2{flex-direction:column;gap:12px;}
+  .tagpick-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px;}
+  .tagpick{width:100%;max-width:420px;background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:20px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.45);}
+  .tagpick-tit{font-size:15px;font-weight:700;}
+  @media (max-width:640px){ .rank-table tbody tr[data-rank-sid]{cursor:pointer;} }
+  .rank-det-cab{display:flex;align-items:center;gap:12px;}
+  .rank-det-nome{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .rank-det-nome strong{font-size:15px;}
+  .rank-det-nome small{font-size:11.5px;color:var(--text-mute);}
+  .rank-det-voce{font-weight:400;color:var(--text-mute);font-size:12px;}
+  .rank-det-lista{display:flex;flex-direction:column;margin-top:16px;border-top:1px solid var(--border);}
+  .rank-det-item{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border);font-size:13.5px;}
+  .rank-det-ic{width:28px;height:28px;border-radius:50%;background:var(--bg-elev);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;color:var(--accent);}
+  .rank-det-ic .icon{width:14px;height:14px;}
+  .rank-det-rot{flex:1;color:var(--text-dim);}
+  .rank-det-item b{font-weight:800;}
+  .tagpick-sub{font-size:11.5px;color:var(--text-mute);margin-top:4px;}
+  .tagpick-lista{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+  .tagpick-op{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:12px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .tagpick-op .icon{width:16px;height:16px;}
+  .tagpick-op.tag-duvida{color:var(--danger);} .tagpick-op.tag-interacao{color:var(--accent-2,var(--accent));} .tagpick-op.tag-conquista{color:var(--success);} .tagpick-op.tag-apresentacao{color:var(--shared);}
+  .tagpick-cancelar{display:block;width:100%;height:42px;margin-top:14px;background:none;border:1px solid var(--border);border-radius:999px;color:var(--text-dim);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  .tagpick-cancelar:hover{border-color:var(--text-mute);color:var(--text);}
+  .comp2-topo{display:flex;align-items:center;gap:12px;}
+  .comp2-convite{font-size:15px;font-weight:600;line-height:1.4;color:var(--text-dim);}
+  .comp2-corpo{width:100%;}
+  /* campo 'Escreva um comentário' no tamanho das explicações (o celular forçava 16px) */
+  .comment-composer input[data-comment-input], .comment-composer input[data-comment-input]::placeholder{font-size:11.5px!important;}
+  .comment-composer input[data-comment-input]{height:34px;padding-top:0;padding-bottom:0;border-radius:10px!important;}
+  /* Raios em harmonia: card 14px · tudo que fica dentro dele (campo, emoji, enviar) 10px · tags redondas */
+  .comp2 textarea{border-radius:10px!important;}
+  .comment-composer .emoji-btn{width:34px;height:34px;min-width:34px;padding:0;margin:0!important;border-radius:10px!important;display:inline-flex;align-items:center;justify-content:center;font-size:15px;border:1px solid var(--border);background:var(--bg-elev);flex:0 0 auto;}
+  .comment-composer .cc-enviar{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px!important;border-radius:10px!important;border:1px solid var(--border)!important;background:var(--bg-elev)!important;color:var(--accent)!important;font-size:12.5px;font-weight:700;flex:0 0 auto;}
+  .comment-composer .cc-enviar .icon{width:15px;height:15px;}
+  .comment-composer{gap:6px;align-items:center;}
+  /* mesma altura exata para campo, emoji e Enviar no comentário */
+  .comment-composer input[data-comment-input], .comment-composer .emoji-btn, .comment-composer .cc-enviar{height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;}
+  .comment-composer .emoji-btn{width:36px!important;min-width:36px!important;}
+  /* Filtros da Comunidade numa linha só: dividem a largura; se não couber, rolam para o lado */
+  .com-mural-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;}
+  .com-mural-cab .section-title.ini-sec{margin:0!important;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
+  .com-filtro{position:relative;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 28px 0 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto;}
+  .com-filtro.ativo{border-color:var(--accent);color:var(--accent);}
+  .com-filtro .icon{width:13px;height:13px;}
+  .com-filtro select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:inherit;font:inherit;font-size:12px!important;padding:0;cursor:pointer;outline:none;}
+  .com-filtro select option{color:#111;}
+  .com-filtro-seta{position:absolute;right:11px;pointer-events:none;font-size:10px;}
+  #community-filters{flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  #community-filters::-webkit-scrollbar{display:none;}
+  #community-filters .filter-tab{flex:1 1 auto;white-space:nowrap;text-align:center;padding:7px 10px!important;font-size:11.5px!important;}
+  @media (max-width:520px){ #community-filters{gap:4px!important;} #community-filters .filter-tab{padding:7px 6px!important;font-size:10.5px!important;} }
+  .comp2 textarea{min-height:84px;}
+  .comp2 .composer-footer{flex-wrap:nowrap;gap:6px;margin-top:10px;justify-content:flex-start;}
+  .comp2 .type-select{flex-wrap:nowrap;gap:6px;flex:1;min-width:0;}
+  .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #post-btn{height:36px;min-height:36px;box-sizing:border-box;margin:0;}
+  .comp2 .type-pill{width:36px;padding:0;gap:0;flex:0 0 auto;justify-content:center;transition:width .2s,padding .2s;}
+  .comp2 .emoji-btn{width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;border-radius:10px;border:1px solid var(--border);background:var(--bg-elev);}
+  .comp2 #post-btn{height:36px;min-height:36px;max-height:36px;padding:0 14px!important;justify-content:center;border-radius:10px;font-size:13px;line-height:1;}
+  .comp2.tag-aberta #post-btn .pb-rot{display:none;}
+  /* enviar no mesmo estilo dos outros botões da linha: fundo neutro, contorno e ícone na cor de destaque */
+  .comp2 #post-btn{background:var(--bg-elev)!important;border:1px solid var(--border)!important;color:var(--accent)!important;box-shadow:none!important;}
+  .comp2 #post-btn:hover{border-color:var(--accent)!important;}
+  .comp2 #post-btn:disabled{opacity:.5;}
+  .comp2 .type-pill .icon, .comp2 #post-btn .icon{width:15px;height:15px;}
+  .comp2 .type-pill{border-radius:999px;}
+  .comp2 .type-pill .tp-rot{display:none;}
+  .comp2.tag-aberta .type-pill.active{width:auto;padding:0 10px;gap:5px;font-size:11.5px;white-space:nowrap;}
+  @media (max-width:520px){ .comp2 .type-select, .comp2 .composer-footer{gap:4px;} .comp2.tag-aberta .type-pill.active{font-size:10.5px;padding:0 8px;} }
+  .comp2.tag-aberta .type-pill.active .tp-rot{display:inline;}
+  .comp2 .emoji-btn{flex:0 0 auto;}
+  .comp2 #post-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .comp2.tag-aberta #post-btn .pb-rot{display:none;}
+  .comp2.tag-aberta #post-btn{width:36px;min-width:36px;padding:0!important;justify-content:center;border-radius:10px;}
+  .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #post-btn{flex-shrink:0!important;}
+  .comp2 .emoji-btn{min-width:36px;margin:0!important;}
+  #view-comunidade > .com-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
+  .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;}
+  /* Card da agenda: nome + tag no canto direito / "com Fulano" / horário e link; botões de fora a fora embaixo */
+  #view-agenda .agenda-info .title{display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px 6px;}
+  #view-agenda .agenda-info .title .ag-nome{flex:1 1 0;min-width:0;order:0;}
+  #view-agenda .agenda-info .title .pill{order:1;flex:0 0 auto;margin:0;}
+  #view-agenda .agenda-info .title .ag-com{flex:0 0 100%;order:2;color:var(--text);}
+  #view-agenda .agenda-info .meta{margin-top:4px;}
+  #view-agenda .agenda-actions{flex:0 0 100%;width:100%;margin-left:0;justify-content:stretch;}
+  #view-agenda .agenda-actions > *{flex:1 1 0;justify-content:center;text-align:center;}
+  #view-agenda .grav-card{gap:12px 14px;}
+  #view-agenda .grav-card .agenda-date{width:48px;height:48px;}
+  #view-agenda .grav-data{font-size:13.5px;font-weight:700;}
+  #view-agenda .grav-card{flex-wrap:nowrap;align-items:center;}
+  #view-agenda .grav-acoes{flex:1 1 auto!important;width:auto!important;min-width:0;flex-wrap:nowrap;gap:6px;}
+  #view-agenda .grav-acoes > *{height:48px;box-sizing:border-box;padding:0 8px;font-size:12px;white-space:nowrap;gap:5px;border-radius:10px;}
+  /* cabeçalho do card na mesma linha: bolinha do ícone, título e botão Abrir (a regra ".ep-inicio > div" empilhava tudo) */
+  .ep-inicio > .ep-inicio-topo{display:flex;flex-direction:row;align-items:center;gap:12px;flex:0 0 auto;text-align:left;}
+  .ep-inicio-topo strong{flex:1;min-width:0;font-size:15px;}
+  .ep-inicio-topo .btn-mini{flex:0 0 auto;border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:6px 14px;font-weight:700;}
+  .ep-inicio > .ep-inicio-item{flex-direction:row;gap:10px;flex:0 0 auto;align-items:baseline;}
+  }
 </style>
 </head>
 <body>
@@ -8526,7 +8536,9 @@ function inicioComunidadeHtml(){
   if(!novas.length) return `<div class="im-com-vazio">${lista.length ? 'Você já interagiu com as publicações mais recentes da Comunidade. 💬' : 'Ainda não há publicações na Comunidade.'} <button type="button" class="btn-mini" data-goto="comunidade">Abrir a Comunidade</button></div>`;
   return `<div class="im-com">${novas.map(p=>`<div class="im-com-item" data-inicio-post="${p.id}" data-aud="${escapeAttr(p.audience)}" role="button" tabindex="0" title="Abrir na Comunidade">${postHtml(p,true,true)}<div class="im-com-abrir">Toque para abrir na Comunidade ›</div></div>`).join('')}</div>`;
 }
-function renderInicio(){
+/* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
+function renderInicio(){ return ehCel() ? renderInicio_cel() : renderInicio_web(); }
+function renderInicio_cel(){
   const s = getStudent(currentStudentId);
   if(s && s.tier==='curso' && currentRole==='aluno'){ renderInicioCurso(s); return; }
   if(videoBoasVindasPendente(s) && s.id===(currentUser&&currentUser.id)){ document.getElementById('view-inicio').innerHTML = ''; bvMostrar(s); return; }
@@ -8586,6 +8598,69 @@ function renderInicio(){
     ev.preventDefault(); ev.stopPropagation();
     notifAbrirComunidade({ post_id: el.dataset.inicioPost, audience: el.dataset.aud, motivo:'abrir' });
   }));
+  bindCourseTiles();
+  document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
+  bindOpenCourseTags(document.getElementById('view-inicio'));
+  premioBindBanner(document.getElementById('view-inicio'));
+  eeBindBanner(document.getElementById('view-inicio'));
+  anivAlunoBind(document.getElementById('view-inicio'));
+}
+function renderInicio_web(){
+  const s = getStudent(currentStudentId);
+  if(s && s.tier==='curso' && currentRole==='aluno'){ renderInicioCurso(s); return; }
+  if(videoBoasVindasPendente(s) && s.id===(currentUser&&currentUser.id)){ document.getElementById('view-inicio').innerHTML = ''; bvMostrar(s); return; }
+  if(needsWispform(s)){ renderWispformWizard(s); return; }
+  const overall = overallProgress(s);
+  const nextTask = s.ritmoLento ? metaDaVez(s) : s.checklist.find(t=>t.responsavel==='Mentorado' && t.status!=='Concluída');
+  const nextLive = LIVE_SESSIONS.find(l=>l.type==='upcoming' && (l.studentId===s.id || (l.studentId==null && l.audience===(s.tier||'mentorado'))));
+  const inProgress = COURSES.filter(c=>s.courseProgress[c.id]>0 && s.courseProgress[c.id]<100);
+  const continueList = inProgress.length? inProgress : COURSES.filter(c=>s.courseProgress[c.id]===0).slice(0,3);
+  const crmStats = computeCrmStats(s.id);
+  const fatStats = computeFaturamentoStats(s.id);
+  const heroPts = STUDENT_POINTS[s.id] || {conquistas:0};
+  const heroDias = diasRestantes(s);
+
+  document.getElementById('view-inicio').innerHTML = `
+    <div class="hero">
+      <div>
+        <h1>Olá, ${s.name.split(' ')[0]}</h1>
+        <p>Bem-vindo(a) de volta à sua área do Método Essência.</p>
+      </div>
+      <div class="hero-mini-stats">
+        <div class="hero-mini-stat"><div class="hero-mini-value">${heroPts.conquistas||0}</div><div class="hero-mini-label">Conquistas</div></div>
+        <div class="hero-mini-stat"><div class="hero-mini-value">${Math.max(0,heroDias)}</div><div class="hero-mini-label">${heroDias<0? 'Dias em atraso' : 'Dias faltantes'}</div></div>
+      </div>
+      ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
+    </div>
+    <div class="stat-row">
+      <div class="stat-card clickable" data-goto="dashboard"><div class="label">Progresso geral</div><div class="value shared">${overall}%</div></div>
+      <div class="stat-card clickable" data-goto="metas"><div class="label">Próxima meta</div><div class="value" style="font-size:14px">${nextTask? nextTask.tarefa : 'Tudo em dia'}</div></div>
+      <div class="stat-card"><div class="label">Próximo encontro ao vivo</div><div class="value accent" style="font-size:14px">${nextLive? nextLive.date+' · '+nextLive.time.split('·')[0] : '—'}</div></div>
+      <div class="stat-card"><div class="label">Turma</div><div class="value" style="font-size:14px">${s.turma}</div></div>
+    </div>
+
+    ${aniversariantesAlunoHtml()}
+
+    ${epInicioHtml(s)}
+
+    ${essenciaBannerHtml()}
+    ${premioBannerHtml()}
+
+    <h2 class="section-title">Indicadores do consultório</h2>
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="label">Leads no mês</div><div class="value">${crmStats.leadsMesCount}</div></div>
+      <div class="kpi-tile"><div class="label">Conversão (lead → agendado)</div><div class="value">${crmStats.conversaoPct!=null? crmStats.conversaoPct+'%' : '—'}</div></div>
+      <div class="kpi-tile"><div class="label">Faturamento do mês</div><div class="value" style="font-size:16px">${fmtAluno(fatStats.mesAtual, s.id)}</div></div>
+      <div class="kpi-tile"><div class="label">Faturamento total desde o início</div><div class="value" style="font-size:16px">${fmtAluno(fatStats.totalAcumulado, s.id)}</div></div>
+    </div>
+    <p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>
+
+    <h2 class="section-title">${icon('film')} Continue assistindo</h2>
+    <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
+
+    <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
+    <div>${COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===getViewingTier()).slice(0,2).map(p=>postHtml(p,true,true)).join('')}</div>
+  `;
   bindCourseTiles();
   document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>goTo(el.dataset.goto)));
   bindOpenCourseTags(document.getElementById('view-inicio'));
@@ -9006,7 +9081,9 @@ function aulaCombina(c, q){
   if(normTxt(c.title).includes(q)) return true;
   return (c.materiais||[]).some(m=>normTxt(m.title).includes(q));
 }
-function renderAulas(){
+/* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
+function renderAulas(){ return ehCel() ? renderAulas_cel() : renderAulas_web(); }
+function renderAulas_cel(){
   const q = normTxt(aulasBusca).trim();
   const visiveis = COURSES.filter(c=>aulaCombina(c,q));
   const cats = orderedCourseCats().filter(cat=>visiveis.some(c=>c.cat===cat));
@@ -9027,6 +9104,34 @@ function renderAulas(){
       </div>
     `).join('') || (q? `<div class="empty-state">Nenhuma aula ou material com "${escapeHtml(aulasBusca.trim())}". Tente outra palavra.</div>` : '')}
   </div>`;
+  bindBuscaInput('aulas-busca', v=>{ aulasBusca = v; }, renderAulas);
+  const limpar = document.getElementById('aulas-busca-limpar');
+  if(limpar) limpar.addEventListener('click', ()=>{ aulasBusca=''; renderAulas(); });
+  bindCourseTiles();
+  bindRowScrollers();
+}
+function renderAulas_web(){
+  const q = normTxt(aulasBusca).trim();
+  const visiveis = COURSES.filter(c=>aulaCombina(c,q));
+  const cats = orderedCourseCats().filter(cat=>visiveis.some(c=>c.cat===cat));
+  document.getElementById('view-aulas').innerHTML = `
+    <p class="section-sub">Biblioteca de aulas do Método Essência, organizada pelos mesmos módulos do seu Dashboard — assista no seu ritmo.</p>
+    <div class="busca-bar">
+      <input class="ps-input" type="text" id="aulas-busca" value="${escapeAttr(aulasBusca)}" placeholder="Buscar aula ou material (ex.: precificação, planilha…)">
+      ${q? `<button type="button" class="btn-outline" id="aulas-busca-limpar">${icon('x','tiny')} Limpar</button>` : ''}
+    </div>
+    ${q? `<div class="busca-info">${visiveis.length} aula(s) encontrada(s) para <strong>"${escapeHtml(aulasBusca.trim())}"</strong>${visiveis.some(c=>!normTxt(c.title).includes(q))? ' — algumas por causa do material anexado' : ''}</div>` : ''}
+    ${cats.map((cat,i)=>`
+      <div class="category-block">
+        <h2 class="section-title">${cat}</h2>
+        <div class="row-scroll-wrap">
+          <button type="button" class="row-scroll-btn left is-hidden" aria-label="Rolar para a esquerda">${icon('back')}</button>
+          <div class="row-scroll" id="row-scroll-${i}">${visiveis.filter(c=>c.cat===cat).map(c=>courseTileHtml(c)).join('')}</div>
+          <button type="button" class="row-scroll-btn right is-hidden" aria-label="Rolar para a direita">${icon('back')}</button>
+        </div>
+      </div>
+    `).join('') || (q? `<div class="empty-state">Nenhuma aula ou material com "${escapeHtml(aulasBusca.trim())}". Tente outra palavra.</div>` : '')}
+  `;
   bindBuscaInput('aulas-busca', v=>{ aulasBusca = v; }, renderAulas);
   const limpar = document.getElementById('aulas-busca-limpar');
   if(limpar) limpar.addEventListener('click', ()=>{ aulasBusca=''; renderAulas(); });
@@ -10151,7 +10256,7 @@ function postHtml(p,compact,showCourseTag){
               ${initialsAvatar(replyAuthor.initials,replyAuthor.color,22,replyAuthor.avatarUrl)}
               <input type="text" placeholder="${replyTargets[p.id]? 'Responder a '+escapeAttr(replyTargets[p.id].name)+'...' : 'Escreva um comentário...'}" data-comment-input="${p.id}">
               <button type="button" class="emoji-btn" title="Emoji">😊</button>
-              <button class="btn-mini cc-enviar" data-comment-send="${p.id}">${icon('send','tiny')}<span>Enviar</span></button>
+              ${ehCel() ? `<button class="btn-mini cc-enviar" data-comment-send="${p.id}">${icon('send','tiny')}<span>Enviar</span></button>` : `<button class="btn-mini" data-comment-send="${p.id}">Enviar</button>`}
             </div>
           </div>` : ''}
         </div>`:''}
@@ -10184,8 +10289,13 @@ function comEscolherTag(jaApresentou){
     document.body.appendChild(ov);
   });
 }
+/* Celular = tela de até 640px. Ao cruzar esse limite (girar o aparelho, redimensionar a janela) a tela atual é redesenhada. */
+function ehCel(){ try{ return window.matchMedia('(max-width:640px)').matches; }catch(e){ return false; } }
+try{ window.matchMedia('(max-width:640px)').addEventListener('change', ()=>{ try{ if(typeof currentView!=='undefined' && currentView) goTo(currentView); }catch(e){} }); }catch(e){}
 let COMP_TAG_ABERTA = false;  /* no composer da Comunidade: alguma tag foi tocada (mostra o nome dela e encolhe o Publicar) */
-function renderComunidade(){
+/* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
+function renderComunidade(){ return ehCel() ? renderComunidade_cel() : renderComunidade_web(); }
+function renderComunidade_cel(){
   const me = getPerson(actingAuthorId());
   /* A equipe interna, navegando como equipe (currentRole 'staff'), acompanha as duas comunidades e
      escolhe qual está vendo por essa aba. Em qualquer modo "Aluno" — o próprio aluno logado, OU a equipe
@@ -10390,6 +10500,188 @@ function renderComunidade(){
     });
   });
 }
+function renderComunidade_web(){
+  const me = getPerson(actingAuthorId());
+  /* A equipe interna, navegando como equipe (currentRole 'staff'), acompanha as duas comunidades e
+     escolhe qual está vendo por essa aba. Em qualquer modo "Aluno" — o próprio aluno logado, OU a equipe
+     "vendo como" um mentorado/aluno do curso selecionado — a audiência segue sempre a de quem está sendo
+     visto (getViewingTier()), sem aba nenhuma: é pra mostrar exatamente o que aquela pessoa vê. */
+  if(currentRole!=='staff') currentCommunityAudience = getViewingTier();
+  const filters = [
+    {id:'todas', label:'Todas'},
+    {id:'duvida', label:'Dúvidas'},
+    {id:'interacao', label:'Interações'},
+    {id:'conquista', label:'Conquistas'},
+    {id:'apresentacao', label:'Apresentações'},
+  ];
+  const alreadyApresentou = me? hasApresentacao(me.id) : false;
+  if(alreadyApresentou && selectedPostType==='apresentacao') selectedPostType = 'interacao';
+  // Comentários feitos dentro de uma aula (post.courseId definido) ficam restritos à própria aula — não
+  // aparecem no mural da Comunidade, que mostra só o que foi publicado ali diretamente. E cada comunidade
+  // só mostra o que é da própria audiência — mentorados e alunos do curso não se veem entre si.
+  const communityOnly = COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===currentCommunityAudience);
+  const visible = communityFilter==='todas' ? communityOnly : communityOnly.filter(p=>p.type===communityFilter);
+  const root = document.getElementById('view-comunidade');
+  root.innerHTML = `
+    <p class="section-sub">Mural coletivo — compartilhe conquistas, dúvidas e aprendizados com a turma.</p>
+    ${currentRole==='staff'? `
+    <div class="community-filters" id="community-audience-tabs" style="margin-bottom:10px">
+      <button class="filter-tab ${currentCommunityAudience==='mentorado'?'active':''}" data-audience="mentorado">Comunidade Mentorados</button>
+      <button class="filter-tab ${currentCommunityAudience==='curso'?'active':''}" data-audience="curso">Comunidade do Curso</button>
+    </div>` : ''}
+    ${me? `
+    <div class="composer">
+      ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
+      <div style="flex:1">
+        <textarea id="new-post" placeholder="Compartilhe algo com a turma..."></textarea>
+        <div class="composer-footer">
+          <div class="type-select" id="type-select">
+            ${Object.keys(POST_TYPES).map(k=>{
+              const disabled = k==='apresentacao' && alreadyApresentou;
+              return `<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${selectedPostType===k?'active':''}" data-type="${k}" ${disabled?'disabled title="Você já publicou sua apresentação — exclua a anterior pra postar uma nova."':''}>${icon(POST_TYPES[k].icon,'tiny')}${POST_TYPES[k].label}</button>`;
+            }).join('')}
+          </div>
+          <button type="button" class="emoji-btn" data-emoji-for="#new-post" title="Emoji">😊</button>
+          <button class="btn-accent" id="post-btn">Publicar</button>
+        </div>
+      </div>
+    </div>` : ''}
+    <div class="community-filters" id="community-filters">
+      ${filters.map(f=>`<button class="filter-tab ${communityFilter===f.id?'active':''}" data-filter="${f.id}">${f.label}</button>`).join('')}
+    </div>
+    <div id="posts-list">${visible.map(p=>postHtml(p,false,true)).join('') || '<p class="section-sub">Nenhuma publicação nesse filtro ainda.</p>'}</div>
+    ${MURAL_ESTADO[currentCommunityAudience] && !MURAL_ESTADO[currentCommunityAudience].fim ? `
+    <div class="cf-actions" style="justify-content:center;margin-top:16px">
+      <button class="btn-outline" id="mural-mais">${MURAL_ESTADO[currentCommunityAudience].carregando? 'Carregando...' : 'Ver publicações mais antigas'}</button>
+    </div>` : ''}
+  `;
+  markVisiblePostsSeen(visible);
+  bindOpenCourseTags(root);
+  root.querySelectorAll('#type-select [data-type]').forEach(btn=>{
+    if(btn.disabled) return;
+    btn.addEventListener('click',()=>{ selectedPostType = btn.dataset.type; renderComunidade(); });
+  });
+  root.querySelectorAll('#community-filters [data-filter]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ communityFilter = btn.dataset.filter; renderComunidade(); });
+  });
+  root.querySelectorAll('#community-audience-tabs [data-audience]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ currentCommunityAudience = btn.dataset.audience; renderComunidade(); });
+  });
+  const maisBtn = root.querySelector('#mural-mais');
+  if(maisBtn){
+    maisBtn.addEventListener('click', async ()=>{
+      const alvo = currentCommunityAudience;
+      maisBtn.disabled = true;
+      maisBtn.textContent = 'Carregando...';
+      await carregarMural(alvo);
+      // Se a pessoa trocou de comunidade enquanto carregava, não redesenha por cima do que ela abriu.
+      if(currentCommunityAudience===alvo && currentView==='comunidade') renderComunidade();
+    });
+  }
+  attachMentions(root.querySelector('#new-post'), ()=>currentCommunityAudience);
+  const postBtn = root.querySelector('#post-btn');
+  if(postBtn){
+    postBtn.addEventListener('click', async ()=>{
+      const ta = root.querySelector('#new-post');
+      if(!ta.value.trim()) return;
+      if(selectedPostType==='apresentacao' && hasApresentacao(actingAuthorId())){
+        selectedPostType = 'interacao';
+        renderComunidade();
+        return;
+      }
+      postBtn.disabled = true;
+      if(!(await confirmarDuvidaRepetida(selectedPostType, '#type-select'))){ postBtn.disabled = false; return; }
+      try{
+        const post = await createCommunityPost(actingAuthorId(), selectedPostType, ta.value.trim(), null, currentCommunityAudience, extractMentions(ta));
+        COMMUNITY_POSTS.unshift(post);
+        if(post.type==='apresentacao' && post.authorId===actingAuthorId()) EU_JA_APRESENTEI = true;
+        refreshPendencias();
+        renderComunidade();
+      }catch(e){ console.error(e); postBtn.disabled = false; }
+    });
+  }
+  root.querySelectorAll('[data-like]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!me) return;
+      const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.like);
+      p.liked = !p.liked;
+      p.likes += p.liked? 1 : -1;
+      if(p.liked) MEUS_LIKES.add(p.id); else MEUS_LIKES.delete(p.id);
+      syncCommunityLike(p.id, actingAuthorId(), p.liked);
+      renderComunidade();
+    });
+  });
+  root.querySelectorAll('[data-comment-send]').forEach(btn=>{
+    const send = async ()=>{
+      if(!me) return;
+      const pid = btn.dataset.commentSend;
+      const input = root.querySelector(`[data-comment-input="${pid}"]`);
+      if(!input.value.trim()) return;
+      const text = input.value.trim();
+      const p = COMMUNITY_POSTS.find(x=>x.id==pid);
+      const rt = replyTargets[pid];
+      btn.disabled = true;
+      try{
+        const menc = extractMentions(input);
+        const commentId = await syncCommunityComment(p.id, actingAuthorId(), text, rt? rt.commentId : null, menc);
+        p.comments.push({id:commentId, authorId:actingAuthorId(), text, replyTo: rt? rt.commentId : null, notifyAuthor:false, mentions:menc.mentions, mentionAll:menc.mentionAll});
+        maybeNotifyPostAuthor(p);
+        maybeNotifyCommentAuthor(p, rt? rt.commentId : null);
+        delete replyTargets[pid];
+        refreshPendencias();
+        renderComunidade();
+      }catch(e){ console.error(e); btn.disabled = false; }
+    };
+    btn.addEventListener('click',send);
+    const input = root.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
+    attachMentions(input, ()=>{ const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.commentSend); return p? p.audience : currentCommunityAudience; });
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+  });
+  root.querySelectorAll('[data-reply-comment]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      replyTargets[btn.dataset.replyPost] = {commentId:btn.dataset.replyComment, name:btn.dataset.replyName};
+      renderComunidade();
+      const input = document.getElementById('view-comunidade').querySelector(`[data-comment-input="${btn.dataset.replyPost}"]`);
+      if(input) input.focus();
+    });
+  });
+  root.querySelectorAll('[data-cancel-reply]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      delete replyTargets[btn.dataset.cancelReply];
+      renderComunidade();
+    });
+  });
+  root.querySelectorAll('[data-del-post]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!(await confirmDelete('Excluir esta publicação? Essa ação não pode ser desfeita.'))) return;
+      const pid = btn.dataset.delPost;
+      const idx = COMMUNITY_POSTS.findIndex(x=>x.id==pid);
+      if(idx>-1){
+        const removido = COMMUNITY_POSTS[idx];
+        syncCommunityPostDelete(removido.id);
+        COMMUNITY_POSTS.splice(idx,1);
+        if(removido.type==='apresentacao' && removido.authorId===actingAuthorId()) EU_JA_APRESENTEI = false;
+        PENDENCIAS = PENDENCIAS.filter(x=>String(x.post_id)!==String(removido.id));
+      }
+      updateNotifBadge();
+      renderComunidade();
+    });
+  });
+  root.querySelectorAll('[data-del-comment]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!(await confirmDelete('Excluir este comentário? Essa ação não pode ser desfeita.'))) return;
+      const cid = btn.dataset.delComment;
+      const p = COMMUNITY_POSTS.find(x=>x.comments.some(c=>c.id==cid));
+      if(p){
+        const idx = p.comments.findIndex(c=>c.id==cid);
+        if(idx>-1){ syncCommunityCommentDelete(p.comments[idx].id); p.comments.splice(idx,1); }
+      }
+      renderComunidade();
+    });
+  });
+}
 
 /* ================= VIEW: RANKING ================= */
 /* Formata pontos: inteiro sem casas decimais, fracionário com 2 casas e vírgula (padrão pt-BR). */
@@ -10398,7 +10690,9 @@ function formatPts(n){
   n = Math.round((n||0)*100)/100;
   return n.toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
 }
-function renderRanking(){
+/* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
+function renderRanking(){ return ehCel() ? renderRanking_cel() : renderRanking_web(); }
+function renderRanking_cel(){
   const root = document.getElementById('view-ranking');
   const meId = actingAuthorId();
   const empty = {total:0, conquistas:0, comunidade:0, comunidadeLikes:0, aulas:0, aulasLikes:0, dashboardChecks:0, metasChecks:0, apresentacao:0, boasVindas:0};
@@ -10464,6 +10758,64 @@ function renderRanking(){
     const r = rows.find(x=>x.s.id===tr.dataset.rankSid); if(r) rankDetalhe(r.s, r.pts, +tr.dataset.rankPos, r.s.id===meId);
   }));
 }
+function renderRanking_web(){
+  const root = document.getElementById('view-ranking');
+  const meId = actingAuthorId();
+  const empty = {total:0, conquistas:0, comunidade:0, comunidadeLikes:0, aulas:0, aulasLikes:0, dashboardChecks:0, metasChecks:0, apresentacao:0, boasVindas:0};
+  // Ranking é uma dinâmica da mentoria completa — alunos do curso gravado nem veem esta página (não têm
+  // Dashboard/Metas pra pontuar), então não fazem sentido misturados no placar dos mentorados.
+  const rows = STUDENTS
+    .filter(s=>s.tier!=='curso' && !RANK_CANC.has(s.id) && !(typeof acessoCancelado==='function' && acessoCancelado(s.id)))
+    .map(s=>({s, pts: STUDENT_POINTS[s.id] || empty}))
+    .sort((a,b)=>b.pts.total-a.pts.total);
+  root.innerHTML = `
+    <p class="section-sub">Ranking da turma do Método Essência — cada conquista compartilhada vale <strong>+600 pontos</strong>; publicar sua apresentação vale <strong>+10 pontos</strong> (uma vez só — some se você excluir a publicação, e volta se publicar de novo); dar as boas-vindas a um mentorado que acabou de chegar, comentando na apresentação dele, vale <strong>+20 pontos</strong>; comentar ou curtir na comunidade e nas aulas vale <strong>+0,01 ponto</strong> cada; marcar um item no checklist do Dashboard ou em Minhas Metas vale <strong>+10 pontos</strong> cada.</p>
+    <div class="table-wrap">
+      <table class="check-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Aluno</th>
+            <th>Conquistas</th>
+            <th>Apresentação</th>
+            <th>Boas-vindas</th>
+            <th>Comunidade</th>
+            <th>Curtidas comunidade</th>
+            <th>Aulas</th>
+            <th>Curtidas aulas</th>
+            <th>Checklists</th>
+            <th>Pontos</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,i)=>{
+            const rank = i+1;
+            const isMe = r.s.id===meId;
+            const rankCls = rank<=3 ? ` rank-top rank-${rank}` : '';
+            return `<tr class="${isMe?'rank-me':''}">
+              <td><span class="rank-num${rankCls}">${rank}</span></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:9px">
+                  ${initialsAvatar(r.s.initials, r.s.color, 26, r.s.avatarUrl)}
+                  <span>${escapeHtml(r.s.name)}${isMe? ` <span class="section-sub" style="margin:0;display:inline">(você)</span>`:''}</span>
+                </div>
+              </td>
+              <td>${r.pts.conquistas}</td>
+              <td>${r.pts.apresentacao? icon('check','tiny') : '—'}</td>
+              <td>${r.pts.boasVindas||0}</td>
+              <td>${r.pts.comunidade}</td>
+              <td>${r.pts.comunidadeLikes}</td>
+              <td>${r.pts.aulas}</td>
+              <td>${r.pts.aulasLikes}</td>
+              <td>${r.pts.dashboardChecks + r.pts.metasChecks}</td>
+              <td><span class="rank-pts">${formatPts(r.pts.total)} pts</span></td>
+            </tr>`;
+          }).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--text-mute)">Nenhum aluno pontuou ainda.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
 /* Prêmio do Ranking (pedido em 22/11/2026): iPhone 17 Pro, apuração em 23/12/2026 às 23h59 (Brasília).
    A foto fica em premio-ranking.png no site; se o arquivo ainda não existir, o espaço da foto some sozinho. */
 const RANK_PREMIO = { nome:'iPhone 17 Pro 256 GB', fim:'2026-12-23T23:59:00-03:00', foto:'premio-ranking.png' };
@@ -10512,7 +10864,9 @@ function rankDetalhe(st, pts, pos, eu){
 function gcalUrl(title, details){
   return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(details||'Encontro da Ascentria · Método Essência')}`;
 }
-function renderAgenda(){
+/* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
+function renderAgenda(){ return ehCel() ? renderAgenda_cel() : renderAgenda_web(); }
+function renderAgenda_cel(){
   /* Aluno do Curso Gravado (Método) não tem encontros ao vivo — a aba continua no menu (com um
      cadeado), mas ao abrir mostra uma tela de bloqueio explicando o motivo, em vez da lista vazia. */
   const bonusView = currentRole==='aluno' && isBonusView();
@@ -10630,6 +10984,103 @@ function renderAgenda(){
     });
   });
 }
+function renderAgenda_web(){
+  /* Aluno do Curso Gravado (Método) não tem encontros ao vivo — a aba continua no menu (com um
+     cadeado), mas ao abrir mostra uma tela de bloqueio explicando o motivo, em vez da lista vazia. */
+  const bonusView = currentRole==='aluno' && isBonusView();
+  if(currentRole==='aluno' && getViewingTier()==='curso' && !bonusView){
+    document.getElementById('view-agenda').innerHTML = `
+      <div class="locked-view">
+        <div class="locked-icon">${icon('lock')}</div>
+        <h2>Encontros ao vivo bloqueados</h2>
+        <p>Mastermind, Plantão de Dúvidas e Consultório Simulado são exclusivos para mentorados da Mentoria Essência. Fale com a equipe e conheça as condições para migrar seu acesso e participar dos encontros ao vivo.</p>
+      </div>
+    `;
+    return;
+  }
+  /* Encontros coletivos (studentId null) aparecem pra quem é do público certo (mentoria x método —
+     ver "audience", definido pela equipe interna no cadastro do evento); reuniões individuais (agendadas
+     de dentro do Acompanhamento Interno de um mentorado) só aparecem pro próprio mentorado, independente
+     de audience — currentStudentId é sempre o contexto do aluno em questão, seja ele mesmo logado ou a
+     equipe interna vendo o perfil dele. Enquanto a equipe interna está no modo "Equipe Interna" (não
+     "vendo como" ninguém), vê todos os encontros coletivos, dos dois públicos. */
+  const visible = LIVE_SESSIONS.filter(l=>{
+    if(l.studentId!=null) return l.studentId===currentStudentId;
+    if(currentRole==='staff') return true;
+    if(bonusView) return l.audience==='mentorado'; // Método + Bônus vê a agenda da mentoria (com cadeado fora de terça/sexta); Pós-graduação vê tudo
+    return l.audience===getViewingTier();
+  });
+  /* Ordena sempre pela data (e horário, quando informado) — não pela ordem em que foram cadastrados —
+     assim um encontro novo aparece automaticamente na posição certa da sequência, mesmo se sua data for
+     anterior à de encontros já existentes. Próximos: o mais próximo primeiro. Gravações: a mais recente primeiro. */
+  const byDateTimeAsc = (a,b)=> a._eventDate===b._eventDate ? (a.time||'').localeCompare(b.time||'') : (a._eventDate<b._eventDate?-1:1);
+  const upcoming = visible.filter(l=>l.type==='upcoming').sort(byDateTimeAsc);
+  /* Gravações anteriores: só encontros coletivos. Encontros 1:1 que já passaram saem da Agenda ao Vivo
+     e passam a aparecer automaticamente em Minhas Sessões 1:1 do próprio mentorado (ver renderSessoes) —
+     por isso ficam de fora daqui, mesmo que "visible" os inclua enquanto ainda estavam próximos. */
+  const pastColetivos = visible.filter(l=>l.type==='past' && l.studentId==null).sort((a,b)=>byDateTimeAsc(b,a));
+  const TIPO_GRUPOS = [
+    {key:'mastermind', label:'Mastermind'},
+    {key:'treinamento_vendas', label:'Treinamento de Vendas'},
+    {key:'plantao_duvidas', label:'Plantão de Dúvidas'},
+    {key:'consultorio_simulado', label:'Consultório Simulado'},
+    {key:null, label:'Outros encontros'},
+  ];
+  const card = (l)=>{
+    const watched = WATCHED_LIVE.has(l.id);
+    const bloqueado = bonusView && !liveSessionLiberadaBonus(l);
+    if(bloqueado){
+      return `
+    <div class="agenda-card ${l.type==='past'?'past':''} agenda-locked" title="Exclusivo para mentorados da Mentoria Essência">
+      <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
+      <div class="agenda-info">
+        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}</div>
+        <div class="meta">${l.time} — <span style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle">${icon('lock','tiny')} Exclusivo para mentorados da Mentoria Essência</span></div>
+      </div>
+      <span class="btn-outline disabled" style="display:inline-flex;align-items:center;gap:6px">${icon('lock','tiny')} Bloqueado</span>
+    </div>`;
+    }
+    return `
+    <div class="agenda-card ${l.type==='past'?'past':''} ${watched?'watched':''}">
+      <div class="agenda-date"><div class="d">${l.day}</div><div class="m">${l.month}</div></div>
+      <div class="agenda-info">
+        <div class="title">${l.title} ${l.type==='upcoming'?'<span class="pill live">Ao vivo</span>':'<span class="pill replay">Gravação</span>'}${watched? '<span class="pill watched">'+icon('check','tiny')+' Assistido</span>' : ''}</div>
+        <div class="meta">${l.time} — ${linkify(l.desc)}${l.studentId && l.modalidade==='presencial' && l.local ? ` · <strong>Local:</strong> ${escapeHtml(l.local)}` : ''}</div>
+      </div>
+      ${l.type==='upcoming'
+        ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a></div>`
+        : `<div class="agenda-actions">
+            ${l.linkGravacao
+              ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>${playerDriveId(l.linkGravacao) ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Se o vídeo der erro aqui dentro, abra direto no Google Drive">${icon('externallink','tiny')} Abrir no Drive</a>` : ''}`
+              : `<span class="btn-outline disabled" title="A equipe interna ainda não adicionou o link desta gravação">${icon('play','tiny')} Assistir</span>`}
+            <button type="button" class="btn-outline watched-btn ${watched?'active':''}" data-watched="${l.id}">${watched? icon('check','tiny') : ''} Assistido</button>
+          </div>`}
+    </div>`;
+  };
+  const gravacoesHtml = TIPO_GRUPOS.map(g=>{
+    const items = pastColetivos.filter(l=>(l.tipo||null)===g.key);
+    if(!items.length) return '';
+    return `<h4 class="ps-h" style="margin-top:18px">${g.label}</h4><div class="agenda-list">${items.map(card).join('')}</div>`;
+  }).join('');
+  document.getElementById('view-agenda').innerHTML = `
+    <p class="section-sub">${bonusView
+      ? 'Como aluno do Método + Bônus, você participa dos encontros ao vivo da mentoria de <strong>terça-feira</strong> (Plantão de Dúvidas) e <strong>sexta-feira</strong> (Consultório Simulado). Os demais encontros aparecem com cadeado — são exclusivos da Mentoria Essência.'
+      : 'Encontros coletivos e individuais com os mentores.'}</p>
+    <h2 class="section-title">${icon('calendar')} Próximos encontros</h2>
+    <div class="agenda-list">${upcoming.map(card).join('') || '<p class="section-sub">Nenhum encontro agendado no momento.</p>'}</div>
+    <h2 class="section-title">${icon('video')} Gravações anteriores</h2>
+    ${gravacoesHtml || '<p class="section-sub">Nenhuma gravação anterior ainda.</p>'}
+  `;
+  document.querySelectorAll('[data-watched]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const l = LIVE_SESSIONS.find(x=>x.id==btn.dataset.watched);
+      const nowWatched = !WATCHED_LIVE.has(l.id);
+      if(nowWatched) WATCHED_LIVE.add(l.id); else WATCHED_LIVE.delete(l.id);
+      syncLiveSessionWatched(l.id, nowWatched);
+      renderAgenda();
+    });
+  });
+}
 
 /* ================= VIEW: MATERIAIS ================= */
 /* Materiais: além dos materiais gerais, reúne todos os documentos anexados às aulas (course_materials),
@@ -10643,7 +11094,9 @@ function matTipo(link){
   if(/wispform|forms\.gle|docs\.google\.com\/forms/.test(l)) return ['Formulário','check'];
   return ['Arquivo','file'];
 }
-function renderMateriais(){
+/* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
+function renderMateriais(){ return ehCel() ? renderMateriais_cel() : renderMateriais_web(); }
+function renderMateriais_cel(){
   const st = getStudent(currentStudentId);
   const tier = getViewingTier();
   const cats = orderedCourseCats();
@@ -10682,6 +11135,31 @@ function renderMateriais(){
     });
   });
   document.querySelectorAll('#view-materiais [data-mat-trava]').forEach(btn=>btn.addEventListener('click', ()=>alert(libMsgTravada())));
+}
+function renderMateriais_web(){
+  document.getElementById('view-materiais').innerHTML = `
+    <p class="section-sub">Materiais de apoio disponíveis para toda a turma.</p>
+    <div class="materials-grid">
+      ${MATERIALS.map(m=>`
+        <div class="material-card">
+          <div class="material-icon">${icon('folder')}</div>
+          <div class="mi">
+            <div class="title">${m.title}</div>
+            <div class="meta">${m.type}${m.size? ' · '+m.size:''}</div>
+            ${m.link
+              ? `<a class="btn-mini" href="${m.link}" target="_blank" rel="noopener">${icon('download')} Abrir</a>`
+              : `<button class="btn-mini" data-dl="${m.id}">${icon('download')} Baixar</button>`}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.querySelectorAll('[data-dl]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const m = MATERIALS.find(x=>x.id==btn.dataset.dl);
+      downloadPlaceholder(m.title.replace(/\s+/g,'_')+'.txt', m.title);
+    });
+  });
 }
 
 /* ================= VIEW: DASHBOARD (compartilhado aluno + equipe) ================= */
@@ -12691,7 +13169,7 @@ function mejEncontroHtml(){
       <span>Às 19h (horário de Brasília) · toda quinta-feira</span></div>
     <div class="mej-enc-acoes">
       ${MEJ_ENCONTRO.meet ? `<a class="btn-accent mej-enc-btn" href="${escapeAttr(MEJ_ENCONTRO.meet)}" target="_blank" rel="noopener">${icon('video','tiny')}<span>Entrar no Meet</span></a>` : ''}
-      <a class="btn-outline mej-enc-btn" href="${gcal}" target="_blank" rel="noopener">${icon('calendar','tiny')}<span>Adicionar ao Google Agenda</span></a>
+      <a class="btn-outline mej-enc-btn" href="${gcal}" target="_blank" rel="noopener">${icon('calendar','tiny')}<span>${ehCel() ? 'Adicionar ao Google Agenda' : 'Adicionar à agenda'}</span></a>
     </div>
   </div>`;
 }
@@ -22931,11 +23409,11 @@ function epInicioHtml(s){
     </div>`;
   const ag = epAgenda(s, cfg, 1);
   const hoje = ag.dias[0];
-  const lista = hoje.blocos;  /* lista completa do dia (pedido em 22/11/2026) */
+  const lista = ehCel() ? hoje.blocos : hoje.blocos.slice(0,3);  /* celular: lista completa do dia (pedido em 22/11/2026) */
   return `
     <div class="ep-inicio col" data-goto="planner">
       <div class="ep-inicio-topo"><span class="ep-inicio-ic">${icon('calendar')}</span><strong>Hoje no seu ePLANNER</strong><span class="btn-mini">Abrir</span></div>
-      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span>${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</div>`).join('')
+      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span>${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</div>`).join('') + (!ehCel() && hoje.blocos.length>3 ? `<small class="ep-inicio-mais">e mais ${hoje.blocos.length-3}</small>` : '')
         : `<small>${ag.feitos.length ? 'Tudo de hoje feito. Muito bem!' : hoje.ativo ? 'Nada pendente para hoje.' : 'Hoje é dia de descanso.'}</small>`}
     </div>`;
 }
