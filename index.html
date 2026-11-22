@@ -11272,7 +11272,7 @@ function renderDashboard(){
   const eqPorMod = {}; let eqTotal = 0;
   MODULES.forEach(m=>{ const n = s ? dashItensEquipe(s.id, m.id).size : 0; eqPorMod[m.id] = n; eqTotal += n; });
   document.getElementById('view-dashboard').innerHTML = `
-    <p class="section-sub">Visão geral do progresso no Método Essência — o mesmo painel que você e a equipe interna acompanham.</p>
+    <p class="section-sub">Visão geral do progresso no Método Essência. Esse é o mesmo painel que você e a equipe interna acompanham.</p>
     <div class="progress-hero">
       <div class="ring" style="background:conic-gradient(var(--shared) ${overall*3.6}deg, var(--bg-card) 0deg)">
         <div class="ring-inner"><div class="pct">${overall}%</div><div class="lbl">concluído</div></div>
