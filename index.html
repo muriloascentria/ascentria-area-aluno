@@ -2677,6 +2677,19 @@
   .notif-item.notif-tv .notif-txt small{white-space:normal;}
   .tv-ic{background:linear-gradient(135deg,#ff5a5f,#c81e2b)!important;color:#fff!important;box-shadow:0 0 12px rgba(229,72,77,.65);}
   .tv-pill{background:linear-gradient(135deg,#ff8a8a,#d63340)!important;color:#fff!important;}
+  .notif-item.notif-lb{background:linear-gradient(120deg,rgba(37,99,235,.26),rgba(96,165,250,.10) 55%,rgba(37,99,235,.20));border-left-color:#3b82f6;cursor:default;}
+  .notif-item.notif-lb::after{background:linear-gradient(100deg,transparent,rgba(170,205,255,.40),transparent);}
+  .notif-item.notif-lb .notif-txt strong{color:#60a5fa;}
+  .notif-item.notif-lb .notif-txt small{white-space:normal;}
+  .lb-ic{background:linear-gradient(135deg,#60a5fa,#1d4ed8)!important;color:#fff!important;box-shadow:0 0 12px rgba(59,130,246,.7);}
+  .lb-pill{background:linear-gradient(135deg,#7cb8ff,#2563eb)!important;color:#fff!important;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:11.5px;font-weight:700;padding:4px 10px;}
+  .lb-acoes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;}
+  .lb-acoes .notif-bv-pts{margin-top:0;}
+  .lb-link{background:none;border:0;padding:0;color:#93c5fd;font:inherit;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;}
+  #notif-btn.lb-brilho{color:#60a5fa;animation:lbSino 1.6s ease-in-out infinite;}
+  #notif-btn.lb-brilho .notif-badge{background:linear-gradient(135deg,#60a5fa,#1d4ed8);color:#fff;box-shadow:0 0 10px rgba(96,165,250,.95);}
+  @keyframes lbSino{0%,100%{filter:drop-shadow(0 0 0 rgba(96,165,250,0))}50%{filter:drop-shadow(0 0 9px rgba(96,165,250,1))}}
+  @media (prefers-reduced-motion: reduce){#notif-btn.lb-brilho{animation:none;}}
   #notif-btn.tv-brilho{color:#ff5a5f;animation:tvSino 1.6s ease-in-out infinite;}
   #notif-btn.tv-brilho .notif-badge{background:linear-gradient(135deg,#ff6b6b,#c81e2b);color:#fff;box-shadow:0 0 10px rgba(255,90,95,.9);}
   @keyframes tvSino{0%,100%{filter:drop-shadow(0 0 0 rgba(255,90,95,0))}50%{filter:drop-shadow(0 0 8px rgba(255,90,95,.95))}}
@@ -5031,8 +5044,30 @@ async function tvCarregar(){
     const { data, error } = await sb.rpc('tarefas_vencidas_meu_alerta');
     if(!error && data) TV_ALERTA = data;
   }catch(e){ console.warn('tarefas_vencidas_meu_alerta', e); }
+  try{ await lembCarregar(); }catch(e){ console.warn('lembretes', e); }
   if(!TV_TIMER) TV_TIMER = setInterval(tvCarregar, 5*60*1000);
   if(typeof updateNotifBadge==='function') updateNotifBadge();
+}
+/* Lembrete semanal do Murilo (pedido em 21/11/2026): toda quinta, a partir das 6h, o sino brilha em azul
+   para ele lembrar os sócios de enviarem o Fechamento da Semana na Gestão do Time (prazo quinta às 23h59).
+   Fica no sino até ele marcar que viu (lembretes_vistos, uma linha por quinta-feira). */
+const LEMB = { vistos:null };
+function lembQuintaAtual(){
+  const sp = new Date(Date.now()-3*3600e3); const dow = sp.getUTCDay(); const h = sp.getUTCHours();
+  let volta = (dow-4+7)%7; if(volta===0 && h<6) volta = 7;
+  const d = new Date(sp.getTime()-volta*864e5); return d.toISOString().slice(0,10);
+}
+async function lembCarregar(){
+  if(!souMurilo()){ LEMB.vistos = null; return; }
+  const { data } = await sb.from('lembretes_vistos').select('chave').like('chave','fechamento_semana:%');
+  LEMB.vistos = new Set((data||[]).map(r=>r.chave));
+}
+function lembAtivo(){ return !!(LEMB.vistos && souMurilo() && !LEMB.vistos.has('fechamento_semana:'+lembQuintaAtual())); }
+async function lembMarcarVisto(){
+  const chave = 'fechamento_semana:'+lembQuintaAtual();
+  if(LEMB.vistos) LEMB.vistos.add(chave); updateNotifBadge();
+  const { error } = await sb.from('lembretes_vistos').upsert({ usuario:currentUser.id, chave }, { onConflict:'usuario,chave' });
+  if(error){ console.error('lembrete visto', error); if(LEMB.vistos) LEMB.vistos.delete(chave); updateNotifBadge(); alert('Não foi possível marcar como visto: '+(error.message||'')); }
 }
 function tvAtivo(){ return areaAtiva('tarefas') && !!(TV_ALERTA && TV_ALERTA.ativo && Number(TV_ALERTA.vencidas)>0); }
 function tvSouMariane(){ return !!(currentUser && (currentUser.id===TV_MARIANE || currentUser.id==='7e570000-0000-4000-8000-0000000000ae')); }
@@ -7566,7 +7601,7 @@ function updateNotifBadge(){
   // A contagem vem de comunidade_pendencias() no banco (ver refreshPendencias) — antes era feita
   // varrendo COMMUNITY_POSTS, o que só funcionava baixando a comunidade inteira em toda abertura.
   const pend = pendenciasDoSino();
-  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + (areaAtiva('tarefas') ? tarefasNaoLidas().length : 0) + (MSG_SO_ALUNOS ? 0 : gtfMinhasAbertas().length) + (areaAtiva('politicas') && typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (currentRole==='aluno' ? TERMOS_PEND.length : 0);
+  const tf = currentRole!=='aluno' ? (tvOn0() ? 1 : 0) + (lembAtivo() ? 1 : 0) + (areaAtiva('tarefas') ? tarefasNaoLidas().length : 0) + (MSG_SO_ALUNOS ? 0 : gtfMinhasAbertas().length) + (areaAtiva('politicas') && typeof polPendentesMeus==='function' ? polPendentesMeus().length : 0) : (currentRole==='aluno' ? TERMOS_PEND.length : 0);
   /* Mensagens não entram mais no sininho: o número aparece na bolinha do menu lateral e do Início (msgBolinhas).
      O ícone do app continua somando as conversas por ler, para avisar fora da plataforma. */
   const msgConv = msgSouMentorado() ? Object.values(MSG_ACOMP).filter(a=>a.naoLidas).length : currentRole!=='aluno' ? msgConversasNaoLidas() : 0;
@@ -7574,7 +7609,8 @@ function updateNotifBadge(){
   msgBolinhas();
   const sinoBtn = document.getElementById('notif-btn');
   const tvOn = currentRole!=='aluno' && typeof tvAtivo==='function' && tvAtivo();
-  if(sinoBtn){ sinoBtn.classList.toggle('tv-brilho', tvOn); sinoBtn.classList.toggle('bv-brilho', !tvOn && pend.some(x=>x.motivo==='boasvindas' || x.motivo==='e27')); }
+  const lbOn = currentRole!=='aluno' && !tvOn && lembAtivo();
+  if(sinoBtn){ sinoBtn.classList.toggle('tv-brilho', tvOn); sinoBtn.classList.toggle('lb-brilho', lbOn); sinoBtn.classList.toggle('bv-brilho', !tvOn && !lbOn && pend.some(x=>x.motivo==='boasvindas' || x.motivo==='e27')); }
   if(currentRole!=='aluno' || tf>0){
     dot.style.display = 'none';
     badge.style.display = (pend.length+tf)>0 ? 'flex' : 'none';
@@ -7643,6 +7679,10 @@ function notifItens(){
   if(currentRole!=='aluno' && tvAtivo()){
     const n = Number(TV_ALERTA.vencidas);
     itens.unshift({ tipo:'vencidas', quando:TV_ALERTA.ativado_em, titulo:`Você tem ${n} tarefa${n>1?'s':''} vencida${n>1?'s':''}`, sub:'A Mariane pediu que você finalize as tarefas em atraso. Abra suas tarefas e conclua as que estão com o prazo vencido.', acao: ()=>{ if(typeof tarefasUI!=='undefined'){ tarefasUI.aba='minhas'; } goTo('tarefas'); } });
+  }
+  if(currentRole!=='aluno' && lembAtivo()){
+    const q = lembQuintaAtual();
+    itens.unshift({ tipo:'lembrete', quando:q+'T09:00:00Z', titulo:'Lembre os sócios: Fechamento da Semana', sub:`${q===tzHojeISO() ? 'Hoje' : 'Quinta-feira ('+q.slice(8,10)+'/'+q.slice(5,7)+')'} é dia de a Sandra, a Carmem e o Diego preencherem os indicadores e as entregas da semana na Gestão do Time. O prazo é quinta-feira às 23h59.`, acao: ()=>{} });
   }
   if(currentRole==='aluno') TERMOS_PEND.forEach(t=>{
     itens.push({ tipo:'termo', quando:t.enviado_em, titulo:'Leia e concorde com os Termos e Condições de Contratação', sub:'A Ascentria enviou os termos da sua contratação do Método Essência para você ler e confirmar.', acao: ()=>termoAbrir(t) });
@@ -7719,7 +7759,7 @@ function notifPainelHtml(){
   const itens = notifItens();
   const av = (it)=> it.grupo ? msgGrupoAvatar(34, it.grupo) : it.avatarDe ? msgAvatarDe(it.avatarDe, 34) : `<span class="notif-ic">${icon(it.icone||'bell','tiny')}</span>`;
   return `<div class="notif-hd"><strong>Notificações</strong>${itens.length ? `<span class="msg-badge">${itens.length}</span>` : ''}</div>
-    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='vencidas' ? `<button type="button" class="notif-item notif-bv notif-tv" data-notif="${i}"><span class="notif-ic tv-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts tv-pill">Finalizar tarefas vencidas</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='termo' ? `<button type="button" class="notif-item notif-bv notif-termo" data-notif="${i}"><span class="notif-ic termo-ic">${icon('file','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts termo-pill">Ler e concordar</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">${escapeHtml(it.pill||'Entrar na comunidade E27')}</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
+    <div class="notif-lista">${itens.length ? itens.map((it,i)=>(it.tipo==='lembrete' ? `<div class="notif-item notif-bv notif-lb"><span class="notif-ic lb-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="lb-acoes"><button type="button" class="notif-bv-pts lb-pill" data-lb-visto>${icon('check','tiny')} Marquei que vi</button><button type="button" class="lb-link" data-lb-abrir>Abrir Gestão do Time</button></span><em>toda quinta-feira</em></span></div>` : it.tipo==='vencidas' ? `<button type="button" class="notif-item notif-bv notif-tv" data-notif="${i}"><span class="notif-ic tv-ic">${icon('bell','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts tv-pill">Finalizar tarefas vencidas</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='termo' ? `<button type="button" class="notif-item notif-bv notif-termo" data-notif="${i}"><span class="notif-ic termo-ic">${icon('file','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts termo-pill">Ler e concordar</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='e27' ? `<button type="button" class="notif-item notif-bv notif-e27" data-notif="${i}"><span class="notif-ic e27-ic">${icon('users','tiny')}</span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong><small>${escapeHtml(it.sub)}</small><span class="notif-bv-pts e27-pill">${escapeHtml(it.pill||'Entrar na comunidade E27')}</span><em>${notifQuando(it.quando)}</em></span></button>` : it.tipo==='boasvindas' ? `<button type="button" class="notif-item notif-bv" data-notif="${i}"><span class="notif-bv-av">${av(it)}<span class="bv-estrela">✦</span></span><span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>"${escapeHtml(String(it.sub).slice(0,90))}${String(it.sub).length>90?'…':''}"</small>` : ''}<span class="notif-bv-pts">+20 pontos ao dar as boas-vindas</span><em>${notifQuando(it.quando)}</em></span></button>` : `<button type="button" class="notif-item" data-notif="${i}">${av(it)}<span class="notif-txt"><strong>${escapeHtml(it.titulo)}</strong>${it.sub ? `<small>${escapeHtml(String(it.sub).slice(0,110))}</small>` : ''}<em>${notifQuando(it.quando)}</em></span></button>`)).join('') : '<div class="notif-vazio">Nenhuma notificação nova. Quando alguém te enviar uma mensagem, comentar, deixar uma dúvida ou te mencionar, aparece aqui.</div>'}</div>`;
 }
 function notifPainelEl(){
   let p = document.getElementById('notif-painel');
@@ -7740,6 +7780,8 @@ function notifPainelAtualizar(){
   p.innerHTML = notifPainelHtml();
   const depois = p.querySelector('.notif-lista'); if(depois && rolagem) depois.scrollTop = rolagem;
   p.querySelectorAll('[data-notif]').forEach(b=>b.addEventListener('click', ()=>{ const it = itens[+b.dataset.notif]; notifPainelFechar(); if(it) it.acao(); }));
+  const lbV = p.querySelector('[data-lb-visto]'); if(lbV) lbV.addEventListener('click', ()=>{ lembMarcarVisto(); });
+  const lbA = p.querySelector('[data-lb-abrir]'); if(lbA) lbA.addEventListener('click', ()=>{ notifPainelFechar(); goTo('gestaotime'); });
   notifPainelPosicionar(p);
 }
 function notifPainelToggle(){ const p = notifPainelEl(); if(p.hidden){ p.hidden = false; notifPainelAtualizar(); } else notifPainelFechar(); }
