@@ -2243,7 +2243,8 @@
   .ct-link .icon{width:12px;height:12px;}
   .eq-metas{margin:6px 0 22px;}
   .eq-meta-bloco .vendas-meta + .vendas-meta{margin-top:10px;}
-  .eq-meta-bloco{margin-top:10px;}
+  .eq-meta-bloco{margin-top:22px;}
+  .eq-meta-bloco:first-of-type{margin-top:10px;}
   .eq-meta-rot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-mute);margin:0 0 6px;}
   .eq-meta-rot .link-btn{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-size:12px;}
   .eq-meta-bloco .vendas-meta{margin-bottom:0;}
@@ -19127,9 +19128,10 @@ function eqMetasHtml(){
     dev = mtDevHtml(lista, momentos);
   }catch(e){ console.warn('metas dev', e); }
   let fin = ''; try{ fin = mtFinHtml(); }catch(e){ console.warn('metas fin', e); }
-  let crm = ''; try{ crm = eqCrmMetasHtml() + vendasMetaHtml(); }catch(e){ console.warn('metas crm', e); }
+  let ecrm = '', ses = ''; try{ ecrm = eqCrmMetasHtml(); }catch(e){ console.warn('metas ecrm', e); }
+  try{ ses = vendasMetaHtml(); }catch(e){ console.warn('metas sessoes', e); }
   const bloco = (rot, html, view)=> html ? `<div class="eq-meta-bloco"><div class="eq-meta-rot"><span>${rot}</span><button type="button" class="link-btn" data-equipe-go="${view}">Abrir ${icon('externallink','tiny')}</button></div>${html}</div>` : '';
-  const corpo = bloco('CRM · eCRM e Registro de Sessões 1:1', crm, 'vendas') + bloco('Financeiro · Radar Financeiro', fin, 'radarfin') + bloco('Desenvolvimento · Radar dos Mentorados', dev, 'radar');
+  const corpo = bloco('eCRM · Funil da Mentoria', ecrm, 'ecrm') + bloco('Registro de Sessões 1:1', ses, 'vendas') + bloco('Financeiro · Radar Financeiro', fin, 'radarfin') + bloco('Desenvolvimento · Radar dos Mentorados', dev, 'radar');
   return `<div class="eq-metas"><h2 class="section-title com-titulo">${icon('target')} PAINEL DE METAS</h2>${corpo || '<p class="section-sub">Sem dados de metas no momento.</p>'}</div>`;
 }
 function renderEquipe(){
