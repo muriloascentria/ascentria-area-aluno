@@ -1266,7 +1266,7 @@
   .agenda-card.past{opacity:0.75;}
   .agenda-card.past .agenda-date{background:var(--bg-elev);color:var(--text-mute);}
   .agenda-card.past.watched{opacity:1;border-color:var(--success);}
-  .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;}
   /* Garante que o ícone fique do lado do texto (não empilhado em cima) nos botões de ação da gravação,
      já que .icon é display:block por padrão — sem isso "Assistir" e "Assistido" ficavam com alturas diferentes. */
   .agenda-actions .btn-outline{display:inline-flex;align-items:center;gap:5px;}
@@ -10527,7 +10527,7 @@ function renderAgenda(){
         <div class="meta">${l.time} — ${linkify(l.desc)}${l.studentId && l.modalidade==='presencial' && l.local ? ` · <strong>Local:</strong> ${escapeHtml(l.local)}` : ''}</div>
       </div>
       ${l.type==='upcoming'
-        ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">Adicionar à agenda</a></div>`
+        ? `<div class="agenda-actions">${l.studentId && l.modalidade!=='presencial' && l.linkGravacao ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener">${icon('video','tiny')} Entrar no encontro</a>` : ''}<a class="btn-outline" href="${gcalUrl(l.title, l.desc)}" target="_blank" rel="noopener">${icon('calendar','tiny')} Adicionar ao Google Agenda</a></div>`
         : `<div class="agenda-actions">
             ${l.linkGravacao
               ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" data-player="${escapeAttr(l.title||'Gravação')}">${icon('play','tiny')} Assistir</a>${playerDriveId(l.linkGravacao) ? `<a class="btn-outline" href="${escapeAttr(l.linkGravacao)}" target="_blank" rel="noopener" title="Se o vídeo der erro aqui dentro, abra direto no Google Drive">${icon('externallink','tiny')} Abrir no Drive</a>` : ''}`
@@ -12621,7 +12621,7 @@ function mejEncontroHtml(){
       <span>Às 19h (horário de Brasília) · toda quinta-feira</span></div>
     <div class="mej-enc-acoes">
       ${MEJ_ENCONTRO.meet ? `<a class="btn-accent mej-enc-btn" href="${escapeAttr(MEJ_ENCONTRO.meet)}" target="_blank" rel="noopener">${icon('video','tiny')}<span>Entrar no Meet</span></a>` : ''}
-      <a class="btn-outline mej-enc-btn" href="${gcal}" target="_blank" rel="noopener">${icon('calendar','tiny')}<span>Adicionar à agenda</span></a>
+      <a class="btn-outline mej-enc-btn" href="${gcal}" target="_blank" rel="noopener">${icon('calendar','tiny')}<span>Adicionar ao Google Agenda</span></a>
     </div>
   </div>`;
 }
