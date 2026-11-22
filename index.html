@@ -10445,7 +10445,7 @@ function renderRanking(){
 }
 /* Prêmio do Ranking (pedido em 22/11/2026): iPhone 17 Pro, apuração em 23/12/2026 às 23h59 (Brasília).
    A foto fica em premio-ranking.png no site; se o arquivo ainda não existir, o espaço da foto some sozinho. */
-const RANK_PREMIO = { nome:'iPhone 17 Pro', fim:'2026-12-23T23:59:00-03:00', foto:'premio-ranking.png' };
+const RANK_PREMIO = { nome:'iPhone 17 Pro 256 GB', fim:'2026-12-23T23:59:00-03:00', foto:'premio-ranking.png' };
 function rankPremioHtml(){
   const ms = Date.parse(RANK_PREMIO.fim) - Date.now();
   const dias = Math.ceil(ms/864e5);
