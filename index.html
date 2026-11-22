@@ -716,6 +716,15 @@
   .pe-decl .icon{width:13px;height:13px;stroke:var(--success);}
   .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px;}
   .im-meta{display:block;width:100%;margin-top:14px;box-sizing:border-box;}
+  /* Início do mentorado: o mesmo espaço entre os três cards do topo (--ini-g) e o mesmo respiro entre as seções (--ini-r). */
+  .ini-al{--ini-g:12px;--ini-r:40px;}
+  .ini-al .stat-row{gap:var(--ini-g)!important;margin-top:var(--ini-g);}
+  .ini-al .stat-row > .stat-card{flex:1 1 0;min-width:0;}
+  .ini-al .im-meta{margin-top:var(--ini-g)!important;}
+  .ini-al .aniv-bloco, .ini-al .ep-inicio, .ini-al .ee-banner, .ini-al .premio-banner{margin-top:var(--ini-r)!important;margin-bottom:0!important;}
+  .ini-al .ee-banner + .premio-banner{margin-top:var(--ini-r)!important;}
+  .ini-al .section-title.ini-sec{margin-top:var(--ini-r)!important;margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em;}
+  .ini-al .kpi-row{margin-top:0;}
   .im-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
   .im-conta{font-size:11.5px;color:var(--text-mute);}
   .im-tit{font-size:15px!important;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;}
@@ -8332,7 +8341,7 @@ function renderInicio(){
   const heroPts = STUDENT_POINTS[s.id] || {conquistas:0};
   const heroDias = diasRestantes(s);
 
-  document.getElementById('view-inicio').innerHTML = `
+  document.getElementById('view-inicio').innerHTML = `<div class="ini-al">
     <div class="hero">
       <div>
         <h1>Olá, ${s.name.split(' ')[0]}</h1>
@@ -8357,7 +8366,7 @@ function renderInicio(){
     ${essenciaBannerHtml()}
     ${premioBannerHtml()}
 
-    <h2 class="section-title">Indicadores do consultório</h2>
+    <h2 class="section-title ini-sec">Indicadores do consultório</h2>
     <div class="kpi-row">
       <div class="kpi-tile"><div class="label">Leads no mês</div><div class="value">${crmStats.leadsMesCount}</div></div>
       <div class="kpi-tile"><div class="label">Conversão (lead → agendado)</div><div class="value">${crmStats.conversaoPct!=null? crmStats.conversaoPct+'%' : '—'}</div></div>
@@ -8366,12 +8375,12 @@ function renderInicio(){
     </div>
     <p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>
 
-    <h2 class="section-title">${icon('film')} Continue assistindo</h2>
+    <h2 class="section-title ini-sec">${icon('film')} Continue assistindo</h2>
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
 
-    <h2 class="section-title">${icon('users')} Últimos na comunidade</h2>
+    <h2 class="section-title ini-sec">${icon('users')} Últimos na comunidade</h2>
     ${inicioComunidadeHtml()}
-  `;
+  </div>`;
   document.querySelectorAll('#view-inicio [data-inicio-post]').forEach(el=>el.addEventListener('click', ev=>{
     if(ev.target.closest('[data-open-course],[data-del-post],a')) return;
     ev.preventDefault(); ev.stopPropagation();
