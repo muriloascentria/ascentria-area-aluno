@@ -4019,6 +4019,11 @@
      Cada etapa é um card compacto em grade: o check à esquerda, centralizado no bloco tag + nome;
      a ação (Abrir aula / Abrir Painel) ocupa a linha de baixo, de ponta a ponta, como botão secundário
      com contorno (não compete com o conteúdo). Concluída: card levemente verde e nome riscado. */
+  /* rolagem só abaixo da barra do topo: a barra fica fixa e só o conteúdo rola (a barra de rolagem começa embaixo dela) */
+  html, body{height:100%;overflow:hidden;}
+  #app{height:100dvh;min-height:0!important;overflow:hidden;}
+  #app .main{height:100dvh;overflow:hidden;}
+  #app .main > .content{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
   .mod-check-modal .cat{display:none!important;}
   .dp-aviso .app-confirm-actions{display:flex;flex-direction:row;gap:8px;}
   .dp-aviso .app-confirm-actions button{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;margin:0;white-space:nowrap;}
@@ -10529,6 +10534,8 @@ function comEscolherTag(jaApresentou){
 }
 /* Celular = tela de até 640px. Ao cruzar esse limite (girar o aparelho, redimensionar a janela) a tela atual é redesenhada. */
 function ehCel(){ try{ return window.matchMedia('(max-width:640px)').matches; }catch(e){ return false; } }
+/* no celular quem rola é o .content (abaixo da barra do topo): window.scrollTo também leva o conteúdo junto */
+(function(){ try{ const orig = window.scrollTo.bind(window); window.scrollTo = function(){ orig.apply(null, arguments); try{ if(ehCel()){ const c = document.querySelector('#app .main > .content'); if(c) c.scrollTo.apply(c, arguments); } }catch(e){} }; }catch(e){} })();
 try{ window.matchMedia('(max-width:640px)').addEventListener('change', ()=>{ try{ if(typeof currentView!=='undefined' && currentView) goTo(currentView); }catch(e){} }); }catch(e){}
 let COMP_TAG_ABERTA = false;  /* no composer da Comunidade: alguma tag foi tocada (mostra o nome dela e encolhe o Publicar) */
 /* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
