@@ -4041,6 +4041,10 @@
   #view-planner .ep-config-rodape{flex-direction:column;align-items:stretch;}
   #view-planner .ep-config-rodape > div{width:100%;flex-wrap:nowrap!important;}
   #view-planner .ep-config-rodape > div > button{flex:1 1 0;min-width:0;height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;padding:0 10px;}
+  /* iPhone: o campo de horário tem largura própria e passava da borda; aqui ele respeita o quadro */
+  #view-planner .ep-dia-campos label{width:100%;min-width:0;overflow:hidden;}
+  #view-planner .ep-dia-campos input[type="time"]{-webkit-appearance:none;appearance:none;display:block;width:100%!important;min-width:0!important;max-width:100%!important;text-align:left;line-height:42px;}
+  #view-planner .ep-dia-campos input[type="time"]::-webkit-date-and-time-value{text-align:left;}
   #view-planner .ep-dia-campos .ps-input{height:42px;box-sizing:border-box;padding:0 10px!important;}
   .ep-nota-det{margin-top:14px;}
   .ep-nota-det summary{list-style:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
