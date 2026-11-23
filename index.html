@@ -823,10 +823,19 @@
   .dp-lista small{color:var(--text-mute);}
   .dp-lista li{align-items:flex-start;}
   .dp-lista .dp-falta{color:var(--warning,#e0a040);}
-  .dp-lista-itens{list-style:disc;padding-left:20px;gap:4px;}
-  .dp-lista-itens li{display:list-item;color:var(--warning,#e0a040);font-weight:600;}
-  .dp-aviso .dp-titulo{letter-spacing:.06em;}
-  .dp-aviso .dp-lista-itens{margin:10px 0 14px!important;}
+  /* aviso "Atenção" do Painel: ícone âmbar discreto, lista em caixa suave, dica em tom secundário */
+  .dp-aviso .app-confirm-card{padding:22px 22px 20px;}
+  .dp-aviso .dp-topo{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .dp-aviso .dp-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(224,160,64,.12);color:#e0a040;}
+  .dp-aviso .dp-ico svg{width:18px;height:18px;}
+  .dp-aviso .dp-titulo{margin:0!important;font-size:12px!important;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#e0a040;}
+  .dp-aviso .dp-intro{font-size:13.5px;color:var(--text);line-height:1.5;margin:0 0 12px!important;}
+  .dp-lista-itens{list-style:none;margin:0 0 12px!important;padding:10px 14px!important;display:flex;flex-direction:column;gap:7px;
+    background:rgba(224,160,64,.06);border:1px solid rgba(224,160,64,.22);border-radius:12px;}
+  .dp-lista-itens li{display:flex!important;align-items:center!important;gap:10px;font-size:13.5px;font-weight:500;color:var(--text);}
+  .dp-lista-itens li::before{content:"";width:6px;height:6px;border-radius:50%;background:#e0a040;flex-shrink:0;}
+  .dp-aviso .dp-dica{font-size:12.5px;color:var(--text-mute);line-height:1.5;margin:0 0 18px!important;}
+  .dp-aviso .dp-dica b{color:var(--text-dim);font-weight:600;}
   .dp-dica{font-size:12.5px;color:var(--text-mute);margin:6px 0 0;}
   #dp-abrir{display:inline-flex;align-items:center;gap:6px;}
   .dp-hint{display:flex;align-items:center;gap:4px;margin-top:3px;font-size:11.5px;color:var(--warning, #d9a441);font-weight:600;}
@@ -11614,8 +11623,8 @@ function dashPainelAvisoBloqueio(faltam, voltar, s){
   wrap.className = 'app-confirm-backdrop dp-aviso';
   wrap.innerHTML = `
     <div class="app-confirm-card">
-      <h4 class="dp-titulo">⚠️ ATENÇÃO</h4>
-      <p>Esta tarefa só pode ser marcada depois que ${itensFalta.length>1 ? 'estes quadros estiverem preenchidos' : 'este quadro estiver preenchido'} no Painel do Método:</p>
+      <div class="dp-topo"><span class="dp-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4.2"/><path d="M12 16.9h.01"/></svg></span><h4 class="dp-titulo">Atenção</h4></div>
+      <p class="dp-intro">Esta tarefa só pode ser marcada depois que ${itensFalta.length>1 ? 'estes quadros estiverem preenchidos' : 'este quadro estiver preenchido'} no Painel do Método:</p>
       <ul class="dp-lista dp-lista-itens">${itensFalta.map(t=>`<li>${escapeHtml(t)}</li>`).join('')}</ul>
       <p class="dp-dica">Se algum item não se aplica a você, use o botão <b>"não se aplica"</b> dentro do quadro no Painel do Método.</p>
       <div class="app-confirm-actions"><button type="button" class="btn-outline" id="dp-fechar">Agora não</button><button type="button" class="btn-accent" id="dp-abrir">${icon('compass','tiny')} Abrir no Painel</button></div>
