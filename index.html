@@ -4037,6 +4037,10 @@
   /* ao tocar no dia, começo e tempo abrem dentro do próprio card, num quadro delimitado */
   #view-planner .ep-dia-campos{grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 4px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);}
   #view-planner .ep-dia-campos[hidden]{display:none;}
+  /* Cancelar e Salvar minha semana lado a lado, de ponta a ponta */
+  #view-planner .ep-config-rodape{flex-direction:column;align-items:stretch;}
+  #view-planner .ep-config-rodape > div{width:100%;flex-wrap:nowrap!important;}
+  #view-planner .ep-config-rodape > div > button{flex:1 1 0;min-width:0;height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;padding:0 10px;}
   #view-planner .ep-dia-campos .ps-input{height:42px;box-sizing:border-box;padding:0 10px!important;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
