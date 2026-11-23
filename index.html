@@ -160,9 +160,14 @@
   .icon.tiny{width:12px;height:12px;}
 
   /* ---------- LOGIN ---------- */
+  /* A tela de login começa escondida: só aparece quando o app confirma que não há sessão salva
+     (antes ela piscava a cada recarregamento, mesmo com a pessoa já logada). */
+  #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg,#151612);}
+  #boot-splash img{width:64px;height:64px;border-radius:16px;opacity:.9;animation:bootPulso 1.4s ease-in-out infinite;}
+  @keyframes bootPulso{0%,100%{transform:scale(1);opacity:.75}50%{transform:scale(1.06);opacity:1}}
   #login-screen{
     min-height:100vh;
-    display:flex;
+    display:none;
     align-items:center;
     justify-content:center;
     background:radial-gradient(circle at 20% 20%, rgba(141,145,111,0.18), transparent 45%),
@@ -4210,6 +4215,7 @@
 })();
 </script>
 
+<div id="boot-splash" aria-hidden="true"><img src="icon-192.png" alt=""></div>
 <!-- ============ LOGIN ============ -->
 <div id="login-screen">
   <div class="login-box">
@@ -6913,7 +6919,10 @@ async function bootstrapData(){
   refreshPendencias(); // sem await de propósito: o sininho pode chegar meio segundo depois
 }
 
+function bootSplashFim(){ const b = document.getElementById('boot-splash'); if(b) b.remove(); }
+setTimeout(bootSplashFim, 25000);  /* segurança: nunca deixa a tela de carregamento presa */
 async function enterApp(){
+  bootSplashFim();
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').classList.add('active');
   setupNav();
@@ -7676,6 +7685,7 @@ function syncLiveSessionWatched(liveId, watched){
 
 /* ================= LOGIN ================= */
 function renderLogin(){
+  bootSplashFim();
   document.querySelectorAll('#login-tabs [data-tab]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       document.querySelectorAll('#login-tabs [data-tab]').forEach(b=>b.classList.toggle('active', b===btn));
@@ -7845,7 +7855,7 @@ function setupNav(){
     currentUser = null; currentUserRole = null; currentStudentId = null; STAFF_BLOQUEIOS = new Set(); GT.dados = null; GT.pessoa = null;
     wfDraft = null; wfStep = 0; wfPhase = 'fill';
     document.getElementById('app').classList.remove('active');
-    document.getElementById('login-screen').style.display='flex';
+    bootSplashFim(); document.getElementById('login-screen').style.display='flex';
     document.getElementById('li-email').value=''; document.getElementById('li-senha').value='';
     document.querySelectorAll('#login-tabs [data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab==='entrar'));
     document.getElementById('login-panel-entrar').style.display='block';
@@ -28440,6 +28450,7 @@ sb.auth.onAuthStateChange((event, session)=>{
 (async function initApp(){
   document.getElementById('login-screen').style.display = 'none';
   /* Link externo da inscrição no Essência Experience: abre só o formulário, sem login. */
+  if(new URLSearchParams(location.search).has('inscricao') || new URLSearchParams(location.search).has('premio') || new URLSearchParams(location.search).has('documentos')) bootSplashFim();
   if(new URLSearchParams(location.search).has('inscricao')){ eeAbrir({publico:true}); return; }
   if(new URLSearchParams(location.search).has('premio')){ premioAbrir({publico:true}); return; }
   if(new URLSearchParams(location.search).has('documentos')){ fdAbrir(); return; }
@@ -28455,7 +28466,8 @@ sb.auth.onAuthStateChange((event, session)=>{
   }catch(e){
     console.error('restaurar sessão', e);
   }
-  document.getElementById('login-screen').style.display = 'flex';
+  bootSplashFim();
+  bootSplashFim(); document.getElementById('login-screen').style.display = 'flex';
   renderLogin();
 })();
 </script>
