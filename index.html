@@ -1671,6 +1671,10 @@
   body.player-aberto{overflow:hidden;}
   @media (max-width:560px){ .player-ov{padding:0;align-items:center;} .player-box{border-radius:0;border-left:0;border-right:0;} }
   .pl-drive-curto{display:none;} .pl-dica-curta{display:none;}
+  /* campo de comentário cresce conforme a pessoa escreve (até ~6 linhas, depois rola) */
+  .comment-composer textarea.cc-campo{flex:1;min-width:0;resize:none;overflow-y:hidden;min-height:34px;max-height:140px;line-height:1.4;padding:8px 12px;box-sizing:border-box;font:inherit;font-size:12.5px;border-radius:10px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text);}
+  .comment-composer textarea.cc-campo:focus{outline:none;border-color:var(--accent);}
+  .comment-composer:has(textarea.cc-campo){align-items:flex-end;}
   /* respostas recuadas sob o comentário respondido, com uma linha fina à esquerda */
   .comments{--cmt-ind:30px;}
   @media (max-width:640px){ .comments{--cmt-ind:26px;} }
@@ -4117,8 +4121,8 @@
   .comp2-convite{font-size:15px;font-weight:600;line-height:1.4;color:var(--text-dim);}
   .comp2-corpo{width:100%;}
   /* campo 'Escreva um comentário' no tamanho das explicações (o celular forçava 16px) */
-  .comment-composer input[data-comment-input], .comment-composer input[data-comment-input]::placeholder{font-size:11.5px!important;}
-  .comment-composer input[data-comment-input]{height:34px;padding-top:0;padding-bottom:0;border-radius:10px!important;}
+  .comment-composer [data-comment-input], .comment-composer [data-comment-input]::placeholder{font-size:11.5px!important;}
+  .comment-composer [data-comment-input]{min-height:36px;padding:9px 12px;border-radius:10px!important;}
   /* Raios em harmonia: card 14px · tudo que fica dentro dele (campo, emoji, enviar) 10px · tags redondas */
   .comp2 textarea{border-radius:10px!important;}
   .comment-composer .emoji-btn{width:34px;height:34px;min-width:34px;padding:0;margin:0!important;border-radius:10px!important;display:inline-flex;align-items:center;justify-content:center;font-size:15px;border:1px solid var(--border);background:var(--bg-elev);flex:0 0 auto;}
@@ -4126,7 +4130,7 @@
   .comment-composer .cc-enviar .icon{width:15px;height:15px;}
   .comment-composer{gap:6px;align-items:center;}
   /* mesma altura exata para campo, emoji e Enviar no comentário */
-  .comment-composer input[data-comment-input], .comment-composer .emoji-btn, .comment-composer .cc-enviar{height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;}
+  .comment-composer .emoji-btn, .comment-composer .cc-enviar{height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;}
   .comment-composer .emoji-btn{width:36px!important;min-width:36px!important;}
   /* Filtros da Comunidade numa linha só: dividem a largura; se não couber, rolam para o lado */
   .com-mural-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;}
@@ -10373,7 +10377,7 @@ function postHtml(p,compact,showCourseTag){
             ${replyTargets[p.id]? `<div class="reply-target-chip">${icon('reply','tiny')} Respondendo a <b>${escapeHtml(replyTargets[p.id].name)}</b><button type="button" data-cancel-reply="${p.id}">${icon('x','tiny')}</button></div>` : ''}
             <div class="comment-composer">
               ${initialsAvatar(replyAuthor.initials,replyAuthor.color,22,replyAuthor.avatarUrl)}
-              <input type="text" placeholder="${replyTargets[p.id]? 'Responder a '+escapeAttr(replyTargets[p.id].name)+'...' : 'Escreva um comentário...'}" data-comment-input="${p.id}">
+              <textarea rows="1" class="cc-campo" placeholder="${replyTargets[p.id]? 'Responder a '+escapeAttr(replyTargets[p.id].name)+'...' : 'Escreva um comentário...'}" data-comment-input="${p.id}"></textarea>
               <button type="button" class="emoji-btn" title="Emoji">😊</button>
               ${ehCel() ? `<button class="btn-mini cc-enviar" data-comment-send="${p.id}">${icon('send','tiny')}<span>Enviar</span></button>` : `<button class="btn-mini" data-comment-send="${p.id}">Enviar</button>`}
             </div>
@@ -10381,6 +10385,9 @@ function postHtml(p,compact,showCourseTag){
         </div>`:''}
     </div>`;
 }
+/* Campo de comentário: aumenta de altura conforme o texto cresce. */
+function ccAjustarAltura(el){ if(!el || el.tagName!=='TEXTAREA') return; el.style.height = 'auto'; const h = Math.min(el.scrollHeight + 2, 140); el.style.height = h + 'px'; el.style.overflowY = el.scrollHeight + 2 > 140 ? 'auto' : 'hidden'; }
+document.addEventListener('input', e=>{ if(e.target && e.target.matches && e.target.matches('textarea[data-comment-input]')) ccAjustarAltura(e.target); });
 /* Comentários em hierarquia, como no Facebook, com só dois níveis: o comentário e, recuadas abaixo dele,
    as respostas. Resposta de resposta fica na mesma reta das respostas, ligada à foto de cima por uma linha reta
    (com "respondendo a Fulana"). */
