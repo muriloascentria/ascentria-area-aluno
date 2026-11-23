@@ -4030,6 +4030,12 @@
   /* tabelas que rolam de lado param no limite, sem "elástico" e sem arrastar a tela junto */
   .table-wrap{overscroll-behavior-x:none;overscroll-behavior:contain;touch-action:pan-y;}
   #app .main > .content{overflow-x:hidden;overscroll-behavior-x:none;}
+  /* Ajustar minha semana: os 7 dias empilhados, um por linha (nome à esquerda, começo e tempo à direita) */
+  #view-planner .ep-dias{grid-template-columns:1fr!important;gap:8px;}
+  #view-planner .ep-dia{flex-direction:row;align-items:center;gap:10px;padding:8px 10px;min-height:52px;box-sizing:border-box;}
+  #view-planner .ep-dia-btn{flex:1 1 auto;min-width:0;}
+  #view-planner .ep-dia-campos{flex:0 0 auto;grid-template-columns:106px 84px;}
+  #view-planner .ep-dia-campos[hidden]{display:none;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
