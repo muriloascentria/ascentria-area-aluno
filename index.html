@@ -4327,6 +4327,8 @@
   .ini-al .stat-row > .stat-card{flex:1 1 0;min-width:0;}
   .ini-al .im-meta{margin-top:var(--ini-g)!important;}
   /* lista do dia no card do ePLANNER: no tamanho e cor dos textos de explicação */
+  .kpi-regras{margin-top:14px;}
+  .kpi-regras .kpi-note{margin:10px 0 0!important;font-size:12.5px;color:var(--text-dim);line-height:1.5;}
   .ini-al .ep-inicio-item{font-size:12.5px!important;line-height:1.5!important;color:var(--text-dim)!important;gap:10px;}
   .ini-al .ep-inicio-item span{font-size:12.5px!important;font-weight:700;color:var(--text-dim);min-width:40px;}
   .ini-al .aniv-bloco, .ini-al .ep-inicio, .ini-al .ee-banner, .ini-al .premio-banner{margin-top:var(--ini-r)!important;margin-bottom:0!important;}
@@ -9167,7 +9169,7 @@ function renderInicio_cel(){
       <div class="kpi-tile"><div class="label">Faturamento do mês</div><div class="value" style="font-size:16px">${fmtAluno(fatStats.mesAtual, s.id)}</div></div>
       <div class="kpi-tile"><div class="label">Faturamento total desde o início</div><div class="value" style="font-size:16px">${fmtAluno(fatStats.totalAcumulado, s.id)}</div></div>
     </div>
-    <p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>
+    ${ehCel() ? `<details class="ep-nota-det kpi-regras"><summary><span>Ver regras de sincronização</span><svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p></details>` : `<p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>`}
 
     <h2 class="section-title ini-sec">${icon('film')} Continue assistindo</h2>
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
@@ -9235,7 +9237,7 @@ function renderInicio_web(){
       <div class="kpi-tile"><div class="label">Faturamento do mês</div><div class="value" style="font-size:16px">${fmtAluno(fatStats.mesAtual, s.id)}</div></div>
       <div class="kpi-tile"><div class="label">Faturamento total desde o início</div><div class="value" style="font-size:16px">${fmtAluno(fatStats.totalAcumulado, s.id)}</div></div>
     </div>
-    <p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>
+    ${ehCel() ? `<details class="ep-nota-det kpi-regras"><summary><span>Ver regras de sincronização</span><svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p></details>` : `<p class="kpi-note">Leads e conversão sincronizados com o CRM (aba Vendas); faturamento sincronizado com o Fluxo Financeiro (aba Faturamento).</p>`}
 
     <h2 class="section-title">${icon('film')} Continue assistindo</h2>
     <div class="row-scroll">${continueList.map(c=>courseTileHtml(c)).join('')}</div>
