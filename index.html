@@ -7660,7 +7660,27 @@ function syncCommunityCommentDelete(commentId){
 function syncChecklistItemStatus(id, status){
   syncNow(sb.from('checklist_items').update({status}).eq('id', id));
 }
+/* Tarefa colada como lista numerada (ex.: as tarefas do Guia do Embarque): se ninguém escolheu as aulas e
+   atividades, liga cada linha ao item do Dashboard com o mesmo texto. Assim os checks se marcam sozinhos
+   conforme o mentorado faz (23/11/2026). */
+function checklistNormTxt(t){
+  return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ')
+    .split(/\s+/).filter(w=>w && !['a','o','os','as','seu','sua','seus','suas','de','do','da','dos','das','e'].includes(w)).join(' ');
+}
+function checklistAulasDoTexto(texto){
+  const linhas = String(texto||'').split(/\n/).map(l=>l.trim()).filter(l=>/^\d+[.)]\s+/.test(l)).map(l=>l.replace(/^\d+[.)]\s+/,''));
+  if(linhas.length < 2) return [];
+  let seq = []; try{ seq = apoioSequencia(); }catch(e){ return []; }
+  const chaves = seq.map(x=>checklistNormTxt(x.titulo.replace(/^assistir aula:\s*/i,'assistir aula sobre ')));
+  /* procura na ordem do Dashboard, a partir do último item achado (itens repetidos, como "Incluir tudo
+     no Painel do Método", caem no módulo certo) */
+  const out = []; let pos = 0;
+  linhas.forEach(l=>{ const k = checklistNormTxt(l); let i = chaves.indexOf(k, pos); if(i<0) i = chaves.indexOf(k);
+    if(i>=0){ pos = i+1; if(!out.includes(seq[i].id)) out.push(seq[i].id); } });
+  return out.length >= Math.ceil(linhas.length/2) ? out : [];
+}
 async function syncChecklistItemInsert(sid, item){
+  if(!(item.aulas||[]).length){ const auto = checklistAulasDoTexto(item.tarefa); if(auto.length) item.aulas = auto; }
   const { data, error } = await sb.from('checklist_items').insert({student_id:sid, tarefa:item.tarefa, responsavel:item.responsavel, prazo:item.prazo, status:item.status, obs:item.obs, aulas:item.aulas||[], contato_id:item.contatoId||null, agendamento_id:item.agendamentoId||null}).select().single();
   if(error) throw error;
   item.criadoPor = data.criado_por || (currentUser && currentUser.id) || null; item.criadoEm = data.criado_em || null;
