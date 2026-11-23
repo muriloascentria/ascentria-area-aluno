@@ -13271,7 +13271,16 @@ function renderSessoes(){
       linkGravacao: l.linkGravacao||'', linkTranscricao:'', _fromAgenda:true,
     }));
   const manuais = s.sessions.map(sess=>({...sess,_fromAgenda:false}));
-  const all = [...doAgenda, ...manuais];
+  /* Conta Teste Aluno: 2 sessões de exemplo (só na tela, nada é gravado no banco) para ver como fica */
+  const exemplo = (s.id===TESTE_ALUNO_MURILO && !manuais.length && !doAgenda.length) ? [
+    { title:'Sessão 1:1 · Posicionamento e Nicho', date:'18/11/2026', responsavel:'Murilo Pedroso', _fromAgenda:false,
+      notes:'Revisamos o seu nicho e a proposta de valor. Combinamos:\n• Ajustar a bio do Instagram com a nova promessa até sexta.\n• Gravar 3 vídeos curtos sobre as dores da sua cliente ideal.\n• Trazer na próxima sessão os 10 primeiros contatos da lista quente.',
+      linkGravacao:'https://drive.google.com/file/d/exemplo1/view', linkTranscricao:'https://drive.google.com/file/d/exemplo1b/view' },
+    { title:'Sessão 1:1 · Primeira consulta e precificação', date:'04/11/2026', responsavel:'Sandra Bublitz', _fromAgenda:false,
+      notes:'Simulamos a primeira consulta do começo ao fim e definimos o valor do seu acompanhamento.\n• Valor de entrada: R$ 450 por consulta.\n• Pacote de 3 meses com retorno quinzenal.\n• Próximo passo: montar o roteiro de acolhimento no Painel do Método.',
+      linkGravacao:'https://drive.google.com/file/d/exemplo2/view', linkTranscricao:'' },
+  ] : [];
+  const all = [...doAgenda, ...manuais, ...exemplo];
   document.getElementById('view-sessoes').innerHTML = `
     <p class="section-sub">Histórico de sessões individuais com a sua mentora — visível somente para você (e para a equipe interna).</p>
     ${all.length? all.map(sess=>`
