@@ -1895,7 +1895,7 @@
   .crmh-fx{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
   .crmh-fx.on{border-color:var(--accent);color:var(--text);background:rgba(141,145,111,.14);}
   .crmh-pergunta{font-size:12.5px;color:var(--text-dim);}
-  .crmh-peca{border-top:1px solid var(--border);padding-top:12px;}
+  .crmh-peca{}
   .crmh-card > .crmh-peca:first-of-type{border-top:0;padding-top:0;}
   .crmh-peca-rot{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px;}
   .crmh-msg{font-size:14px;line-height:1.5;color:var(--text);background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
@@ -1910,6 +1910,24 @@
   .crmh-sec{flex:1 1 0;background:transparent;border:1px solid var(--border);color:var(--text-dim);}
   .crmh-vazio{font-size:13px;color:var(--text-mute);margin:0 0 16px;}
   .crmh-det{margin:14px 0 4px;}
+  .crmh-como{margin:0 0 16px!important;}
+  .crmh-como-lista{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .crmh-como-lista b{color:var(--text);font-weight:700;}
+  .crmh-novo-btn{width:100%;height:44px;border-radius:10px;border:1px dashed var(--accent);background:transparent;color:var(--accent-2,var(--accent));font:inherit;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;margin-bottom:24px;}
+  .crmh-form{border:1px solid var(--accent);border-radius:12px;padding:14px;margin-bottom:24px;display:flex;flex-direction:column;gap:8px;background:var(--bg-elev);}
+  .crmh-form .ps-label{margin:4px 0 0;}
+  .crmh-sub{font-size:12.5px;color:var(--text-mute);margin:-4px 0 10px;}
+  .crmh-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .crmh-cab-txt{min-width:0;}
+  .crmh-pontos{display:inline-flex;gap:4px;margin-top:6px;flex-shrink:0;}
+  .crmh-pontos i{width:8px;height:8px;border-radius:50%;border:1px solid var(--border);display:block;}
+  .crmh-pontos i.feito{background:var(--accent);border-color:var(--accent);}
+  .crmh-pontos i.agora{border-color:var(--accent);box-shadow:0 0 0 2px rgba(141,145,111,.25);}
+  .crmh-passo{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);}
+  .crmh-passo span{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:0;flex-shrink:0;}
+  .crmh-cheio{width:100%;flex:none;}
+  .crmh-link{background:none;border:0;padding:2px 0;color:var(--accent-2,var(--accent));font:inherit;font-size:12.5px;font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer;align-self:center;}
+  .crmh-preco{margin:24px 0 0!important;max-width:none!important;}
   .crmh-det > summary{list-style:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
   .crmh-det > summary::-webkit-details-marker{display:none;}
   .crmh-det .ep-nota-seta{width:15px;height:15px;transition:transform .2s;}
@@ -5140,12 +5158,12 @@ function crmApplyPlaceholders(texto, lead, precoConsulta){
 const CRM_FLUXO = {
   procurou: {
     novo: { pecas:[
-      {rot:'Abertura', msg:'Olá, [nome]! É um prazer compartilhar mais sobre como funciona o meu trabalho. Antes de tudo, quero entender melhor o que você está buscando, para que eu possa te orientar da melhor forma e se meu trabalho pode atender sua demanda.'},
-      {rot:'Explique como funciona', msg:'O meu atendimento é focado em [explicar sua abordagem]. Avalio o momento que você está vivendo e crio um plano personalizado que une diversas intervenções para alcançar os resultados que você deseja.'},
-      {rot:'Se já atendeu casos parecidos', msg:'Já acompanhei muitas pessoas em situações parecidas com a sua e sei como pode ser desafiador dar o primeiro passo. Muitos clientes relatam mudanças significativas.'},
-      {rot:'Se ainda não atendeu casos parecidos', msg:'As intervenções que utilizo têm resultados expressivos para essa demanda.'},
-      {rot:'Preço e convite', msg:'O investimento para uma consulta é de [valor]. Podemos agendar o seu atendimento? Qual período fica melhor para você?'},
-    ], dica:'Se tiver depoimentos ou exemplos concretos, envie junto. Se não responder em 3 horas, o app traz a mensagem do Dia 1.', horas:3 },
+      {rot:'Mensagem 1 · Abertura', msg:'Olá, [nome]! É um prazer compartilhar mais sobre como funciona o meu trabalho. Antes de tudo, quero entender melhor o que você está buscando, para que eu possa te orientar da melhor forma e se meu trabalho pode atender sua demanda.'},
+      {rot:'Mensagem 2 · Como funciona o seu atendimento', msg:'O meu atendimento é focado em [explicar sua abordagem]. Avalio o momento que você está vivendo e crio um plano personalizado que une diversas intervenções para alcançar os resultados que você deseja.'},
+      {rot:'Mensagem 3 · Use esta se já atendeu casos parecidos', msg:'Já acompanhei muitas pessoas em situações parecidas com a sua e sei como pode ser desafiador dar o primeiro passo. Muitos clientes relatam mudanças significativas.'},
+      {rot:'Mensagem 3 · Ou esta, se ainda não atendeu', msg:'As intervenções que utilizo têm resultados expressivos para essa demanda.'},
+      {rot:'Mensagem 4 · Preço e convite', msg:'O investimento para uma consulta é de [valor]. Podemos agendar o seu atendimento? Qual período fica melhor para você?'},
+    ], dica:'Envie as mensagens nesta ordem, uma depois da outra. Se tiver depoimentos ou exemplos, mande junto. Se o lead não responder em 3 horas, o app traz a próxima mensagem.', horas:3 },
     d1: { pecas:[{msg:'Oi, [nome]. Você tem mais alguma dúvida?'}] },
     d2: { pecas:[{msg:'Poderia ouvir o áudio que eu enviei?'}] },
     d3: { pecas:[{msg:'Existe algum motivo para você não querer mais agendar o seu atendimento, para que eu possa encerrar o atendimento e não incomodar mais?'}] },
@@ -5153,11 +5171,7 @@ const CRM_FLUXO = {
     d5: { pecas:[{msg:'Esta é minha última mensagem por aqui. Ainda deixei disponível para você uma Avaliação Clínica Inicial 100% Gratuita, para entender suas principais queixas e avaliar quais cuidados podem fazer sentido para o seu caso. Responda SIM se quiser aproveitar essa avaliação ou NÃO caso não tenha mais interesse.'}] },
   },
   reativacao: {
-    novo: { pecas:[
-      {rot:'Primeira mensagem', msg:'Oi, [nome]. Posso falar com você?'},
-      {rot:'Se responder', msg:'Oi, [nome]. Tudo bem? Aqui é o Enf. [seu nome]. Estava revendo alguns acompanhamentos e lembrei de você. Posso falar com você rapidinho?'},
-      {rot:'Se responder SIM', msg:'Estava estudando seu prontuário e queria saber como você está hoje em relação a [queixa/objetivo]. Gostaria de fazer uma conversa de aproximadamente 30 minutos com você. Podemos agendar?'},
-    ], dica:'Envie a primeira mensagem. As outras são para quando o lead responder.' },
+    novo: { pecas:[ {msg:'Oi, [nome]. Posso falar com você?'} ], dica:'Quando o lead responder, toque em "O lead respondeu" para ver a próxima mensagem.' },
     d1: { pecas:[{msg:'Oi, [nome]. Conseguiu ver minha mensagem de ontem?'}] },
     d2: { pecas:[{msg:'[nome], conseguiu ouvir o áudio que te enviei?'}] },
     d3: { pecas:[{msg:'Oi, [nome]. Só para eu não ficar insistindo sem necessidade: hoje você não tem interesse em responder minha mensagem ou aconteceu alguma coisa que te impediu de responder?'}] },
@@ -5176,6 +5190,11 @@ const CRM_RESPOSTAS = [
     {rot:'Se responder sim', msg:'Se eu te ajudar a encontrar uma forma de encaixar o investimento na sua capacidade de pagamento, ficaria bom?'},
     {rot:'Se responder sim de novo', msg:'Certo, qual seria um valor de parcela que você conseguiria se comprometer sem gerar ansiedade?'}]},
   {k:'agendar', rot:'Quer agendar', dica:'Siga a Jornada do Paciente no Painel do Método (aba Jornada do Usuário) e toque em "Agendou" quando marcar.', pecas:[]},
+];
+/* respostas extras do primeiro contato de reativação (aparecem só nesse caso, antes das demais) */
+const CRM_RESPOSTAS_REAT = [
+  {k:'reat1', rot:'Respondeu o oi', pecas:[{msg:'Oi, [nome]. Tudo bem? Aqui é o Enf. [seu nome]. Estava revendo alguns acompanhamentos e lembrei de você. Posso falar com você rapidinho?'}]},
+  {k:'reat2', rot:'Disse que pode falar', pecas:[{msg:'Estava estudando seu prontuário e queria saber como você está hoje em relação a [queixa/objetivo]. Gostaria de fazer uma conversa de aproximadamente 30 minutos com você. Podemos agendar?'}]},
 ];
 const CRM_ORDEM = ['novo','d1','d2','d3','d4','d5'];
 function crmFluxoDe(lead){ return lead && lead.tipo==='Profissional Procurou' ? 'reativacao' : 'procurou'; }
@@ -5202,6 +5221,18 @@ function crmPecasHtml(pecas, lead, preco, skey){
       <div class="crmh-acoes"><button type="button" class="crmh-btn" data-crmh-copiar="${escapeAttr(t)}">${icon('copy','tiny')} Copiar</button>${wa ? `<a class="crmh-btn crmh-wa" href="${escapeAttr(wa)}" target="_blank" rel="noopener">${icon('send','tiny')} Abrir no WhatsApp</a>` : ''}</div>
     </div>`; }).join('');
 }
+function crmPontos(lead){
+  if(lead.stage==='novo') return '';
+  const n = Math.max(0, CRM_ORDEM.indexOf(lead.stage));
+  return `<span class="crmh-pontos" title="${crmDiaRot(lead.stage)}">${[1,2,3,4,5].map(i=>`<i class="${i<n?'feito':i===n?'agora':''}"></i>`).join('')}</span>`;
+}
+function crmQuando(ts){
+  if(!ts) return 'agora';
+  const d = new Date(ts), h = new Date(); h.setHours(0,0,0,0);
+  const dia = Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - h)/86400000);
+  const hora = d.getHours()||d.getMinutes() ? ` às ${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}` : '';
+  return dia<=0 ? `hoje${hora}` : dia===1 ? 'amanhã' : d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+}
 function crmHojeHtml(section, val){
   const skey = section.key, preco = val.precoConsulta;
   const ativos = val.leads.filter(l=>!l.discarded && (l.nome||'').trim());
@@ -5210,36 +5241,50 @@ function crmHojeHtml(section, val){
   const conversa = ativos.filter(l=>l.conversa && l.stage!=='agendado');
   const depois = ativos.filter(l=>!l.conversa && l.stage!=='agendado' && !crmVencido(l));
   const agendados = ativos.filter(l=>l.stage==='agendado');
-  const fluxoSel = lead=>`<div class="crmh-fluxo">${[['procurou','Me procurou','Cliente Procurou'],['reativacao','Eu procurei','Profissional Procurou']].map(([k,r,t])=>`<button type="button" class="crmh-fx ${crmFluxoDe(lead)===k?'on':''}" data-crmh-tipo="${escapeAttr(t)}" data-crmh-id="${lead.id}" data-skey="${skey}">${r}</button>`).join('')}</div>`;
-  const cab = lead=>`<div class="crmh-cab"><div><strong>${escapeHtml(lead.nome)}</strong><small>${crmDiaRot(lead.stage)}${lead.meio ? ' · '+escapeHtml(lead.meio) : ''}${crmAtrasado(lead) ? ' · <span class="crmh-atraso">atrasado</span>' : ''}</small></div></div>`;
+  const seta = '<svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  const origem = l=>crmFluxoDe(l)==='reativacao' ? 'Você procurou' : 'Procurou você';
+  const cab = lead=>`<div class="crmh-cab"><div class="crmh-cab-txt"><strong>${escapeHtml(lead.nome)}</strong><small>${crmDiaRot(lead.stage)} · ${origem(lead)}${crmAtrasado(lead) ? ' · <span class="crmh-atraso">atrasado</span>' : ''}</small></div>${crmPontos(lead)}</div>`;
   const cardEnviar = lead=>{ const f = (CRM_FLUXO[crmFluxoDe(lead)]||{})[lead.stage] || {pecas:[]};
-    return `<div class="crmh-card">${cab(lead)}${lead.stage==='novo' ? fluxoSel(lead) : ''}
+    return `<div class="crmh-card">${cab(lead)}
+      <div class="crmh-passo"><span>1</span> ${f.pecas.length>1 ? 'Copie e envie estas mensagens' : 'Copie e envie esta mensagem'}</div>
       ${crmPecasHtml(f.pecas, lead, preco, skey)}
       ${f.dica ? `<p class="crmh-dica">${escapeHtml(f.dica)}</p>` : ''}
-      <div class="crmh-fim"><button type="button" class="crmh-main" data-crmh-enviei="${lead.id}" data-skey="${skey}">${icon('check','tiny')} Enviei</button><button type="button" class="crmh-sec" data-crmh-respondeu="${lead.id}" data-skey="${skey}">${icon('comment','tiny')} Respondeu</button></div>
+      <div class="crmh-passo"><span>2</span> Depois de enviar, toque aqui</div>
+      <button type="button" class="crmh-main crmh-cheio" data-crmh-enviei="${lead.id}" data-skey="${skey}">${icon('check','tiny')} Já enviei</button>
+      <button type="button" class="crmh-link" data-crmh-respondeu="${lead.id}" data-skey="${skey}">O lead respondeu? Toque aqui</button>
     </div>`; };
-  const cardConversa = lead=>{ const ab = val.hojeResp && val.hojeResp[lead.id] || 'duvida'; const r = CRM_RESPOSTAS.find(x=>x.k===ab) || CRM_RESPOSTAS[0];
+  const cardConversa = lead=>{ const lista = (crmFluxoDe(lead)==='reativacao' && lead.stage==='novo' ? CRM_RESPOSTAS_REAT : []).concat(CRM_RESPOSTAS);
+    const ab = (val.hojeResp && val.hojeResp[lead.id]) || null; const r = lista.find(x=>x.k===ab);
     return `<div class="crmh-card">${cab(lead)}
-      <div class="crmh-pergunta">O que o lead respondeu?</div>
-      <div class="crmh-resps">${CRM_RESPOSTAS.map(x=>`<button type="button" class="crmh-fx ${x.k===ab?'on':''}" data-crmh-resp="${x.k}" data-crmh-id="${lead.id}" data-skey="${skey}">${x.rot}</button>`).join('')}</div>
-      ${r.dica ? `<p class="crmh-dica">${escapeHtml(r.dica)}</p>` : ''}
-      ${crmPecasHtml(r.pecas, lead, preco, skey)}
+      <div class="crmh-passo"><span>1</span> O que o lead respondeu?</div>
+      <div class="crmh-resps">${lista.map(x=>`<button type="button" class="crmh-fx ${x.k===ab?'on':''}" data-crmh-resp="${x.k}" data-crmh-id="${lead.id}" data-skey="${skey}">${x.rot}</button>`).join('')}</div>
+      ${r ? `<div class="crmh-passo"><span>2</span> ${r.pecas.length ? 'Copie e responda' : 'Próximo passo'}</div>${r.dica ? `<p class="crmh-dica">${escapeHtml(r.dica)}</p>` : ''}${crmPecasHtml(r.pecas, lead, preco, skey)}` : ''}
       <div class="crmh-fim"><button type="button" class="crmh-main" data-crmh-agendou="${lead.id}" data-skey="${skey}">${icon('calendar','tiny')} Agendou</button><button type="button" class="crmh-sec" data-crmh-parou="${lead.id}" data-skey="${skey}">Não respondeu</button></div>
     </div>`; };
-  const cardFim = lead=>`<div class="crmh-card">${cab(lead)}<p class="crmh-dica">Você já enviou as 5 mensagens e o lead não respondeu. Encerrar este lead?</p>
-      <div class="crmh-fim"><button type="button" class="crmh-main" data-crmh-encerrar="${lead.id}" data-skey="${skey}">Encerrar lead</button><button type="button" class="crmh-sec" data-crmh-recomecar="${lead.id}" data-skey="${skey}">Recomeçar do Dia 1</button></div></div>`;
-  const sec = (tit, n, corpo)=>`<div class="crmh-sec-tit">${tit}${n!=null ? ` <span>${n}</span>` : ''}</div>${corpo}`;
+  const cardFim = lead=>`<div class="crmh-card">${cab(lead)}<p class="crmh-dica">Você já enviou as 5 mensagens e o lead não respondeu. Quer encerrar este lead?</p>
+      <div class="crmh-fim"><button type="button" class="crmh-main" data-crmh-encerrar="${lead.id}" data-skey="${skey}">Encerrar lead</button><button type="button" class="crmh-sec" data-crmh-recomecar="${lead.id}" data-skey="${skey}">Recomeçar</button></div></div>`;
+  const sec = (tit, n, corpo, sub)=>`<div class="crmh-sec-tit">${tit}${n!=null ? ` <span>${n}</span>` : ''}</div>${sub ? `<p class="crmh-sub">${sub}</p>` : ''}${corpo}`;
+  const form = val.hojeForm ? `<div class="crmh-form">
+      <label class="ps-label">Nome do lead</label><input class="ps-input" id="crmh-nome-${skey}" placeholder="Ex.: Maria Souza">
+      <label class="ps-label">WhatsApp (se tiver)</label><input class="ps-input" id="crmh-fone-${skey}" type="tel" placeholder="(11) 99999-9999">
+      <label class="ps-label">Como esse lead chegou?</label>
+      <div class="crmh-fluxo">${[['Cliente Procurou','Ele me procurou'],['Profissional Procurou','Eu procurei (paciente antigo)']].map(([t,r],i)=>`<button type="button" class="crmh-fx ${(val.hojeFormTipo||'Cliente Procurou')===t?'on':''}" data-crmh-formtipo="${escapeAttr(t)}" data-skey="${skey}">${r}</button>`).join('')}</div>
+      <div class="crmh-fim"><button type="button" class="crmh-main" data-crmh-add="${skey}">Adicionar</button><button type="button" class="crmh-sec" data-crmh-form="0" data-skey="${skey}">Cancelar</button></div>
+    </div>` : `<button type="button" class="crmh-novo-btn" data-crmh-form="1" data-skey="${skey}">${icon('plus','tiny')} Novo lead</button>`;
   return `
     <div class="crmh">
-      <div class="crmh-novo">
-        <input class="ps-input" id="crmh-nome-${skey}" placeholder="Nome do lead">
-        <input class="ps-input" id="crmh-fone-${skey}" type="tel" placeholder="WhatsApp">
-        <button type="button" class="crmh-main" data-crmh-add="${skey}">${icon('plus','tiny')} Adicionar lead</button>
+      <details class="ep-nota-det crmh-det crmh-como"><summary><span>Como funciona</span>${seta}</summary>
+        <ol class="crmh-como-lista"><li><b>Cadastre o lead</b> em "Novo lead", com o nome e, se tiver, o WhatsApp.</li><li><b>Todo dia</b>, veja quem está em "Para enviar hoje". A mensagem já vem pronta: copie (ou abra no WhatsApp) e envie.</li><li><b>Toque em "Já enviei".</b> O lead some da lista e volta sozinho no dia seguinte com a próxima mensagem.</li><li><b>Se o lead responder</b>, toque em "O lead respondeu", escolha o que ele disse e copie a resposta pronta.</li></ol>
+      </details>
+      ${form}
+      ${sec('Para enviar hoje', enviar.length + fim.length, (fim.map(cardFim).join('') + enviar.map(cardEnviar).join('')) || '<p class="crmh-vazio">Nenhuma mensagem para enviar agora. Volte amanhã ou cadastre um novo lead.</p>')}
+      ${conversa.length ? sec('Responderam', conversa.length, conversa.map(cardConversa).join(''), 'Continue a conversa com a resposta pronta.') : ''}
+      ${depois.length ? `<details class="ep-nota-det crmh-det"><summary><span>Próximas mensagens (${depois.length})</span>${seta}</summary>${depois.sort((a,b)=>(a.proxEm||0)-(b.proxEm||0)).map(l=>`<div class="crmh-linha"><span>${escapeHtml(l.nome)}</span><small>${crmDiaRot(l.stage)} · ${crmQuando(l.proxEm)}</small></div>`).join('')}</details>` : ''}
+      ${agendados.length ? `<details class="ep-nota-det crmh-det"><summary><span>Agendados (${agendados.length})</span>${seta}</summary>${agendados.map(l=>`<div class="crmh-linha"><span>${escapeHtml(l.nome)}</span><small>Agendado</small></div>`).join('')}</details>` : ''}
+      <div class="crm-preco-wrap crmh-preco">
+        <label class="ps-label">Valor da sua consulta (entra nas mensagens)</label>
+        <input type="number" step="0.01" min="0" class="ps-input pr-recalc crm-preco-input" data-fkind="crm-preco" data-skey="${skey}" value="${preco!=null && preco!==''? escapeAttr(preco) : ''}" placeholder="${simboloAluno()}">
       </div>
-      ${sec('Para enviar hoje', enviar.length + fim.length, (fim.map(cardFim).join('') + enviar.map(cardEnviar).join('')) || '<p class="crmh-vazio">Nenhuma mensagem para enviar agora. 🎉</p>')}
-      ${conversa.length ? sec('Em conversa', conversa.length, conversa.map(cardConversa).join('')) : ''}
-      ${depois.length ? `<details class="ep-nota-det crmh-det"><summary><span>Próximas mensagens (${depois.length})</span><svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>${depois.sort((a,b)=>(a.proxEm||0)-(b.proxEm||0)).map(l=>`<div class="crmh-linha"><span>${escapeHtml(l.nome)}</span><small>${crmDiaRot(CRM_ORDEM[Math.min(CRM_ORDEM.indexOf(l.stage),5)]||l.stage)} · ${new Date(l.proxEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></div>`).join('')}</details>` : ''}
-      ${agendados.length ? `<details class="ep-nota-det crmh-det"><summary><span>Agendados (${agendados.length})</span><svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>${agendados.map(l=>`<div class="crmh-linha"><span>${escapeHtml(l.nome)}</span><small>Agendado</small></div>`).join('')}</details>` : ''}
     </div>`;
 }
 /* Compartilhadas entre o render normal do roteiro e a atualização "leve" (refreshCrmRoteiroPanel) que
@@ -12845,10 +12890,6 @@ function renderSectionHTML(section, data){
     if(modoCrm==='hoje') return `<div class="ps-section">
       <h4 class="ps-h">${section.label}</h4>
       ${abasCrm}
-      <div class="crm-preco-wrap crmh-preco">
-        <label class="ps-label">Valor da consulta</label>
-        <input type="number" step="0.01" min="0" class="ps-input pr-recalc crm-preco-input" data-fkind="crm-preco" data-skey="${section.key}" value="${val.precoConsulta!=null && val.precoConsulta!==''? escapeAttr(val.precoConsulta) : ''}" placeholder="${simboloAluno()}">
-      </div>
       ${crmHojeHtml(section, val)}
     </div>`;
     return `<div class="ps-section">
@@ -13178,11 +13219,14 @@ function bindSectionEvents(sections, data, rerender, saveKey){
     try{ await navigator.clipboard.writeText(t); ok = true; }catch(e){ try{ const ta = document.createElement('textarea'); ta.value = t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); }catch(_){} }
     const orig = b.innerHTML; b.innerHTML = `${icon('check','tiny')} ${ok ? 'Copiado' : 'Não deu para copiar'}`; b.classList.add('ok'); setTimeout(()=>{ b.innerHTML = orig; b.classList.remove('ok'); }, 1600);
   }));
+  modalEl.querySelectorAll('[data-crmh-form]').forEach(b=>b.addEventListener('click', ()=>{ const v = crmhVal(b.dataset.skey); if(!v) return; v.hojeForm = b.dataset.crmhForm==='1'; rerender(); if(v.hojeForm){ const ni = document.getElementById('modal').querySelector(`#crmh-nome-${b.dataset.skey}`); if(ni) ni.focus(); } }));
+  modalEl.querySelectorAll('[data-crmh-formtipo]').forEach(b=>b.addEventListener('click', ()=>{ const v = crmhVal(b.dataset.skey); if(!v) return; v.hojeFormTipo = b.dataset.crmhFormtipo; modalEl.querySelectorAll('[data-crmh-formtipo]').forEach(x=>x.classList.toggle('on', x===b)); }));
   modalEl.querySelectorAll('[data-crmh-add]').forEach(b=>b.addEventListener('click', ()=>{
     const skey = b.dataset.crmhAdd, v = crmhVal(skey); if(!v) return;
     const ni = modalEl.querySelector(`#crmh-nome-${skey}`), fi = modalEl.querySelector(`#crmh-fone-${skey}`);
     const nome = (ni && ni.value || '').trim(); if(!nome){ if(ni) ni.focus(); return; }
-    v.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome, tipo:'Cliente Procurou', meio:(fi && fi.value.trim()) ? 'WhatsApp' : '', whatsapp:(fi && fi.value.trim()) || '', stage:'novo', discarded:false, expanded:false, createdAt:Date.now(), proxEm:Date.now() });
+    v.hojeForm = false;
+    v.leads.push({ id:'lead'+Date.now()+Math.random().toString(36).slice(2,7), nome, tipo:v.hojeFormTipo||'Cliente Procurou', meio:(fi && fi.value.trim()) ? 'WhatsApp' : '', whatsapp:(fi && fi.value.trim()) || '', stage:'novo', discarded:false, expanded:false, createdAt:Date.now(), proxEm:Date.now() });
     persist(); rerender();
   }));
   modalEl.querySelectorAll('[data-crmh-tipo]').forEach(b=>b.addEventListener('click', ()=>{ const v = crmhVal(b.dataset.skey), l = crmhLead(v, b.dataset.crmhId); if(!l) return; l.tipo = b.dataset.crmhTipo; persist(); rerender(); }));
