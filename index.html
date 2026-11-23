@@ -11456,12 +11456,14 @@ function renderDashboard(){
       }).join('')}
     </div>
 
+    ${cel ? '' : `
     <h2 class="section-title${cel ? ' ini-sec' : ''}">${icon('compass')} Continue no Painel do Método</h2>
     ${painelBloqueado
       ? `<button class="btn-accent" id="goto-painel" style="display:inline-flex;align-items:center;gap:8px;opacity:.85" title="Exclusivo para mentorados da Mentoria Essência">${icon('lock','tiny')} Abrir Painel do Método</button>`
       : `<button class="btn-accent" id="goto-painel">Abrir Painel do Método</button>`}
+    `}
   ${cel ? '</div>' : ''}`;
-  document.getElementById('goto-painel').addEventListener('click',()=>goTo('painel'));
+  const gotoPainel = document.getElementById('goto-painel'); if(gotoPainel) gotoPainel.addEventListener('click',()=>goTo('painel'));
   document.querySelectorAll('.module-bar-row[data-mod]').forEach(el=>{
     el.addEventListener('click',()=>openModuleChecklist(el.dataset.mod));
   });
