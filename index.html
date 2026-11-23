@@ -4008,12 +4008,18 @@
   .mod-check-modal .desc{font-size:12.5px!important;line-height:1.45;margin-bottom:14px!important;}
   .mod-check-modal .mod-check-list{padding-top:1px!important;}
   .mod-check-list{border:0!important;padding:0!important;gap:8px!important;max-height:56vh!important;}
-  .mod-check-item{display:grid!important;grid-template-columns:24px minmax(0,1fr);column-gap:12px;row-gap:12px;align-items:center!important;
+  .mod-check-item{display:grid!important;grid-template-columns:22px minmax(0,1fr) auto;column-gap:10px;row-gap:10px;align-items:center!important;
     border:1px solid var(--border);border-radius:12px!important;padding:12px 14px!important;background:var(--bg-elev);transition:background .15s,border-color .15s;}
   .mod-check-item:active{background:var(--bg-card);}
   .mod-check-item .box{grid-column:1;grid-row:1;align-self:center;width:22px!important;height:22px!important;border-radius:7px!important;margin:0!important;}
-  .mod-check-item .txt{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;}
-  .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{grid-column:1 / -1;grid-row:2;order:0;width:100%;margin:0!important;
+  .mod-check-item .txt{display:contents;}
+  .dc-marcar{grid-column:2;grid-row:1;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);}
+  .mod-check-item.done .dc-marcar{color:var(--success);}
+  .mod-check-item.equipe .dc-marcar{color:var(--equipe,#8b7bd8);}
+  .mod-check-item .dc-tag{grid-column:3;grid-row:1;justify-self:end;}
+  .mod-check-item .dc-txt{grid-column:1 / -1;grid-row:2;}
+  .mod-check-item .eq-tag, .mod-check-item .dp-hint{grid-column:1 / -1;margin:0!important;}
+  .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{grid-column:1 / -1;order:0;width:100%;margin:0!important;
     display:flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px!important;box-sizing:border-box;
     border-radius:10px!important;border:1px solid var(--border)!important;background:transparent!important;color:var(--accent-2)!important;
     font:inherit;font-size:12.5px!important;font-weight:700;cursor:pointer;text-decoration:none!important;}
@@ -11634,7 +11640,7 @@ function openModuleChecklist(modId, hlIdx){
             const eqIt = !state[idx] && eqSet.has(idx);
             return `
             <div class="mod-check-item ${state[idx]?'done':''} ${trav?'travado':''} ${eqIt?'equipe':''}" data-idx="${idx}" ${trav?'data-travado="1"':''}>
-              <span class="box">${state[idx] || eqIt ? icon('tick') : trav ? icon('lock','tiny') : ''}</span>
+              <span class="box">${state[idx] || eqIt ? icon('tick') : trav ? icon('lock','tiny') : ''}</span>${ehCel() ? `<span class="dc-marcar">${state[idx] || eqIt ? 'Feito' : 'Marcar como feito'}</span>` : ''}
               <span class="txt">${ehCel() ? dashCelTxt(label) : label}${eqIt ? '<small class="eq-tag">Avançado pela equipe</small>' : ''}${trav || ehCel() ? '' : dashTarefaPainelHtml(modId, idx, label)}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx] || trav) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
               ${ehCel() && !trav ? dashTarefaPainelHtml(modId, idx, label) : ''}
               ${linkedCourse && !trav ? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
