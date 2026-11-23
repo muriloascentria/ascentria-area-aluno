@@ -4018,7 +4018,8 @@
   .mod-check-item .dc-tag{grid-column:2;grid-row:1;justify-self:start;height:22px!important;padding:0 7px!important;box-sizing:border-box;border:1px solid var(--border);background:transparent!important;color:var(--accent-2)!important;}
   .mod-check-item .box .icon{width:13px;height:13px;}
   .mod-check-item .dc-txt{grid-column:2 / -1;grid-row:2;}
-  .mod-check-item .eq-tag, .mod-check-item .dp-hint{grid-column:2 / -1;margin:0!important;}
+  .mod-check-item .eq-tag{grid-column:2 / -1;margin:0!important;}
+  .mod-check-item .dp-hint{display:none!important;}
   .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{grid-column:3;grid-row:1;justify-self:start;order:0;margin:0!important;
     display:inline-flex;align-items:center;justify-content:center;gap:4px;height:22px;padding:0 7px!important;box-sizing:border-box;white-space:nowrap;
     border-radius:6px!important;border:1px solid var(--border)!important;background:transparent!important;color:var(--accent-2)!important;
@@ -11543,6 +11544,7 @@ function dashCelTxt(label){
   else if(/^resumir aula sobre /i.test(t)){ tag = 'resumo'; rot = 'Resumo'; t = t.replace(/^resumir aula sobre /i, 'Fazer resumo da aula sobre '); }
   else if(/^tarefa\s*:\s*/i.test(t)){ t = t.replace(/^tarefa\s*:\s*/i, ''); }
   t = t.replace(/ sobre (O|A|Os|As) /, (m, a)=>' sobre ' + a.toLowerCase() + ' ');
+  t = t.replace(/^(\S+) (O|A|Os|As) /, (m, v, a)=>v + ' ' + a.toLowerCase() + ' ');
   t = t.replace(/[.\s]+$/, '');
   if(t && !/[.!?]$/.test(t)) t += '.';
   return `<span class="dc-tag dc-${tag}">${rot}</span><span class="dc-txt">${escapeHtml(t)}</span>`;
