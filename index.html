@@ -4214,6 +4214,8 @@
   .painel-topic .ps-input, .painel-topic textarea.ps-input{font-size:14px;}
   .painel-topic .gabarito{font-size:12.5px;line-height:1.5;color:var(--text-dim);margin-bottom:8px;}
   .painel-topic .ps-nao-tenho{font-size:11px;}
+  /* Persona: sem a explicação embaixo do título e sem o aviso verde de salvo */
+  .topico-persona > .desc, .topico-persona .ps-saved-note{display:none!important;}
   .painel-topic .modal-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
   /* CRM: botões com ícone e texto lado a lado, ícone depois do texto (nunca em cima) */
   .crm-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px!important;align-items:stretch!important;}
@@ -13434,7 +13436,7 @@ function openTopicModal(quadrant, topicId){
   function renderModal(){
     const filled = topicFilled(quadrant, topic, idx, s);
     document.getElementById('modal').innerHTML = `
-      <div class="modal-body form-modal painel-topic">
+      <div class="modal-body form-modal painel-topic topico-${topic.id}">
         <div class="cat">${quadrant.title}</div>
         <h3>${topic.title}</h3>
         ${topic.desc? `<p class="desc">${topic.desc}</p>` : ''}
