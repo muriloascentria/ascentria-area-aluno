@@ -11543,7 +11543,8 @@ function dashCelTxt(label){
   else if(/^resumir aula sobre /i.test(t)){ tag = 'resumo'; rot = 'Resumo'; t = t.replace(/^resumir aula sobre /i, 'Fazer resumo da aula sobre '); }
   else if(/^tarefa\s*:\s*/i.test(t)){ t = t.replace(/^tarefa\s*:\s*/i, ''); }
   t = t.replace(/ sobre (O|A|Os|As) /, (m, a)=>' sobre ' + a.toLowerCase() + ' ');
-  t = t.replace(/\.$/, '');
+  t = t.replace(/[.\s]+$/, '');
+  if(t && !/[.!?]$/.test(t)) t += '.';
   return `<span class="dc-tag dc-${tag}">${rot}</span><span class="dc-txt">${escapeHtml(t)}</span>`;
 }
 function dashTarefaPainelHtml(modId, idx, label){
