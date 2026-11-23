@@ -4042,6 +4042,12 @@
   #view-planner .ep-config-rodape > div{width:100%;flex-wrap:nowrap!important;}
   #view-planner .ep-config-rodape > div > button{flex:1 1 0;min-width:0;height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;padding:0 10px;}
   #view-planner .ep-dia-campos .ps-input{height:42px;box-sizing:border-box;padding:0 10px!important;}
+  .ep-nota-det{margin-top:14px;}
+  .ep-nota-det summary{list-style:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
+  .ep-nota-det summary::-webkit-details-marker{display:none;}
+  .ep-nota-seta{width:15px;height:15px;transition:transform .2s;}
+  .ep-nota-det[open] .ep-nota-seta{transform:rotate(180deg);}
+  .ep-nota-det .ep-nota{margin-top:10px;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
@@ -23694,7 +23700,7 @@ function renderPlanner(){
         </tbody>
       </table>
     </div>
-    <p class="ep-nota">Marcar uma tarefa aqui marca também no Dashboard e no acompanhamento da equipe. Se você fizer uma tarefa antes do dia planejado, pode marcar direto no dia em que ela está: ela passa para hoje como feita e a agenda anda para frente. O que não foi feito volta a ser distribuído a partir de hoje. Os tempos são estimativas: aulas pela duração do vídeo com uma folga para anotar, resumos 20 min e tarefas conforme o tamanho.</p>
+    ${ehCel() ? `<details class="ep-nota-det"><summary><span>Ver a explicação</span><svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p class="ep-nota">Marcar uma tarefa aqui marca também no Dashboard e no acompanhamento da equipe. Se você fizer uma tarefa antes do dia planejado, pode marcar direto no dia em que ela está: ela passa para hoje como feita e a agenda anda para frente. O que não foi feito volta a ser distribuído a partir de hoje. Os tempos são estimativas: aulas pela duração do vídeo com uma folga para anotar, resumos 20 min e tarefas conforme o tamanho.</p></details>` : `<p class="ep-nota">Marcar uma tarefa aqui marca também no Dashboard e no acompanhamento da equipe. Se você fizer uma tarefa antes do dia planejado, pode marcar direto no dia em que ela está: ela passa para hoje como feita e a agenda anda para frente. O que não foi feito volta a ser distribuído a partir de hoje. Os tempos são estimativas: aulas pela duração do vídeo com uma folga para anotar, resumos 20 min e tarefas conforme o tamanho.</p>`}
     <div style="margin-top:14px"><button type="button" class="btn-outline" data-ep-editar>${icon('edit','tiny')} Ajustar minha semana</button></div>`;
   EP_UI.salvo = false;
   el.querySelectorAll('[data-ep-editar]').forEach(b=>b.addEventListener('click', ()=>{ EP_UI.editando = true; EP_UI.rascunho = null; renderPlanner(); window.scrollTo(0,0); }));
