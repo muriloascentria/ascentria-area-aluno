@@ -4055,6 +4055,12 @@
   .ep-nota-seta{width:15px;height:15px;transition:transform .2s;}
   .ep-nota-det[open] .ep-nota-seta{transform:rotate(180deg);}
   .ep-nota-det .ep-nota{margin-top:10px;}
+  .ep-dia-rec > summary{list-style:none;cursor:pointer;margin-bottom:0!important;}
+  .ep-dia-rec > summary::-webkit-details-marker{display:none;}
+  .ep-dia-rec[open] > summary{margin-bottom:8px!important;}
+  .ep-dia-dir{display:inline-flex;align-items:center;gap:8px;color:var(--text-mute);}
+  .ep-dia-seta{width:16px;height:16px;flex-shrink:0;transition:transform .2s;}
+  .ep-dia-rec[open] .ep-dia-seta{transform:rotate(180deg);}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
@@ -23421,7 +23427,7 @@ const EP_DIAS = [
 const EP_NOME_DIA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const EP_DURACOES = [30,45,60,90,120,150,180,240];
 const EP_REGUA = [30,90,180,270,330]; // fim de cada módulo pela régua de 365 dias do acompanhamento
-const EP_UI = { maisDias:0, editando:false, rascunho:null, salvo:false };
+const EP_UI = { maisDias:0, editando:false, rascunho:null, salvo:false, diasAbertos:new Set() };
 
 function epConfig(sid){ const c = PANEL_DATA[sid+':'+EP_TOPIC]; return (c && c.dias) ? c : null; }
 function epConfigurado(cfg){ return !!(cfg && cfg.dias && Object.values(cfg.dias).some(x=>x && x.ativo && x.min>0)); }
@@ -23645,7 +23651,12 @@ function renderPlanner(){
   }
   const proxEstudo = !hoje.blocos.length ? ag.dias.slice(1).find(d=>d.blocos.length) : null;
   /* Um dia da semana atual: os que já passaram mostram o que foi feito; os próximos, o que está planejado. */
-  const diaCard = (data, conteudo, extraCls)=>`
+  /* no celular, os próximos dias vêm recolhidos: toca no dia para abrir (o que ficou aberto continua aberto) */
+  const diaCard = (data, conteudo, extraCls)=>(ehCel() && !extraCls) ? `
+    <details class="ep-dia-card ep-dia-rec" data-ep-dia-iso="${epISO(data)}" ${EP_UI.diasAbertos.has(epISO(data)) ? 'open' : ''}>
+      <summary class="ep-dia-hd"><strong>${epDataLonga(data)}</strong><span class="ep-dia-dir">${conteudo.hd||''}<svg class="ep-dia-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></summary>
+      ${conteudo.corpo}
+    </details>` : `
     <div class="ep-dia-card ${extraCls||''}">
       <div class="ep-dia-hd"><strong>${epDataLonga(data)}</strong>${conteudo.hd||''}</div>
       ${conteudo.corpo}
@@ -23711,6 +23722,7 @@ function renderPlanner(){
     <div style="margin-top:14px"><button type="button" class="btn-outline" data-ep-editar>${icon('edit','tiny')} Ajustar minha semana</button></div>`;
   EP_UI.salvo = false;
   el.querySelectorAll('[data-ep-editar]').forEach(b=>b.addEventListener('click', ()=>{ EP_UI.editando = true; EP_UI.rascunho = null; renderPlanner(); window.scrollTo(0,0); }));
+  el.querySelectorAll('details[data-ep-dia-iso]').forEach(d=>d.addEventListener('toggle', ()=>{ if(d.open) EP_UI.diasAbertos.add(d.dataset.epDiaIso); else EP_UI.diasAbertos.delete(d.dataset.epDiaIso); }));
   const mais = document.getElementById('ep-mais'); if(mais) mais.addEventListener('click', ()=>{ EP_UI.maisDias += 7; renderPlanner(); });
   const hist = document.getElementById('ep-hist'); if(hist) hist.addEventListener('click', ()=>{ EP_UI.verHist = !EP_UI.verHist; renderPlanner(); });
   el.querySelectorAll('[data-ep-aula]').forEach(b=>b.addEventListener('click', ()=>openCourseModal(b.dataset.epAula)));
