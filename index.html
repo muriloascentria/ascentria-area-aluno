@@ -4087,6 +4087,16 @@
   .epc .dc-txt{grid-column:2 / -1;grid-row:2;}
   .epc.done .dc-txt{text-decoration:line-through;color:var(--text-mute);}
   .epc.done .dc-tag{opacity:.6;}
+  /* Indicação: número de indicações vira um botão na mesma linha e altura do selo (Comece a indicar) */
+  .ind-prog-topo{align-items:center;justify-content:flex-start;flex-wrap:nowrap;gap:8px;}
+  .ind-num-box{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;box-sizing:border-box;border-radius:999px;border:1px solid var(--border);background:var(--bg-elev);white-space:nowrap;}
+  .ind-num-box .ind-num{font-size:15px;font-weight:800;line-height:1;}
+  .ind-num-box .ind-num-lbl{margin:0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1;}
+  #view-indicacao .section-title.ini-sec{font-size:16px!important;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:28px 0 14px;}
+  .ind-regras{margin-top:16px;}
+  .ind-regras-txt{font-size:13px;color:var(--text-dim);line-height:1.55;margin:10px 0 0;}
+  .ind-num-box{padding:0 12px!important;}
+  .ind-prog-topo .ind-selo{height:32px;box-sizing:border-box;padding:0 14px!important;font-size:11px!important;white-space:nowrap;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
@@ -24765,20 +24775,26 @@ function renderIndicacao(){
   const el = document.getElementById('view-indicacao'); if(!el) return;
   const s = getStudent(currentStudentId) || currentUserProfile;
   if(IND_UI.rows===null && !IND_UI.carregando){ indCarregar(); }
-  const minhas = (IND_UI.rows||[]).filter(r=>s && r.indicador_id===s.id);
+  let minhas = (IND_UI.rows||[]).filter(r=>s && r.indicador_id===s.id);
+  /* Conta Teste Aluno: 2 indicações simuladas (só na tela, nada é gravado no banco) para ver como fica */
+  if(s && s.id===TESTE_ALUNO_MURILO && IND_UI.rows!==null && !minhas.length) minhas = [
+    { indicador_id:s.id, indicado_id:null, indicado_nome:'Ana Paula Ferreira', data_indicacao:'2026-11-10' },
+    { indicador_id:s.id, indicado_id:null, indicado_nome:'Juliana Martins', data_indicacao:'2026-11-19' },
+  ];
   const n = minhas.length; const nv = indNivel(n);
   el.innerHTML = `
     <div class="ind-card">
       ${indLogoHtml()}
       ${ehCel() ? '' : '<p class="ind-intro">Indique colegas para a Mentoria Essência. Cada pessoa que entrar na mentoria por sua indicação conta no seu progresso.</p>'}
     </div>
-    <h2 class="section-title">Progresso de indicações</h2>
+    <h2 class="section-title${ehCel() ? ' ini-sec' : ''}">Progresso de indicações</h2>
     <div class="ind-progresso">
-      <div class="ind-prog-topo"><div><div class="ind-num">${n}</div><div class="ind-num-lbl">indicaç${n===1?'ão':'ões'} na mentoria</div></div>${indSeloHtml(n, true)}</div>
+      <div class="ind-prog-topo"><div class="ind-num-box"><div class="ind-num">${n}</div><div class="ind-num-lbl">indicaç${n===1?'ão':'ões'}${ehCel() ? '' : ' na mentoria'}</div></div>${indSeloHtml(n, true)}</div>
       ${indBarraHtml(n)}
       ${ehCel() && nv.chave==='inicio' ? '' : `<p class="ind-falta">${escapeHtml(nv.txt)}</p>`}
+      ${ehCel() ? `<details class="ep-nota-det ind-regras"><summary><span>Ver regras</span><svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p class="ind-regras-txt">Indique colegas para a Mentoria Essência. Cada pessoa que entrar na mentoria por sua indicação conta no seu progresso. Com a primeira indicação você já vira Embaixador e, a partir de ${IND_ELITE} indicações, chega ao nível Elite.</p></details>` : ''}
     </div>
-    <h2 class="section-title">Pessoas que entraram por sua indicação</h2>
+    <h2 class="section-title${ehCel() ? ' ini-sec' : ''}">${ehCel() ? 'Pessoas que entraram' : 'Pessoas que entraram por sua indicação'}</h2>
     ${IND_UI.rows===null ? '<div class="empty-state">Carregando…</div>' : minhas.length ? `<div class="ind-lista">${minhas.map(r=>{ const p = r.indicado_id ? (getStudent(r.indicado_id) || PEOPLE[r.indicado_id]) : null;
       return `<div class="ind-item">${p ? initialsAvatar(p.initials||'', p.color||'#8d916f', 32, p.avatarUrl||null) : `<span class="ind-av">${icon('users','tiny')}</span>`}<div><strong>${escapeHtml(r.indicado_nome)}</strong><small>Na Mentoria Essência desde ${escapeHtml(tzDataCurta(r.data_indicacao))}</small></div></div>`; }).join('')}</div>`
       : '<div class="empty-state">Ainda não há ninguém vinculado à sua indicação. Quando alguém que você indicou entrar na Mentoria Essência, o nome aparece aqui.</div>'}
