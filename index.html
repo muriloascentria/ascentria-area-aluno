@@ -4028,16 +4028,8 @@
   .ep-sec-hd h3{text-transform:uppercase;letter-spacing:.06em;}
   /* ePLANNER: respiro igual entre indicadores, aviso de previsão, hoje e os dias seguintes */
   /* tabelas que rolam de lado param no limite, sem "elástico" e sem arrastar a tela junto */
-  .table-wrap{overscroll-behavior-x:none;overscroll-behavior:contain;}
+  .table-wrap{overscroll-behavior-x:none;overscroll-behavior:contain;touch-action:pan-y;}
   #app .main > .content{overflow-x:hidden;overscroll-behavior-x:none;}
-  /* Previsão por módulo: a tabela cabe inteira na largura da tela, sem rolagem lateral (nada para arrastar) */
-  #view-planner .table-wrap{overflow-x:hidden;}
-  #view-planner .ep-prev{width:100%;min-width:0!important;table-layout:fixed;font-size:11.5px;}
-  #view-planner .ep-prev th, #view-planner .ep-prev td{padding:9px 6px!important;white-space:normal!important;overflow-wrap:anywhere;vertical-align:top;line-height:1.35;}
-  #view-planner .ep-prev th{font-size:10px;}
-  #view-planner .ep-prev th:first-child, #view-planner .ep-prev td:first-child{width:27%;padding-left:10px!important;}
-  #view-planner .ep-prev th:nth-child(2), #view-planner .ep-prev td:nth-child(2){width:23%;}
-  #view-planner .ep-prev .ep-ok, #view-planner .ep-prev .ep-atraso{display:block;margin:3px 0 0!important;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
@@ -10556,6 +10548,35 @@ function comEscolherTag(jaApresentou){
 }
 /* Celular = tela de até 640px. Ao cruzar esse limite (girar o aparelho, redimensionar a janela) a tela atual é redesenhada. */
 function ehCel(){ try{ return window.matchMedia('(max-width:640px)').matches; }catch(e){ return false; } }
+/* Tabelas com rolagem lateral no celular: o arraste de lado é feito aqui (o navegador só cuida do vertical),
+   então ao chegar no começo ou no fim a tabela para ali, sem "elástico" nem fundo escuro aparecendo. */
+(function(){
+  let g = null, raf = 0;
+  const lim = (w, v)=>Math.max(0, Math.min(w.scrollWidth - w.clientWidth, v));
+  document.addEventListener('touchstart', e=>{
+    cancelAnimationFrame(raf);
+    const w = e.target && e.target.closest ? e.target.closest('.table-wrap') : null;
+    if(!w || !ehCel() || w.scrollWidth <= w.clientWidth || e.touches.length !== 1){ g = null; return; }
+    const t = e.touches[0];
+    g = { w, x0:t.clientX, y0:t.clientY, sl:w.scrollLeft, modo:null, ux:t.clientX, ut:performance.now(), v:0 };
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(!g) return;
+    const t = e.touches[0], dx = t.clientX - g.x0, dy = t.clientY - g.y0;
+    if(!g.modo){ if(Math.abs(dx) < 6 && Math.abs(dy) < 6) return; g.modo = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; }
+    if(g.modo !== 'x') return;
+    if(e.cancelable) e.preventDefault();
+    g.w.scrollLeft = lim(g.w, g.sl - dx);
+    const agora = performance.now(), dt = agora - g.ut;
+    if(dt > 0){ g.v = (g.ux - t.clientX) / dt; g.ux = t.clientX; g.ut = agora; }
+  }, {passive:false});
+  document.addEventListener('touchend', ()=>{
+    if(!g || g.modo !== 'x'){ g = null; return; }
+    const w = g.w; let v = g.v * 16; g = null;
+    const passo = ()=>{ if(Math.abs(v) < 0.4) return; const antes = w.scrollLeft; w.scrollLeft = lim(w, antes + v); if(w.scrollLeft === antes) return; v *= 0.94; raf = requestAnimationFrame(passo); };
+    raf = requestAnimationFrame(passo);
+  }, {passive:true});
+})();
 /* no celular quem rola é o .content (abaixo da barra do topo): window.scrollTo também leva o conteúdo junto */
 (function(){ try{ const orig = window.scrollTo.bind(window); window.scrollTo = function(){ orig.apply(null, arguments); try{ if(ehCel()){ const c = document.querySelector('#app .main > .content'); if(c) c.scrollTo.apply(c, arguments); } }catch(e){} }; }catch(e){} })();
 try{ window.matchMedia('(max-width:640px)').addEventListener('change', ()=>{ try{ if(typeof currentView!=='undefined' && currentView) goTo(currentView); }catch(e){} }); }catch(e){}
