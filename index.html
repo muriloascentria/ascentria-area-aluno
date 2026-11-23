@@ -1392,6 +1392,9 @@
   .ps-label{display:block;font-size:11.5px;font-weight:600;color:var(--text-dim);margin-bottom:4px;margin-top:10px;}
   .ps-label-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;}
   textarea.ps-auto{resize:none;overflow:hidden;min-height:38px;line-height:1.45;font-family:inherit;}
+  /* o X de cada item fica no meio do campo (o espaço entre itens vai na linha, não no campo) */
+  .ps-list .ps-row{align-items:center!important;margin-bottom:8px;}
+  .ps-list .ps-row > .ps-input{margin:0!important;}
   .ps-nao-tenho{font:inherit;font-size:11px;font-weight:600;padding:3px 10px;margin-bottom:4px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
   .ps-nao-tenho:hover{border-color:var(--accent);color:var(--accent);}
   .cob-res{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg-soft,rgba(0,0,0,.05));}
@@ -5378,7 +5381,10 @@ const QUADRANTS = [
        ]},
        {type:'list',key:'dores',label:'Dores',placeholder:'Ex.: Medo do parto normal'},
        {type:'list',key:'desejos',label:'Desejos',placeholder:'Ex.: Ser protagonista do parto / confiar no corpo'},
-       {type:'list',key:'medos',label:'Medos e Crenças',placeholder:'Ex.: "Meu corpo não é capaz de parir naturalmente."'},
+       {type:'list',key:'medos',label:'Medos',placeholder:'Ex.: Medo de não aguentar a dor do parto'},
+       /* Separado de Medos em 23/11/2026. Quem já tinha preenchido "Medos e Crenças" juntos não volta a ficar pendente:
+          a seção conta como preenchida enquanto Medos estiver preenchido (preenchidoCom). */
+       {type:'list',key:'crencas',label:'Crenças',placeholder:'Ex.: "Meu corpo não é capaz de parir naturalmente."',preenchidoCom:'medos'},
      ]},
     {id:'mvv',title:'Missão, Visão, Valores e Proposta de Valor',desc:'Direcionadores estratégicos e proposta de valor do consultório.',
      sections:[
@@ -12181,7 +12187,7 @@ function psEhNA(v){ return /^\s*(não tenho|nao tenho|não se aplica|nao se apli
 function sectionFilled(section, data){
   const val = sectionValue(data, section);
   if(section.type==='fields') return section.fields.every(f=>(val[f.key]||'').trim()!=='');
-  if(section.type==='list') return val.some(v=>(v||'').trim()!=='');
+  if(section.type==='list') return val.some(v=>(v||'').trim()!=='') || (section.preenchidoCom ? (Array.isArray(data[section.preenchidoCom]) && data[section.preenchidoCom].some(v=>(v||'').trim()!=='')) : false);
   if(section.type==='checklist') return val.length>0 && val.every(it=>(it.text||'').trim()!=='');
   if(section.type==='swatches') return val.every(v=>psEhNA(v) || /^#([0-9a-f]{3}){1,2}$/i.test(String(v||'').replace(/\s+/g,'')));
   /* "Totalmente completo": TODAS as linhas precisam ter TODAS as colunas reais preenchidas — não
