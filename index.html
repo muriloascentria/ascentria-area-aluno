@@ -4026,6 +4026,11 @@
   #app .main > .content{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
   /* ePLANNER: títulos das seções em caixa alta, como nas outras telas */
   .ep-sec-hd h3{text-transform:uppercase;letter-spacing:.06em;}
+  /* ePLANNER: respiro igual entre indicadores, aviso de previsão, hoje e os dias seguintes */
+  #view-planner .kpi-row{margin-bottom:28px;}
+  #view-planner .ep-aviso{margin:0 0 28px;}
+  #view-planner .ep-hoje{margin-top:0;}
+  #view-planner .ep-hoje + .ep-sec-hd, #view-planner .ep-proximos + .ep-sec-hd{margin-top:28px!important;}
   .btn-outline[data-ep-editar]{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .btn-outline[data-ep-editar] .icon{flex-shrink:0;}
   .mod-check-modal .cat{display:none!important;}
