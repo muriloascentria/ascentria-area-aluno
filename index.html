@@ -1672,9 +1672,17 @@
   @media (max-width:560px){ .player-ov{padding:0;align-items:center;} .player-box{border-radius:0;border-left:0;border-right:0;} }
   .pl-drive-curto{display:none;} .pl-dica-curta{display:none;}
   /* respostas recuadas sob o comentário respondido, com uma linha fina à esquerda */
-  .comment.cmt-n1{margin-left:28px;padding-left:10px;border-left:2px solid var(--border);}
-  .comment.cmt-n2{margin-left:56px;padding-left:10px;border-left:2px solid var(--border);}
-  @media (max-width:640px){ .comment.cmt-n1{margin-left:20px;} .comment.cmt-n2{margin-left:40px;} }
+  .comments{--cmt-ind:30px;}
+  @media (max-width:640px){ .comments{--cmt-ind:26px;} }
+  .comment{position:relative;}
+  .comment.cmt-n1{margin-left:var(--cmt-ind);}
+  .comment.cmt-n2{margin-left:calc(2 * var(--cmt-ind));}
+  .comment > .avatar{position:relative;z-index:1;}
+  /* trilhos: a curva sai da coluna da foto de cima e entra na foto da resposta; as retas ligam as respostas seguintes */
+  .cmt-curva, .cmt-vert, .cmt-desce{position:absolute;pointer-events:none;border-color:var(--border);border-style:solid;border-width:0;}
+  .cmt-curva{left:calc(-1 * var(--cmt-ind) + 10px);width:calc(var(--cmt-ind) - 10px);top:-8px;height:19px;border-left-width:2px;border-bottom-width:2px;border-bottom-left-radius:12px;}
+  .cmt-vert{top:-8px;bottom:-8px;width:0;border-left-width:2px;}
+  .cmt-desce{left:10px;top:22px;bottom:-8px;width:0;border-left-width:2px;}
   /* Celular em pé: vídeo inteiro (16:9 sem cortar), aviso e botões arrumados */
   @media (max-width:640px){
     /* em pé: a janela ocupa a tela toda e o vídeo fica com todo o espaço livre (o player do Drive centraliza o vídeo
@@ -10350,13 +10358,13 @@ function postHtml(p,compact,showCourseTag){
       </div>
       ${!compact? `
         <div class="comments">
-          ${comentariosEmArvore(p.comments).map(({c, nivel, direto})=>{
+          ${comentariosEmArvore(p.comments).map(({c, nivel, direto, ultimo, temFilhos, ancUltimo})=>{
             const a=getPerson(c.authorId); if(!a) return '';
             const canDeleteComment = c.authorId===interacaoAutorId() || iAmStaff;
             const replySrc = c.replyTo? p.comments.find(x=>x.id==c.replyTo) : null;
             const replySrcAuthor = replySrc? getPerson(replySrc.authorId) : null;
             const commentUnseen = c.authorId===actingAuthorId() && c.notifyAuthor;
-            return `<div class="comment cmt-n${nivel}${commentUnseen?' comment-unseen':''}">${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div class="comment-body">${replySrcAuthor && !direto? `<div class="comment-reply-tag">${icon('reply','tiny')} respondendo a <b>${escapeHtml(replySrcAuthor.name)}</b></div>` : ''}<b>${a.name}${nameTag(a)}</b>${linkify(c.text, c)}<div class="comment-actions">${replyAuthor? `<button type="button" class="comment-reply-btn" data-reply-comment="${c.id}" data-reply-post="${p.id}" data-reply-name="${escapeAttr(a.name)}">Responder</button>` : ''}${commentUnseen? `<span class="comment-new-badge">${icon('bell','tiny')} Nova resposta</span>` : ''}</div></div>${canDeleteComment? `<button type="button" class="comment-del-btn" data-del-comment="${c.id}" title="Excluir comentário">${icon('trash','tiny')}</button>` : ''}</div>`;
+            return `<div class="comment cmt-n${nivel}${commentUnseen?' comment-unseen':''}">${cmtTrilhos(nivel, ultimo, temFilhos, ancUltimo)}${initialsAvatar(a.initials,a.color,22,a.avatarUrl)}<div class="comment-body">${replySrcAuthor && !direto? `<div class="comment-reply-tag">${icon('reply','tiny')} respondendo a <b>${escapeHtml(replySrcAuthor.name)}</b></div>` : ''}<b>${a.name}${nameTag(a)}</b>${linkify(c.text, c)}<div class="comment-actions">${replyAuthor? `<button type="button" class="comment-reply-btn" data-reply-comment="${c.id}" data-reply-post="${p.id}" data-reply-name="${escapeAttr(a.name)}">Responder</button>` : ''}${commentUnseen? `<span class="comment-new-badge">${icon('bell','tiny')} Nova resposta</span>` : ''}</div></div>${canDeleteComment? `<button type="button" class="comment-del-btn" data-del-comment="${c.id}" title="Excluir comentário">${icon('trash','tiny')}</button>` : ''}</div>`;
           }).join('')}
           ${replyAuthor? `
           <div class="comment-composer-wrap">
@@ -10382,15 +10390,40 @@ function comentariosEmArvore(lista){
     if(pai && porId.has(pai) && pai!==String(c.id)){ if(!filhos.has(pai)) filhos.set(pai, []); filhos.get(pai).push(c); }
     else raizes.push(c);
   });
-  const out = []; const visto = new Set();
-  const anda = (c, nivel)=>{
-    if(visto.has(String(c.id))) return; visto.add(String(c.id));
-    out.push({ c, nivel: Math.min(nivel, 2), direto: nivel>=1 && nivel<=2 });
-    (filhos.get(String(c.id))||[]).forEach(f=>anda(f, nivel+1));
+  /* árvore "visual": até 2 níveis de recuo; respostas mais fundas viram filhas do comentário de nível 1 */
+  const visto = new Set();
+  const no = (c, nivelReal)=>({ c, nivelReal, kids:[] });
+  /* pré-ordem: cada resposta entra logo depois do comentário que ela responde */
+  const desce = (c, nivelReal, alvo, nivel1)=>{
+    if(visto.has(String(c.id))) return;
+    visto.add(String(c.id));
+    const n = no(c, nivelReal); alvo.push(n);
+    const alvoFilhos = nivelReal>=2 ? nivel1.kids : n.kids;
+    const n1 = nivelReal===1 ? n : nivel1;
+    (filhos.get(String(c.id))||[]).forEach(f=>desce(f, nivelReal+1, alvoFilhos, n1));
   };
-  raizes.forEach(c=>anda(c, 0));
-  lista.forEach(c=>{ if(!visto.has(String(c.id))) anda(c, 0); });
+  const arv = [];
+  raizes.forEach(c=>desce(c, 0, arv, null));
+  lista.forEach(c=>{ if(!visto.has(String(c.id))) desce(c, 0, arv, null); });
+  const out = [];
+  const anda = (n, nivel, ultimo, ancUltimo)=>{
+    out.push({ c:n.c, nivel, direto: n.nivelReal>=1 && n.nivelReal<=2, ultimo, temFilhos: n.kids.length>0, ancUltimo });
+    n.kids.forEach((k,i)=>anda(k, Math.min(nivel+1,2), i===n.kids.length-1, nivel>=1 ? ancUltimo.concat([ultimo]) : ancUltimo));
+  };
+  arv.forEach((n,i)=>anda(n, 0, i===arv.length-1, []));
   return out;
+}
+/* Linhas que ligam a resposta ao comentário de cima, com curva suave (estilo Facebook). */
+function cmtTrilhos(nivel, ultimo, temFilhos, ancUltimo){
+  let h = '';
+  // linhas que continuam dos níveis de cima (o "avô" ainda tem respostas depois desta)
+  ancUltimo.forEach((ult, idx)=>{ const k = idx+1; if(!ult) h += `<span class="cmt-vert" style="left:calc(${(k-1)-nivel} * var(--cmt-ind) + 10px)"></span>`; });
+  if(nivel>=1){
+    h += `<span class="cmt-curva"></span>`;
+    if(!ultimo) h += `<span class="cmt-vert" style="left:calc(-1 * var(--cmt-ind) + 10px)"></span>`;
+  }
+  if(temFilhos) h += `<span class="cmt-desce"></span>`;
+  return h;
 }
 /* Apresentação vale 10 pontos no ranking, mas só uma vez por mentorado — se ele excluir a apresentação
    anterior, o contador zera e ele pode publicar uma nova (ver view "student_points" no Supabase). */
