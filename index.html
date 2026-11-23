@@ -4215,6 +4215,15 @@
   .painel-topic .gabarito{font-size:12.5px;line-height:1.5;color:var(--text-dim);margin-bottom:8px;}
   .painel-topic .ps-nao-tenho{font-size:11px;}
   .painel-topic .modal-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+  /* CRM: botões com ícone e texto lado a lado, ícone depois do texto (nunca em cima) */
+  .crm-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px!important;align-items:stretch!important;}
+  .crm-toolbar > button{display:inline-flex!important;flex-direction:row-reverse;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 10px!important;margin:0!important;box-sizing:border-box;width:100%;min-width:0;font-size:12.5px;white-space:normal;line-height:1.2;text-align:center;}
+  .crm-toolbar > button .icon{flex-shrink:0;margin:0!important;}
+  .crm-toolbar > .crm-preco-wrap{grid-column:1 / -1;order:10;}
+  .crm-toolbar > .crm-preco-wrap .ps-input{width:100%;max-width:none;}
+  .crm-toolbar > .ps-add{border:1px solid var(--accent)!important;border-radius:var(--radius-sm,10px);}
+  .crmh-btn, .crmh-main, .crmh-sec, .crmh-novo-btn{flex-direction:row-reverse;}
+
   .mod-check-modal .cat{display:none!important;}
   .dp-aviso .app-confirm-actions{display:flex;flex-direction:row;gap:8px;}
   .dp-aviso .app-confirm-actions button{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;margin:0;white-space:nowrap;}
