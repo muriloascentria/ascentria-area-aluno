@@ -4148,6 +4148,11 @@
   .mod-check-item.equipe{border-color:rgba(139,123,216,.35);}
   .mod-check-item.travado .dc-txt{color:var(--text-mute);}
   .mod-check-item .eq-tag, .mod-check-item .dp-hint{font-size:11px;}
+  /* sem moldura por item dentro da janela: só traços finos separando, como no ePLANNER */
+  .mod-check-item{border:0!important;border-top:1px solid var(--border)!important;border-radius:0!important;background:transparent!important;padding:12px 2px!important;flex-shrink:0;}
+  .mod-check-item:first-child{border-top:0!important;}
+  .mod-check-item.done, .mod-check-item.equipe{background:transparent!important;}
+  .mod-check-list{gap:0!important;}
   .cel-titulo{margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
