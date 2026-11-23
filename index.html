@@ -163,7 +163,8 @@
   /* A tela de login começa escondida: só aparece quando o app confirma que não há sessão salva
      (antes ela piscava a cada recarregamento, mesmo com a pessoa já logada). */
   #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg,#151612);}
-  #boot-splash img{width:64px;height:64px;border-radius:16px;opacity:.9;animation:bootPulso 1.4s ease-in-out infinite;}
+  #boot-splash img{width:200px;max-width:60vw;height:auto;filter:var(--logo-filter);animation:bootPulso 1.4s ease-in-out infinite;}
+  #boot-splash img:not([src]){visibility:hidden;}
   @keyframes bootPulso{0%,100%{transform:scale(1);opacity:.75}50%{transform:scale(1.06);opacity:1}}
   #login-screen{
     min-height:100vh;
@@ -4220,7 +4221,7 @@
 })();
 </script>
 
-<div id="boot-splash" aria-hidden="true"><img src="icon-192.png" alt=""></div>
+<div id="boot-splash" aria-hidden="true"><img alt=""></div>
 <!-- ============ LOGIN ============ -->
 <div id="login-screen">
   <div class="login-box">
@@ -4339,6 +4340,7 @@
   </aside>
 
   <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <script>/* tela de carregamento: usa o mesmo logotipo Essência PLAT do menu */ try{ var _bl=document.querySelector(".sidebar .brand-logo"), _bi=document.querySelector("#boot-splash img"); if(_bl&&_bi) _bi.src=_bl.src; }catch(e){}</script>
 
   <div class="main">
     <div class="topbar">
