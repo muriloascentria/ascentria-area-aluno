@@ -4328,6 +4328,7 @@
   .ini-al .im-meta{margin-top:var(--ini-g)!important;}
   /* lista do dia no card do ePLANNER: no tamanho e cor dos textos de explicação */
   .kpi-regras{margin-top:14px;}
+  .com-ver-mais{width:100%;height:44px;margin:4px 0 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--accent-2,var(--accent));font:inherit;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;}
   .kpi-regras .kpi-note{margin:10px 0 0!important;font-size:12.5px;color:var(--text-dim);line-height:1.5;}
   .ini-al .ep-inicio-item{font-size:12.5px!important;line-height:1.5!important;color:var(--text-dim)!important;gap:10px;}
   .ini-al .ep-inicio-item span{font-size:12.5px!important;font-weight:700;color:var(--text-dim);min-width:40px;}
@@ -8884,6 +8885,7 @@ function renderProfile(){
 }
 
 function goTo(view){
+  if(view!=='comunidade') COM_FOCO = null;
   /* Trava final: a vendedora só abre o Registro de Sessões 1:1. Os outros itens já estão escondidos
      do menu dela, isso aqui cobre qualquer caminho indireto (link antigo, atalho, código que chame
      goTo direto). O banco continua sendo a garantia real — aqui é só para a tela não quebrar. */
@@ -9180,6 +9182,7 @@ function renderInicio_cel(){
   document.querySelectorAll('#view-inicio [data-inicio-post]').forEach(el=>el.addEventListener('click', ev=>{
     if(ev.target.closest('[data-open-course],[data-del-post],a')) return;
     ev.preventDefault(); ev.stopPropagation();
+    COM_FOCO = el.dataset.inicioPost;
     notifAbrirComunidade({ post_id: el.dataset.inicioPost, audience: el.dataset.aud, motivo:'abrir' });
   }));
   bindCourseTiles();
@@ -11001,6 +11004,7 @@ function ehCel(){ try{ return window.matchMedia('(max-width:640px)').matches; }c
 try{ window.matchMedia('(max-width:640px)').addEventListener('change', ()=>{ try{ if(typeof currentView!=='undefined' && currentView) goTo(currentView); }catch(e){} }); }catch(e){}
 let COMP_TAG_ABERTA = false;  /* no composer da Comunidade: alguma tag foi tocada (mostra o nome dela e encolhe o Publicar) */
 /* 22/11/2026: o layout novo desta tela vale só no celular; no computador fica a versão anterior. */
+let COM_FOCO = null;  /* id da publicação aberta pelo Início (celular) */
 function renderComunidade(){ return ehCel() ? renderComunidade_cel() : renderComunidade_web(); }
 function renderComunidade_cel(){
   const me = getPerson(actingAuthorId());
@@ -11022,7 +11026,9 @@ function renderComunidade_cel(){
   // aparecem no mural da Comunidade, que mostra só o que foi publicado ali diretamente. E cada comunidade
   // só mostra o que é da própria audiência — mentorados e alunos do curso não se veem entre si.
   const communityOnly = COMMUNITY_POSTS.filter(p=>!p.courseId && p.audience===currentCommunityAudience);
-  const visible = communityFilter==='todas' ? communityOnly : communityOnly.filter(p=>p.type===communityFilter);
+  /* Aberta pelo Início: mostra só a publicação tocada; "Ver mais publicações" volta para o feed completo */
+  const focoPost = COM_FOCO ? communityOnly.find(p=>String(p.id)===String(COM_FOCO)) : null;
+  const visible = focoPost ? [focoPost] : (communityFilter==='todas' ? communityOnly : communityOnly.filter(p=>p.type===communityFilter));
   const root = document.getElementById('view-comunidade');
   root.innerHTML = `
     ${currentRole==='staff'? `
@@ -11061,12 +11067,14 @@ function renderComunidade_cel(){
       </label>
     </div>
     <div id="posts-list">${visible.map(p=>postHtml(p,false,true)).join('') || '<p class="section-sub">Nenhuma publicação nesse filtro ainda.</p>'}</div>
+    ${focoPost ? `<button type="button" class="com-ver-mais" id="com-ver-mais">Ver mais publicações</button>` : ''}
     ${MURAL_ESTADO[currentCommunityAudience] && !MURAL_ESTADO[currentCommunityAudience].fim ? `
     <div class="cf-actions" style="justify-content:center;margin-top:16px">
       <button class="btn-outline" id="mural-mais">${MURAL_ESTADO[currentCommunityAudience].carregando? 'Carregando...' : 'Ver publicações mais antigas'}</button>
     </div>` : ''}
   `;
   markVisiblePostsSeen(visible);
+  const verMais = document.getElementById('com-ver-mais'); if(verMais) verMais.addEventListener('click', ()=>{ COM_FOCO = null; communityFilter = 'todas'; renderComunidade(); window.scrollTo(0,0); });
   bindOpenCourseTags(root);
   root.querySelectorAll('#type-select [data-type]').forEach(btn=>{
     if(btn.disabled) return;
