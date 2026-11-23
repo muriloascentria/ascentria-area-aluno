@@ -4006,9 +4006,12 @@
   .mod-check-item.equipe{border-color:rgba(139,123,216,.35);}
   /* botão Abrir aula na linha de baixo, de onde começa o texto da tarefa até a borda */
   .mod-check-item{flex-wrap:wrap;}
-  .mod-check-item:has(.mod-check-course-link) .box{align-self:flex-start;}
+  .mod-check-item:has(.mod-check-course-link) .box, .mod-check-item:has(.dp-btn) .box, .mod-check-item:has(.dp-tag) .box{align-self:flex-start;}
+  .mod-check-item .dp-btn{display:flex;width:100%;align-items:center;justify-content:center;gap:6px;margin-top:8px;padding:8px 12px;border-radius:999px;border:0;background:var(--accent-soft);color:var(--accent-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;}
+  .mod-check-item.done .dp-btn{text-decoration:none;}
+  .mod-check-item .dp-tag{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 10px;border-radius:999px;background:var(--bg-card);color:var(--text-mute);font-size:11px;font-weight:700;text-decoration:none;}
   .mod-check-item .txt{flex:1 1 0;min-width:0;}
-  .mod-check-item .mod-check-course-link{order:5;flex:0 0 calc(100% - 28px);margin-left:28px!important;margin-top:4px;justify-content:center;box-sizing:border-box;}
+  .mod-check-item .mod-check-course-link{order:5;flex:0 0 calc(100% - 28px);margin-left:28px!important;margin-top:8px;justify-content:center;box-sizing:border-box;padding:8px 12px;font-size:12px;gap:6px;}
   .cel-titulo{margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
@@ -11511,6 +11514,11 @@ function dashTarefaPainelHtml(modId, idx, label){
   if(!/^TAREFA/i.test(String(label||'').trim())) return '';
   const topId = (DASH_TAREFA_PAINEL[modId]||{})[idx+1];
   const a = topId ? painelAcharTopico(topId) : null;
+  /* celular: no lugar da frase, um botão (ou uma tag, quando a tarefa é feita fora do Painel) */
+  if(ehCel()){
+    if(!a) return `<span class="dp-tag">${icon('tick','tiny')} Tarefa prática</span>`;
+    return `<button type="button" class="dp-btn" data-dp-ir="${escapeAttr(topId)}" title="${escapeAttr(a.q.title+' › '+a.t.title)}">${icon('compass','tiny')} Abrir Painel do Método</button>`;
+  }
   if(!a) return `<small class="dp-onde">${icon('compass','tiny')} Tarefa prática, feita fora do Painel do Método.</small>`;
   const extra = (modId==='gerenciar' && idx+1===12) ? ' e POPs' : '';
   return `<small class="dp-onde">${icon('compass','tiny')} No Painel do Método: <b>${escapeHtml(a.q.title)} › ${escapeHtml(a.t.title)}${extra}</b> <button type="button" class="dp-onde-ir" data-dp-ir="${escapeAttr(topId)}">abrir</button></small>`;
