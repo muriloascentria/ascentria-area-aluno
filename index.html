@@ -4006,12 +4006,20 @@
   .mod-check-item.equipe{border-color:rgba(139,123,216,.35);}
   /* botão Abrir aula na linha de baixo, de onde começa o texto da tarefa até a borda */
   .mod-check-item{flex-wrap:wrap;}
-  .mod-check-item:has(.mod-check-course-link) .box, .mod-check-item:has(.dp-btn) .box, .mod-check-item:has(.dp-tag) .box{align-self:flex-start;}
-  .mod-check-item .dp-btn{display:flex;width:100%;align-items:center;justify-content:center;gap:6px;margin-top:8px;padding:8px 12px;border-radius:999px;border:0;background:var(--accent-soft);color:var(--accent-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;}
+  .mod-check-item .box{align-self:flex-start;margin-top:22px!important;}
+  .mod-check-item .txt{display:flex;flex-direction:column;align-items:flex-start;gap:5px;}
+  .dc-tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;}
+  .dc-aula{background:var(--accent-soft);color:var(--accent-2);}
+  .dc-resumo{background:rgba(96,165,250,.15);color:#7fb2f5;}
+  .dc-tarefa{background:rgba(234,179,8,.14);color:#e0b43a;}
+  .mod-check-item.done .dc-tag{text-decoration:none;opacity:.7;}
+  .mod-check-item.done .txt{text-decoration:none!important;}
+  .mod-check-item.done .dc-txt{text-decoration:line-through;}
+  .mod-check-item .dp-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;padding:8px 12px;border-radius:999px;border:0;background:var(--accent-soft);color:var(--accent-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;}
   .mod-check-item.done .dp-btn{text-decoration:none;}
   .mod-check-item .dp-tag{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 10px;border-radius:999px;background:var(--bg-card);color:var(--text-mute);font-size:11px;font-weight:700;text-decoration:none;}
   .mod-check-item .txt{flex:1 1 0;min-width:0;}
-  .mod-check-item .mod-check-course-link{order:5;flex:0 0 calc(100% - 28px);margin-left:28px!important;margin-top:8px;justify-content:center;box-sizing:border-box;padding:8px 12px;font-size:12px;gap:6px;}
+  .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{order:5;flex:0 0 100%;width:100%;margin-left:0!important;margin-top:10px;justify-content:center;box-sizing:border-box;padding:8px 12px;font-size:12px;gap:6px;}
   .cel-titulo{margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
@@ -11510,13 +11518,23 @@ const DASH_TAREFA_PAINEL = {
   transformar:{7:'agendamento', 10:'registro', 13:'orientacoes', 20:'avaliacao-jornada'},
   gerenciar:  {3:'registro', 9:'contratos', 12:'politicas', 18:'prescricoes', 21:'laudos', 24:'financeiro', 30:'precificacao', 33:'rotina'},
 };
+/* Celular: tag AULA / RESUMO / TAREFA em cima e, embaixo, só o nome da aula ou o que fazer. */
+function dashCelTxt(label){
+  let t = String(label||'').trim(); let tag = 'tarefa', rot = 'Tarefa';
+  const tira = (re)=>{ t = t.replace(re, ''); t = t.replace(/^(o|a|os|as) /, ''); t = t.replace(/\.$/, ''); };
+  if(/^assistir aula sobre /i.test(t)){ tag = 'aula'; rot = 'Aula'; tira(/^assistir aula sobre /i); }
+  else if(/^resumir aula sobre /i.test(t)){ tag = 'resumo'; rot = 'Resumo'; tira(/^resumir aula sobre /i); }
+  else if(/^tarefa\s*:\s*/i.test(t)){ t = t.replace(/^tarefa\s*:\s*/i, ''); }
+  t = t.replace(/\.$/, '');
+  return `<span class="dc-tag dc-${tag}">${rot}</span><span class="dc-txt">${escapeHtml(t)}</span>`;
+}
 function dashTarefaPainelHtml(modId, idx, label){
   if(!/^TAREFA/i.test(String(label||'').trim())) return '';
   const topId = (DASH_TAREFA_PAINEL[modId]||{})[idx+1];
   const a = topId ? painelAcharTopico(topId) : null;
   /* celular: no lugar da frase, um botão (ou uma tag, quando a tarefa é feita fora do Painel) */
   if(ehCel()){
-    if(!a) return `<span class="dp-tag">${icon('tick','tiny')} Tarefa prática</span>`;
+    if(!a) return '';
     return `<button type="button" class="dp-btn" data-dp-ir="${escapeAttr(topId)}" title="${escapeAttr(a.q.title+' › '+a.t.title)}">${icon('compass','tiny')} Abrir Painel do Método</button>`;
   }
   if(!a) return `<small class="dp-onde">${icon('compass','tiny')} Tarefa prática, feita fora do Painel do Método.</small>`;
@@ -11607,7 +11625,8 @@ function openModuleChecklist(modId, hlIdx){
             return `
             <div class="mod-check-item ${state[idx]?'done':''} ${trav?'travado':''} ${eqIt?'equipe':''}" data-idx="${idx}" ${trav?'data-travado="1"':''}>
               <span class="box">${state[idx] || eqIt ? icon('tick') : trav ? icon('lock','tiny') : ''}</span>
-              <span class="txt">${label}${eqIt ? '<small class="eq-tag">Avançado pela equipe</small>' : ''}${trav ? '' : dashTarefaPainelHtml(modId, idx, label)}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx] || trav) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
+              <span class="txt">${ehCel() ? dashCelTxt(label) : label}${eqIt ? '<small class="eq-tag">Avançado pela equipe</small>' : ''}${trav || ehCel() ? '' : dashTarefaPainelHtml(modId, idx, label)}${(()=>{ const req = (DASH_PAINEL[modId]||{})[idx+1]; if(!req || state[idx] || trav) return ''; const faltam = dashPainelFaltando(s, modId, idx); return faltam.length ? `<small class="dp-hint">${icon('compass','tiny')} Preencha antes no Painel: ${faltam.map(a=>{ const d = dashPainelDetalhe(s, a); return escapeHtml(a.t.title) + (d ? ` (falta: ${escapeHtml(d)})` : ''); }).join(', ')}</small>` : ''; })()}</span>
+              ${ehCel() && !trav ? dashTarefaPainelHtml(modId, idx, label) : ''}
               ${linkedCourse && !trav ? `<button type="button" class="mod-check-course-link" data-open-course-item="${linkedCourse.id}" title="Abrir aula: ${escapeAttr(linkedCourse.title)}">${icon('film','tiny')} Abrir aula</button>` : ''}
             </div>`;
           }).join('')}
