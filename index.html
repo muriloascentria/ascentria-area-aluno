@@ -420,6 +420,15 @@
   .icon-btn:hover{color:var(--text);}
   #menu-btn{display:none;}
   #refresh-btn{display:none;}
+  /* Celular deitado: só o vídeo pode ficar na horizontal; o resto do app pede para voltar à vertical */
+  #gire-aviso{display:none;position:fixed;inset:0;z-index:2147483000;background:var(--bg,#171813);color:var(--text,#eee);flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;}
+  #gire-aviso svg{width:44px;height:44px;color:var(--accent,#8d916f);transform:rotate(90deg);animation:gireVolta 1.6s ease-in-out infinite;}
+  #gire-aviso strong{font-size:15px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
+  #gire-aviso span{font-size:13px;color:var(--text-dim,#aaa);}
+  @keyframes gireVolta{0%,25%{transform:rotate(90deg);}60%,100%{transform:rotate(0deg);}}
+  @media (orientation:landscape) and (max-height:520px) and (hover:none) and (pointer:coarse){
+    body:not(.video-aberto) #gire-aviso{display:flex;}
+  }
   .cel-titulo{display:none;}
   .topbar-esq{display:contents;}
   .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:45;}
@@ -4361,6 +4370,7 @@
 </style>
 </head>
 <body>
+<div id="gire-aviso" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg><strong>Gire o celular</strong><span>O aplicativo funciona na posição vertical.</span></div>
 <script>
 /* Aplica o tema salvo antes de qualquer pintura — se isso rodasse junto com o resto do app, a tela
    apareceria escura por um instante e só depois viraria clara, dando um "flash" a cada carregamento.
@@ -10660,6 +10670,21 @@ function ehCel(){ try{ return window.matchMedia('(max-width:640px)').matches; }c
     const passo = ()=>{ if(Math.abs(v) < 0.4) return; const antes = w.scrollLeft; w.scrollLeft = lim(w, antes + v); if(w.scrollLeft === antes) return; v *= 0.94; raf = requestAnimationFrame(passo); };
     raf = requestAnimationFrame(passo);
   }, {passive:true});
+})();
+/* Celular deitado: marca quando há vídeo aberto (player das gravações, aula ou vídeo de boas-vindas),
+   para o aviso "Gire o celular" não cobrir o vídeo. Nos outros casos, tenta travar na vertical onde o
+   navegador deixa (app instalado no Android); no iPhone vale o aviso. */
+(function(){
+  const temVideo = ()=>{ try{ if(document.body.classList.contains('player-aberto') || document.fullscreenElement || document.webkitFullscreenElement) return true;
+    return [...document.querySelectorAll('video, iframe')].some(v=>{ const r = v.getBoundingClientRect(); return r.width > 160 && r.height > 90 && r.bottom > 0 && r.top < innerHeight && getComputedStyle(v).visibility !== 'hidden'; }); }catch(e){ return false; } };
+  const atualizar = ()=>{ try{ if(!document.body) return; const v = temVideo(); document.body.classList.toggle('video-aberto', v);
+  }catch(e){} };
+  const travar = ()=>{ try{ if(!screen.orientation) return; if(document.body.classList.contains('video-aberto')){ if(screen.orientation.unlock) screen.orientation.unlock(); } else if(screen.orientation.lock){ screen.orientation.lock('portrait').catch(()=>{}); } }catch(e){} };
+  addEventListener('orientationchange', ()=>setTimeout(()=>{ atualizar(); travar(); }, 60));
+  addEventListener('resize', atualizar);
+  document.addEventListener('fullscreenchange', atualizar);
+  document.addEventListener('webkitfullscreenchange', atualizar);
+  try{ new MutationObserver(()=>{ clearTimeout(atualizar._t); atualizar._t = setTimeout(atualizar, 120); }).observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['class']}); }catch(e){}
 })();
 /* no celular quem rola é o .content (abaixo da barra do topo): window.scrollTo também leva o conteúdo junto */
 (function(){ try{ const orig = window.scrollTo.bind(window); window.scrollTo = function(){ orig.apply(null, arguments); try{ if(ehCel()){ const c = document.querySelector('#app .main > .content'); if(c) c.scrollTo.apply(c, arguments); } }catch(e){} }; }catch(e){} })();
