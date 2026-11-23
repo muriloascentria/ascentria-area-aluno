@@ -4005,7 +4005,9 @@
      com contorno (não compete com o conteúdo). Concluída: card levemente verde e nome riscado. */
   .mod-check-modal .cat{display:none!important;}
   .mod-check-modal h3{font-size:18px!important;line-height:1.25;margin-bottom:6px!important;}
-  .mod-check-modal .desc{font-size:12.5px!important;line-height:1.45;margin-bottom:14px!important;}
+  .mod-check-modal .desc{display:none!important;}
+  .mod-check-modal h3{margin-bottom:14px!important;}
+  .mc-dot{font-size:.6em;vertical-align:.2em;margin:0 .25em;color:var(--text-dim);}
   .mod-check-modal .mod-check-list{padding-top:1px!important;}
   .mod-check-list{border:0!important;padding:0!important;gap:8px!important;max-height:56vh!important;}
   .mod-check-item{display:grid!important;grid-template-columns:22px auto auto minmax(0,1fr);column-gap:8px;row-gap:8px;align-items:center!important;
@@ -4013,7 +4015,7 @@
   .mod-check-item:active{background:var(--bg-card);}
   .mod-check-item .box{grid-column:1;grid-row:1;align-self:center;width:22px!important;height:22px!important;border-radius:7px!important;margin:0!important;}
   .mod-check-item .txt{display:contents;}
-  .mod-check-item .dc-tag{grid-column:2;grid-row:1;justify-self:start;height:22px!important;}
+  .mod-check-item .dc-tag{grid-column:2;grid-row:1;justify-self:start;height:22px!important;padding:0 7px!important;box-sizing:border-box;border:1px solid var(--border);background:transparent!important;}
   .mod-check-item .box .icon{width:13px;height:13px;}
   .mod-check-item .dc-txt{grid-column:2 / -1;grid-row:2;}
   .mod-check-item .eq-tag, .mod-check-item .dp-hint{grid-column:2 / -1;margin:0!important;}
@@ -4027,7 +4029,7 @@
   .dc-aula{background:rgba(160,170,120,.16);color:#c3c99a;}
   .dc-resumo{background:rgba(96,165,250,.14);color:#8ab8f2;}
   .dc-tarefa{background:rgba(234,179,8,.13);color:#e0b84a;}
-  .dc-txt{font-size:14px;font-weight:400;line-height:1.35;color:var(--text);}
+  .dc-txt{font-size:12.5px;font-weight:400;line-height:1.45;color:var(--text-dim);}
   .mod-check-item.done{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.25);}
   .mod-check-item.done .txt{text-decoration:none!important;}
   .mod-check-item.done .dc-txt{text-decoration:line-through;color:var(--text-mute);font-weight:400;}
@@ -11631,7 +11633,7 @@ function openModuleChecklist(modId, hlIdx){
     modalEl.innerHTML = `
       <div class="modal-body form-modal mod-check-modal">
         <div class="cat">Dashboard · Progresso no Método Essência</div>
-        <h3>Checklist — Módulo ${mod.name}</h3>
+        <h3>${ehCel() ? `Checklist <span class="mc-dot">•</span> Módulo ${mod.name}` : `Checklist — Módulo ${mod.name}`}</h3>
         <p class="desc">${done}/${items.length} itens marcados (${pct}%)${eqSet.size ? ` · ${eqSet.size} avançado${eqSet.size>1?'s':''} pela equipe (em roxo)` : ''}. Clique em cada item para marcar aula assistida, resumo feito ou tarefa concluída.</p>
         <div class="mod-check-list">
           ${items.map((label,idx)=>{
