@@ -1391,6 +1391,7 @@
   .ps-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--shared);margin-bottom:10px;}
   .ps-label{display:block;font-size:11.5px;font-weight:600;color:var(--text-dim);margin-bottom:4px;margin-top:10px;}
   .ps-label-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;}
+  textarea.ps-auto{resize:none;overflow:hidden;min-height:38px;line-height:1.45;font-family:inherit;}
   .ps-nao-tenho{font:inherit;font-size:11px;font-weight:600;padding:3px 10px;margin-bottom:4px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
   .ps-nao-tenho:hover{border-color:var(--accent);color:var(--accent);}
   .cob-res{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg-soft,rgba(0,0,0,.05));}
@@ -4208,12 +4209,16 @@
   .painel-topic .ps-section{margin-bottom:28px;padding-bottom:24px;}
   .painel-topic .ps-section:last-child{border-bottom:0;padding-bottom:0;}
   .painel-topic .ps-h{font-size:13px!important;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text)!important;line-height:1.4;margin-bottom:14px;}
-  .painel-topic .ps-label-row{margin-top:16px;}
+  .painel-topic .ps-label-row{margin-top:8px;align-items:center;}
+  .painel-topic .ps-section > .ps-input, .painel-topic .ps-section > textarea.ps-input, .painel-topic .ps-section > .gabarito + .ps-input{margin-bottom:4px!important;}
   .painel-topic .ps-label-row:first-of-type{margin-top:0;}
   .painel-topic .ps-label{font-size:11px!important;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute)!important;margin:0 0 6px!important;}
   .painel-topic .ps-input, .painel-topic textarea.ps-input{font-size:14px;}
+  .painel-topic textarea.ps-input{resize:none;min-height:42px;line-height:1.45;}
   .painel-topic .gabarito{font-size:12.5px;line-height:1.5;color:var(--text-dim);margin-bottom:8px;}
-  .painel-topic .ps-nao-tenho{font-size:11px;}
+  .painel-topic .ps-nao-tenho{font-size:10.5px;padding:2px 8px!important;line-height:1.3;}
+  .painel-topic .ps-label-row .ps-label{margin:0!important;}
+  .painel-topic .ps-label-row{margin-bottom:6px;}
   /* Persona: sem a explicação embaixo do título e sem o aviso verde de salvo */
   .topico-persona > .desc, .topico-persona .ps-saved-note{display:none!important;}
   .painel-topic .modal-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
@@ -12606,7 +12611,7 @@ function renderSectionHTML(section, data){
       <h4 class="ps-h">${section.label}</h4>
       <div class="ps-list" data-skey="${section.key}">
         ${items.map((v,i)=>`<div class="ps-row">
-          <input class="ps-input" data-fkind="list" data-skey="${section.key}" data-idx="${i}" value="${escapeAttr(v)}" placeholder="${escapeAttr(section.placeholder||'')}">
+          <textarea class="ps-input ps-auto" rows="1" data-fkind="list" data-skey="${section.key}" data-idx="${i}" placeholder="${escapeAttr(section.placeholder||'')}">${escapeHtml(v)}</textarea>
           <button class="ps-remove" data-remove="list" data-skey="${section.key}" data-idx="${i}">${icon('x')}</button>
         </div>`).join('')}
       </div>
@@ -13388,6 +13393,9 @@ function bindSectionEvents(sections, data, rerender, saveKey){
     });
   });
 }
+/* Painel do Método: campos de texto crescem até mostrar tudo o que foi escrito (todas as linhas) */
+function painelAutoAltura(el){ try{ if(!el || el.tagName!=='TEXTAREA' || !el.offsetParent) return; el.style.height = 'auto'; el.style.overflowY = 'hidden'; el.style.height = (el.scrollHeight + 2) + 'px'; }catch(e){} }
+document.addEventListener('input', e=>{ const t = e.target; if(t && t.tagName==='TEXTAREA' && t.closest && t.closest('.painel-topic')) painelAutoAltura(t); });
 function openTopicModal(quadrant, topicId){
   const s = getStudent(currentStudentId);
   try{ reconciliarAutoPublish(s && s.id); }catch(e){ console.error('autoPublish', e); }
@@ -13454,6 +13462,7 @@ function openTopicModal(quadrant, topicId){
           <button class="btn-outline" id="modal-close-2">Fechar</button>
         </div>
       </div>`;
+    { const ajustar = ()=>document.querySelectorAll('#modal .painel-topic textarea').forEach(painelAutoAltura); requestAnimationFrame(()=>requestAnimationFrame(ajustar)); setTimeout(ajustar, 250); }
     document.getElementById('modal-close-2').addEventListener('click',closeModal);
     if(topic.pdfExport){
       document.getElementById('topic-pdf').addEventListener('click',()=>exportTopicPDF(quadrant, topic, data));
