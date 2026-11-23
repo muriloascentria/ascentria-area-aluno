@@ -4326,15 +4326,22 @@
   .comp2 .composer-footer{flex-wrap:nowrap;gap:6px;margin-top:10px;justify-content:flex-start;}
   .comp2 .type-select{flex-wrap:nowrap;gap:6px;flex:1;min-width:0;}
   .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #post-btn{height:36px;min-height:36px;box-sizing:border-box;margin:0;}
+  .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #cm-post-btn{height:36px;min-height:36px;box-sizing:border-box;margin:0;}
   .comp2 .type-pill{width:36px;padding:0;gap:0;flex:0 0 auto;justify-content:center;transition:width .2s,padding .2s;}
   .comp2 .emoji-btn{width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;border-radius:10px;border:1px solid var(--border);background:var(--bg-elev);}
   .comp2 #post-btn{height:36px;min-height:36px;max-height:36px;padding:0 14px!important;justify-content:center;border-radius:10px;font-size:13px;line-height:1;}
+  .comp2 #cm-post-btn{height:36px;min-height:36px;max-height:36px;padding:0 14px!important;justify-content:center;border-radius:10px;font-size:13px;line-height:1;}
   .comp2.tag-aberta #post-btn .pb-rot{display:none;}
+  .comp2.tag-aberta #cm-post-btn .pb-rot{display:none;}
   /* enviar no mesmo estilo dos outros botões da linha: fundo neutro, contorno e ícone na cor de destaque */
   .comp2 #post-btn{background:var(--bg-elev)!important;border:1px solid var(--border)!important;color:var(--accent)!important;box-shadow:none!important;}
+  .comp2 #cm-post-btn{background:var(--bg-elev)!important;border:1px solid var(--border)!important;color:var(--accent)!important;box-shadow:none!important;}
   .comp2 #post-btn:hover{border-color:var(--accent)!important;}
+  .comp2 #cm-post-btn:hover{border-color:var(--accent)!important;}
   .comp2 #post-btn:disabled{opacity:.5;}
+  .comp2 #cm-post-btn:disabled{opacity:.5;}
   .comp2 .type-pill .icon, .comp2 #post-btn .icon{width:15px;height:15px;}
+  .comp2 .type-pill .icon, .comp2 #cm-post-btn .icon{width:15px;height:15px;}
   .comp2 .type-pill{border-radius:999px;}
   .comp2 .type-pill .tp-rot{display:none;}
   .comp2.tag-aberta .type-pill.active{width:auto;padding:0 10px;gap:5px;font-size:11.5px;white-space:nowrap;}
@@ -4342,9 +4349,13 @@
   .comp2.tag-aberta .type-pill.active .tp-rot{display:inline;}
   .comp2 .emoji-btn{flex:0 0 auto;}
   .comp2 #post-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .comp2 #cm-post-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   .comp2.tag-aberta #post-btn .pb-rot{display:none;}
+  .comp2.tag-aberta #cm-post-btn .pb-rot{display:none;}
   .comp2.tag-aberta #post-btn{width:36px;min-width:36px;padding:0!important;justify-content:center;border-radius:10px;}
+  .comp2.tag-aberta #cm-post-btn{width:36px;min-width:36px;padding:0!important;justify-content:center;border-radius:10px;}
   .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #post-btn{flex-shrink:0!important;}
+  .comp2 .type-pill, .comp2 .emoji-btn, .comp2 #cm-post-btn{flex-shrink:0!important;}
   .comp2 .emoji-btn{min-width:36px;margin:0!important;}
   #view-comunidade > .com-sub{font-size:11.5px;color:var(--text-mute);font-style:normal;line-height:1.5;margin:4px 0 18px;}
   .agenda-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;}
@@ -9614,6 +9625,7 @@ function openCourseModal(id){
   bindCourseComments(c);
 }
 /* ---- Dúvidas e comentários por aula — reaproveita o mesmo modelo de post da Comunidade, filtrado por courseId ---- */
+let CM_TAG_ABERTA = false;  /* composer dos comentários da aula no celular: alguma tag foi tocada */
 function courseCommentsHtml(c){
   const me = getPerson(actingAuthorId());
   // As aulas são as mesmas pras duas audiências, mas os comentários ficam cada um na sua comunidade —
@@ -9622,7 +9634,23 @@ function courseCommentsHtml(c){
   return `
     <div class="course-comments">
       <div class="ps-h">${icon('comment')} Dúvidas e comentários desta aula</div>
-      ${me? `
+      ${me && ehCel() ? `
+      <div class="composer comp2 ${CM_TAG_ABERTA ? 'tag-aberta' : ''}">
+        <div class="comp2-topo">
+          ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
+          <span class="comp2-convite">No que você está pensando?</span>
+        </div>
+        <div class="comp2-corpo">
+          <textarea id="cm-new-post" aria-label="No que você está pensando?"></textarea>
+          <div class="composer-footer">
+            <div class="type-select" id="cm-type-select">
+              ${Object.keys(POST_TYPES).filter(k=>k!=='apresentacao').map(k=>`<button type="button" class="type-pill tag-${POST_TYPES[k].css} ${CM_TAG_ABERTA && selectedCoursePostType===k?'active':''}" data-cm-type="${k}" title="${POST_TYPES[k].label}">${icon(POST_TYPES[k].icon,'tiny')}<span class="tp-rot">${POST_TYPES[k].label}</span></button>`).join('')}
+            </div>
+            <button type="button" class="emoji-btn" data-emoji-for="#cm-new-post" title="Emoji">😊</button>
+            <button class="btn-accent" id="cm-post-btn" title="Enviar">${icon('send','tiny')}<span class="pb-rot">Enviar</span></button>
+          </div>
+        </div>
+      </div>` : me? `
       <div class="composer">
         ${initialsAvatar(me.initials,me.color,undefined,me.avatarUrl)}
         <div style="flex:1">
@@ -9644,19 +9672,33 @@ function bindCourseComments(c){
   const me = getPerson(actingAuthorId());
   markVisiblePostsSeen(COMMUNITY_POSTS.filter(p=>p.courseId===c.id && p.audience===getViewingTier()));
   modalEl.querySelectorAll('#cm-type-select [data-cm-type]').forEach(btn=>{
-    btn.addEventListener('click',()=>{ selectedCoursePostType = btn.dataset.cmType; openCourseModal(c.id); });
+    btn.addEventListener('click',()=>{
+      selectedCoursePostType = btn.dataset.cmType;
+      /* celular: igual à Comunidade, sem redesenhar (o texto digitado não se perde) */
+      if(ehCel()){ CM_TAG_ABERTA = true; modalEl.querySelectorAll('#cm-type-select [data-cm-type]').forEach(b=>b.classList.toggle('active', b===btn)); const cx = modalEl.querySelector('.course-comments .comp2'); if(cx) cx.classList.add('tag-aberta'); return; }
+      openCourseModal(c.id);
+    });
   });
   attachMentions(modalEl.querySelector('#cm-new-post'), ()=>getViewingTier());
   const postBtn = modalEl.querySelector('#cm-post-btn');
   if(postBtn){
     postBtn.addEventListener('click', async ()=>{
       const ta = modalEl.querySelector('#cm-new-post');
-      if(!ta.value.trim()) return;
+      if(!ta.value.trim()){ ta.focus(); return; }
+      /* celular: sem tag escolhida, pergunta numa janela antes de publicar (como na Comunidade) */
+      if(ehCel() && !CM_TAG_ABERTA){
+        const tipo = await comEscolherTag(true);
+        if(!tipo) return;
+        selectedCoursePostType = tipo; CM_TAG_ABERTA = true;
+        modalEl.querySelectorAll('#cm-type-select [data-cm-type]').forEach(b=>b.classList.toggle('active', b.dataset.cmType===tipo));
+        const cx = modalEl.querySelector('.course-comments .comp2'); if(cx) cx.classList.add('tag-aberta');
+      }
       postBtn.disabled = true;
       if(!(await confirmarDuvidaRepetida(selectedCoursePostType, '#cm-type-select'))){ postBtn.disabled = false; return; }
       try{
         const post = await createCommunityPost(actingAuthorId(), selectedCoursePostType, ta.value.trim(), c.id, getViewingTier(), extractMentions(ta));
         COMMUNITY_POSTS.unshift(post);
+        CM_TAG_ABERTA = false;
         refreshPendencias();
         openCourseModal(c.id);
       }catch(e){ console.error(e); postBtn.disabled = false; }
