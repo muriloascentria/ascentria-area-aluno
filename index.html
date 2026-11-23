@@ -823,6 +823,10 @@
   .dp-lista small{color:var(--text-mute);}
   .dp-lista li{align-items:flex-start;}
   .dp-lista .dp-falta{color:var(--warning,#e0a040);}
+  .dp-lista-itens{list-style:disc;padding-left:20px;gap:4px;}
+  .dp-lista-itens li{display:list-item;color:var(--warning,#e0a040);font-weight:600;}
+  .dp-aviso .dp-titulo{letter-spacing:.06em;}
+  .dp-aviso .dp-lista-itens{margin:10px 0 14px!important;}
   .dp-dica{font-size:12.5px;color:var(--text-mute);margin:6px 0 0;}
   #dp-abrir{display:inline-flex;align-items:center;gap:6px;}
   .dp-hint{display:flex;align-items:center;gap:4px;margin-top:3px;font-size:11.5px;color:var(--warning, #d9a441);font-weight:600;}
@@ -4007,6 +4011,8 @@
      a ação (Abrir aula / Abrir Painel) ocupa a linha de baixo, de ponta a ponta, como botão secundário
      com contorno (não compete com o conteúdo). Concluída: card levemente verde e nome riscado. */
   .mod-check-modal .cat{display:none!important;}
+  .dp-aviso .app-confirm-actions{display:flex;flex-direction:column-reverse;gap:8px;}
+  .dp-aviso .app-confirm-actions button{width:100%;justify-content:center;margin:0;}
   .mod-check-modal h3{font-size:18px!important;line-height:1.25;margin-bottom:6px!important;}
   .mod-check-modal .desc{display:none!important;}
   .mod-check-modal h3{margin-bottom:14px!important;}
@@ -11602,13 +11608,16 @@ function dashPainelDetalhe(s, a){
 function dashPainelAvisoBloqueio(faltam, voltar, s){
   s = s || getStudent(currentStudentId);
   const wrap = document.createElement('div');
-  wrap.className = 'app-confirm-backdrop';
+  /* lista só o que realmente falta (cada campo vazio); quando o quadro não detalha, mostra o nome do quadro */
+  const itensFalta = [];
+  faltam.forEach(a=>{ let f = []; try{ f = s ? topicFaltando(a.t, getTopicData(s.id, a.t.id)) : []; }catch(e){} (f.length ? f : [a.t.title]).forEach(x=>{ if(!itensFalta.includes(x)) itensFalta.push(x); }); });
+  wrap.className = 'app-confirm-backdrop dp-aviso';
   wrap.innerHTML = `
     <div class="app-confirm-card">
-      <h4>Antes, preencha o Painel do Método</h4>
-      <p>Esta tarefa só pode ser marcada depois que ${faltam.length>1 ? 'estes quadros estiverem preenchidos' : 'este quadro estiver preenchido'} no Painel do Método:</p>
-      <ul class="dp-lista">${faltam.map(a=>{ const d = s ? dashPainelDetalhe(s, a) : ''; return `<li>${icon(a.q.icon,'tiny')} <span><b>${escapeHtml(a.t.title)}</b> <small>${escapeHtml(a.q.title)}</small>${d ? `<br><small class="dp-falta">Falta: ${escapeHtml(d)}</small>` : ''}</span></li>`; }).join('')}</ul>
-      <p class="dp-dica">Se algum item não se aplica a você, use o botão <b>"não se aplica"</b> dentro do quadro no Painel.</p>
+      <h4 class="dp-titulo">⚠️ ATENÇÃO</h4>
+      <p>Esta tarefa só pode ser marcada depois que ${itensFalta.length>1 ? 'estes quadros estiverem preenchidos' : 'este quadro estiver preenchido'} no Painel do Método:</p>
+      <ul class="dp-lista dp-lista-itens">${itensFalta.map(t=>`<li>${escapeHtml(t)}</li>`).join('')}</ul>
+      <p class="dp-dica">Se algum item não se aplica a você, use o botão <b>"não se aplica"</b> dentro do quadro no Painel do Método.</p>
       <div class="app-confirm-actions"><button type="button" class="btn-outline" id="dp-fechar">Agora não</button><button type="button" class="btn-accent" id="dp-abrir">${icon('compass','tiny')} Abrir no Painel</button></div>
     </div>`;
   document.body.appendChild(wrap);
