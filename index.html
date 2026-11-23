@@ -9514,7 +9514,7 @@ function bindCourseComments(c){
     btn.addEventListener('click',send);
     const input = modalEl.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
     attachMentions(input, ()=>getViewingTier());
-    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey && !ehCel()){ e.preventDefault(); send(); } });  /* celular: Enter pula linha; computador: Shift+Enter pula linha */
   });
   modalEl.querySelectorAll('[data-reply-comment]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -10622,7 +10622,7 @@ function renderComunidade_cel(){
     btn.addEventListener('click',send);
     const input = root.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
     attachMentions(input, ()=>{ const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.commentSend); return p? p.audience : currentCommunityAudience; });
-    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey && !ehCel()){ e.preventDefault(); send(); } });  /* celular: Enter pula linha; computador: Shift+Enter pula linha */
   });
   root.querySelectorAll('[data-reply-comment]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -10804,7 +10804,7 @@ function renderComunidade_web(){
     btn.addEventListener('click',send);
     const input = root.querySelector(`[data-comment-input="${btn.dataset.commentSend}"]`);
     attachMentions(input, ()=>{ const p = COMMUNITY_POSTS.find(x=>x.id==btn.dataset.commentSend); return p? p.audience : currentCommunityAudience; });
-    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey && !ehCel()){ e.preventDefault(); send(); } });  /* celular: Enter pula linha; computador: Shift+Enter pula linha */
   });
   root.querySelectorAll('[data-reply-comment]').forEach(btn=>{
     btn.addEventListener('click',()=>{
