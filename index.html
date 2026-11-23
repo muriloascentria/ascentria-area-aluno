@@ -4061,6 +4061,22 @@
   .ep-dia-dir{display:inline-flex;align-items:center;gap:8px;color:var(--text-mute);}
   .ep-dia-seta{width:16px;height:16px;flex-shrink:0;transition:transform .2s;}
   .ep-dia-rec[open] .ep-dia-seta{transform:rotate(180deg);}
+  /* tarefas do ePLANNER no desenho do checklist do Dashboard */
+  .epc{display:grid;grid-template-columns:22px auto auto minmax(0,1fr);column-gap:8px;row-gap:8px;align-items:center;
+    border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--bg-elev);margin-top:8px;}
+  .ep-dia-hd + .epc, .ep-sec-hd + .epc{margin-top:6px;}
+  .epc-box{grid-column:1;grid-row:1;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--border);background:none;padding:0;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;}
+  .epc-box .icon{width:13px;height:13px;stroke:#fff;stroke-width:3;}
+  .epc.done{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.25);}
+  .epc.done .epc-box{background:var(--success);border-color:var(--success);}
+  .epc .dc-tag{grid-column:2;grid-row:1;justify-self:start;height:22px;padding:0 7px;box-sizing:border-box;border:1px solid var(--border);background:transparent!important;color:var(--accent-2)!important;}
+  .epc .epc-acao{grid-column:3;grid-row:1;justify-self:start;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px!important;box-sizing:border-box;white-space:nowrap;margin:0!important;
+    border-radius:6px!important;border:1px solid var(--border)!important;background:transparent!important;color:var(--accent-2)!important;font:inherit;font-size:9.5px!important;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;}
+  .epc .epc-acao .icon{width:11px;height:11px;}
+  .epc-hora{grid-column:4;grid-row:1;justify-self:end;font-size:11px;color:var(--text-mute);white-space:nowrap;}
+  .epc .dc-txt{grid-column:2 / -1;grid-row:2;}
+  .epc.done .dc-txt{text-decoration:line-through;color:var(--text-mute);}
+  .epc.done .dc-tag{opacity:.6;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
@@ -23560,6 +23576,7 @@ function epBlocoHtml(b, comCheck){
   const it = b.it;
   let curso = null; try{ curso = checklistLinkedCourse(it.label, it.modName); }catch(e){}
   const sufixo = (b.parte>1 || !b.ultimaParte) ? ` · parte ${b.parte}` : '';
+  if(ehCel()) return epBlocoCelHtml({ it, curso, hora:`${epHora(b.ini)} · ${epDurTxt(b.min)}`, parte:sufixo ? b.parte : 0, check: comCheck ? `<button type="button" class="epc-box" data-ep-marcar="${it.modId}:${it.idx}" title="${b.ultimaParte ? 'Marcar como feita' : 'Já terminei esta tarefa inteira'}"></button>` : '' });
   return `
     <div class="ep-bloco">
       <div class="ep-hora">${epHora(b.ini)}<small>${epDurTxt(b.min)}</small></div>
@@ -23571,7 +23588,24 @@ function epBlocoHtml(b, comCheck){
       ${comCheck ? `<button type="button" class="ep-check" data-ep-marcar="${it.modId}:${it.idx}" title="${b.ultimaParte ? 'Marcar como feita' : 'Já terminei esta tarefa inteira'}">${icon('tick')}</button>` : ''}
     </div>`;
 }
+/* celular: tarefa do ePLANNER no mesmo desenho do checklist do Dashboard
+   (quadradinho de marcar, tag do tipo, botão de abrir e o horário na 1ª linha; a frase embaixo) */
+function epBlocoCelHtml(o){
+  const it = o.it;
+  let painel = ''; try{ painel = dashTarefaPainelHtml(it.modId, it.idx, it.label); }catch(e){}
+  let tt = dashCelTxt(it.label);
+  if(o.parte) tt = tt.replace(/<\/span>$/, ` (parte ${o.parte})</span>`);
+  return `
+    <div class="epc ${o.feito ? 'done' : ''}">
+      ${o.check || '<span class="epc-box"></span>'}
+      ${tt}
+      ${o.curso ? `<button type="button" class="epc-acao" data-ep-aula="${escapeAttr(o.curso.id)}">${icon('film','tiny')} Abrir aula</button>` : painel.replace('class="dp-btn"','class="epc-acao dp-btn"')}
+      <span class="epc-hora">${o.hora}</span>
+    </div>`;
+}
 function epFeitoHtml(f){
+  if(ehCel()){ let curso = null; try{ curso = checklistLinkedCourse(f.label, f.modName); }catch(e){}
+    return epBlocoCelHtml({ it:{ modId:f.modId, idx:f.idx, label:String(f.label||''), modName:f.modName }, curso, feito:true, hora:`feita · ${epHora(f.quando.getHours()*60+f.quando.getMinutes())}`, check:`<button type="button" class="epc-box" data-ep-desmarcar="${f.modId}:${f.idx}" title="Desmarcar">${icon('tick')}</button>` }); }
   return `
     <div class="ep-bloco feito">
       <div class="ep-hora">${icon('tick','tiny')}<small>${epHora(f.quando.getHours()*60+f.quando.getMinutes())}</small></div>
@@ -23726,6 +23760,7 @@ function renderPlanner(){
   const mais = document.getElementById('ep-mais'); if(mais) mais.addEventListener('click', ()=>{ EP_UI.maisDias += 7; renderPlanner(); });
   const hist = document.getElementById('ep-hist'); if(hist) hist.addEventListener('click', ()=>{ EP_UI.verHist = !EP_UI.verHist; renderPlanner(); });
   el.querySelectorAll('[data-ep-aula]').forEach(b=>b.addEventListener('click', ()=>openCourseModal(b.dataset.epAula)));
+  el.querySelectorAll('[data-dp-ir]').forEach(b=>b.addEventListener('click', ()=>{ const a = painelAcharTopico(b.dataset.dpIr); if(!a) return; panelQuadrantId = a.q.id; goTo('painel'); setTimeout(()=>openTopicModal(a.q, a.t.id), 60); }));
   el.querySelectorAll('[data-ep-marcar]').forEach(b=>b.addEventListener('click', ()=>{
     const [modId, idx] = b.dataset.epMarcar.split(':');
     epMarcar(s, modId, +idx, true);
