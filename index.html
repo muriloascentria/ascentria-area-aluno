@@ -3000,7 +3000,7 @@
   .ep-inicio-topo{display:flex;align-items:center;gap:10px;}
   .ep-inicio-topo strong{flex:1;}
   .ep-inicio-item{display:flex;gap:10px;font-size:13px;line-height:1.35;}
-  .ep-inicio-item span{font-weight:700;min-width:44px;}
+  .ep-inicio-item > span:first-child{font-weight:700;min-width:44px;}
   .ep-inicio-mais{padding-left:54px;}
   .rd-kpis .rd-kpi{cursor:pointer;text-align:left;font:inherit;color:inherit;}
   .rd-kpi .value{font-size:24px;font-weight:800;}
@@ -4331,7 +4331,10 @@
   .com-ver-mais{width:100%;height:44px;margin:4px 0 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--accent-2,var(--accent));font:inherit;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;}
   .kpi-regras .kpi-note{margin:10px 0 0!important;font-size:12.5px;color:var(--text-dim);line-height:1.5;}
   .ini-al .ep-inicio-item{font-size:12.5px!important;line-height:1.5!important;color:var(--text-dim)!important;gap:10px;}
-  .ini-al .ep-inicio-item span{font-size:12.5px!important;font-weight:700;color:var(--text-dim);min-width:40px;}
+  .ini-al .ep-inicio-item > span:first-child{font-size:12.5px!important;font-weight:700;color:var(--text-dim);min-width:40px;flex-shrink:0;}
+  /* o horário começa alinhado ao calendário dentro do círculo (9px para dentro) e cada tarefa fica numa linha só, com reticências */
+  .ini-al .ep-inicio-item{padding-left:9px;}
+  .ini-al .ep-ini-txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ini-al .aniv-bloco, .ini-al .ep-inicio, .ini-al .ee-banner, .ini-al .premio-banner{margin-top:var(--ini-r)!important;margin-bottom:0!important;}
   .ini-al .ee-banner + .premio-banner{margin-top:var(--ini-g)!important;}
   .ini-al .section-title.ini-sec{margin-top:var(--ini-r)!important;margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em;}
@@ -24255,7 +24258,7 @@ function epInicioHtml(s){
   return `
     <div class="ep-inicio col" data-goto="planner">
       <div class="ep-inicio-topo"><span class="ep-inicio-ic">${icon('calendar')}</span><strong>Hoje no seu ePLANNER</strong><span class="btn-mini">Abrir</span></div>
-      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span>${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</div>`).join('') + (!ehCel() && hoje.blocos.length>3 ? `<small class="ep-inicio-mais">e mais ${hoje.blocos.length-3}</small>` : '')
+      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span><span class="ep-ini-txt">${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</span></div>`).join('') + (!ehCel() && hoje.blocos.length>3 ? `<small class="ep-inicio-mais">e mais ${hoje.blocos.length-3}</small>` : '')
         : `<small>${ag.feitos.length ? 'Tudo de hoje feito. Muito bem!' : hoje.ativo ? 'Nada pendente para hoje.' : 'Hoje é dia de descanso.'}</small>`}
     </div>`;
 }
