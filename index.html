@@ -4311,6 +4311,11 @@
   /* mesma altura exata para campo, emoji e Enviar no comentário */
   .comment-composer .emoji-btn, .comment-composer .cc-enviar{height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;}
   .comment-composer .emoji-btn{width:36px!important;min-width:36px!important;}
+  /* foto, campo, emoji e Enviar na mesma linha: o campo tem a mesma altura dos botões (36px) e cresce para cima;
+     a foto fica centralizada nessa primeira linha */
+  .comment-composer .mention-wrap{display:flex;flex:1;min-width:0;}
+  .comment-composer textarea.cc-campo{display:block;width:100%;min-height:36px!important;height:36px;padding:8px 12px!important;line-height:18px!important;margin:0!important;}
+  .comment-composer > .avatar{margin-bottom:7px;}
   /* Filtros da Comunidade numa linha só: dividem a largura; se não couber, rolam para o lado */
   .com-mural-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px;}
   .com-mural-cab .section-title.ini-sec{margin:0!important;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
@@ -10604,7 +10609,7 @@ function postHtml(p,compact,showCourseTag){
             ${replyTargets[p.id]? `<div class="reply-target-chip">${icon('reply','tiny')} Respondendo a <b>${escapeHtml(replyTargets[p.id].name)}</b><button type="button" data-cancel-reply="${p.id}">${icon('x','tiny')}</button></div>` : ''}
             <div class="comment-composer">
               ${initialsAvatar(replyAuthor.initials,replyAuthor.color,22,replyAuthor.avatarUrl)}
-              <textarea rows="1" class="cc-campo" placeholder="${replyTargets[p.id]? 'Responder a '+escapeAttr(replyTargets[p.id].name)+'...' : 'Escreva um comentário...'}" data-comment-input="${p.id}"></textarea>
+              <textarea rows="1" class="cc-campo" placeholder="${replyTargets[p.id]? (ehCel() ? 'Responder...' : 'Responder a '+escapeAttr(replyTargets[p.id].name)+'...') : (ehCel() ? 'Comentar...' : 'Escreva um comentário...')}" data-comment-input="${p.id}"></textarea>
               <button type="button" class="emoji-btn" title="Emoji">😊</button>
               ${ehCel() ? `<button class="btn-mini cc-enviar" data-comment-send="${p.id}">${icon('send','tiny')}<span>Enviar</span></button>` : `<button class="btn-mini" data-comment-send="${p.id}">Enviar</button>`}
             </div>
