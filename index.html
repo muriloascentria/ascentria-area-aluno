@@ -3999,27 +3999,37 @@
   .dash-al .section-title.dash-sec1{margin-top:0!important;}
   .dash-al .progress-hero{justify-content:flex-start;}
   .dash-al .module-bar-row .name{text-transform:uppercase;letter-spacing:.06em;}
-  /* checklist do módulo: cada etapa no seu próprio box, cantos 10 (mesma escala dos outros cards internos) */
-  .mod-check-list{border:0!important;padding:0!important;gap:8px!important;}
-  .mod-check-item{border:1px solid var(--border);border-radius:10px!important;padding:12px!important;background:var(--bg-elev);align-items:center!important;}
-  .mod-check-item.done{border-color:rgba(34,197,94,.28);}
-  .mod-check-item.equipe{border-color:rgba(139,123,216,.35);}
-  /* botão Abrir aula na linha de baixo, de onde começa o texto da tarefa até a borda */
-  .mod-check-item{flex-wrap:wrap;}
-  .mod-check-item .box{align-self:flex-start;margin-top:22px!important;}
-  .mod-check-item .txt{display:flex;flex-direction:column;align-items:flex-start;gap:5px;}
-  .dc-tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;}
-  .dc-aula{background:var(--accent-soft);color:var(--accent-2);}
-  .dc-resumo{background:rgba(96,165,250,.15);color:#7fb2f5;}
-  .dc-tarefa{background:rgba(234,179,8,.14);color:#e0b43a;}
-  .mod-check-item.done .dc-tag{text-decoration:none;opacity:.7;}
+  /* ===== Checklist do módulo no celular (revisão de UX 22/11/2026) =====
+     Cada etapa é um card compacto em grade: o check à esquerda, centralizado no bloco tag + nome;
+     a ação (Abrir aula / Abrir Painel) ocupa a linha de baixo, de ponta a ponta, como botão secundário
+     com contorno (não compete com o conteúdo). Concluída: card levemente verde e nome riscado. */
+  .mod-check-modal .cat{display:none!important;}
+  .mod-check-modal h3{font-size:18px!important;line-height:1.25;margin-bottom:6px!important;}
+  .mod-check-modal .desc{font-size:12.5px!important;line-height:1.45;margin-bottom:14px!important;}
+  .mod-check-modal .mod-check-list{padding-top:1px!important;}
+  .mod-check-list{border:0!important;padding:0!important;gap:8px!important;max-height:56vh!important;}
+  .mod-check-item{display:grid!important;grid-template-columns:24px minmax(0,1fr);column-gap:12px;row-gap:12px;align-items:center!important;
+    border:1px solid var(--border);border-radius:12px!important;padding:12px 14px!important;background:var(--bg-elev);transition:background .15s,border-color .15s;}
+  .mod-check-item:active{background:var(--bg-card);}
+  .mod-check-item .box{grid-column:1;grid-row:1;align-self:center;width:22px!important;height:22px!important;border-radius:7px!important;margin:0!important;}
+  .mod-check-item .txt{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;}
+  .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{grid-column:1 / -1;grid-row:2;order:0;width:100%;margin:0!important;
+    display:flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px!important;box-sizing:border-box;
+    border-radius:10px!important;border:1px solid var(--border)!important;background:transparent!important;color:var(--accent-2)!important;
+    font:inherit;font-size:12.5px!important;font-weight:700;cursor:pointer;text-decoration:none!important;}
+  .mod-check-item .mod-check-course-link .icon, .mod-check-item > .dp-btn .icon{width:14px;height:14px;}
+  .dc-tag{display:inline-flex;align-items:center;height:18px;padding:0 8px;border-radius:6px;font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;text-decoration:none;}
+  .dc-aula{background:rgba(160,170,120,.16);color:#c3c99a;}
+  .dc-resumo{background:rgba(96,165,250,.14);color:#8ab8f2;}
+  .dc-tarefa{background:rgba(234,179,8,.13);color:#e0b84a;}
+  .dc-txt{font-size:14px;font-weight:600;line-height:1.35;color:var(--text);}
+  .mod-check-item.done{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.25);}
   .mod-check-item.done .txt{text-decoration:none!important;}
-  .mod-check-item.done .dc-txt{text-decoration:line-through;}
-  .mod-check-item .dp-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;padding:8px 12px;border-radius:999px;border:0;background:var(--accent-soft);color:var(--accent-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;}
-  .mod-check-item.done .dp-btn{text-decoration:none;}
-  .mod-check-item .dp-tag{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 10px;border-radius:999px;background:var(--bg-card);color:var(--text-mute);font-size:11px;font-weight:700;text-decoration:none;}
-  .mod-check-item .txt{flex:1 1 0;min-width:0;}
-  .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{order:5;flex:0 0 100%;width:100%;margin-left:0!important;margin-top:10px;justify-content:center;box-sizing:border-box;padding:8px 12px;font-size:12px;gap:6px;}
+  .mod-check-item.done .dc-txt{text-decoration:line-through;color:var(--text-mute);font-weight:500;}
+  .mod-check-item.done .dc-tag{opacity:.6;}
+  .mod-check-item.equipe{border-color:rgba(139,123,216,.35);}
+  .mod-check-item.travado .dc-txt{color:var(--text-mute);}
+  .mod-check-item .eq-tag, .mod-check-item .dp-hint{font-size:11px;}
   .cel-titulo{margin:2px 0 18px;font-size:19px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;line-height:1.25;}
   /* Agenda ao Vivo: títulos no padrão das outras telas (caixa alta, 16px, espaçado) */
   #view-agenda .section-title{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
@@ -11613,7 +11623,7 @@ function openModuleChecklist(modId, hlIdx){
     const pct = Math.round(done/items.length*100);
     const eqSet = dashItensEquipe(s.id, modId);
     modalEl.innerHTML = `
-      <div class="modal-body form-modal">
+      <div class="modal-body form-modal mod-check-modal">
         <div class="cat">Dashboard · Progresso no Método Essência</div>
         <h3>Checklist — Módulo ${mod.name}</h3>
         <p class="desc">${done}/${items.length} itens marcados (${pct}%)${eqSet.size ? ` · ${eqSet.size} avançado${eqSet.size>1?'s':''} pela equipe (em roxo)` : ''}. Clique em cada item para marcar aula assistida, resumo feito ou tarefa concluída.</p>
