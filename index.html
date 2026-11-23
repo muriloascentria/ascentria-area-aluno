@@ -4181,6 +4181,40 @@
   .btn-outline[data-ep-editar]{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
   #view-planner #ep-mais, #view-planner .btn-outline[data-ep-editar]{display:flex;width:100%;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;box-sizing:border-box;line-height:1;font-size:13px;}
   .btn-outline[data-ep-editar] .icon{flex-shrink:0;}
+  /* ===== Painel do Método no celular: tipografia e respiro padronizados (23/11/2026) =====
+     Título de seção: 16px, 800, caixa alta, cor de texto · Subtítulo (nome do card/tópico): 15px, 700 ·
+     Texto (campos): 14px, 400 · Explicação: 12.5px, 400, cor secundária · Rótulo de campo: 11px, 700,
+     caixa alta, cor apagada · Respiro: 28px entre seções, 12px entre itens. */
+  #view-painel > .section-sub{font-size:12.5px!important;line-height:1.5;color:var(--text-dim);margin:0 0 20px!important;}
+  #view-painel .quadrant-grid{gap:12px;}
+  #view-painel .quadrant-card{padding:18px 16px;}
+  #view-painel .quadrant-card .qi{width:40px;height:40px;margin-bottom:12px;}
+  #view-painel .quadrant-card .title{font-size:15px;font-weight:700;margin-bottom:4px;}
+  #view-painel .quadrant-card .meta{font-size:12.5px;line-height:1.5;color:var(--text-dim);margin-bottom:14px;}
+  #view-painel .quadrant-card .frac{font-size:11px!important;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute)!important;margin-top:8px!important;}
+  #view-painel .back-row{margin-bottom:20px;}
+  #view-painel .back-btn{font-size:13px;}
+  #view-painel > h2.section-title{font-size:16px!important;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px!important;display:flex;align-items:center;gap:8px;}
+  #view-painel > h2.section-title .icon{width:18px;height:18px;}
+  #view-painel > h2.section-title + .section-sub{font-size:12.5px!important;line-height:1.5;color:var(--text-dim);margin:0 0 18px!important;}
+  #view-painel > h2.section-title + .topic-row{margin-top:16px;}
+  #view-painel .topic-row{margin-bottom:10px;padding:14px 16px;gap:12px;}
+  #view-painel .topic-row .title{font-size:15px;font-weight:700;line-height:1.3;}
+  #view-painel .topic-row .desc{font-size:12.5px;line-height:1.5;color:var(--text-dim);margin-top:3px;}
+  .painel-topic .cat{font-size:11px!important;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute)!important;margin-bottom:4px;}
+  .painel-topic h3{font-size:18px!important;font-weight:800;line-height:1.3;margin:0 0 6px!important;}
+  .painel-topic > .desc{font-size:12.5px!important;line-height:1.5;color:var(--text-dim);margin:0 0 20px!important;}
+  .painel-topic .topic-note{font-size:12.5px;line-height:1.55;color:var(--text-dim);padding:12px 14px;margin-bottom:16px;}
+  .painel-topic .ps-section{margin-bottom:28px;padding-bottom:24px;}
+  .painel-topic .ps-section:last-child{border-bottom:0;padding-bottom:0;}
+  .painel-topic .ps-h{font-size:13px!important;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text)!important;line-height:1.4;margin-bottom:14px;}
+  .painel-topic .ps-label-row{margin-top:16px;}
+  .painel-topic .ps-label-row:first-of-type{margin-top:0;}
+  .painel-topic .ps-label{font-size:11px!important;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute)!important;margin:0 0 6px!important;}
+  .painel-topic .ps-input, .painel-topic textarea.ps-input{font-size:14px;}
+  .painel-topic .gabarito{font-size:12.5px;line-height:1.5;color:var(--text-dim);margin-bottom:8px;}
+  .painel-topic .ps-nao-tenho{font-size:11px;}
+  .painel-topic .modal-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;}
   .mod-check-modal .cat{display:none!important;}
   .dp-aviso .app-confirm-actions{display:flex;flex-direction:row;gap:8px;}
   .dp-aviso .app-confirm-actions button{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;margin:0;white-space:nowrap;}
@@ -13391,7 +13425,7 @@ function openTopicModal(quadrant, topicId){
   function renderModal(){
     const filled = topicFilled(quadrant, topic, idx, s);
     document.getElementById('modal').innerHTML = `
-      <div class="modal-body form-modal">
+      <div class="modal-body form-modal painel-topic">
         <div class="cat">${quadrant.title}</div>
         <h3>${topic.title}</h3>
         ${topic.desc? `<p class="desc">${topic.desc}</p>` : ''}
