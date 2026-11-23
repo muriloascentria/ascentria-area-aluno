@@ -12073,7 +12073,7 @@ function renderPainel(){
     el.innerHTML = `
       <div class="back-row"><button class="back-btn" id="panel-back">${icon('back')} Voltar ao Painel do Método</button></div>
       <h2 class="section-title">${icon(q.icon)} ${q.title}</h2>
-      <p class="section-sub">${filled}/${q.topics.length} seções preenchidas · módulo "${getModule(q.moduleId).name}" no Dashboard.</p>
+      ${ehCel() && q.id==='vendas' ? '' : `<p class="section-sub">${filled}/${q.topics.length} seções preenchidas · módulo "${getModule(q.moduleId).name}" no Dashboard.</p>`}
       ${q.topics.map((t,i)=>{
         const f = topicFilled(q,t,i,s);
         return `<button class="topic-row" data-topic="${t.id}">
