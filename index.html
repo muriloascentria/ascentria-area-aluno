@@ -4027,6 +4027,9 @@
   /* ePLANNER: títulos das seções em caixa alta, como nas outras telas */
   .ep-sec-hd h3{text-transform:uppercase;letter-spacing:.06em;}
   /* ePLANNER: respiro igual entre indicadores, aviso de previsão, hoje e os dias seguintes */
+  /* tabelas que rolam de lado param no limite, sem "elástico" e sem arrastar a tela junto */
+  .table-wrap{overscroll-behavior-x:none;overscroll-behavior:contain;}
+  #app .main > .content{overflow-x:hidden;overscroll-behavior-x:none;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
