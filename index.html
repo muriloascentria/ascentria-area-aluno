@@ -4013,8 +4013,8 @@
   .mod-check-item:active{background:var(--bg-card);}
   .mod-check-item .box{display:none!important;grid-column:1;grid-row:1;align-self:center;width:22px!important;height:22px!important;border-radius:7px!important;margin:0!important;}
   .mod-check-item .txt{display:contents;}
-  .dc-marcar{grid-column:1;grid-row:1;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;box-sizing:border-box;border-radius:6px;
-    border:1px solid var(--border);font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim,var(--text-mute));white-space:nowrap;}
+  .dc-marcar{grid-column:1;grid-row:1;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;box-sizing:border-box;border-radius:6px;
+    border:1px solid var(--border);font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text-dim,var(--text-mute));white-space:nowrap;}
   .dc-marcar .icon{width:11px;height:11px;stroke:#fff;stroke-width:3.2;}
   .mod-check-item.done .dc-marcar{background:var(--success);border-color:var(--success);color:#fff;}
   .mod-check-item.equipe .dc-marcar{background:var(--equipe,#8b7bd8);border-color:var(--equipe,#8b7bd8);color:#fff;}
@@ -4022,12 +4022,13 @@
   .mod-check-item .dc-tag{grid-column:2;grid-row:1;justify-self:start;height:22px!important;}
   .mod-check-item .dc-txt{grid-column:1 / -1;grid-row:2;}
   .mod-check-item .eq-tag, .mod-check-item .dp-hint{grid-column:1 / -1;margin:0!important;}
-  .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{grid-column:1 / -1;order:0;width:100%;margin:0!important;
-    display:flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px!important;box-sizing:border-box;
-    border-radius:10px!important;border:1px solid var(--border)!important;background:transparent!important;color:var(--accent-2)!important;
-    font:inherit;font-size:12.5px!important;font-weight:700;cursor:pointer;text-decoration:none!important;}
-  .mod-check-item .mod-check-course-link .icon, .mod-check-item > .dp-btn .icon{width:14px;height:14px;}
-  .dc-tag{display:inline-flex;align-items:center;height:18px;padding:0 8px;border-radius:6px;font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;text-decoration:none;}
+  .mod-check-item .mod-check-course-link, .mod-check-item > .dp-btn{grid-column:3;grid-row:1;justify-self:end;order:0;margin:0!important;
+    display:inline-flex;align-items:center;justify-content:center;gap:4px;height:22px;padding:0 7px!important;box-sizing:border-box;white-space:nowrap;
+    border-radius:6px!important;border:1px solid var(--border)!important;background:transparent!important;color:var(--accent-2)!important;
+    font:inherit;font-size:9.5px!important;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;text-decoration:none!important;}
+  .mod-check-item .mod-check-course-link .icon, .mod-check-item > .dp-btn .icon{width:11px;height:11px;}
+  @media (max-width:360px){ .mod-check-item .mod-check-course-link .icon, .mod-check-item > .dp-btn .icon{display:none;} }
+  .dc-tag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:6px;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;}
   .dc-aula{background:rgba(160,170,120,.16);color:#c3c99a;}
   .dc-resumo{background:rgba(96,165,250,.14);color:#8ab8f2;}
   .dc-tarefa{background:rgba(234,179,8,.13);color:#e0b84a;}
@@ -11555,7 +11556,7 @@ function dashTarefaPainelHtml(modId, idx, label){
   /* celular: no lugar da frase, um botão (ou uma tag, quando a tarefa é feita fora do Painel) */
   if(ehCel()){
     if(!a) return '';
-    return `<button type="button" class="dp-btn" data-dp-ir="${escapeAttr(topId)}" title="${escapeAttr(a.q.title+' › '+a.t.title)}">${icon('compass','tiny')} Abrir Painel do Método</button>`;
+    return `<button type="button" class="dp-btn" data-dp-ir="${escapeAttr(topId)}" title="${escapeAttr(a.q.title+' › '+a.t.title)}">${icon('compass','tiny')} Abrir painel</button>`;
   }
   if(!a) return `<small class="dp-onde">${icon('compass','tiny')} Tarefa prática, feita fora do Painel do Método.</small>`;
   const extra = (modId==='gerenciar' && idx+1===12) ? ' e POPs' : '';
