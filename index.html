@@ -23374,7 +23374,7 @@ function epHoje(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
 function epAddDias(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 function epISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function epDataTxt(d){ return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`; }
-function epDataLonga(d){ return `${EP_NOME_DIA[d.getDay()]}, ${epDataTxt(d)}`; }
+function epDataLonga(d){ return `${EP_NOME_DIA[d.getDay()]} · ${epDataTxt(d)}`; }
 
 /* Tempo estimado de cada tarefa do Dashboard. Aula: a duração real do vídeo mais uma folga para
    pausar e anotar. Resumo: 20 min. Tarefas: pelo tamanho do que pedem. */
@@ -23611,7 +23611,7 @@ function renderPlanner(){
       <div class="ep-sec-hd"><h3>${icon('calendar')} Hoje · ${epDataLonga(hoje.data)}</h3>${hoje.ativo ? `<span>${epHora(hoje.inicio)} às ${epHora(hoje.inicio+hoje.cap)}</span>` : ''}</div>
       ${ag.feitos.map(epFeitoHtml).join('')}
       ${hoje.blocos.map(b=>epBlocoHtml(b, true)).join('')}
-      ${!hoje.blocos.length && !ag.feitos.length ? `<p class="ep-vazio">${!pend.length ? 'Você concluiu todas as tarefas do Dashboard. Parabéns! 🎉' : hoje.ativo ? 'Tempo de hoje já preenchido.' : `Hoje não é dia de estudo. ${proxEstudo ? `Próximo: <strong>${epDataLonga(proxEstudo.data)}, ${epHora(proxEstudo.inicio)}</strong>.` : ''}`}</p>` : ''}
+      ${!hoje.blocos.length && !ag.feitos.length ? `<p class="ep-vazio">${!pend.length ? 'Você concluiu todas as tarefas do Dashboard. Parabéns! 🎉' : hoje.ativo ? 'Tempo de hoje já preenchido.' : `Hoje não é dia de estudo. ${proxEstudo ? `Próximo: <strong>${epDataLonga(proxEstudo.data)} · ${epHora(proxEstudo.inicio)}</strong>.` : ''}`}</p>` : ''}
       ${!hoje.blocos.length && ag.feitos.length && pend.length ? `<p class="ep-vazio">Tudo de hoje feito. Muito bem!</p>` : ''}
     </div>
     ${restoSemana.length ? `
