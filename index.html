@@ -25396,12 +25396,17 @@ function rdAvaliar(s, r){
   const motivos = []; // nivel 2 = vermelho, 1 = laranja
   const add = (nivel, txt, chave)=>motivos.push({nivel, txt, chave});
   // VERMELHO 1. Sem entrar no Plat
+  /* Recém-chegados (23/11/2026): os prazos contam a partir da entrada na Mentoria (matrícula ou criação do
+     acesso, o que for mais recente), para quem acabou de entrar não aparecer como atrasado. */
+  const inicioAluno = [RADAR_INICIO_MEDICAO, (s.cadastro||{}).dataMatricula, s.contaCriada].filter(Boolean).sort().pop();
+  const dEntrada = rdDiasDesde(inicioAluno+'T00:00:00-03:00');
+  const dConta = s.contaCriada ? rdDiasDesde(s.contaCriada+'T00:00:00-03:00') : null;
   const dAcesso = rdDiasDesde(r.ultimo_acesso);
-  if(dAcesso===null) add(2, 'Nunca entrou no Plat', 'acesso');
+  if(dAcesso===null){ if(dConta===null || dConta>=7) add(2, 'Nunca entrou no Plat', 'acesso'); }
   else if(dAcesso>=14) add(2, `${dAcesso} dias sem entrar no Plat`, 'acesso');
   // VERMELHO 2. Parado no Dashboard (30 dias ou mais; a medição começou em 03/10)
-  const dAvanco = rdDiasDesde(r.ultimo_avanco || RADAR_INICIO_MEDICAO+'T00:00:00-03:00');
-  if(!rdDashboardCompleto(s) && dAvanco>=30) add(2, r.ultimo_avanco ? `Parado no Dashboard há ${dAvanco} dias` : `Parado no Dashboard desde ${tzDataCurta(RADAR_INICIO_MEDICAO)}`, 'dashboard');
+  const dAvanco = rdDiasDesde(r.ultimo_avanco || inicioAluno+'T00:00:00-03:00');
+  if(!rdDashboardCompleto(s) && dAvanco>=30) add(2, r.ultimo_avanco ? `Parado no Dashboard há ${dAvanco} dias` : `Parado no Dashboard desde ${tzDataCurta(inicioAluno)}`, 'dashboard');
   // VERMELHO 3 / LARANJA. Ritmo no método
   const esp = rdEstagioEsperado(s), real = rdEstagioReal(s);
   if(esp && diasRestantes(s)>=0){
@@ -25429,7 +25434,7 @@ function rdAvaliar(s, r){
   const dHumano = [rdDiasDesde(r.ult_contato_humano), waCob ? rdDiasDesde(waCob.enviado_em) : null].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
   const dContato = rdUltContatoDias(s);
   const dPessoal = [dHumano, dContato].filter(x=>x!==null).reduce((a,b)=>a===null?b:Math.min(a,b), null);
-  if(dPessoal===null) add(1, 'Sem contato pessoal da equipe registrado', 'contato');
+  if(dPessoal===null){ if(dEntrada===null || dEntrada>=14) add(1, 'Sem contato pessoal da equipe registrado', 'contato'); }
   else if(dPessoal>=14) add(1, `Sem contato pessoal da equipe há ${dPessoal} dias`, 'contato');
   const nivel = motivos.reduce((a,m)=>Math.max(a,m.nivel),0);
   motivos.sort((a,b)=>RD_ORDEM.indexOf(a.chave)-RD_ORDEM.indexOf(b.chave));
