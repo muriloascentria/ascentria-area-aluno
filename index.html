@@ -24770,7 +24770,7 @@ function renderIndicacao(){
   el.innerHTML = `
     <div class="ind-card">
       ${indLogoHtml()}
-      <p class="ind-intro">Indique colegas para a Mentoria Essência. Cada pessoa que entrar na mentoria por sua indicação conta no seu progresso.</p>
+      ${ehCel() ? '' : '<p class="ind-intro">Indique colegas para a Mentoria Essência. Cada pessoa que entrar na mentoria por sua indicação conta no seu progresso.</p>'}
     </div>
     <h2 class="section-title">Progresso de indicações</h2>
     <div class="ind-progresso">
