@@ -5379,12 +5379,12 @@ const QUADRANTS = [
        {type:'fields',key:'socio',label:'Dados Sociodemográficos',fields:[
          {key:'nome',label:'Nome'},{key:'sexo',label:'Sexo Biológico'},{key:'idade',label:'Idade'},{key:'estadoCivil',label:'Estado Civil'},{key:'profissao',label:'Profissão'},
        ]},
-       {type:'list',key:'dores',label:'Dores',placeholder:'Ex.: Medo do parto normal'},
-       {type:'list',key:'desejos',label:'Desejos',placeholder:'Ex.: Ser protagonista do parto / confiar no corpo'},
-       {type:'list',key:'medos',label:'Medos',placeholder:'Ex.: Medo de não aguentar a dor do parto'},
+       {type:'list',key:'dores',label:'Dores'},
+       {type:'list',key:'desejos',label:'Desejos'},
+       {type:'list',key:'medos',label:'Medos'},
        /* Separado de Medos em 23/11/2026. Quem já tinha preenchido "Medos e Crenças" juntos não volta a ficar pendente:
           a seção conta como preenchida enquanto Medos estiver preenchido (preenchidoCom). */
-       {type:'list',key:'crencas',label:'Crenças',placeholder:'Ex.: "Meu corpo não é capaz de parir naturalmente."',preenchidoCom:'medos'},
+       {type:'list',key:'crencas',label:'Crenças',preenchidoCom:'medos'},
      ]},
     {id:'mvv',title:'Missão, Visão, Valores e Proposta de Valor',desc:'Direcionadores estratégicos e proposta de valor do consultório.',
      sections:[
