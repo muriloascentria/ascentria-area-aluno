@@ -6935,23 +6935,23 @@ async function enterApp(){
     return;
   }
   setRole(currentUserRole==='staff' ? 'staff' : 'aluno');
-  goTo(currentUserRole==='staff' ? 'equipe' : 'inicio');
+  /* Depois do botão Atualizar, abre direto na aba em que a pessoa estava (sem passar pelo Início). */
+  let voltar = null;
+  try{ const raw = sessionStorage.getItem('voltar_aba'); sessionStorage.removeItem('voltar_aba'); voltar = raw ? JSON.parse(raw) : null; }catch(e){ voltar = null; }
+  let abaInicial = currentUserRole==='staff' ? 'equipe' : 'inicio';
+  try{
+    if(voltar && voltar.v && document.getElementById('view-'+voltar.v) && !gateAlunoAtivo()){
+      if(currentUserRole==='staff'){
+        if(voltar.s && getStudent(voltar.s)) currentStudentId = voltar.s;
+        if(voltar.r && voltar.r!==currentRole) setRole(voltar.r);
+      }
+      abaInicial = voltar.v;
+    }
+  }catch(e){}
+  goTo(abaInicial);
   if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); setTimeout(scPreencherCasos, 1500); }
   if(currentUserRole==='staff' && location.hash.startsWith('#termo=')) setTimeout(()=>termoVerArquivo(location.hash.slice(7)), 600);
   setTimeout(aulaDoLinkAbrir, 900);
-  /* Volta para a aba em que a pessoa estava quando tocou em Atualizar (o refresh não leva mais ao Início). */
-  try{
-    const raw = sessionStorage.getItem('voltar_aba'); sessionStorage.removeItem('voltar_aba');
-    const vb = raw ? JSON.parse(raw) : null;
-    if(vb && vb.v && document.getElementById('view-'+vb.v)) setTimeout(()=>{ try{
-      if(gateAlunoAtivo()) return;
-      if(currentUserRole==='staff'){
-        if(vb.s && getStudent(vb.s)) currentStudentId = vb.s;
-        if(vb.r && vb.r!==currentRole) setRole(vb.r);
-      }
-      goTo(vb.v);
-    }catch(e){} }, 300);
-  }catch(e){}
   if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
   setTimeout(pwaConvidarInstalar, 2500);
   setTimeout(pushConvidar, 6000);
