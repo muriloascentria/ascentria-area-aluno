@@ -8783,7 +8783,7 @@ function renderInicioCurso(s){
     <div class="hero">
       <div>
         <h1>Olá, ${escapeHtml(s.name.split(' ')[0])}</h1>
-        <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : 'do Método Essência'}.</p>
+        <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : s.tier==='curso' ? 'do Método Essência' : 'da Mentoria Essência'}.</p>
       </div>
       ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
     </div>
@@ -8852,7 +8852,7 @@ function renderInicio_cel(){
     <div class="hero">
       <div>
         <h1>Olá, ${s.name.split(' ')[0]}</h1>
-        <p>Bem-vindo(a) de volta à sua área do Método Essência.</p>
+        <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : s.tier==='curso' ? 'do Método Essência' : 'da Mentoria Essência'}.</p>
       </div>
       <div class="hero-mini-stats">
         <div class="hero-mini-stat"><div class="hero-mini-value">${heroPts.conquistas||0}</div><div class="hero-mini-label">Conquistas</div></div>
@@ -8918,7 +8918,7 @@ function renderInicio_web(){
     <div class="hero">
       <div>
         <h1>Olá, ${s.name.split(' ')[0]}</h1>
-        <p>Bem-vindo(a) de volta à sua área do Método Essência.</p>
+        <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : s.tier==='curso' ? 'do Método Essência' : 'da Mentoria Essência'}.</p>
       </div>
       <div class="hero-mini-stats">
         <div class="hero-mini-stat"><div class="hero-mini-value">${heroPts.conquistas||0}</div><div class="hero-mini-label">Conquistas</div></div>
