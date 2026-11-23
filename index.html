@@ -4073,7 +4073,17 @@
   .epc .epc-acao{grid-column:3;grid-row:1;justify-self:start;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px!important;box-sizing:border-box;white-space:nowrap;margin:0!important;
     border-radius:6px!important;border:1px solid var(--border)!important;background:transparent!important;color:var(--accent-2)!important;font:inherit;font-size:9.5px!important;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;}
   .epc .epc-acao .icon{width:11px;height:11px;}
-  .epc-hora{grid-column:4;grid-row:1;justify-self:end;font-size:11px;color:var(--text-mute);white-space:nowrap;}
+  .epc{cursor:pointer;}
+  .epc-hora{grid-column:4;grid-row:1;justify-self:end;font-size:13.5px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .epc-meta{grid-column:2 / -1;grid-row:3;margin-top:-4px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);}
+  .epc.done .epc-hora{color:var(--text-mute);font-weight:600;}
+  /* área de toque do quadradinho maior que o desenho (perto de 44 px) */
+  .epc-box{position:relative;}
+  .epc-box::before{content:"";position:absolute;inset:-11px;}
+  /* dentro do card do dia (e do Hoje): sem moldura por tarefa, só linhas finas separando */
+  .ep-dia-card .epc, .ep-hoje .epc{border:0;border-top:1px solid var(--border);border-radius:0;background:transparent;padding:12px 0;margin:0;}
+  .ep-dia-card .epc.done, .ep-hoje .epc.done{background:transparent;}
+  .ep-dia-hd + .epc, .ep-sec-hd + .epc, .ep-dia-card > summary + .epc{border-top:0!important;}
   .epc .dc-txt{grid-column:2 / -1;grid-row:2;}
   .epc.done .dc-txt{text-decoration:line-through;color:var(--text-mute);}
   .epc.done .dc-tag{opacity:.6;}
@@ -23576,7 +23586,7 @@ function epBlocoHtml(b, comCheck){
   const it = b.it;
   let curso = null; try{ curso = checklistLinkedCourse(it.label, it.modName); }catch(e){}
   const sufixo = (b.parte>1 || !b.ultimaParte) ? ` · parte ${b.parte}` : '';
-  if(ehCel()) return epBlocoCelHtml({ it, curso, hora:`${epHora(b.ini)} · ${epDurTxt(b.min)}`, parte:sufixo ? b.parte : 0, check: comCheck ? `<button type="button" class="epc-box" data-ep-marcar="${it.modId}:${it.idx}" title="${b.ultimaParte ? 'Marcar como feita' : 'Já terminei esta tarefa inteira'}"></button>` : '' });
+  if(ehCel()) return epBlocoCelHtml({ it, curso, hora:epHora(b.ini), meta:`${escapeHtml(it.modName||'')} · ${epDurTxt(b.min)}`, parte:sufixo ? b.parte : 0, check: comCheck ? `<button type="button" class="epc-box" data-ep-marcar="${it.modId}:${it.idx}" title="${b.ultimaParte ? 'Marcar como feita' : 'Já terminei esta tarefa inteira'}"></button>` : '' });
   return `
     <div class="ep-bloco">
       <div class="ep-hora">${epHora(b.ini)}<small>${epDurTxt(b.min)}</small></div>
@@ -23601,11 +23611,12 @@ function epBlocoCelHtml(o){
       ${tt}
       ${o.curso ? `<button type="button" class="epc-acao" data-ep-aula="${escapeAttr(o.curso.id)}">${icon('film','tiny')} Abrir aula</button>` : painel.replace('class="dp-btn"','class="epc-acao dp-btn"')}
       <span class="epc-hora">${o.hora}</span>
+      ${o.meta ? `<span class="epc-meta">${o.meta}</span>` : ''}
     </div>`;
 }
 function epFeitoHtml(f){
   if(ehCel()){ let curso = null; try{ curso = checklistLinkedCourse(f.label, f.modName); }catch(e){}
-    return epBlocoCelHtml({ it:{ modId:f.modId, idx:f.idx, label:String(f.label||''), modName:f.modName }, curso, feito:true, hora:`feita · ${epHora(f.quando.getHours()*60+f.quando.getMinutes())}`, check:`<button type="button" class="epc-box" data-ep-desmarcar="${f.modId}:${f.idx}" title="Desmarcar">${icon('tick')}</button>` }); }
+    return epBlocoCelHtml({ it:{ modId:f.modId, idx:f.idx, label:String(f.label||''), modName:f.modName }, curso, feito:true, hora:epHora(f.quando.getHours()*60+f.quando.getMinutes()), meta:`${escapeHtml(f.modName||'')} · feita`, check:`<button type="button" class="epc-box" data-ep-desmarcar="${f.modId}:${f.idx}" title="Desmarcar">${icon('tick')}</button>` }); }
   return `
     <div class="ep-bloco feito">
       <div class="ep-hora">${icon('tick','tiny')}<small>${epHora(f.quando.getHours()*60+f.quando.getMinutes())}</small></div>
@@ -23760,6 +23771,8 @@ function renderPlanner(){
   const mais = document.getElementById('ep-mais'); if(mais) mais.addEventListener('click', ()=>{ EP_UI.maisDias += 7; renderPlanner(); });
   const hist = document.getElementById('ep-hist'); if(hist) hist.addEventListener('click', ()=>{ EP_UI.verHist = !EP_UI.verHist; renderPlanner(); });
   el.querySelectorAll('[data-ep-aula]').forEach(b=>b.addEventListener('click', ()=>openCourseModal(b.dataset.epAula)));
+  /* tocar em qualquer parte da tarefa marca (igual ao checklist do Dashboard); os botões de abrir seguem com a função deles */
+  el.querySelectorAll('.epc').forEach(c=>c.addEventListener('click', e=>{ if(e.target.closest('button')) return; const bx = c.querySelector('button.epc-box'); if(bx) bx.click(); }));
   el.querySelectorAll('[data-dp-ir]').forEach(b=>b.addEventListener('click', ()=>{ const a = painelAcharTopico(b.dataset.dpIr); if(!a) return; panelQuadrantId = a.q.id; goTo('painel'); setTimeout(()=>openTopicModal(a.q, a.t.id), 60); }));
   el.querySelectorAll('[data-ep-marcar]').forEach(b=>b.addEventListener('click', ()=>{
     const [modId, idx] = b.dataset.epMarcar.split(':');
