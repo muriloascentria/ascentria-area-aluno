@@ -3990,6 +3990,7 @@
   #refresh-btn{display:flex;border-radius:50%;}
   /* menu e atualizar sempre juntos, com o mesmo espaço pequeno entre eles em todas as telas */
   .topbar-esq{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  #refresh-btn .icon{width:17px;height:17px;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
   #refresh-btn.girando .icon{animation:rfGira .8s linear infinite;}
   @keyframes rfGira{to{transform:rotate(360deg);}}
   /* no celular o nome da aba sai da barra de cima e vira o título do topo da tela, em caixa alta */
@@ -4383,7 +4384,7 @@
         <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <button class="icon-btn" id="refresh-btn" title="Atualizar" aria-label="Atualizar o aplicativo">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M19.4 13.6A7.5 7.5 0 1 1 17.3 6.7"/><path d="M18.2 3.4l-.4 3.9-3.9-.4"/></svg>
       </button>
       </div>
       <div class="topbar-title" id="topbar-title">Início</div>
