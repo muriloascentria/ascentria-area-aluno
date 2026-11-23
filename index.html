@@ -24776,7 +24776,7 @@ function renderIndicacao(){
     <div class="ind-progresso">
       <div class="ind-prog-topo"><div><div class="ind-num">${n}</div><div class="ind-num-lbl">indicaç${n===1?'ão':'ões'} na mentoria</div></div>${indSeloHtml(n, true)}</div>
       ${indBarraHtml(n)}
-      <p class="ind-falta">${escapeHtml(nv.txt)}</p>
+      ${ehCel() && nv.chave==='inicio' ? '' : `<p class="ind-falta">${escapeHtml(nv.txt)}</p>`}
     </div>
     <h2 class="section-title">Pessoas que entraram por sua indicação</h2>
     ${IND_UI.rows===null ? '<div class="empty-state">Carregando…</div>' : minhas.length ? `<div class="ind-lista">${minhas.map(r=>{ const p = r.indicado_id ? (getStudent(r.indicado_id) || PEOPLE[r.indicado_id]) : null;
