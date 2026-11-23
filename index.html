@@ -4032,10 +4032,12 @@
   #app .main > .content{overflow-x:hidden;overscroll-behavior-x:none;}
   /* Ajustar minha semana: os 7 dias empilhados, um por linha (nome à esquerda, começo e tempo à direita) */
   #view-planner .ep-dias{grid-template-columns:1fr!important;gap:8px;}
-  #view-planner .ep-dia{flex-direction:row;align-items:center;gap:10px;padding:8px 10px;min-height:52px;box-sizing:border-box;}
-  #view-planner .ep-dia-btn{flex:1 1 auto;min-width:0;}
-  #view-planner .ep-dia-campos{flex:0 0 auto;grid-template-columns:106px 84px;}
+  #view-planner .ep-dia{flex-direction:column;align-items:stretch;gap:0;padding:8px 10px;box-sizing:border-box;}
+  #view-planner .ep-dia-btn{width:100%;}
+  /* ao tocar no dia, começo e tempo abrem dentro do próprio card, num quadro delimitado */
+  #view-planner .ep-dia-campos{grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 4px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);}
   #view-planner .ep-dia-campos[hidden]{display:none;}
+  #view-planner .ep-dia-campos .ps-input{height:42px;box-sizing:border-box;padding:0 10px!important;}
   #view-planner .ep-dia-hd strong{text-transform:uppercase;letter-spacing:.05em;}
   #view-planner .kpi-row{margin-bottom:28px;}
   #view-planner .ep-aviso{margin:0 0 28px;}
