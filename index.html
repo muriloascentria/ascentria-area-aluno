@@ -15292,8 +15292,9 @@ function goalAulasHtml(ids, s){
 /* Editar um registro de contato (Registro de Contatos da Área Interna). Se ele já foi para Minhas
    Sessões 1:1 do aluno, a sessão vinculada é atualizada junto (data, resumo, links e responsável). */
 function openContatoEditModal(s, c){
-  const tipos = [['meet','Reunião no Google Meet'],['presencial','Reunião Presencial'],['whatsapp','Contato por WhatsApp'],['plat','Mensagem no Plat']];
   const tipoAtual = c.tipo || 'meet';
+  /* Mensagem no Plat saiu das opções (pedido do Murilo, 24/11/2026); só aparece em registro antigo que já é desse tipo. */
+  const tipos = [['meet','Reunião no Google Meet'],['presencial','Reunião Presencial'],['whatsapp','Contato por WhatsApp']].concat(tipoAtual==='plat' ? [['plat','Mensagem no Plat']] : []);
   document.getElementById('modal').innerHTML = `
     <div class="modal-body form-modal">
       <div class="cat">Registro de Contatos</div>
@@ -15686,7 +15687,7 @@ function cobSecaoHtml(s, intHead, intBody){
       </table>
     </div>
     <div class="add-form form-contato" id="form-cobranca">
-      <div class="field"><label>Canal</label><select class="ps-input" id="new-cob-canal">${Object.entries(COB_CANAIS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div class="field"><label>Canal</label><select class="ps-input" id="new-cob-canal">${Object.entries(COB_CANAIS).filter(([k])=>k!=='plat').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
       <div class="field"><label>Data</label><input class="ps-input" type="date" id="new-cob-data" value="${hoje}"></div>
       <div class="field"><label>Responsável</label><select class="ps-input" id="new-cob-resp">${selectOpts(['Mariane','Carmem Goretty','Murilo Pedroso','Diego Eller','Sandra Bublitz','Viviane da Silva'], '')}</select></div>
       <div class="field"><label>Valor cobrado (R$)</label><input class="ps-input" type="number" step="0.01" min="0" id="new-cob-valor" placeholder="Ex.: 999,75"></div>
@@ -15876,7 +15877,6 @@ function renderInterno(){
           <option value="meet">Reunião no Google Meet</option>
           <option value="presencial">Reunião Presencial</option>
           <option value="whatsapp">Contato por WhatsApp</option>
-          <option value="plat">Mensagem no Plat</option>
         </select>
       </div>
       <div class="field"><label>Data</label><input class="ps-input" type="text" id="new-contato-data" placeholder="Ex.: 25/08/2026"></div>
