@@ -16943,7 +16943,7 @@ function tarefaPedirNota(o){
     ov.innerHTML = `<div class="rot-just-box" role="dialog" aria-modal="true">
       <h3>${escapeHtml(o.titulo)}</h3>
       <p class="desc">${escapeHtml(o.desc||'')}</p>
-      <textarea class="ps-input" rows="4" maxlength="1500" data-tf-nota placeholder="${escapeAttr(o.placeholder||'')}" style="width:100%;resize:vertical"></textarea>
+      <textarea class="ps-input" rows="4" maxlength="${o.max||1500}" data-tf-nota placeholder="${escapeAttr(o.placeholder||'')}" style="width:100%;resize:vertical">${escapeHtml(o.valor||'')}</textarea>
       <div class="rot-just-erro" hidden></div>
       <div class="rot-just-acoes"><button type="button" class="btn-outline" data-tf-nota-voltar>Voltar</button><button type="button" class="btn-primary" data-tf-nota-ok>${escapeHtml(o.ok||'Confirmar')}</button></div>
     </div>`;
@@ -16954,7 +16954,7 @@ function tarefaPedirNota(o){
     ov.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(null); });
     ov.querySelector('[data-tf-nota-ok]').addEventListener('click', ()=>{
       const v = ta.value.trim();
-      if(o.obrigatoria && v.length < 3){ const er = ov.querySelector('.rot-just-erro'); er.hidden = false; er.textContent = o.erro || 'Escreva uma observação.'; ta.classList.add('erro'); ta.focus(); return; }
+      if(o.obrigatoria && v.length < (o.min||3)){ const er = ov.querySelector('.rot-just-erro'); er.hidden = false; er.textContent = o.erro || 'Escreva uma observação.'; ta.classList.add('erro'); ta.focus(); return; }
       fechar(v);
     });
   });
@@ -17558,12 +17558,13 @@ async function openTarefaModal(id, defaults){
       ${nova ? '' : tarefaEntregaBoxHtml(t)}
 
       <h4 class="tf-h">${icon('check','tiny')} Subtarefas ${subs.length? `<span class="qtd">${subs.filter(s=>s.concluida).length}/${subs.length}</span>` : ''}</h4>
-      ${rotina && t.status!=='concluida' && t.status!=='cancelada' ? `<p class="tf-rot-aviso">Para concluir a rotina, marque o que foi feito. O que não deu para fazer hoje, use "Adiar": vira uma tarefa própria para o próximo dia útil. O que não foi feito nem adiado pede uma justificativa curta na hora de concluir.</p>` : ''}
+      ${rotina && t.status!=='concluida' && t.status!=='cancelada' ? `<p class="tf-rot-aviso">Para concluir a rotina, marque o que foi feito. O que já foi feito de outra forma ou não se aplica hoje, use "Justificar". O que não deu para fazer hoje, use "Adiar": vira uma tarefa própria para o próximo dia útil.</p>` : ''}
       <div class="tf-subs" id="tf-subs">
         ${(nova ? draftNovoSubs.map((s,i)=>({id:'d'+i, titulo:s, concluida:false})) : subs).map(s=>`
           <div class="tf-sub-item ${s.concluida?'ok':''}">
             <input type="checkbox" data-tf-sub="${s.id}" ${s.concluida?'checked':''} ${ro(podeEditar)}>
-            <span>${escapeHtml(s.titulo)}${!s.concluida && s.adiadaTarefaId ? `<small class="tf-sub-adiada">${escapeHtml(s.justificativa||'Adiado (virou uma tarefa própria).')}</small>` : (!s.concluida && s.justificativa ? `<small class="tf-sub-just">Não feito: ${escapeHtml(s.justificativa)}</small>` : '')}${s.concluida && (s.prova||[]).length ? `<small class="tf-sub-prova">Prova: ${s.prova.length} ${s.prova.length===1?'análise':'análises'}</small>` : ''}${s.concluida && (s.provaAlunos||[]).length ? `<small class="tf-sub-prova">Prova: ${s.provaAlunos.length} ${s.provaAlunos.length===1?'mentorado resolvido':'mentorados resolvidos'}${s.provaMeta?` (meta ${s.provaMeta})`:''}: ${escapeHtml(s.provaAlunos.map(id=>((getStudent(id)||{}).name||'').split(' ')[0]).filter(Boolean).join(', '))}</small>` : ''}</span>
+            <span>${escapeHtml(s.titulo)}${!s.concluida && s.adiadaTarefaId ? `<small class="tf-sub-adiada">${escapeHtml(s.justificativa||'Adiado (virou uma tarefa própria).')}</small>` : (!s.concluida && s.justificativa ? `<small class="tf-sub-just">Justificado: ${escapeHtml(s.justificativa)}</small>` : '')}${s.concluida && (s.prova||[]).length ? `<small class="tf-sub-prova">Prova: ${s.prova.length} ${s.prova.length===1?'análise':'análises'}</small>` : ''}${s.concluida && (s.provaAlunos||[]).length ? `<small class="tf-sub-prova">Prova: ${s.provaAlunos.length} ${s.provaAlunos.length===1?'mentorado resolvido':'mentorados resolvidos'}${s.provaMeta?` (meta ${s.provaMeta})`:''}: ${escapeHtml(s.provaAlunos.map(id=>((getStudent(id)||{}).name||'').split(' ')[0]).filter(Boolean).join(', '))}</small>` : ''}</span>
+            ${rotina && !s.concluida && !s.adiadaTarefaId && t.status!=='concluida' && t.status!=='cancelada' && podeEditar ? `<button type="button" class="btn-mini tf-sub-adiar" data-tf-sub-just="${s.id}" title="Já foi feito de outra forma ou não se aplica hoje: registre o motivo, sem marcar como feito">${icon('edit','tiny')} Justificar</button>` : ''}
             ${rotina && !s.concluida && !s.adiadaTarefaId && t.status!=='concluida' && t.status!=='cancelada' && podeEditar ? `<button type="button" class="btn-mini tf-sub-adiar" data-tf-sub-adiar="${s.id}" title="Não deu para fazer hoje: vira uma tarefa própria para o próximo dia útil">${icon('calendar','tiny')} Adiar</button>` : ''}
             ${podeEditar && !(rotina && !tarefasSouAdmin()) ? `<button type="button" class="btn-mini icon-only danger" data-tf-sub-del="${s.id}" title="Remover">${icon('x','tiny')}</button>` : ''}
           </div>`).join('') || '<div class="tf-vazio">Nenhuma subtarefa.</div>'}
@@ -17681,6 +17682,21 @@ async function openTarefaModal(id, defaults){
     }
     const { error } = await sb.from('tarefas_subtarefas').update({concluida: cb.checked}).eq('id', cb.dataset.tfSub);
     if(error){ alert('Não foi possível atualizar: '+error.message); cb.checked = !cb.checked; return; }
+    await recarregarTarefa(t.id); openTarefaModal(t.id);
+  }));
+  /* Justificar um item da rotina (pedido do Murilo, 25/11/2026): para o que já foi feito de outra forma
+     (ex.: tarefa semanal que aparece todo dia) ou não se aplica hoje. Não marca como feito: registra o motivo,
+     e o item deixa de pedir justificativa na hora de concluir a rotina. */
+  modal.querySelectorAll('[data-tf-sub-just]').forEach(b=>b.addEventListener('click', async ()=>{
+    const sub = subs.find(x=>x.id===b.dataset.tfSubJust); if(!sub) return;
+    const v = await tarefaPedirNota({ titulo:'Justificar item', ok:'Salvar justificativa', obrigatoria:true, min:ROTINA_JUST_MIN, max:300, valor:sub.justificativa||'',
+      erro:`Escreva pelo menos ${ROTINA_JUST_MIN} caracteres.`,
+      desc:`"${sub.titulo}". Conte por que este item não precisa ser marcado hoje (ex.: já foi feito nesta semana, não houve caso hoje). Fica registrado na rotina, sem contar como feito.`,
+      placeholder:'Ex.: acompanhamento já feito pelo Radar nesta semana.' });
+    if(v===null) return;
+    const { error } = await sb.from('tarefas_subtarefas').update({justificativa:v}).eq('id', sub.id);
+    if(error){ alert('Não foi possível salvar a justificativa: '+error.message); return; }
+    sub.justificativa = v;
     await recarregarTarefa(t.id); openTarefaModal(t.id);
   }));
   modal.querySelectorAll('[data-tf-sub-adiar]').forEach(b=>b.addEventListener('click', async ()=>{
