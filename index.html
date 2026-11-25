@@ -2590,6 +2590,13 @@
   .tf-sinal.hoje{background:rgba(245,158,11,.16);color:#d97706;}
   .tf-sinal.urgente{background:var(--danger);color:#fff;}
   .tf-sinal.nova{background:rgba(37,99,235,.16);color:#2563eb;}
+  .tf-sinal.revisao{background:rgba(124,58,237,.16);color:#7c3aed;}
+  .tf-sinal.ajuste{background:rgba(217,119,6,.16);color:#d97706;}
+  .tf-entrega-box{margin:12px 0 4px;padding:12px 14px;border-radius:12px;border:1px solid rgba(124,58,237,.35);background:rgba(124,58,237,.08);}
+  .tf-entrega-box.ajuste{border-color:rgba(217,119,6,.4);background:rgba(217,119,6,.08);}
+  .tf-entrega-tit{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;}
+  .tf-entrega-nota{margin-top:6px;font-size:13.5px;word-break:break-word;}
+  .tf-entrega-sub{margin-top:6px;font-size:12px;color:var(--text-dim);}
   .tf-sinal.atualizada{background:var(--success-soft);color:var(--success);}
   .tf-vazio{font-size:12.5px;color:var(--text-mute);font-style:italic;padding:8px 4px;}
   .tf-tabela tr[data-tf-abrir]{cursor:pointer;}
@@ -16766,6 +16773,7 @@ function mapTarefaRow(r){
     prazoData:r.prazo_data||'', prazoHora:r.prazo_hora||'', prioridade:r.prioridade||'media', status:r.status||'pendente',
     concluidaEm:r.concluida_em||null, concluidaPor:r.concluida_por||null, excluida:!!r.excluida, excluidaEm:r.excluida_em||null,
     partes:(r.partes && typeof r.partes==='object') ? r.partes : {},
+    origem:r.origem||null, entregaEm:r.entrega_em||null, entregaPor:r.entrega_por||null, entregaNota:r.entrega_nota||'', ajusteEm:r.ajuste_em||null, ajusteNota:r.ajuste_nota||'',
     createdAt:r.created_at, updatedAt:r.updated_at };
 }
 function mapTarefaMembroRow(r){
@@ -16921,8 +16929,73 @@ function tarefaSubProgresso(t){
   const ok = subs.filter(s=>s.concluida).length;
   return `<span class="tf-sub" title="Subtarefas concluídas"><span class="tf-sub-bar"><i style="width:${Math.round(ok/subs.length*100)}%"></i></span>${ok}/${subs.length}</span>`;
 }
+/* Entrega para revisão (pedido do Murilo, 25/11/2026): o responsável de uma tarefa criada por outra pessoa
+   entrega (vai para "Aguardando" e avisa quem criou), e quem criou aprova (conclui) ou pede ajuste
+   (volta para "Em andamento" com o comentário). Funções do banco: tarefa_entregar e tarefa_revisar. */
+function tarefaEmRevisao(t){ return !!t && !t.excluida && t.status==='aguardando' && !!t.entregaEm; }
+function tarefaComAjuste(t){ return !!t && !t.excluida && t.status==='em_andamento' && !!t.ajusteEm; }
+function tarefaPossoEntregar(t){ const eu = tarefasEu(); return !!t && !t.excluida && !!eu && tarefaEhResp(t, eu) && t.criadorId!==eu && !tarefaCompartilhada(t) && !t.origem && !tarefaEhRotina(t) && !['concluida','cancelada'].includes(t.status) && !tarefaEmRevisao(t); }
+function tarefaPossoRevisar(t){ return tarefaEmRevisao(t) && (t.criadorId===tarefasEu() || tarefasSouAdmin()); }
+function tarefaPedirNota(o){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'rot-just-ov';
+    ov.innerHTML = `<div class="rot-just-box" role="dialog" aria-modal="true">
+      <h3>${escapeHtml(o.titulo)}</h3>
+      <p class="desc">${escapeHtml(o.desc||'')}</p>
+      <textarea class="ps-input" rows="4" maxlength="1500" data-tf-nota placeholder="${escapeAttr(o.placeholder||'')}" style="width:100%;resize:vertical"></textarea>
+      <div class="rot-just-erro" hidden></div>
+      <div class="rot-just-acoes"><button type="button" class="btn-outline" data-tf-nota-voltar>Voltar</button><button type="button" class="btn-primary" data-tf-nota-ok>${escapeHtml(o.ok||'Confirmar')}</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    const ta = ov.querySelector('[data-tf-nota]'); setTimeout(()=>ta.focus(), 30);
+    const fechar = v=>{ ov.remove(); resolve(v); };
+    ov.querySelector('[data-tf-nota-voltar]').addEventListener('click', ()=>fechar(null));
+    ov.addEventListener('keydown', e=>{ if(e.key==='Escape') fechar(null); });
+    ov.querySelector('[data-tf-nota-ok]').addEventListener('click', ()=>{
+      const v = ta.value.trim();
+      if(o.obrigatoria && v.length < 3){ const er = ov.querySelector('.rot-just-erro'); er.hidden = false; er.textContent = o.erro || 'Escreva uma observação.'; ta.classList.add('erro'); ta.focus(); return; }
+      fechar(v);
+    });
+  });
+}
+function tarefaEntregaBoxHtml(t){
+  const nome = id=>{ const m = tarefasMembro(id)||getPerson(id); return m ? (m.name||'').split(' ')[0] : '—'; };
+  if(tarefaEmRevisao(t)) return `<div class="tf-entrega-box">
+      <div class="tf-entrega-tit">${icon('upload','tiny')} Entregue para revisão por ${escapeHtml(nome(t.entregaPor))} em ${escapeHtml(tzDataHora(t.entregaEm, true))}</div>
+      ${t.entregaNota ? `<div class="tf-entrega-nota">${linkify(t.entregaNota)}</div>` : ''}
+      <div class="tf-entrega-sub">${tarefaPossoRevisar(t) ? 'Confira os anexos e comentários abaixo e escolha: aprovar e concluir, ou pedir ajuste.' : `Aguardando a revisão de ${escapeHtml(nome(t.criadorId))}.`}</div>
+    </div>`;
+  if(tarefaComAjuste(t)) return `<div class="tf-entrega-box ajuste">
+      <div class="tf-entrega-tit">${icon('reply','tiny')} Ajuste pedido por ${escapeHtml(nome(t.criadorId))} em ${escapeHtml(tzDataHora(t.ajusteEm, true))}</div>
+      ${t.ajusteNota ? `<div class="tf-entrega-nota">${linkify(t.ajusteNota)}</div>` : ''}
+      ${tarefaEhResp(t, tarefasEu()) ? '<div class="tf-entrega-sub">Faça o ajuste e entregue de novo.</div>' : ''}
+    </div>`;
+  return '';
+}
+async function tarefaEntregar(t){
+  const nota = await tarefaPedirNota({ titulo:'Entregar para revisão', ok:'Entregar',
+    desc:`A tarefa vai para "Aguardando" e ${((tarefasMembro(t.criadorId)||getPerson(t.criadorId)||{name:'quem criou'}).name||'').split(' ')[0]} recebe o aviso para revisar. Anexe o arquivo na tarefa antes, se tiver. Aqui você pode colar o link do documento e deixar uma observação (opcional).`,
+    placeholder:'Link do documento e observação para quem vai revisar…' });
+  if(nota===null) return false;
+  const { error } = await sb.rpc('tarefa_entregar', { p_id: t.id, p_nota: nota || null });
+  if(error){ alert('Não foi possível entregar: '+(error.message||'')); return false; }
+  await recarregarTarefa(t.id); return true;
+}
+async function tarefaRevisar(t, aprovar){
+  const resp = ((tarefasMembro(t.responsavelId)||getPerson(t.responsavelId)||{name:'o responsável'}).name||'').split(' ')[0];
+  const nota = aprovar
+    ? await tarefaPedirNota({ titulo:'Aprovar e concluir', ok:'Aprovar e concluir', desc:`A tarefa fica concluída e ${resp} recebe o aviso de que a entrega foi aprovada. Se quiser, deixe um comentário (opcional).`, placeholder:'Comentário para quem entregou (opcional)…' })
+    : await tarefaPedirNota({ titulo:'Pedir ajuste', ok:'Pedir ajuste', obrigatoria:true, erro:'Escreva o que precisa ser ajustado.', desc:`A tarefa volta para ${resp} como "Em andamento", com o seu pedido registrado nos comentários.`, placeholder:'O que precisa ser ajustado…' });
+  if(nota===null) return false;
+  const { error } = await sb.rpc('tarefa_revisar', { p_id: t.id, p_aprovar: !!aprovar, p_nota: nota || null });
+  if(error){ alert('Não foi possível registrar a revisão: '+(error.message||'')); return false; }
+  await recarregarTarefa(t.id); return true;
+}
 function tarefaSinais(t){
   const s = [];
+  if(tarefaEmRevisao(t)) s.push(`<span class="tf-sinal revisao">${tarefaPossoRevisar(t) ? 'Revisar entrega' : 'Entregue para revisão'}</span>`);
+  else if(tarefaComAjuste(t)) s.push('<span class="tf-sinal ajuste">Ajuste pedido</span>');
   if(tarefaAtrasada(t)) s.push('<span class="tf-sinal atrasada">Atrasada</span>');
   else if(tarefaVenceHoje(t)) s.push('<span class="tf-sinal hoje">Vence hoje</span>');
   if(t.prioridade==='urgente' && tarefaAberta(t)) s.push('<span class="tf-sinal urgente">Urgente</span>');
@@ -17457,6 +17530,9 @@ async function openTarefaModal(id, defaults){
       case 'subtarefa_concluida': return `concluiu a subtarefa "${d.titulo}"`;
       case 'subtarefa_reaberta': return `reabriu a subtarefa "${d.titulo}"`;
       case 'anexo': return `anexou "${d.nome}"`;
+      case 'entregue': return 'entregou a tarefa para revisão'+(d.nota?`: "${d.nota}"`:'');
+      case 'aprovada': return 'aprovou a entrega e concluiu a tarefa';
+      case 'ajuste': return `pediu ajuste: "${d.nota||''}"`;
       default: return h.acao;
     }
   };
@@ -17479,6 +17555,7 @@ async function openTarefaModal(id, defaults){
       <label class="ps-label">Descrição</label>
       <textarea class="ps-input" id="tf-m-desc" rows="3" placeholder="Detalhes, contexto, links…" ${ro(dono)}>${escapeHtml(t.descricao)}</textarea>
       ${nova ? '' : tarefaPartesHtml(t)}
+      ${nova ? '' : tarefaEntregaBoxHtml(t)}
 
       <h4 class="tf-h">${icon('check','tiny')} Subtarefas ${subs.length? `<span class="qtd">${subs.filter(s=>s.concluida).length}/${subs.length}</span>` : ''}</h4>
       ${rotina && t.status!=='concluida' && t.status!=='cancelada' ? `<p class="tf-rot-aviso">Para concluir a rotina, marque o que foi feito. O que não deu para fazer hoje, use "Adiar": vira uma tarefa própria para o próximo dia útil. O que não foi feito nem adiado pede uma justificativa curta na hora de concluir.</p>` : ''}
@@ -17517,8 +17594,10 @@ async function openTarefaModal(id, defaults){
 
       <div class="modal-actions tf-m-acoes">
         ${nova ? `<button class="btn-accent" id="tf-m-salvar">Criar tarefa</button>` : `
-          ${(dono) ? `<button class="btn-accent" id="tf-m-salvar">Salvar</button>` : ''}
-          ${podeEditar && t.status!=='concluida' && !t.excluida && !(tarefaCompartilhada(t) && tarefaEhResp(t, eu) && tarefaMinhaParteOk(t)) ? `<button class="btn-outline" id="tf-m-concluir">${icon('check','tiny')} ${tarefaCompartilhada(t) && tarefaEhResp(t, eu) ? 'Concluir minha parte' : 'Concluir'}</button>` : ''}
+          ${tarefaPossoRevisar(t) ? `<button class="btn-accent" id="tf-m-aprovar">${icon('check','tiny')} Aprovar e concluir</button><button class="btn-outline" id="tf-m-ajuste">${icon('reply','tiny')} Pedir ajuste</button>` : ''}
+          ${tarefaPossoEntregar(t) ? `<button class="btn-accent" id="tf-m-entregar">${icon('upload','tiny')} Entregar para revisão</button>` : ''}
+          ${(dono) ? `<button class="${tarefaPossoRevisar(t)?'btn-outline':'btn-accent'}" id="tf-m-salvar">Salvar</button>` : ''}
+          ${podeEditar && t.status!=='concluida' && !t.excluida && !tarefaPossoRevisar(t) && !(tarefaCompartilhada(t) && tarefaEhResp(t, eu) && tarefaMinhaParteOk(t)) ? `<button class="btn-outline" id="tf-m-concluir">${icon('check','tiny')} ${tarefaCompartilhada(t) && tarefaEhResp(t, eu) ? 'Concluir minha parte' : 'Concluir'}</button>` : ''}
           ${podeEditar && !t.excluida && tarefaCompartilhada(t) && tarefaEhResp(t, eu) && tarefaMinhaParteOk(t) ? `<button class="btn-outline" id="tf-m-reabrir-parte">Reabrir minha parte</button>` : ''}
           ${podeEditar && t.status==='concluida' && !(tarefaCompartilhada(t) && tarefaEhResp(t, eu)) ? `<button class="btn-outline" id="tf-m-reabrir">Reabrir</button>` : ''}
           ${tarefasSouMembro() && !t.excluida ? `<button class="btn-outline" id="tf-m-duplicar">${icon('copy','tiny')} Duplicar</button>` : ''}
@@ -17657,6 +17736,9 @@ async function openTarefaModal(id, defaults){
   $('#tf-hist-toggle').addEventListener('click', ()=>{ const h = $('#tf-hist'); h.hidden = !h.hidden; });
   // ações
   const acao = async (payload, msg)=>{ const { error } = await sb.from('tarefas').update(payload).eq('id', t.id); if(error){ alert((msg||'Não foi possível')+': '+error.message); return false; } await recarregarTarefa(t.id); return true; };
+  const bEnt = $('#tf-m-entregar'); if(bEnt) bEnt.addEventListener('click', async ()=>{ if(await tarefaEntregar(t)){ openTarefaModal(t.id); renderTarefas(); } });
+  const bApr = $('#tf-m-aprovar'); if(bApr) bApr.addEventListener('click', async ()=>{ if(await tarefaRevisar(t, true)){ openTarefaModal(t.id); renderTarefas(); } });
+  const bAj = $('#tf-m-ajuste'); if(bAj) bAj.addEventListener('click', async ()=>{ if(await tarefaRevisar(t, false)){ openTarefaModal(t.id); renderTarefas(); } });
   const b1 = $('#tf-m-concluir'); if(b1) b1.addEventListener('click', async ()=>{ if(tarefaCompartilhada(t) && tarefaEhResp(t, eu)){ if(await tarefaConcluirParte(t)){ closeModal(); renderTarefas(); } return; } if(!(await rotinaGarantirJustificativas(t))){ await recarregarTarefa(t.id); openTarefaModal(t.id); return; } if(await acao({status:'concluida'})){ closeModal(); renderTarefas(); } });
   const b2p = $('#tf-m-reabrir-parte'); if(b2p) b2p.addEventListener('click', async ()=>{ if(await tarefaReabrirParte(t)){ closeModal(); renderTarefas(); } });
   const b2 = $('#tf-m-reabrir'); if(b2) b2.addEventListener('click', async ()=>{ if(await acao({status:'pendente'})){ closeModal(); renderTarefas(); } });
