@@ -27073,7 +27073,7 @@ function embmRenderDetalhe(el, s){
           <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia===0 ? 'Chegou hoje' : `Chegou há ${dia} dia${dia===1?'':'s'}`) : ''} · Método Essência${s.bonus?' + Bônus':''} · ${col==='fim' ? 'Embarque concluído' : 'Etapa atual: '+(col==='novo'?'Aluno novo':'Mensagens iniciais')}</small></span>
         </div>
       </div>
-      <div class="emb-topo-prog"><div class="module-bar"><div class="fill" style="width:${Math.round(feitas/etapas.length*100)}%"></div></div><span>${n}/${EMBM_MSGS.length} mensagens</span><span class="emb-salvo" id="emb-salvo">Salvo</span></div>
+      <div class="emb-topo-prog"><span>${n}/${EMBM_MSGS.length} mensagens</span><span class="emb-salvo" id="emb-salvo">Salvo</span></div>
     </div>
     ${embmGuiaHtml(s)}
     <div class="emb-fluxo">
