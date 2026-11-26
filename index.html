@@ -864,6 +864,14 @@
   .rf-fill{height:100%;border-radius:9px;background:var(--danger);}
   .rf-fill.meio{background:var(--individual);} .rf-fill.ok{background:var(--success);}
   .rf-nota{display:block;margin:6px 0 18px;font-size:11.5px;color:var(--text-mute);line-height:1.5;}
+  .rf-venc-filtros{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:6px 0 10px;}
+  .rf-venc-filtros label{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .rf-venc-filtros label span{font-size:10.5px;font-weight:600;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;}
+  .rf-venc-filtros label:first-child{flex:1 1 240px;}
+  .rf-venc-filtros .ps-input{margin:0;height:36px;box-sizing:border-box;}
+  .rf-venc-filtros .btn-mini{height:36px;}
+  #rf-venc-tab tr[hidden]{display:none;}
+  @media (max-width:640px){ .rf-venc-filtros label{flex:1 1 140px;} .rf-venc-filtros label:first-child{flex-basis:100%;} }
   .rf-tab td,.rf-tab th{white-space:nowrap;}
   .rf-sim{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:4px 0 16px;}
   .rf-modo{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:14px;}
@@ -23701,6 +23709,22 @@ function rfCompHtml(Cr, Ci){
     ${lin(`Caixa em ${rfMesNome(ult(Cr).k)} (com pró-labore)`, `<b class="${ult(Cr).salPl<0?'rf-neg':'rf-pos'}">${formatBRL(ult(Cr).salPl)}</b>`, `<b class="${ult(Ci).salPl<0?'rf-neg':'rf-pos'}">${formatBRL(ult(Ci).salPl)}</b>`)}
   </tbody></table></div>`;
 }
+/* Filtro da tabela Parcelas vencidas (nome e período de vencimento). Filtra as linhas já desenhadas. */
+function rfVencNorm(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function rfVencFiltrar(){
+  const tab = document.getElementById('rf-venc-tab'); if(!tab) return;
+  const q = rfVencNorm(document.getElementById('rf-venc-nome').value.trim());
+  const de = document.getElementById('rf-venc-de').value, ate = document.getElementById('rf-venc-ate').value;
+  let n = 0, tot = 0, todas = 0;
+  tab.querySelectorAll('tbody tr').forEach(tr=>{ todas++;
+    const d = tr.dataset.rfvData || '';
+    const ok = (!q || (tr.dataset.rfvNome||'').includes(q)) && (!de || d >= de) && (!ate || d <= ate);
+    tr.hidden = !ok; if(ok){ n++; tot += Number(tr.dataset.rfvValor)||0; } });
+  const res = document.getElementById('rf-venc-res');
+  if(res) res.textContent = (q||de||ate) ? `${n} de ${todas} parcela${todas===1?'':'s'} · ${formatBRL(tot)}` : '';
+}
+document.addEventListener('input', e=>{ if(e.target && /^rf-venc-(nome|de|ate)$/.test(e.target.id)) rfVencFiltrar(); });
+document.addEventListener('click', e=>{ const b = e.target && e.target.closest && e.target.closest('#rf-venc-limpar'); if(!b) return; ['rf-venc-nome','rf-venc-de','rf-venc-ate'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value=''; }); rfVencFiltrar(); });
 function renderRadarFin(){
   const el = document.getElementById('view-radarfin'); if(!el) return;
   if(!rfPode()){ el.innerHTML = '<div class="empty-state">O Radar Financeiro é dos sócios e da administração.</div>'; return; }
@@ -23827,7 +23851,15 @@ function rfPintarCorpo(){
 
     <h2 class="section-title com-titulo">${icon('xcircle')} Clientes com risco de não pagamento</h2>
     ${C.risco.length ? `<div class="rf-risco">${C.risco.map(h=>{ const s = getStudent(h.student_id); return `<div class="rf-cli rf-${cor(h.nivel)}"><div class="rf-cli-hd">${s ? `<button type="button" class="vg-nome-btn" data-rf-acomp="${h.student_id}">${escapeHtml(h.aluno)}</button>` : `<b>${escapeHtml(h.aluno||'—')}</b>`}<small>${rfN(h.pagas)} paga${rfN(h.pagas)===1?'':'s'} · a receber ${formatBRL(rfN(h.a_receber))}${h.prox_venc?` · próxima em ${tzDataCurta(h.prox_venc)}`:''}</small></div><p>${escapeHtml(h.motivo.join(' · '))}</p></div>`; }).join('')}</div>` : '<div class="empty-state">Nenhuma aluna com sinal de risco entre as parcelas vinculadas.</div>'}
-    ${(D.atrasados||[]).length ? `<h3 class="me-sub" style="margin-top:14px">Parcelas vencidas</h3><div class="table-wrap"><table class="check-table rf-tab"><thead><tr><th>Vencimento</th><th>Aluna / descrição</th><th>Categoria</th><th>Parcela</th><th>Valor</th></tr></thead><tbody>${D.atrasados.map(a=>`<tr><td style="white-space:nowrap">${tzDataCurta(a.data_vencimento)} <small class="rf-neg">(${rdDiasDesde(a.data_vencimento+'T12:00:00-03:00')} dias)</small></td><td>${a.aluno ? `<b>${escapeHtml(a.aluno)}</b><br>` : ''}<small>${escapeHtml(a.descricao||'')}</small></td><td><small>${escapeHtml(a.cat||'')}</small></td><td>${a.parcela_num ? a.parcela_num+'/'+(a.parcela_total||'?') : '—'}</td><td><b>${formatBRL(rfN(a.valor))}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${(D.atrasados||[]).length ? `<h3 class="me-sub" style="margin-top:14px">Parcelas vencidas</h3>
+      <div class="rf-venc-filtros" id="rf-venc-filtros">
+        <label><span>Nome</span><input class="ps-input" type="search" id="rf-venc-nome" placeholder="Buscar aluna ou descrição..."></label>
+        <label><span>Vencimento de</span><input class="ps-input" type="date" id="rf-venc-de"></label>
+        <label><span>até</span><input class="ps-input" type="date" id="rf-venc-ate"></label>
+        <button type="button" class="btn-outline btn-mini" id="rf-venc-limpar">Limpar</button>
+      </div>
+      <small class="rf-nota" id="rf-venc-res" style="margin:0 0 8px"></small>
+      <div class="table-wrap"><table class="check-table rf-tab" id="rf-venc-tab"><thead><tr><th>Vencimento</th><th>Aluna / descrição</th><th>Categoria</th><th>Parcela</th><th>Valor</th></tr></thead><tbody>${D.atrasados.map(a=>`<tr data-rfv-nome="${escapeAttr(rfVencNorm((a.aluno||'')+' '+(a.descricao||'')))}" data-rfv-data="${escapeAttr(String(a.data_vencimento||'').slice(0,10))}" data-rfv-valor="${rfN(a.valor)}"><td style="white-space:nowrap">${tzDataCurta(a.data_vencimento)} <small class="rf-neg">(${rdDiasDesde(a.data_vencimento+'T12:00:00-03:00')} dias)</small></td><td>${a.aluno ? `<b>${escapeHtml(a.aluno)}</b><br>` : ''}<small>${escapeHtml(a.descricao||'')}</small></td><td><small>${escapeHtml(a.cat||'')}</small></td><td>${a.parcela_num ? a.parcela_num+'/'+(a.parcela_total||'?') : '—'}</td><td><b>${formatBRL(rfN(a.valor))}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
     <small class="rf-nota">O risco usa o histórico de cada aluna: parcelas vencidas agora, quantas pagou com mais de 2 dias de atraso e o atraso médio.${rfN(D.sem_aluno) ? ` ${rfN(D.sem_aluno)} parcelas de Mentoria a receber ainda não têm aluna vinculada e ficam de fora.` : ''}</small>
 
     <h2 class="section-title com-titulo">${icon('money')} Últimos meses</h2>
