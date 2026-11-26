@@ -2961,6 +2961,17 @@
   .msg-anexo-drop[hidden]{display:none;}
   .mg-foto{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
   .te-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .te-form{display:flex;flex-direction:column;gap:18px;}
+  .te-form .te-cab .cat{margin-bottom:4px;} .te-form .te-cab h3{margin:0;}
+  .te-form .field{display:flex;flex-direction:column;gap:6px;margin:0 !important;min-width:0;}
+  .te-form .field > label{margin:0;}
+  .te-form textarea, .te-form .ps-input, .te-form select{width:100%;max-width:none !important;margin:0 !important;box-sizing:border-box;}
+  .te-form textarea{min-height:0;}
+  .te-form .te-linha2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .te-form .te-dica{margin-top:-10px;font-size:12px;color:var(--text-mute);}
+  .te-form .te-dica[hidden]{display:none;}
+  .te-form .aula-pick, .te-form .apoio-dd, .te-form .apoio-dd-btn{width:100%;max-width:none !important;}
+  .te-form .modal-actions{margin:0;padding-top:4px;}
   @media (max-width:520px){ .te-grid{grid-template-columns:1fr;} }
   .mg-foto .btn-mini{white-space:nowrap;}
   .msg-popup-de{color:var(--accent);font-weight:800;}
@@ -3021,7 +3032,8 @@
   .ep-inicio.col{flex-direction:column;align-items:stretch;gap:8px;}
   .ep-inicio.sem-acao{cursor:default;}
   .ep-inicio-resumo{margin:0;font-size:13.5px;line-height:1.5;color:var(--text-dim);}
-  #view-inicio #aniv-aluno-slot .aniv-bloco{margin:20px 0 4px;}
+  #view-inicio #aniv-aluno-slot .aniv-bloco{margin:20px 0 0;}
+  #view-inicio #aniv-aluno-slot:has(.aniv-bloco) + .ep-inicio{margin-top:20px;}
   .ep-inicio > div{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
   .ep-inicio small{font-size:12px;color:var(--text-mute);}
   .ep-inicio-ic{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
@@ -15528,25 +15540,49 @@ function openContatoEditModal(s, c){
   });
   document.getElementById('ce-resumo').focus();
 }
+/* Item do checklist com responsável "Mentor" vira uma tarefa em Tarefas para quem está usando o ePLAT
+   (Murilo, Sandra...). Uma tarefa por item (origem 'checklist' + id do item); o status acompanha o item. */
+async function checklistTarefaMentor(s, item){
+  try{
+    const eu = tarefasEu(); if(!eu || !item || !item.id) return;
+    const ref = String(item.id);
+    const { data: ja } = await sb.from('tarefas').select('id,status').eq('origem','checklist').eq('origem_ref', ref).eq('excluida', false).limit(1);
+    const existe = (ja||[])[0];
+    const feito = item.status==='Concluída';
+    if(existe){
+      const st = feito ? 'concluida' : (existe.status==='concluida' ? 'pendente' : null);
+      if(st && st!==existe.status) await sb.from('tarefas').update({status:st}).eq('id', existe.id);
+      return;
+    }
+    if(item.responsavel!=='Mentor' || feito) return;
+    const nome = ((s && (s.name||s.nome))||'').trim();
+    const titulo = ((nome ? nome.split(/\s+/).slice(0,2).join(' ')+' · ' : '')+item.tarefa).slice(0,200);
+    const desc = 'Tarefa do Checklist de Acompanhamento'+(nome?' de '+nome:'')+'.'+(item.obs ? '\n\n'+item.obs : '');
+    const { error } = await sb.from('tarefas').insert({ titulo, descricao:desc, responsavel_id:eu, criador_id:eu, prioridade:'media',
+      prazo_data: prazoTextoParaIso(item.prazo) || null, origem:'checklist', origem_ref:ref });
+    if(error) throw error;
+  }catch(e){ console.error('checklist → tarefa do mentor', e); }
+}
 function openTarefaEditModal(s, t){
   const sel = new Set(t.aulas||[]);
   document.getElementById('modal').innerHTML = `
-    <div class="modal-body form-modal">
-      <div class="cat">Checklist de Acompanhamento</div>
-      <h3>Editar tarefa</h3>
-      <div class="field full"><label>Tarefa</label><textarea class="ps-input" id="te-tarefa" rows="2">${escapeHtml(t.tarefa||'')}</textarea></div>
-      <div class="te-grid">
-        <div class="field"><label>Responsável</label>
+    <div class="modal-body form-modal te-form">
+      <div class="te-cab"><div class="cat">Checklist de Acompanhamento</div>
+      <h3>Editar tarefa</h3></div>
+      <div class="field"><label for="te-tarefa">Tarefa</label><textarea class="ps-input" id="te-tarefa" rows="3">${escapeHtml(t.tarefa||'')}</textarea></div>
+      <div class="te-linha2">
+        <div class="field"><label for="te-resp">Responsável</label>
           <select class="ps-input" id="te-resp">${['Mentorado','Mentor'].map(r=>`<option value="${r}" ${t.responsavel===r?'selected':''}>${r}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Prazo</label>${prazoCampoHtml(`<input class="ps-input" type="date" id="te-prazo" value="${escapeAttr(prazoTextoParaIso(t.prazo))}">`, 'te-prazo')}${t.prazo && t.prazo!=='—' && !prazoTextoParaIso(t.prazo) ? `<small class="prazo-antigo">Prazo atual: ${escapeHtml(t.prazo)}</small>` : ''}</div>
-        <div class="field"><label>Status</label>
+        <div class="field"><label for="te-status">Status</label>
           <select class="ps-input" id="te-status">${['Pendente','Concluída','Atrasada'].map(st=>`<option value="${st}" ${t.status===st?'selected':''}>${st}</option>`).join('')}</select>
         </div>
       </div>
-      <div class="field full"><label>Observações</label><textarea class="ps-input" id="te-obs" rows="2">${escapeHtml(t.obs||'')}</textarea></div>
-      <div class="field full"><label>Encontro em que a tarefa foi definida</label>${intEncontroSelect(s, 'te-encontro', intVk(t), true)}${(s.contatos||[]).length ? '' : '<small class="ae-dica">Nenhum encontro registrado ainda com este mentorado.</small>'}</div>
-      <div class="field full"><label>Aulas e atividades de apoio (<span id="te-count">${apoioContagem(sel)}</span>)</label>
+      <small class="te-dica" id="te-resp-dica" ${t.responsavel==='Mentor'?'':'hidden'}>Como responsável Mentor, a tarefa também vai para a sua lista em Tarefas.</small>
+      <div class="field"><label for="te-prazo">Prazo</label>${prazoCampoHtml(`<input class="ps-input" type="date" id="te-prazo" value="${escapeAttr(prazoTextoParaIso(t.prazo))}">`, 'te-prazo')}${t.prazo && t.prazo!=='—' && !prazoTextoParaIso(t.prazo) ? `<small class="prazo-antigo">Prazo atual: ${escapeHtml(t.prazo)}</small>` : ''}</div>
+      <div class="field"><label for="te-obs">Observações</label><textarea class="ps-input" id="te-obs" rows="2">${escapeHtml(t.obs||'')}</textarea></div>
+      <div class="field"><label for="te-encontro">Encontro em que a tarefa foi definida</label>${intEncontroSelect(s, 'te-encontro', intVk(t), true)}${(s.contatos||[]).length ? '' : '<small class="ae-dica">Nenhum encontro registrado ainda com este mentorado.</small>'}</div>
+      <div class="field"><label>Aulas e atividades de apoio (<span id="te-count">${apoioContagem(sel)}</span>)</label>
         ${aulaPickHtml(t.aulas, 'te')}
       </div>
       <div class="modal-actions">
@@ -15559,6 +15595,7 @@ function openTarefaEditModal(s, t){
   document.getElementById('modal-backdrop').classList.add('open');
   bindAulaPick('te', sel);
   document.getElementById('te-cancel').addEventListener('click', closeModal);
+  document.getElementById('te-resp').addEventListener('change', e=>{ document.getElementById('te-resp-dica').hidden = e.target.value!=='Mentor'; });
   document.getElementById('te-tarefa').focus();
   document.getElementById('te-save').addEventListener('click', async ()=>{
     const tarefa = document.getElementById('te-tarefa').value.trim();
@@ -15576,6 +15613,7 @@ function openTarefaEditModal(s, t){
     try{ await syncChecklistItemUpdate(t.id, campos); }
     catch(e){ console.error(e); alert('Não foi possível salvar: '+(e.message||'')); btn.disabled = false; return; }
     Object.assign(t, campos); t.contatoId = campos.contato_id; t.agendamentoId = campos.agendamento_id; delete t.contato_id; delete t.agendamento_id;
+    await checklistTarefaMentor(s, t);
     closeModal();
     aeSincronizarProximaAcao(s);
     renderInterno();
@@ -16257,6 +16295,7 @@ function renderInterno(){
     try{
       item.id = await syncChecklistItemInsert(s.id, item);
       s.checklist.push(item);
+      await checklistTarefaMentor(s, item);
       novaTarefaAulas = new Set();
       aeSincronizarProximaAcao(s);
       renderInterno();
