@@ -6308,7 +6308,7 @@ let METAS_AUTO_EM = 0;
 async function metasAutoRecarregar(forcar){
   if(currentUserRole!=='aluno' || !currentUser) return;
   if(!forcar && Date.now() - METAS_AUTO_EM < 8000) return; METAS_AUTO_EM = Date.now();
-  const s = getStudent(currentUser.id); if(!s) return;
+  const s = getStudent(alunoAreaId()); if(!s) return;
   const { data, error } = await sb.from('checklist_items').select('*').eq('student_id', s.id).order('id');
   if(error || !Array.isArray(data)) return;
   const antes = JSON.stringify(s.checklist.map(t=>[t.id,t.status]));
@@ -7386,8 +7386,9 @@ async function bootstrapData(){
     return;
   }
 
+  try{ const { data: soc } = await sb.from('alunos_socios').select('socio_id,titular_id'); ALUNO_SOCIO = {}; (soc||[]).forEach(r=>{ ALUNO_SOCIO[r.socio_id] = r.titular_id; }); }catch(e){ ALUNO_SOCIO = {}; }
   STUDENTS.length = 0;
-  profiles.filter(p=>p.role==='aluno').forEach(p=>STUDENTS.push(mapProfileRow(p)));
+  profiles.filter(p=>p.role==='aluno' && !(currentUserRole!=='aluno' && ALUNO_SOCIO[p.id])).forEach(p=>STUDENTS.push(mapProfileRow(p)));
 
   PEOPLE = {};
   profiles.forEach(p=>{ PEOPLE[p.id] = {id:p.id, name:p.name, initials:p.initials, color:p.color, avatarUrl:p.avatar_url||null, role:p.role, espelhoDe:p.espelho_de||null, contaTeste:!!p.conta_teste}; });
@@ -7400,7 +7401,7 @@ async function bootstrapData(){
     sb.from('courses').select('*, course_materials(*)').order('mod_id').order('order_index'),
     sb.from('materials').select('*').order('id'),
     sb.from('live_sessions').select('*').order('event_date',{ascending:true}),
-    sb.from('live_session_watched').select('live_session_id').eq('student_id', currentUser.id),
+    sb.from('live_session_watched').select('live_session_id').eq('student_id', alunoAreaId()),
     // Só os ids do que EU curti — em vez das curtidas de todo mundo, linha por linha.
     sb.from('community_likes').select('post_id').eq('student_id', interacaoAutorId()),
     // Uma linha, só pra saber se a pessoa já publicou a apresentação dela (o mural vem paginado agora).
@@ -7467,7 +7468,7 @@ async function bootstrapData(){
      idas e voltas ao servidor enfileiradas, e é isso que fazia o sistema demorar para abrir,
      principalmente para a equipe interna. Agora todas viajam juntas e o tempo total passa a ser o
      da consulta mais lenta, não a soma de todas. Cada resposta é guardada assim que chega. */
-  currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : currentUser.id;
+  currentStudentId = currentUserRole==='staff' ? (STUDENTS[0]? STUDENTS[0].id : null) : alunoAreaId();
   STUDENT_POINTS = {};
   const onda = [
     /* Primeira página das duas comunidades. O aluno recebe zero linhas da que não é dele (a RLS corta),
@@ -9273,7 +9274,7 @@ function renderInicioCurso(s){
   document.getElementById('view-inicio').innerHTML = `
     <div class="hero">
       <div>
-        <h1>Olá, ${escapeHtml(s.name.split(' ')[0])}</h1>
+        <h1>Olá, ${escapeHtml(alunoSaudacaoNome(s))}</h1>${alunoSociedadeTagHtml(s.id)}
         <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : s.tier==='curso' ? 'do Método Essência' : 'da Mentoria Essência'}.</p>
       </div>
       ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
@@ -9344,7 +9345,7 @@ function renderInicio_cel(){
   document.getElementById('view-inicio').innerHTML = `<div class="ini-al">
     <div class="hero">
       <div>
-        <h1>Olá, ${s.name.split(' ')[0]}</h1>
+        <h1>Olá, ${escapeHtml(alunoSaudacaoNome(s))}</h1>${alunoSociedadeTagHtml(s.id)}
         <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : s.tier==='curso' ? 'do Método Essência' : 'da Mentoria Essência'}.</p>
       </div>
       <div class="hero-mini-stats">
@@ -9411,7 +9412,7 @@ function renderInicio_web(){
   document.getElementById('view-inicio').innerHTML = `
     <div class="hero">
       <div>
-        <h1>Olá, ${s.name.split(' ')[0]}</h1>
+        <h1>Olá, ${escapeHtml(alunoSaudacaoNome(s))}</h1>${alunoSociedadeTagHtml(s.id)}
         <p>Bem-vindo(a) de volta à sua área ${s.pos? 'da Pós-graduação' : s.tier==='curso' ? 'do Método Essência' : 'da Mentoria Essência'}.</p>
       </div>
       <div class="hero-mini-stats">
@@ -13932,6 +13933,22 @@ function renderSessoes(){
 let ME_TITULAR = null;
 /* Sócias no Mentores Essência (26/11/2026): a sócia usa a área da titular (Jornada, Sessões e Metas
    unificadas). O banco libera pela mesma regra dos convidados (me_titular_de / tabela me_socias). */
+/* Sócios na área do aluno (ex.: Tácio na área da Heloísa, 26/11/2026): cada um entra com o próprio login,
+   mas os dois veem e editam a mesma área, a do titular. O banco libera via aluno_area(); aqui o sócio abre
+   a área do titular e, para a equipe, só o titular aparece nas listas, com a tag de área compartilhada. */
+let ALUNO_SOCIO = {}; // socio_id -> titular_id
+function alunoSaudacaoNome(s){ const eu = currentUserRole==='aluno' && currentUserProfile && currentUserProfile.name; return String(eu || (s&&s.name) || '').split(' ')[0]; }
+function alunoAreaId(){ return (currentUser && (ALUNO_SOCIO[currentUser.id] || currentUser.id)) || null; }
+function alunoSociosDe(tid){ return Object.keys(ALUNO_SOCIO).filter(k=>ALUNO_SOCIO[k]===tid); }
+function alunoSociedadeNomes(tid){
+  const tit = ALUNO_SOCIO[tid] || tid; const socios = alunoSociosDe(tit); if(!socios.length) return [];
+  const eu = currentUserRole==='aluno' && currentUser ? currentUser.id : tit;
+  return [tit].concat(socios).filter(id=>id!==eu).map(id=>((PEOPLE[id]||{}).name||'').split(' ')[0]).filter(Boolean);
+}
+function alunoSociedadeTagHtml(tid){
+  const nomes = alunoSociedadeNomes(tid); if(!nomes.length) return '';
+  return `<span class="me-socia-tag" title="Cada um entra com o próprio login, e o que um faz o outro vê.">${icon('users','tiny')} Área compartilhada com ${escapeHtml(nomes.join(' e '))}</span>`;
+}
 let ME_SOCIA = {};
 async function meSociasCarregar(){
   try{ const { data, error } = await sb.from('me_socias').select('socia_id,titular_id'); if(error) throw error; ME_SOCIA = {}; (data||[]).forEach(r=>{ ME_SOCIA[r.socia_id] = r.titular_id; }); }
@@ -15971,7 +15988,7 @@ function renderInterno(){
     <div class="aluno-picker" id="aluno-picker">
       <button type="button" class="aluno-picker-btn" id="aluno-picker-btn" aria-expanded="false">
         ${initialsAvatar(s.initials, s.color, 36, s.avatarUrl)}
-        <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${acessoCancelado(s.id) ? 'ACESSO CANCELADO · só consulta · ' : ''}${tierLabel(s)} · ${alunosOrdenados.length} aluno${alunosOrdenados.length===1?'':'s'} — clique para trocar</small></span>
+        <span class="ap-nome"><strong>${escapeHtml(s.name)}${alunoSociosDe(s.id).length ? ' '+alunoSociedadeTagHtml(s.id) : ''}</strong><small>${acessoCancelado(s.id) ? 'ACESSO CANCELADO · só consulta · ' : ''}${tierLabel(s)} · ${alunosOrdenados.length} aluno${alunosOrdenados.length===1?'':'s'} — clique para trocar</small></span>
         ${icon('down')}
       </button>
       <div class="aluno-picker-menu" id="aluno-picker-menu" hidden>
