@@ -21053,7 +21053,7 @@ function gtBindEdicao(el, freq){
    as mesmas regras de acesso (equipeViewPode). O Início só mostra o que estiver visível no menu. */
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
-  {view:'comunicacao',desc:'Recado do dia para a equipe, checkpoint quinzenal, envio coletivo e NPS dos alunos.'},
+  {view:'comunicacao',desc:'Recado do dia para a equipe, lembretes na tela, checkpoint quinzenal e envio coletivo.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
@@ -21423,12 +21423,7 @@ function renderComunicacao(){
     ${checkpointHtml()}
     ${envioBlocoHtml()}
     </div>
-    <div class="com-nps" id="com-nps">
-      ${comSecHead('nps', icon('chart')+' NPS dos alunos')}
-      <div id="com-nps-corpo" ${COM_RECOLHIDOS.nps?'hidden':''}>
-      ${npsHtmlEquipe()}
-      </div>
-    </div>`;
+    `;
   document.querySelectorAll('#view-comunicacao [data-com-recolher]').forEach(h=>h.addEventListener('click', ()=>{
     const k = h.dataset.comRecolher;
     COM_RECOLHIDOS[k] = !COM_RECOLHIDOS[k];
@@ -21439,7 +21434,6 @@ function renderComunicacao(){
   lembBlocoBind();
   bindCheckpoint();
   bindEnvioBloco();
-  comNpsBind();
 }
 /* Trocar o filtro do NPS redesenha só a área do NPS: a tela não pula e a barra de rolagem fica onde
    estava; muda apenas o conteúdo abaixo dos filtros. */
@@ -26314,9 +26308,34 @@ function rdMsgBindCopiar(root, nome){
     catch(e){ alert('Não consegui copiar. Selecione o texto e copie manualmente.'); }
   }));
 }
+/* Abas do Radar (26/11/2026): Mentorados (o radar de sempre) e NPS, que saiu da Comunicação. */
+let RADAR_ABA = (()=>{ try{ return localStorage.getItem('eplat_radar_aba')==='nps' ? 'nps' : 'mentorados'; }catch(e){ return 'mentorados'; } })();
+function radarAbasHtml(){
+  return `<div class="emb-abas rd-abas" style="display:flex;gap:6px;margin:0 0 12px">${[['mentorados','Mentorados'],['nps','NPS']].map(([k,l])=>`<button type="button" class="${RADAR_ABA===k?'btn-accent':'btn-outline'}" data-rd-aba="${k}" style="flex:0 0 auto">${l}</button>`).join('')}</div>`;
+}
+function radarAbasBind(el){
+  el.querySelectorAll('[data-rd-aba]').forEach(b=>b.addEventListener('click', ()=>{
+    RADAR_ABA = b.dataset.rdAba; try{ localStorage.setItem('eplat_radar_aba', RADAR_ABA); }catch(e){}
+    renderRadar(); window.scrollTo(0,0);
+  }));
+}
 function renderRadar(){
   const el = document.getElementById('view-radar');
   if(!el) return;
+  if(radarPode() && RADAR_ABA==='nps'){
+    if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
+    el.innerHTML = `${radarAbasHtml()}
+      <div class="com-nps" id="com-nps">
+        <div class="vg-sec-head"><h2 class="section-title com-titulo">${icon('chart')} NPS DOS ALUNOS</h2></div>
+        <div id="com-nps-corpo">${npsHtmlEquipe()}</div>
+      </div>`;
+    radarAbasBind(el); comNpsBind();
+    return;
+  }
+  renderRadarMentorados(el);
+  if(radarPode() && el.firstElementChild && !el.querySelector('.rd-abas')){ el.insertAdjacentHTML('afterbegin', radarAbasHtml()); radarAbasBind(el); }
+}
+function renderRadarMentorados(el){
   if(!radarPode()){ el.innerHTML = '<div class="empty-state">Esta área é da Direção de Desenvolvimento e da Navegadora.</div>'; return; }
   // O NPS não aparece mais aqui (fica em Comunicação), mas a nota entra no alerta de cada mentorado.
   if(NPS_UI.rows===null && !NPS_UI.carregando) npsCarregarEquipe();
