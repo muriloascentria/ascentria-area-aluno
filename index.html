@@ -864,6 +864,10 @@
   .rf-fill{height:100%;border-radius:9px;background:var(--danger);}
   .rf-fill.meio{background:var(--individual);} .rf-fill.ok{background:var(--success);}
   .rf-nota{display:block;margin:6px 0 18px;font-size:11.5px;color:var(--text-mute);line-height:1.5;}
+  .rf-crm-tag{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:11.5px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+  .rf-crm-tag.inad{background:rgba(220,80,80,.14);color:#e07a7a;}
+  .rf-crm-tag.vazio{background:transparent;border:1px dashed var(--border);color:var(--text-mute);font-weight:500;}
+  @media (max-width:640px){ .rf-crm-tag{white-space:normal;} }
   .rf-venc-filtros{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:6px 0 10px;}
   .rf-venc-filtros label{display:flex;flex-direction:column;gap:5px;min-width:0;}
   .rf-venc-filtros label span{font-size:10.5px;font-weight:600;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;}
@@ -23476,10 +23480,19 @@ const RF = { dados:null, carregando:false, erro:null, editando:false, carregadoE
 /* Quem abre: os 4 sócios e a Mariane (assistente administrativa). Premissas: só os sócios editam. */
 const RF_EXTRA_UIDS = ['b01a4425-1ba8-4703-9c40-3301a0de7249'];
 function rfPode(){ return reuSocio() || (currentUserRole==='staff' && !!currentUser && RF_EXTRA_UIDS.includes(idEfetivo())); }
+/* Tag com a coluna atual do cliente nos funis Cobrança / Inadimplentes do eCRM (copiada a cada 5 min). Só leitura. */
+function rfCrmTagHtml(g){
+  const m = RF.crm || {}; const r = (g.cid && (m.cli||{})[g.cid]) || (g.sid && (m.sid||{})[g.sid]) || null;
+  if(!r) return '<span class="rf-crm-tag vazio" title="Este cliente não tem card aberto nos funis Cobrança ou Inadimplentes do eCRM">Sem card no eCRM</span>';
+  const inad = r.funil==='Inadimplentes';
+  return `<span class="rf-crm-tag ${inad?'inad':''}" title="Funil ${escapeAttr(r.funil)} do eCRM">${escapeHtml(r.funil)} · ${escapeHtml(r.etapa)}</span>`;
+}
 async function rfCarregar(){
   MT_FIN_UI.venc90 = null;
   RF.carregando = true; RF.erro = null;
-  try{ const { data, error } = await sb.rpc('radar_financeiro'); if(error) throw error; if(!data || !data.hoje) throw new Error('resposta vazia do banco'); RF.dados = data; RF.carregadoEm = Date.now(); }
+  try{ const [{ data, error }, crm] = await Promise.all([sb.rpc('radar_financeiro'), sb.from('crm_cobranca_etapas').select('cliente_id,student_id,funil,etapa').then(r=>r, ()=>({data:[]}))]);
+    if(error) throw error; if(!data || !data.hoje) throw new Error('resposta vazia do banco'); RF.dados = data; RF.carregadoEm = Date.now();
+    RF.crm = { cli:{}, sid:{} }; ((crm && crm.data)||[]).forEach(r=>{ RF.crm.cli[r.cliente_id] = r; if(r.student_id) RF.crm.sid[r.student_id] = r; }); }
   catch(e){ console.error('radar_financeiro', e); RF.erro = e.message || 'erro'; }
   RF.carregando = false;
   if(currentView==='radarfin') renderRadarFin();
@@ -23581,7 +23594,7 @@ function rfCalcular(D, P, modo){
   const pr = projetar({ vendas: baseVendas, pl }); sol.mesReserva = (pr.find(x=>x.salPl >= reservaAlvo)||{}).k || null;
   // Cobrança: vencidas por aluna
   const porAluna = {};
-  (D.atrasados||[]).forEach(a=>{ const ch = a.student_id || ('c'+(a.cliente_id||a.id)); const g = porAluna[ch] || (porAluna[ch] = { nome:a.aluno || a.descricao || 'Sem nome', whatsapp:a.whatsapp, itens:[], total:0 }); g.itens.push(a); g.total += rfN(a.valor); if(!g.whatsapp && a.whatsapp) g.whatsapp = a.whatsapp; });
+  (D.atrasados||[]).forEach(a=>{ const ch = a.student_id || ('c'+(a.cliente_id||a.id)); const g = porAluna[ch] || (porAluna[ch] = { nome:a.aluno || a.descricao || 'Sem nome', whatsapp:a.whatsapp, sid:a.student_id||null, cid:a.cliente_id||null, itens:[], total:0 }); g.itens.push(a); g.total += rfN(a.valor); if(!g.whatsapp && a.whatsapp) g.whatsapp = a.whatsapp; });
   sol.cobranca = Object.values(porAluna).sort((a,b)=>b.total-a.total);
   // Necessidade do mês x receita operacional recebida
   const recMes = rfN(atual.rec_pago), recPrevMes = rfN(atual.rec_prev);
@@ -23637,7 +23650,7 @@ function rfSolucoesHtml(C){
   if(S.cobranca.length){
     const cobre = S.deficit>0 ? Math.min(100, Math.round(C.atrasoTotal/S.deficit*100)) : null;
     cards.push(`<div class="rf-sol rf-sol-cob"><div class="rf-sol-hd"><b>1. Cobrar o que já venceu</b><span class="rf-sol-num">${br(C.atrasoTotal)}</span></div><p>É o dinheiro mais rápido: já foi vendido e só falta entrar.${cobre!==null ? ` Sozinho, cobre ${cobre}% do buraco de ${rfMesNome(S.mesAperto)}.` : ''}</p>
-      <div class="rf-cob">${S.cobranca.map(g=>`<div class="rf-cob-it"><div><b>${escapeHtml(g.nome)}</b><small>${g.itens.length} parcela${g.itens.length>1?'s':''} · ${br(g.total)} · desde ${tzDataCurta(g.itens[0].data_vencimento)}</small></div></div>`).join('')}</div></div>`);
+      <div class="rf-cob">${S.cobranca.map(g=>`<div class="rf-cob-it"><div><b>${escapeHtml(g.nome)}</b><small>${g.itens.length} parcela${g.itens.length>1?'s':''} · ${br(g.total)} · desde ${tzDataCurta(g.itens[0].data_vencimento)}</small></div>${rfCrmTagHtml(g)}</div>`).join('')}</div></div>`);
   }
   let nro = S.cobranca.length ? 2 : 1;
   // 2. Pró-labore
