@@ -108,6 +108,12 @@ let data = {
 };
 let cidadesCache = {}; // { UF: [nomes...] }
 let step = 0;
+/* Aluno do Método vindo do Essência PLAT (?aluno=<id>&nome=&email=): o cadastro já entra ligado à conta
+   dele, com a tag "Método Essência". Ligado à conta, o banco gera sozinho os Termos de Contratação, que
+   aparecem no sino do aluno (gatilho registro_termos_metodo). */
+const PARAMS = new URLSearchParams(location.search);
+const ALUNO_ID = /^[0-9a-f-]{36}$/i.test(PARAMS.get('aluno')||'') ? PARAMS.get('aluno') : null;
+if(ALUNO_ID){ data.nome = PARAMS.get('nome') || ''; data.email = PARAMS.get('email') || ''; }
 
 /* ================= VALIDAÇÃO ================= */
 function onlyDigits(s){ return (s||'').replace(/\D/g,''); }
@@ -430,6 +436,7 @@ async function finalizarCadastro(){
     cidade: data.cidade,
     como_conheceu: data.comoConheceu.trim() || null,
   };
+  if(ALUNO_ID){ payload.student_id = ALUNO_ID; payload.tags = ['Método Essência']; }
   const { error } = await sb.from('registro_clientes').insert(payload);
   if(error) throw error;
 }
@@ -440,12 +447,14 @@ function renderSucesso(){
     <div class="center">
       <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
       <h2 class="step-q">Cadastro enviado!</h2>
-      <p class="step-hint">Seus dados foram registrados com sucesso. Nossa equipe entrará em contato em breve.</p>
+      <p class="step-hint">${ALUNO_ID ? 'Seus dados foram registrados com sucesso. Volte ao Essência PLAT: os Termos de Contratação vão aparecer no sininho para você ler e clicar em "Concordo".' : 'Seus dados foram registrados com sucesso. Nossa equipe entrará em contato em breve.'}</p>
+      ${ALUNO_ID ? '<p style="margin-top:18px"><a class="btn-primary" href="./" style="display:inline-block;text-decoration:none">Voltar ao Essência PLAT</a></p>' : ''}
     </div>
   `;
 }
 function resetForm(){
   data = {nome:'',cpf:'',cnpj:'',nascimento:'',whatsapp:'',email:'',cep:'',endereco:'',numero:'',complemento:'',bairro:'',estado:'',cidade:'',comoConheceu:''};
+  if(ALUNO_ID){ data.nome = PARAMS.get('nome') || ''; data.email = PARAMS.get('email') || ''; }
   step = 0;
   renderStep();
 }

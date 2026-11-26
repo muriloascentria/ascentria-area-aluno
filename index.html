@@ -2590,6 +2590,7 @@
   .tf-sinal.hoje{background:rgba(245,158,11,.16);color:#d97706;}
   .tf-sinal.urgente{background:var(--danger);color:#fff;}
   .tf-sinal.nova{background:rgba(37,99,235,.16);color:#2563eb;}
+  .embm-btn{display:inline-flex !important;flex-direction:row !important;align-items:center;justify-content:center;gap:6px;white-space:nowrap;}
   .tf-sinal.revisao{background:rgba(124,58,237,.16);color:#7c3aed;}
   .tf-sinal.ajuste{background:rgba(217,119,6,.16);color:#d97706;}
   .tf-entrega-box{margin:12px 0 4px;padding:12px 14px;border-radius:12px;border:1px solid rgba(124,58,237,.35);background:rgba(124,58,237,.08);}
@@ -7440,7 +7441,7 @@ async function bootstrapData(){
   if(currentUserRole!=='aluno') onda.push(carregarRecadoDia(), tvCarregar());
   if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios(), acessoCarregar(), lembCarregar());
   else if(msgSouMentorado()) onda.push(msgBootstrap(), e27Carregar());
-  if(currentUserRole==='aluno') onda.push(termosCarregar());
+  if(currentUserRole==='aluno') onda.push(termosCarregar(), cadAlunoCarregar());
 
   /* Listas que só a equipe interna carrega — o aluno nunca faz estas consultas, então esse conteúdo
      jamais chega ao navegador dele (nem via RLS, nem por não pedir). */
@@ -7537,6 +7538,7 @@ async function enterApp(){
   if(currentUserRole==='staff' && location.hash.startsWith('#termo=')) setTimeout(()=>termoVerArquivo(location.hash.slice(7)), 600);
   setTimeout(aulaDoLinkAbrir, 900);
   if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
+  if(currentUserRole==='aluno') setTimeout(cadAlunoJanela, 1200);
   setTimeout(pwaConvidarInstalar, 2500);
   setTimeout(pushConvidar, 6000);
 }
@@ -9221,6 +9223,8 @@ function renderInicioCurso(s){
       </div>
       ${initialsAvatar(s.initials,s.color,56,s.avatarUrl)}
     </div>
+
+    ${cadAlunoCardHtml()}
 
     ${aniversariantesAlunoHtml()}
 
@@ -26836,9 +26840,195 @@ function embMarcarFora(sid, fora){
 function embVelhos(){ return embMentorados().filter(s=>{ const d = embDia(s); return d!=null && d>30 && !embResumo(s.id).concluido; }); }
 function embAbrir(sid){ embAluno = sid || null; if(currentView!=='embarque') goTo('embarque'); else renderEmbarque(); window.scrollTo(0,0); }
 
+/* ================= ROTA DE EMBARQUE DO MÉTODO (aluno do curso gravado) =================
+   Pedido do Murilo (26/11/2026). Três colunas: ALUNO NOVO (chegou um aluno do Método), MENSAGENS INICIAIS
+   (as 4 mensagens de boas-vindas, cada uma com Copiar e Enviado) e EMBARQUE CONCLUÍDO (as 4 enviadas).
+   O check "Cadastro preenchido" marca sozinho quando o aluno envia a Ficha de Cadastro pelo link do
+   ePLAT (fica na base de clientes ligado à conta, e o banco gera os Termos de Contratação).
+   Os dados ficam na mesma tabela embarque, na chave "metodo". Entram as contas do Método (sem Pós)
+   criadas a partir de EMBM_INICIO. */
+const EMBM_INICIO = '2026-11-18';
+let EMB_TIPO = (()=>{ try{ return localStorage.getItem('eplat_emb_tipo')==='metodo' ? 'metodo' : 'mentoria'; }catch(e){ return 'mentoria'; } })();
+const EMBM_MSGS = [
+  { k:'m1', titulo:'Mensagem 1 · Boas-vindas', txt:`Seja muito bem-vinda ao Método Essência! Que alegria ter você com a gente.
+
+A partir de agora você tem tudo o que precisa para estruturar o seu Consultório Digital de Enfermagem, no seu ritmo. Vou te mandar algumas orientações rápidas para esse começo, tudo bem?` },
+  { k:'m2', titulo:'Mensagem 2 · Acesso e como aproveitar', txt:`*Acesso à plataforma*
+O Método fica no Essência PLAT: mentoriaessencia.online
+Você entra com o seu e-mail e a senha que criou. Se esquecer a senha, é só clicar em "Esqueci minha senha" na tela de entrada.
+
+*Como aproveitar melhor*
+• Assista às aulas na ordem, do primeiro módulo em diante, porque um conteúdo prepara o próximo.
+• Reserve horários fixos na semana para estudar, como se fossem consultas marcadas com você mesma.
+• Aplique o que aprender logo depois de cada aula.
+
+Você tem *12 meses* de acesso, contados da sua matrícula.` },
+  { k:'m3', titulo:'Mensagem 3 · Dúvidas no Acompanhamento', txt:`*Suas dúvidas, direto com a equipe* 💬
+
+Dentro do Essência PLAT tem uma área de mensagens em *ACOMPANHAMENTO*, como um aplicativo de conversa, onde você fala direto com a nossa equipe. O Murilo e todo o time tiram as suas dúvidas sobre o conteúdo por lá.
+
+Sempre que surgir uma dúvida durante as aulas, mande por lá. Assim fica tudo registrado junto com o seu Método e a resposta chega mais rápido para quem pode te ajudar.` },
+  { k:'m4', titulo:'Mensagem 4 · Comunidade e Termos', txt:`*Comunidade do Método Essência*
+Em aproximadamente 5 dias, vai aparecer dentro da plataforma uma notificação bem clara com o convite para a nossa comunidade no WhatsApp. Lá você faz networking com outros enfermeiros e enfermeiras e recebe os avisos principais do Método.
+
+A gente dá esse tempinho de propósito, para você começar com calma, focada nas primeiras aulas, sem receber informação demais de uma vez.
+
+*Termos de Contratação*
+Quando aparecer no sininho da plataforma o aviso dos Termos e Condições de Contratação, leia com calma e clique em "Concordo".
+
+Um abraço e bons estudos! 💚
+Equipe Ascentria` },
+];
+function embmTexto(m, s){
+  let t = m.txt;
+  if(s && s.genero==='M') t = t.replace('Seja muito bem-vinda','Seja muito bem-vindo').replace('com você mesma','com você mesmo').replace('com calma, focada','com calma, focado');
+  return t;
+}
+function embmAlunos(){
+  return STUDENTS.filter(s=>s.tier==='curso' && !s.pos && !s.contaTeste && String(s.contaCriada||'') >= EMBM_INICIO)
+    .sort((a,b)=>String(b.contaCriada||'').localeCompare(String(a.contaCriada||'')));
+}
+function embmDados(sid){ const d = embDados(sid); if(!d.metodo) d.metodo = {}; return d.metodo; }
+function embmEnviadas(sid){ const m = ((EMB[sid]||{}).metodo)||{}; return EMBM_MSGS.filter(x=>m[x.k] && m[x.k].em).length; }
+function embmCadastro(s){
+  const dig = x=>String(x||'').replace(/\D/g,'');
+  const email = String((s.cadastro||{}).email||'').trim().toLowerCase(), cpf = dig((s.cadastro||{}).cpf);
+  return CLIENTES_REGISTRO.find(c=>c.studentId===s.id) || CLIENTES_REGISTRO.find(c=>(email && String(c.email||'').trim().toLowerCase()===email) || (cpf.length===11 && dig(c.cpf)===cpf)) || null;
+}
+function embmColuna(sid){ const n = embmEnviadas(sid); return n>=EMBM_MSGS.length ? 'fim' : (n>0 ? 'mensagens' : 'novo'); }
+function embmLinkFormulario(s){
+  const q = new URLSearchParams({ aluno:s.id, nome:(s.cadastro||{}).nomeCompleto || s.name || '', email:(s.cadastro||{}).email || '' });
+  return location.origin + location.pathname.replace(/[^/]*$/, '') + 'cadastro-cliente.html?' + q.toString();
+}
+function embmAbasHtml(){
+  return `<div class="emb-abas" style="display:flex;gap:6px;margin:0 0 12px">
+    ${[['mentoria','Mentoria'],['metodo','Método']].map(([k,l])=>`<button type="button" class="${EMB_TIPO===k?'btn-accent':'btn-outline'}" data-emb-tipo="${k}" style="flex:0 0 auto">${l}${k==='metodo' ? ` <span class="qtd" style="margin-left:4px">${embmAlunos().filter(s=>embmColuna(s.id)==='novo').length || ''}</span>` : ''}</button>`).join('')}
+  </div>`;
+}
+function embmAbasBind(el){
+  el.querySelectorAll('[data-emb-tipo]').forEach(b=>b.addEventListener('click', ()=>{
+    EMB_TIPO = b.dataset.embTipo; try{ localStorage.setItem('eplat_emb_tipo', EMB_TIPO); }catch(e){}
+    embAluno = null; renderEmbarque();
+  }));
+}
+function embmCadastroPill(s){
+  const ok = embmCadastro(s);
+  return ok ? `<span class="emb-tag-lead" style="background:rgba(34,197,94,.15);color:#16a34a;border-color:rgba(34,197,94,.4)">${icon('check','tiny')} CADASTRO PREENCHIDO</span>`
+            : `<span class="emb-tag-lead">CADASTRO PENDENTE</span>`;
+}
+function embmRenderQuadro(el){
+  const lista = embmAlunos();
+  const colunas = [{id:'novo', titulo:'Aluno novo', ic:'users'},{id:'mensagens', titulo:'Mensagens iniciais', ic:'comment'},{id:'fim', titulo:'Embarque concluído', ic:'check'}];
+  const porCol = {novo:[], mensagens:[], fim:[]};
+  lista.forEach(s=>porCol[embmColuna(s.id)].push(s));
+  el.innerHTML = `
+    ${embmAbasHtml()}
+    <div class="vg-sec-head"><h2 class="section-title com-titulo">${icon('compass')} ROTA DE EMBARQUE · MÉTODO</h2><span class="qtd">${lista.length}</span></div>
+    <p class="section-sub" style="margin-top:4px">Cada aluno novo do Método Essência chega em Aluno novo. Abra o card, copie as 4 mensagens iniciais e marque Enviado em cada uma: com a primeira, o card passa para Mensagens iniciais; com as 4, vai para Embarque concluído. O check do cadastro marca sozinho quando o aluno envia a Ficha de Cadastro.</p>
+    <div class="emb-quadro">
+      ${colunas.map(c=>`
+        <div class="emb-col ${c.id==='fim'?'emb-col-fim':''}">
+          <div class="emb-col-hd">${icon(c.ic,'tiny')} <span>${c.titulo}</span><span class="qtd">${porCol[c.id].length}</span></div>
+          <div class="emb-col-body">
+            ${porCol[c.id].map(s=>{ const n = embmEnviadas(s.id); const dia = s.contaCriada ? rdDiasDesde(s.contaCriada+'T00:00:00-03:00') : null;
+              return `<div class="emb-card" role="button" tabindex="0" data-embm-abrir="${s.id}">
+                <div class="emb-card-top">${initialsAvatar(s.initials,s.color,30,s.avatarUrl)}<div class="emb-card-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia===0 ? 'Chegou hoje' : `Chegou há ${dia} dia${dia===1?'':'s'}`) : ''}${s.bonus ? ' · Método + Bônus' : ''}</small></div></div>
+                ${embmCadastroPill(s)}
+                <div class="module-bar"><div class="fill" style="width:${Math.round(n/EMBM_MSGS.length*100)}%"></div></div>
+                <div class="emb-card-pe"><span>${n}/${EMBM_MSGS.length} mensagens</span></div>
+              </div>`; }).join('') || '<div class="emb-vazio">—</div>'}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  embmAbasBind(el);
+  el.querySelectorAll('[data-embm-abrir]').forEach(b=>{
+    b.addEventListener('click', ()=>embAbrir(b.dataset.embmAbrir));
+    b.addEventListener('keydown', e=>{ if(e.key==='Enter') embAbrir(b.dataset.embmAbrir); });
+  });
+}
+function embmRenderDetalhe(el, s){
+  const m = embmDados(s.id), cad = embmCadastro(s), n = embmEnviadas(s.id);
+  const quem = id=>{ const p = PEOPLE[id]; return p ? p.name.split(' ')[0] : ''; };
+  el.innerHTML = `
+    <button type="button" class="btn-outline embm-btn" id="embm-voltar" style="margin-bottom:12px">${icon('back','tiny')} Voltar</button>
+    <div class="emb-card-top" style="margin-bottom:10px">${initialsAvatar(s.initials,s.color,44,s.avatarUrl)}<div class="emb-card-nome"><strong style="font-size:17px">${escapeHtml(s.name)}</strong><small>Método Essência${s.bonus?' + Bônus':''} · conta criada em ${escapeHtml(tzDataCurta(s.contaCriada))} · ${n}/${EMBM_MSGS.length} mensagens enviadas</small></div></div>
+    <div class="recado-bloco">
+      <div class="recado-hd">${icon('idcard','tiny')} <strong>FICHA DE CADASTRO</strong></div>
+      ${cad ? `<div class="recado-sub" style="margin-bottom:0">${icon('check','tiny')} Preenchida${cad.createdAt ? ' em '+escapeHtml(tzDataHora(cad.createdAt, true)) : ''}. ${escapeHtml(s.name.split(' ')[0])} já está na base de clientes${cad.studentId===s.id ? ', ligada à conta (os Termos de Contratação são gerados sozinhos)' : ' (encontrada pelo e-mail ou CPF, ainda sem ligação com a conta)'}.</div>`
+            : `<div class="recado-sub">Ainda não preenchida. Ao entrar no ePLAT, o aluno vê o aviso para completar o cadastro. Se precisar, copie o link e mande para ele.</div>
+               <button type="button" class="btn-outline embm-btn" id="embm-link">${icon('copy','tiny')} Copiar o link da ficha</button>`}
+    </div>
+    ${EMBM_MSGS.map(x=>{ const v = m[x.k]||{};
+      return `<div class="recado-bloco">
+        <div class="recado-hd" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><span style="display:flex;align-items:center;gap:8px">${icon('comment','tiny')} <strong>${escapeHtml(x.titulo.toUpperCase())}</strong></span>
+          ${v.em ? `<span style="font-size:12px;color:#16a34a;font-weight:600;display:inline-flex;align-items:center;gap:4px">${icon('check','tiny')} Enviada${quem(v.por)?' por '+escapeHtml(quem(v.por)):''} em ${escapeHtml(tzDataHora(v.em, true))}</span>` : ''}</div>
+        <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.55;margin:10px 0;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px">${escapeHtml(embmTexto(x, s))}</div>
+        <div class="recado-btns">
+          <button type="button" class="btn-outline embm-btn" data-embm-copiar="${x.k}">${icon('copy','tiny')} Copiar</button>
+          ${v.em ? `<button type="button" class="btn-outline embm-btn" data-embm-desfazer="${x.k}">Desfazer</button>` : `<button type="button" class="btn-accent embm-btn" data-embm-enviado="${x.k}">${icon('check','tiny')} Enviado</button>`}
+        </div>
+      </div>`; }).join('')}
+    <div class="emb-salvo" id="emb-salvo" style="font-size:12px;color:var(--text-dim)"></div>`;
+  el.querySelector('#embm-voltar').addEventListener('click', ()=>embAbrir(null));
+  const bl = el.querySelector('#embm-link');
+  if(bl) bl.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(embmLinkFormulario(s)); bl.innerHTML = icon('check','tiny')+' Link copiado'; }catch(e){ showAppAviso(embmLinkFormulario(s)); } });
+  el.querySelectorAll('[data-embm-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
+    const x = EMBM_MSGS.find(y=>y.k===b.dataset.embmCopiar);
+    try{ await navigator.clipboard.writeText(embmTexto(x, s)); b.innerHTML = icon('check','tiny')+' Copiada'; setTimeout(()=>{ b.innerHTML = icon('copy','tiny')+' Copiar'; }, 1800); }catch(e){ showAppAviso('Não foi possível copiar. Selecione o texto e copie.'); }
+  }));
+  el.querySelectorAll('[data-embm-enviado]').forEach(b=>b.addEventListener('click', ()=>{
+    embmDados(s.id)[b.dataset.embmEnviado] = { em:new Date().toISOString(), por:currentUser && currentUser.id };
+    embSalvar(s.id);
+    if(embmEnviadas(s.id)>=EMBM_MSGS.length){ showAppAviso(`Embarque de ${s.name.split(' ')[0]} concluído.`); embAbrir(null); return; }
+    embmRenderDetalhe(el, s);
+  }));
+  el.querySelectorAll('[data-embm-desfazer]').forEach(b=>b.addEventListener('click', ()=>{
+    delete embmDados(s.id)[b.dataset.embmDesfazer]; embSalvar(s.id); embmRenderDetalhe(el, s);
+  }));
+}
+/* ---- Lado do aluno do Método: aviso para completar a Ficha de Cadastro ---- */
+let CAD_ALUNO_OK = null, CAD_AVISO_VISTO = false;
+function cadAlunoPrecisa(s){ return currentUserRole==='aluno' && !!s && s.id===(currentUser&&currentUser.id) && s.tier==='curso' && !s.pos && String(s.contaCriada||'') >= EMBM_INICIO; }
+async function cadAlunoCarregar(){
+  const s = currentUser ? getStudent(currentUser.id) : null;
+  if(!cadAlunoPrecisa(s)){ CAD_ALUNO_OK = true; return; }
+  try{ const { data, error } = await sb.rpc('meu_cadastro_cliente_ok'); if(error) throw error; CAD_ALUNO_OK = !!data; }catch(e){ console.warn('meu_cadastro_cliente_ok', e); CAD_ALUNO_OK = true; }
+}
+function cadAlunoLink(){
+  const s = getStudent(currentUser.id);
+  const q = new URLSearchParams({ aluno:s.id, nome:(s.cadastro||{}).nomeCompleto || s.name || '', email:currentUser.email || (s.cadastro||{}).email || '' });
+  return 'cadastro-cliente.html?' + q.toString();
+}
+function cadAlunoCardHtml(){
+  if(CAD_ALUNO_OK!==false) return '';
+  return `<div class="recado-bloco" style="border-color:var(--accent)">
+    <div class="recado-hd">${icon('idcard','tiny')} <strong>COMPLETE O SEU CADASTRO</strong></div>
+    <div class="recado-sub">Preencha a sua Ficha de Cadastro. Com ela, a equipe prepara os seus Termos de Contratação, que aparecem no sininho para você ler e clicar em "Concordo".</div>
+    <a class="btn-accent" href="${escapeAttr(cadAlunoLink())}" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none">${icon('idcard','tiny')} Preencher agora</a>
+  </div>`;
+}
+function cadAlunoJanela(){
+  if(CAD_ALUNO_OK!==false || CAD_AVISO_VISTO || document.querySelector('.recado-backdrop')) return;
+  CAD_AVISO_VISTO = true;
+  const wrap = document.createElement('div');
+  wrap.className = 'recado-backdrop';
+  wrap.innerHTML = `<div class="recado-card" role="dialog" aria-modal="true" aria-label="Complete o seu cadastro">
+      <div class="recado-topo"><div class="recado-de"><strong>Complete o seu cadastro</strong><small>Método Essência</small></div></div>
+      <div class="recado-texto">Para começar, preencha a sua Ficha de Cadastro. Leva poucos minutos. Com ela, a equipe prepara os seus Termos de Contratação.</div>
+      <div class="recado-acoes" style="gap:8px"><button type="button" class="btn-outline" data-cad-depois>Depois</button><a class="btn-accent" href="${escapeAttr(cadAlunoLink())}" style="text-decoration:none">Preencher agora</a></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector('[data-cad-depois]').addEventListener('click', ()=>wrap.remove());
+}
+
 async function renderEmbarque(){
   const el = document.getElementById('view-embarque');
   if(!embCarregado){ el.innerHTML = '<p class="section-sub">Carregando…</p>'; await embCarregar(); if(currentView!=='embarque') return; }
+  if(EMB_TIPO==='metodo'){
+    const sm = embAluno ? getStudent(embAluno) : null;
+    if(sm && sm.tier==='curso') return embmRenderDetalhe(el, sm);
+    embAluno = null; return embmRenderQuadro(el);
+  }
   if(embAluno && embAlunoOuLead(embAluno)) return embRenderDetalhe(el, embAlunoOuLead(embAluno));
   embAluno = null;
   const lista = embMentorados();
@@ -26851,6 +27041,7 @@ async function renderEmbarque(){
   const porCol = {}; colunas.forEach(c=>porCol[c.id]=[]);
   lista.forEach(s=>{ const r = embResumo(s.id); porCol[r.concluido ? 'fim' : r.atual.k].push({s, r}); });
   el.innerHTML = `
+    ${embmAbasHtml()}
     ${embGuiaHtml(null)}
     <div class="vg-sec-head"><h2 class="section-title com-titulo">${icon('compass')} ROTA DE EMBARQUE</h2><span class="qtd">${lista.length}</span></div>
     <p class="section-sub" style="margin-top:4px">Os 30 primeiros dias de cada mentorado, etapa por etapa: do grupo criado aos onboardings. Cada card fica na etapa em que o mentorado está agora e só passa para a coluna seguinte quando o check de passagem da etapa é marcado. Quem já passou do embarque fica em Embarque concluído. Clique no card para abrir o passo a passo.</p>
@@ -26876,6 +27067,7 @@ async function renderEmbarque(){
         </div>`).join('')}
     </div>`;
   /* Roda do mouse em cima das colunas move o quadro para os lados. Nas pontas, a página volta a rolar. */
+  embmAbasBind(el);
   embGuiaBind(el, null);
   const quadro = el.querySelector('.emb-quadro');
   if(quadro){
