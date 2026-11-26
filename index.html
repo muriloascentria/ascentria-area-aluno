@@ -3019,6 +3019,9 @@
   .ep-nota{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-top:10px;}
   .ep-inicio{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);cursor:pointer;margin:16px 0 4px;}
   .ep-inicio.col{flex-direction:column;align-items:stretch;gap:8px;}
+  .ep-inicio.sem-acao{cursor:default;}
+  .ep-inicio-resumo{margin:0;font-size:13.5px;line-height:1.5;color:var(--text-dim);}
+  #view-inicio #aniv-aluno-slot .aniv-bloco{margin:20px 0 4px;}
   .ep-inicio > div{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
   .ep-inicio small{font-size:12px;color:var(--text-mute);}
   .ep-inicio-ic{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
@@ -24607,21 +24610,14 @@ function epInicioHtml(s){
   const ag = epAgenda(s, cfg, 1);
   const hoje = ag.dias[0];
   const lista = hoje.blocos.slice(0,3);
-  /* celular: só o resumo do dia, sem a lista (pedido em 23/11/2026) */
-  if(ehCel()){
-    const n = hoje.blocos.length;
-    const txt = n ? `Você tem ${n} tarefa${n===1?'':'s'} para hoje.` : ag.feitos.length ? 'Parabéns! Você já cumpriu as tarefas de hoje.' : hoje.ativo ? 'Nada pendente para hoje.' : 'Hoje é dia de descanso.';
-    return `
-    <div class="ep-inicio col" data-goto="planner">
-      <div class="ep-inicio-topo"><span class="ep-inicio-ic">${icon('calendar')}</span><strong>Hoje no seu ePLANNER</strong><span class="btn-mini">Abrir</span></div>
-      <p class="ep-inicio-resumo">${txt}</p>
-    </div>`;
-  }
+  /* Só o resumo do dia, no celular e no computador (pedidos de 23 e 26/11/2026). Com tarefas, o cartão
+     abre o ePLANNER; sem tarefas, é só a frase. */
+  const n = hoje.blocos.length;
+  const txt = n ? `Você tem ${n} tarefa${n===1?'':'s'} para hoje.` : ag.feitos.length ? 'Parabéns! Você já cumpriu as tarefas de hoje.' : hoje.ativo ? 'Nada pendente para hoje.' : 'Hoje é dia de descanso.';
   return `
-    <div class="ep-inicio col" data-goto="planner">
-      <div class="ep-inicio-topo"><span class="ep-inicio-ic">${icon('calendar')}</span><strong>Hoje no seu ePLANNER</strong><span class="btn-mini">Abrir</span></div>
-      ${lista.length ? lista.map(b=>`<div class="ep-inicio-item"><span>${epHora(b.ini)}</span><span class="ep-ini-txt">${escapeHtml(b.it.label.replace(/^TAREFA:\s*/i,'Tarefa: '))}</span></div>`).join('') + (!ehCel() && hoje.blocos.length>3 ? `<small class="ep-inicio-mais">e mais ${hoje.blocos.length-3}</small>` : '')
-        : `<small>${ag.feitos.length ? 'Tudo de hoje feito. Muito bem!' : hoje.ativo ? 'Nada pendente para hoje.' : 'Hoje é dia de descanso.'}</small>`}
+    <div class="ep-inicio col ${n?'':'sem-acao'}" ${n?'data-goto="planner" role="button" tabindex="0"':''}>
+      <div class="ep-inicio-topo"><span class="ep-inicio-ic">${icon('calendar')}</span><strong>Hoje no seu ePLANNER</strong>${n?'<span class="btn-mini">Abrir</span>':''}</div>
+      <p class="ep-inicio-resumo">${txt}</p>
     </div>`;
 }
 
