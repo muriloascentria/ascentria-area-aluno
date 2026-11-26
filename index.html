@@ -27647,7 +27647,7 @@ Se tiver qualquer dificuldade com o acesso ao Essência PLAT, traga para a reuni
       'Confirmar que conseguiu entrar no Essência PLAT, que assistiu ao vídeo de introdução e respondeu o Diagnóstico de Abertura.',
       'Ver na Rota quais das 5 tarefas iniciais faltam (ePLANNER, aulas da Introdução, apresentação na Comunidade) e ajudar a concluir.',
       'Explicar as áreas do ePLAT, as aulas, as tarefas e a área de metas.',
-      'Combinar que a maior parte da comunicação acontece dentro da plataforma. O WhatsApp fica só para avisos rápidos e urgentes.',
+      'Combinar que a conversa com a equipe acontece no grupo do WhatsApp do mentorado. Dentro do ePLAT ficam as aulas, as tarefas, as metas e a agenda.',
       'Se a pessoa não se encontra no nicho, na persona etc., marcar na Rota: Solicitar Mentoria de Desenvolvimento.',
       'Avisar que o próximo encontro será com o Murilo, em cerca de 10 dias, depois das primeiras tarefas.']},
     {tipo:'msg', titulo:'Tarefas para postar no ePLAT (prazo: 10 dias)', texto:EMB_GUIA_TAREFAS_1, semNome:true},
@@ -27683,14 +27683,14 @@ Até lá, siga com as tarefas na área de metas do Essência PLAT 💪`},
       'Conseguiu fazer as primeiras tarefas? Se não: não se encontrou no nicho, na persona etc. → pedir à Mari o agendamento com a Sandra (Mentoria de Desenvolvimento). Falta de tempo → ampliar o prazo em 10 dias no ePLAT.',
       'Ouvir os desejos do mentorado, conhecer o negócio e perguntar: qual o maior desafio hoje no seu negócio?',
       'Traçar metas para aumentar o faturamento.',
-      'Depois do encontro: postar as tarefas abaixo no ePLAT (prazo: 10 dias), avisar no Acompanhamento do Essência PLAT e fazer o handoff para a Mari agendar o Onboarding eSIS.']},
+      'Depois do encontro: postar as tarefas abaixo no ePLAT (prazo: 10 dias), avisar no grupo do WhatsApp e fazer o handoff para a Mari agendar o Onboarding eSIS.']},
     {tipo:'msg', titulo:'Tarefas para postar no ePLAT (prazo: 10 dias)', texto:EMB_GUIA_TAREFAS_2, semNome:true},
-    {tipo:'msg', titulo:'Aviso no Acompanhamento do Essência PLAT', texto:`NOME, as suas novas tarefas já estão na *área de metas* do Essência PLAT ✅
+    {tipo:'msg', titulo:'Aviso no grupo do WhatsApp', texto:`NOME, as suas novas tarefas já estão na *área de metas* do Essência PLAT ✅
 
 São as aulas e tarefas que combinamos no nosso encontro, na sequência do painel. O prazo é até *DATA*.
 
 Qualquer dúvida, me chama por aqui 😉`},
-    {tipo:'nota', texto:'A partir daqui, os avisos de tarefas vão no Acompanhamento do Essência PLAT, não mais no grupo do WhatsApp.'},
+    {tipo:'nota', texto:'Os avisos de tarefas dos mentorados vão sempre no grupo do WhatsApp. As mensagens dentro do ePLAT ficam só para os alunos do Método.'},
   ]},
   {etapa:'expert', titulo:'Agendamento do Onboarding eSIS', quem:'Mariane (Assistente Administrativa)', quando:'Logo após o Onboarding Expert', itens:[
     {tipo:'msg', titulo:'Mari: convite para o Onboarding eSIS', texto:`Agora que você já fez o seu encontro com o Murilo, vamos dar continuidade à sua jornada na Mentoria Essência com o *onboarding do eSIS*, a nossa plataforma de prontuários eletrônicos.
@@ -27710,9 +27710,9 @@ Se possível, já entre no eSIS antes do encontro para conferir se o acesso est�
     {tipo:'acoes', titulo:'Roteiro do encontro', linhas:[
       'Explicar as áreas do eSIS e como usá-las no dia a dia do consultório.',
       'Ver se fez as tarefas do Onboarding Expert (Princípios, Identidade de Valor e A Transformação que Você Gera). Se não: nicho, persona etc. → Sandra. Falta de tempo → ampliar o prazo em 10 dias no ePLAT. Dúvidas sobre a profissão → pedir à Mari o agendamento com o Murilo.',
-      'Explicar como segue daqui em diante: acompanhamento quinzenal pelo Acompanhamento do Essência PLAT.',
-      'Depois do encontro: registrar o combinado no Acompanhamento do Essência PLAT e marcar Embarque concluído.']},
-    {tipo:'nota', texto:'15 dias depois, a Viviane (Customer Success) confere o andamento das tarefas combinadas. A partir daí, entra a rotina quinzenal automática da Mentora de Desenvolvimento.'},
+      'Explicar como segue daqui em diante: acompanhamento pelo grupo do WhatsApp, com as metas e as tarefas no ePLAT.',
+      'Depois do encontro: registrar o combinado no Registro de Contatos (Acompanhamento Interno), avisar no grupo do WhatsApp e marcar Embarque concluído.']},
+    {tipo:'nota', texto:'15 dias depois, a Viviane (Customer Success) confere o andamento das tarefas combinadas. A partir daí, o acompanhamento segue pelo Radar dos Mentorados e pelo grupo do WhatsApp.'},
   ]},
   {etapa:'dev', titulo:'Se precisar: encontro com a Sandra', quem:'Mariane (Assistente Administrativa)', quando:'Quando um onboarding pedir a Mentoria de Desenvolvimento', itens:[
     {tipo:'msg', titulo:'Mari: convite para a Mentoria de Desenvolvimento', texto:`Olá, NOME! Tudo bem?
@@ -27742,7 +27742,7 @@ const EMB_CHECK_MSGS = {
   'eplat:concluido':  [['Onboarding ePLAT','Vivi: link da reunião (10 min antes)']],
   'eplat:tarefas':    [['Onboarding ePLAT','Tarefas para postar no ePLAT (prazo: 10 dias)'],['Onboarding ePLAT','Vivi: aviso no grupo depois de postar as tarefas']],
   'eplat:proximo':    [['Acesso ao eSIS e agendamento com o Murilo','Mari: acesso ao eSIS'],['Acesso ao eSIS e agendamento com o Murilo','Mari: convite para o Onboarding Expert'],['Acesso ao eSIS e agendamento com o Murilo','Mari: confirmação']],
-  'expert:tarefas':   [['Onboarding Expert','Tarefas para postar no ePLAT (prazo: 10 dias)'],['Onboarding Expert','Aviso no Acompanhamento do Essência PLAT']],
+  'expert:tarefas':   [['Onboarding Expert','Tarefas para postar no ePLAT (prazo: 10 dias)'],['Onboarding Expert','Aviso no grupo do WhatsApp']],
   'expert:proximo':   [['Agendamento do Onboarding eSIS','Mari: convite para o Onboarding eSIS'],['Agendamento do Onboarding eSIS','Mari: confirmação']],
   'dev:agendado':     [['Se precisar: encontro com a Sandra','Mari: convite para a Mentoria de Desenvolvimento']],
 };
