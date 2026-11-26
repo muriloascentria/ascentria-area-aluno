@@ -7472,6 +7472,7 @@ async function bootstrapData(){
   if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios(), acessoCarregar(), lembCarregar());
   else if(msgSouMentorado()) onda.push(msgBootstrap(), e27Carregar());
   if(currentUserRole==='aluno') onda.push(termosCarregar(), cadAlunoCarregar());
+  if(currentUserRole==='aluno' || currentUserRole==='staff') onda.push(meSociasCarregar());
 
   /* Listas que só a equipe interna carrega — o aluno nunca faz estas consultas, então esse conteúdo
      jamais chega ao navegador dele (nem via RLS, nem por não pedir). */
@@ -13905,6 +13906,20 @@ function renderSessoes(){
    e-mail (função me-convidar), cria a própria senha e entra vendo só o Mentores Essência do titular.
    As metas marcadas por qualquer um ficam com o nome de quem marcou. */
 let ME_TITULAR = null;
+/* Sócias no Mentores Essência (26/11/2026): a sócia usa a área da titular (Jornada, Sessões e Metas
+   unificadas). O banco libera pela mesma regra dos convidados (me_titular_de / tabela me_socias). */
+let ME_SOCIA = {};
+async function meSociasCarregar(){
+  try{ const { data, error } = await sb.from('me_socias').select('socia_id,titular_id'); if(error) throw error; ME_SOCIA = {}; (data||[]).forEach(r=>{ ME_SOCIA[r.socia_id] = r.titular_id; }); }
+  catch(e){ console.warn('me_socias', e); ME_SOCIA = {}; }
+}
+function meArea(sid){ return (sid && ME_SOCIA[sid]) || sid; }
+function meSociasDe(area){ return Object.keys(ME_SOCIA).filter(k=>ME_SOCIA[k]===area); }
+function meSociedadeFaixaHtml(sid){
+  const area = meArea(sid); const nomes = [area].concat(meSociasDe(area)).filter(id=>id!==sid).map(id=>((getStudent(id)||PEOPLE[id]||{}).name||'').split(' ')[0]).filter(Boolean);
+  if(!nomes.length || (area===sid && !meSociasDe(area).length)) return '';
+  return `<div class="me-conv-faixa">${icon('users','tiny')} Área compartilhada com ${escapeHtml(nomes.join(' e '))}, sócia${nomes.length>1?'s':''} no Mentores Essência. O que uma escreve, a outra vê.</div>`;
+}
 const ME_CONV = {}; // titular_id -> lista de convidados (equipe)
 function setRoleConvidado(){
   currentRole = 'aluno';
@@ -14171,7 +14186,7 @@ function mejEncontroHtml(){
 }
 function renderMeJornada(){
   const el = document.getElementById('view-me_jornada'); if(!el) return;
-  const sid = currentStudentId;
+  const sid = meArea(currentStudentId);
   if(!sid){ el.innerHTML = meLogoHtml()+'<div class="empty-state">Escolha um mentor para ver a jornada.</div>'; return; }
   if(!MEJ.resp[sid]){ meJornadaCarregar(sid); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando a jornada…</div>'; return; }
   if(ME.materiais===null) meCarregarMateriais();
@@ -14206,7 +14221,7 @@ function renderMeJornada(){
     return `<div class="mej-item mej-travado"><div class="mej-item-h">${cad}<span>${escapeHtml(it.n)}</span></div>
       ${it.sub ? `<ul class="mej-sub">${it.sub.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}</div>`;
   };
-  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}${currentUserRole!=='me_convidado' ? meSociedadeFaixaHtml(currentStudentId) : ''}
     <div class="mej-linha">
       <section class="mej-etapa mej-etapa-enc"><div class="mej-ponto-espaco"></div><div class="mej-corpo mej-corpo-enc">${mejEncontroHtml()}</div></section>${ME_JORNADA.map((e,i)=>`
       <section class="mej-etapa">
@@ -14261,7 +14276,7 @@ function renderMeJornada(){
 function renderMeAulas(){
   const el = document.getElementById('view-me_aulas'); if(!el) return;
   if(ME.aulas===null){ meCarregarAulas(); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando as aulas…</div>'; return; }
-  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}${currentUserRole!=='me_convidado' ? meSociedadeFaixaHtml(currentStudentId) : ''}
     <p class="section-sub" style="text-align:center">Aulas exclusivas do Mentores Essência.</p>
     ${ME.aulas.length ? ME.aulas.map((a,i)=>{ const emb = meVideoEmbed(a.video_url); const aberta = ME.aberta===a.id; return `
       <div class="me-aula">
@@ -14314,7 +14329,7 @@ function renderMeMateriais(){
   const grupos = {};
   ME.materiais.forEach(m=>{ const c = (m.categoria||'').trim() || 'Materiais'; (grupos[c] = grupos[c] || []).push(m); });
   const nomes = Object.keys(grupos);
-  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}${currentUserRole!=='me_convidado' ? meSociedadeFaixaHtml(currentStudentId) : ''}
     <p class="section-sub" style="text-align:center">Materiais de apoio exclusivos do Mentores Essência.</p>
     ${nomes.length ? nomes.map(c=>`<fieldset class="me-mat-cat">${nomes.length>1 || c!=='Materiais' ? `<legend>${escapeHtml(c)}</legend>` : ''}
       ${grupos[c].map(m=>`<div class="me-mat">
@@ -14326,10 +14341,10 @@ function renderMeMateriais(){
 }
 function renderMeSessoes(){
   const el = document.getElementById('view-me_sessoes'); if(!el) return;
-  const sid = currentStudentId;
+  const sid = meArea(currentStudentId);
   if(!ME.sessoes[sid]){ meCarregarAluno(sid); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando as sessões…</div>'; return; }
   const lista = ME.sessoes[sid];
-  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}${currentUserRole!=='me_convidado' ? meSociedadeFaixaHtml(currentStudentId) : ''}
     <p class="section-sub" style="text-align:center">${currentUserRole==='me_convidado' ? 'Sessões individuais do Mentores Essência, com as gravações e os materiais.' : 'Suas sessões individuais do Mentores Essência, visíveis só para você e para a equipe.'}</p>
     ${lista.length ? lista.map(x=>`
       <div class="session-card">
@@ -14343,12 +14358,12 @@ function renderMeSessoes(){
 }
 function renderMeMetas(){
   const el = document.getElementById('view-me_metas'); if(!el) return;
-  const sid = currentStudentId;
+  const sid = meArea(currentStudentId);
   if(!ME.metas[sid]){ meCarregarAluno(sid); el.innerHTML = meLogoHtml()+'<div class="empty-state">Carregando as metas…</div>'; return; }
   const lista = ME.metas[sid];
   const feitas = lista.filter(m=>m.status==='Concluída').length;
   const hoje = tzHojeISO();
-  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}
+  el.innerHTML = `${meLogoHtml()}${meConvidadoFaixaHtml()}${currentUserRole!=='me_convidado' ? meSociedadeFaixaHtml(currentStudentId) : ''}
     <p class="section-sub" style="text-align:center">Metas definidas com a equipe no Mentores Essência: ${feitas}/${lista.length} concluídas.</p>
     ${lista.length ? lista.map(m=>{ const ok = m.status==='Concluída'; const atras = !ok && m.prazo && m.prazo < hoje; return `
       <div class="goal-card">
@@ -14372,10 +14387,10 @@ function renderMeMetas(){
 }
 /* Equipe: sessões e metas do Mentores Essência dentro do Acompanhamento Interno do aluno. */
 function meInternoHtml(s){
-  const sid = s.id;
+  const sid = meArea(s.id);
   if(!ME.sessoes[sid] || !ME.metas[sid]){ meCarregarAluno(sid); return '<div class="empty-state">Carregando…</div>'; }
   const ses = ME.sessoes[sid], metas = ME.metas[sid];
-  return `<p class="section-sub" style="margin-top:0">Sessões e metas próprias do Mentores Essência. O aluno vê em Mentores Essência → Minhas Sessões 1:1 e Minhas Metas.</p>
+  return `${meSociedadeFaixaHtml(s.id)}<p class="section-sub" style="margin-top:0">Sessões e metas próprias do Mentores Essência. O aluno vê em Mentores Essência → Minhas Sessões 1:1 e Minhas Metas.</p>
     <h3 class="me-sub">Sessões 1:1 do Mentores Essência</h3>
     <div class="table-wrap"><table class="check-table me-staff-tabela"><thead><tr><th>Data</th><th>Sessão</th><th>Anotações</th><th>Links</th><th></th></tr></thead><tbody>
       ${ses.map(x=>`<tr><td style="white-space:nowrap">${escapeHtml(meDataTxt(x.data)||'—')}</td><td><b>${escapeHtml(x.titulo)}</b></td><td style="min-width:220px">${x.notas ? linkify(x.notas) : '—'}</td>
@@ -14404,8 +14419,8 @@ function meInternoHtml(s){
     ${meConvHtml(s)}`;
 }
 function meInternoBind(s){
-  const v = document.getElementById('view-interno'); if(!v || !s.mentorEssencia || !ME.sessoes[s.id]) return;
-  const sid = s.id;
+  const v = document.getElementById('view-interno'); if(!v || !s.mentorEssencia || !ME.sessoes[meArea(s.id)]) return;
+  const sid = meArea(s.id);
   meConvBind(s, v);
   const on = (id, fn)=>{ const b = v.querySelector('#'+id); if(b) b.addEventListener('click', fn); };
   on('me-ses-add', async (e)=>{
