@@ -2961,6 +2961,7 @@
   .msg-anexo-drop[hidden]{display:none;}
   .mg-foto{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
   .te-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .apoio-op .apoio-usada{margin-left:auto;flex-shrink:0;padding:2px 8px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:10.5px;font-weight:600;white-space:nowrap;}
   .me-socia-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:11.5px;font-weight:600;white-space:nowrap;}
   @media (max-width:640px){ .me-socia-tag{white-space:normal;} }
   .te-form{display:flex;flex-direction:column;gap:18px;}
@@ -15399,21 +15400,27 @@ function aulaPickInnerHtml(sel, prefix){
       <button type="button" class="ps-input apoio-dd-btn" data-${prefix}-abrir>${itensSel.length? 'Adicionar mais aulas ou atividades...' : 'Selecionar aulas ou atividades...'} <span class="apoio-dd-seta">▾</span></button>
     </div>`;
 }
-function apoioPainelHtml(sel, busca){
+/* Quantas outras tarefas do checklist já usam cada aula/atividade (para mostrar "já em N tarefas"). */
+function apoioUsadas(s, exceto){
+  const m = new Map();
+  ((s&&s.checklist)||[]).forEach(t=>{ if(exceto && t===exceto) return; (t.aulas||[]).forEach(id=>m.set(id,(m.get(id)||0)+1)); });
+  return m;
+}
+function apoioPainelHtml(sel, busca, usadas){
   const q = String(busca||'').trim().toLowerCase();
   const seq = apoioSequencia().filter(x=>!q || (x.titulo+' '+x.modNome).toLowerCase().includes(q));
   if(!seq.length) return '<div class="apoio-vazio">Nada encontrado com esse termo.</div>';
   let mod = null, html = '';
   seq.forEach(x=>{
     if(x.modNome!==mod){ mod = x.modNome; html += `<div class="apoio-sec">${escapeHtml(mod)}</div>`; }
-    html += `<button type="button" class="apoio-op ${sel.has(x.id)?'on':''}" data-apoio-op="${escapeAttr(x.id)}"><span class="apoio-box">${sel.has(x.id)?icon('tick','tiny'):''}</span>${icon(x.tipo==='aula'?'play':'check','tiny')}<span>${escapeHtml(x.titulo)}</span></button>`;
+    html += `<button type="button" class="apoio-op ${sel.has(x.id)?'on':''}" data-apoio-op="${escapeAttr(x.id)}"><span class="apoio-box">${sel.has(x.id)?icon('tick','tiny'):''}</span>${icon(x.tipo==='aula'?'play':'check','tiny')}<span>${escapeHtml(x.titulo)}</span>${usadas && usadas.get(x.id) ? `<span class="apoio-usada" title="Já escolhida em ${usadas.get(x.id)} tarefa${usadas.get(x.id)>1?'s':''} anterior${usadas.get(x.id)>1?'es':''} deste checklist">já em ${usadas.get(x.id)} tarefa${usadas.get(x.id)>1?'s':''}</span>` : ''}</button>`;
   });
   return html;
 }
 function aulaPickHtml(selecionadas, prefix){
   return `<div class="aula-pick" id="${prefix}-pick">${aulaPickInnerHtml(new Set(selecionadas||[]), prefix)}</div>`;
 }
-function bindAulaPick(prefix, set){
+function bindAulaPick(prefix, set, usadas){
   const box = document.getElementById(prefix+'-pick');
   if(!box) return;
   let painel = null, busca = '';
@@ -15429,7 +15436,7 @@ function bindAulaPick(prefix, set){
   const fora = (e)=>{ if(painel && !box.contains(e.target)) fecha(); };
   const desenhaLista = ()=>{
     const lista = painel.querySelector('.apoio-lista'); const st = lista.scrollTop;
-    lista.innerHTML = apoioPainelHtml(set, busca);
+    lista.innerHTML = apoioPainelHtml(set, busca, usadas);
     lista.scrollTop = st;
     lista.querySelectorAll('[data-apoio-op]').forEach(b=>b.addEventListener('click', ()=>{
       const id = b.dataset.apoioOp;
@@ -15600,7 +15607,7 @@ function openTarefaEditModal(s, t){
   modalReturnTo = null;
   modalCloseGuard = null;
   document.getElementById('modal-backdrop').classList.add('open');
-  bindAulaPick('te', sel);
+  bindAulaPick('te', sel, apoioUsadas(s, t));
   document.getElementById('te-cancel').addEventListener('click', closeModal);
   document.getElementById('te-resp').addEventListener('change', e=>{ document.getElementById('te-resp-dica').hidden = e.target.value!=='Mentor'; });
   document.getElementById('te-tarefa').focus();
@@ -15643,7 +15650,7 @@ function openTarefaAulasModal(s, t){
   modalReturnTo = null;
   modalCloseGuard = null;
   document.getElementById('modal-backdrop').classList.add('open');
-  bindAulaPick('ta', sel);
+  bindAulaPick('ta', sel, apoioUsadas(s, t));
   document.getElementById('ta-cancel').addEventListener('click', closeModal);
   document.getElementById('ta-save').addEventListener('click', ()=>{
     t.aulas = apoioOrdenar(sel);
@@ -16308,7 +16315,7 @@ function renderInterno(){
       renderInterno();
     }catch(e){ console.error(e); btn.disabled = false; }
   });
-  bindAulaPick('nt', novaTarefaAulas);
+  bindAulaPick('nt', novaTarefaAulas, apoioUsadas(s));
   document.querySelectorAll('[data-task-aulas]').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const t = s.checklist.find(x=>x.id==btn.dataset.taskAulas);
