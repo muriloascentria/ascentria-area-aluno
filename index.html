@@ -23628,8 +23628,8 @@ function rfSolucoesHtml(C){
   // 1. Cobrança
   if(S.cobranca.length){
     const cobre = S.deficit>0 ? Math.min(100, Math.round(C.atrasoTotal/S.deficit*100)) : null;
-    cards.push(`<div class="rf-sol rf-sol-cob"><div class="rf-sol-hd"><b>1. Cobrar o que já venceu</b><span class="rf-sol-num">${br(C.atrasoTotal)}</span></div><p>É o dinheiro mais rápido: já foi vendido e só falta entrar.${cobre!==null ? ` Sozinho, cobre ${cobre}% do buraco de ${rfMesNome(S.mesAperto)}.` : ''} O botão abre o WhatsApp com a mensagem pronta para você revisar e enviar.</p>
-      <div class="rf-cob">${S.cobranca.map(g=>{ const w = rfWaLink(g.whatsapp, g.nome, g.itens); return `<div class="rf-cob-it"><div><b>${escapeHtml(g.nome)}</b><small>${g.itens.length} parcela${g.itens.length>1?'s':''} · ${br(g.total)} · desde ${tzDataCurta(g.itens[0].data_vencimento)}</small></div>${w ? `<a class="btn-mini" href="${w}" target="_blank" rel="noopener">Cobrar no WhatsApp</a>` : '<small class="rf-neg">sem WhatsApp no cadastro</small>'}</div>`; }).join('')}</div></div>`);
+    cards.push(`<div class="rf-sol rf-sol-cob"><div class="rf-sol-hd"><b>1. Cobrar o que já venceu</b><span class="rf-sol-num">${br(C.atrasoTotal)}</span></div><p>É o dinheiro mais rápido: já foi vendido e só falta entrar.${cobre!==null ? ` Sozinho, cobre ${cobre}% do buraco de ${rfMesNome(S.mesAperto)}.` : ''}</p>
+      <div class="rf-cob">${S.cobranca.map(g=>`<div class="rf-cob-it"><div><b>${escapeHtml(g.nome)}</b><small>${g.itens.length} parcela${g.itens.length>1?'s':''} · ${br(g.total)} · desde ${tzDataCurta(g.itens[0].data_vencimento)}</small></div></div>`).join('')}</div></div>`);
   }
   let nro = S.cobranca.length ? 2 : 1;
   // 2. Pró-labore
