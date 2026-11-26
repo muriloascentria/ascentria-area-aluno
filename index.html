@@ -7989,7 +7989,7 @@ function mapVendaSessaoRow(row){
     dataTexto: row.data_texto || (row.data_sessao ? formatDateBR(row.data_sessao) : ''),
     lead: row.lead_nome || '', vendedor: row.vendedor || '', produto: row.produto || '',
     upsell: !!row.upsell, formato: row.formato || '',
-    presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '', videoVenda: row.video_venda || '', transcricao: row.transcricao || '', videoVenda2: row.video_venda_2 || '', transcricao2: row.transcricao_2 || '',
+    presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '', videoVenda: row.video_venda || '', transcricao: row.transcricao || '', videoVenda2: row.video_venda_2 || '', transcricao2: row.transcricao_2 || '', partesExtras: Array.isArray(row.partes_extras) ? row.partes_extras : [],
     valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
     objecoes: row.objecoes || '', objecoes2: row.objecoes2 || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
     contrato: row.contrato_texto || '', garantia: row.garantia || '',
@@ -21651,11 +21651,21 @@ function topPhrases(items, n){
   });
   return Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,n);
 }
+/* Reunião que caiu mais de uma vez: campos da 3ª parte em diante no modal de edição. */
+function vendaParteExtraHtml(n, p){
+  return `<div class="ev-parte-extra">
+    <label class="ps-label">Link da gravação da ${n}ª parte</label>
+    <input class="ps-input" type="text" data-k="video" value="${escapeAttr(p?.video||'')}" placeholder="https://...">
+    <label class="ps-label">Link da transcrição da ${n}ª parte</label>
+    <input class="ps-input" type="text" data-k="transcricao" value="${escapeAttr(p?.transcricao||'')}" placeholder="https://...">
+  </div>`;
+}
 /* Gravação e transcrição da sessão (chegam sozinhas do eCRM quando o Google Meet anexa à reunião). */
 function vendaLinksReuniao(v){
   const link = (url, txt) => /^https?:\/\//i.test(String(url||'').trim())
     ? `<a class="link-btn" href="${escapeAttr(String(url).trim())}" target="_blank" rel="noopener">${txt}</a>` : '';
-  const html = [link(v.videoVenda, 'Gravação'), link(v.transcricao, 'Transcrição'), link(v.videoVenda2, 'Gravação 2ª parte'), link(v.transcricao2, 'Transcrição 2ª parte')].filter(Boolean).join(' ');
+  const html = [link(v.videoVenda, 'Gravação'), link(v.transcricao, 'Transcrição'), link(v.videoVenda2, 'Gravação 2ª parte'), link(v.transcricao2, 'Transcrição 2ª parte'),
+    ...(v.partesExtras||[]).flatMap((p, i) => [link(p?.video, `Gravação ${i+3}ª parte`), link(p?.transcricao, `Transcrição ${i+3}ª parte`)])].filter(Boolean).join(' ');
   return html ? `<div class="vd-links" style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;font-weight:400">${html}</div>` : '';
 }
 function vendaTemRegistro(t, fallback){ return !!(t && String(t).trim() && String(t).trim()!==fallback); }
@@ -22064,6 +22074,8 @@ function openEditVendaModal(id){
           <input class="ps-input" type="text" id="ev-video2" value="${escapeAttr(v.videoVenda2||'')}" placeholder="https://...">
           <label class="ps-label">Link da transcrição da 2ª parte</label>
           <input class="ps-input" type="text" id="ev-transcricao2" value="${escapeAttr(v.transcricao2||'')}" placeholder="https://...">
+          <div id="ev-partes-extras">${(v.partesExtras||[]).map((p, i) => vendaParteExtraHtml(i + 3, p)).join('')}</div>
+          <button type="button" class="btn-outline btn-mini ev-parte2-btn" id="ev-parte-mais">${icon('plus','tiny')} Adicionar mais uma parte</button>
         </div>
       </div>
       <div class="ps-section">
@@ -22099,6 +22111,7 @@ function openEditVendaModal(id){
       evPreencher();
     });
   });
+  { const bm = document.getElementById('ev-parte-mais'); if(bm) bm.addEventListener('click', ()=>{ const box = document.getElementById('ev-partes-extras'); const n = box.querySelectorAll('.ev-parte-extra').length + 3; box.insertAdjacentHTML('beforeend', vendaParteExtraHtml(n, {})); box.lastElementChild.querySelector('input').focus(); }); }
   { const b2 = document.getElementById('ev-parte2-btn'); if(b2) b2.addEventListener('click', ()=>{ b2.hidden = true; const box = document.getElementById('ev-parte2'); box.hidden = false; document.getElementById('ev-video2').focus(); }); }
   document.getElementById('ev-save').addEventListener('click', ()=>{
     /* O link da gravação precisa ser o do vídeo (Drive), não da agenda nem da transcrição. */
@@ -22129,6 +22142,7 @@ function openEditVendaModal(id){
     v.transcricao = document.getElementById('ev-transcricao').value.trim();
     v.videoVenda2 = document.getElementById('ev-video2').value.trim();
     v.transcricao2 = document.getElementById('ev-transcricao2').value.trim();
+    v.partesExtras = [...document.querySelectorAll('#ev-partes-extras .ev-parte-extra')].map((el) => ({ video: el.querySelector('[data-k="video"]').value.trim(), transcricao: el.querySelector('[data-k="transcricao"]').value.trim() })).filter((p) => p.video || p.transcricao);
     const alunoSel = document.getElementById('ev-aluno');
     if(alunoSel) v.studentId = alunoSel.value || null;
     syncVendaSessaoUpdate(v.id, {
@@ -22142,6 +22156,7 @@ function openEditVendaModal(id){
       contrato_texto: v.contrato || null, garantia: v.resultado==='Vendido' ? (v.garantia||'Permaneceu') : (v.garantia||null),
       video_venda: v.videoVenda || null, transcricao: v.transcricao || null,
       video_venda_2: v.videoVenda2 || null, transcricao_2: v.transcricao2 || null,
+      partes_extras: v.partesExtras || [],
     });
     closeModal();
     renderVendas();
