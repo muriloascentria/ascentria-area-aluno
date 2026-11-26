@@ -2590,6 +2590,19 @@
   .tf-sinal.hoje{background:rgba(245,158,11,.16);color:#d97706;}
   .tf-sinal.urgente{background:var(--danger);color:#fff;}
   .tf-sinal.nova{background:rgba(37,99,235,.16);color:#2563eb;}
+  .vm-det{margin-top:14px;}
+  .vm-det > summary{list-style:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
+  .vm-det > summary::-webkit-details-marker{display:none;}
+  .vm-det .ep-nota-seta{width:15px;height:15px;transition:transform .2s;}
+  .vm-det[open] > summary .ep-nota-seta{transform:rotate(180deg);}
+  .vm-lista{display:flex;flex-direction:column;margin-top:8px;}
+  .vm-item{border-top:1px solid var(--border);padding:8px 0;}
+  .vm-item > summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;}
+  .vm-item > summary::-webkit-details-marker{display:none;}
+  .vm-prev{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .vm-item[open] .vm-prev{display:none;}
+  .vm-item > summary small{font-size:11.5px;color:var(--text-mute);}
+  .vm-full{font-size:13.5px;line-height:1.55;margin-top:6px;word-break:break-word;}
   .embm-btn{display:inline-flex !important;flex-direction:row !important;align-items:center;justify-content:center;gap:6px;white-space:nowrap;}
   .tf-sinal.revisao{background:rgba(124,58,237,.16);color:#7c3aed;}
   .tf-sinal.ajuste{background:rgba(217,119,6,.16);color:#d97706;}
@@ -6618,11 +6631,8 @@ function lembBlocoHtml(){
         </div>
       </div>
       <div class="recado-rodape"><small id="lemb-msg"></small><div class="recado-btns"><button type="button" class="btn-accent" id="lemb-salvar" style="display:inline-flex;flex-direction:row;align-items:center;gap:6px;white-space:nowrap">${icon('bell','tiny')} Marcar lembrete</button></div></div>
-      ${lista.length ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${lista.slice(0,8).map(l=>`
-        <div style="font-size:12.5px;border-top:1px solid var(--border);padding-top:6px">
-          <b>${escapeHtml(tzDataHora(l.quando, true))}</b> · para ${escapeHtml(nome(l.user_id))} · <span style="color:var(--text-dim)">${l.visto_em ? 'visto em '+escapeHtml(tzDataHora(l.visto_em, true)) : (new Date(l.quando) <= new Date() ? 'aguardando a pessoa abrir o ePLAT' : 'agendado')}</span>
-          <div style="color:var(--text-dim);margin-top:2px">${escapeHtml(l.texto)}</div>
-        </div>`).join('')}</div>` : ''}
+      ${verMaisHtml('Ver lembretes anteriores', lista.map(l=>({ texto:l.texto||'',
+        meta:`${escapeHtml(tzDataHora(l.quando, true))} · para ${escapeHtml(nome(l.user_id))} · ${l.visto_em ? 'visto em '+escapeHtml(tzDataHora(l.visto_em, true)) : (new Date(l.quando) <= new Date() ? 'aguardando a pessoa abrir o ePLAT' : 'agendado')}` })))}
     </div>`;
 }
 function lembBlocoBind(){
@@ -21219,7 +21229,19 @@ const ENVIO_REMETENTES = [
   { id:'8b5e35ad-0e4a-48ca-bca3-ad7fdcfae3cc', nome:'Diego'  }
 ];
 let ENVIOS_LISTA = [];
-let envioUI = { remetente: ENVIO_ADMIN_UID, canal:'mensagem', modo:'agora', texto:'', data:'', hora:'' };
+let envioUI = { remetente: ENVIO_ADMIN_UID, canal:'notificacao', modo:'agora', texto:'', data:'', hora:'', publico:'mentorado' };
+/* Público do envio coletivo (pedido do Murilo, 26/11/2026). Mentorados não têm mais Mensagens do ePLAT:
+   para eles (e para "Todos") só existe Notificação. O banco confere a mesma regra (envio_coletivo_criar). */
+const ENVIO_PUBLICOS = [['mentorado','Mentorados (Mentoria Essência)'],['metodo','Alunos do Método Essência'],['pos','Alunos da Pós-graduação'],['todos','Todos os alunos']];
+function envioPublicoNome(k){ const x = ENVIO_PUBLICOS.find(p=>p[0]===k); return x ? x[1] : 'Mentorados'; }
+function envioPermiteMensagem(k){ return k==='metodo' || k==='pos'; }
+/* "Ver mais" padrão da plataforma: recolhido, com seta; cada item abre a mensagem inteira ao tocar. */
+function verMaisHtml(rotulo, itens){
+  if(!itens.length) return '';
+  return `<details class="ep-nota-det vm-det"><summary><span>${escapeHtml(rotulo)} (${itens.length})</span><svg class="ep-nota-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <div class="vm-lista">${itens.map(it=>`<details class="vm-item"><summary><span class="vm-prev">${escapeHtml(it.texto)}</span><small>${it.meta}</small></summary><div class="vm-full">${linkify(it.texto).replace(/\n/g,'<br>')}</div>${it.acao||''}</details>`).join('')}</div>
+  </details>`;
+}
 
 function envioSouAutor(){ return currentUserRole==='staff' && currentUser && currentUser.id === ENVIO_ADMIN_UID; }
 
@@ -21248,26 +21270,24 @@ function fmtDataHora(iso){
 function envioBlocoHtml(){
   if(!envioSouAutor()) return '';
   const agendar = envioUI.modo === 'agendar';
+  if(!envioPermiteMensagem(envioUI.publico)) envioUI.canal = 'notificacao';
   const pessoas = ENVIO_REMETENTES.map(r=>{
     const p = PEOPLE[r.id] || {};
     return `<button type="button" data-envio-rem="${r.id}" class="envio-pessoa ${envioUI.remetente===r.id?'on':''}" aria-pressed="${envioUI.remetente===r.id}">${initialsAvatar(p.initials||r.nome.slice(0,2).toUpperCase(), p.color||'#8d916f', 26, p.avatarUrl)}<span>${escapeHtml(r.nome)}</span></button>`;
   }).join('');
   const op = (attr, val, atual, titulo, desc)=>`<button type="button" ${attr}="${val}" class="envio-op ${atual===val?'on':''}" aria-pressed="${atual===val}"><span class="envio-op-radio"></span><span class="envio-op-txt"><b>${titulo}</b><small>${desc}</small></span></button>`;
-  const lista = ENVIOS_LISTA.length ? `
-    <div class="envio-lista">
-      ${ENVIOS_LISTA.map(e=>`
-        <div class="envio-item">
-          <div class="envio-item-txt">
-            <strong>${escapeHtml(e.texto)}</strong>
-            <small>${escapeHtml(envioNomeRemetente(e.remetente))} · ${e.canal==='mensagem'?'mensagem':'notificação'} · ${escapeHtml(envioQuandoTexto(e))}</small>
-          </div>
-          ${e.status==='agendado' ? `<button type="button" class="btn-mini danger" data-envio-cancelar="${e.id}">Cancelar</button>` : ''}
-        </div>`).join('')}
-    </div>` : '';
+  const lista = verMaisHtml('Ver envios anteriores', ENVIOS_LISTA.map(e=>({ texto:e.texto||'',
+    meta:`${escapeHtml(envioNomeRemetente(e.remetente))} · ${escapeHtml(envioPublicoNome(e.publico||'mentorado'))} · ${e.canal==='mensagem'?'mensagem':'notificação'} · ${escapeHtml(envioQuandoTexto(e))}`,
+    acao: e.status==='agendado' ? `<button type="button" class="btn-mini danger" data-envio-cancelar="${e.id}" style="margin-top:8px">Cancelar</button>` : '' })));
   return `
     <div class="envio-bloco">
-      <div class="envio-hd">${icon('send','tiny')} <strong>ENVIO COLETIVO PARA OS MENTORADOS</strong></div>
-      <p class="envio-sub">Mesma mensagem para todos os mentorados de uma vez. Cada um recebe na conversa privada com a pessoa escolhida, ou só como notificação no celular.</p>
+      <div class="envio-hd">${icon('send','tiny')} <strong>ENVIO COLETIVO PARA USUÁRIOS</strong></div>
+      <p class="envio-sub">Mesma mensagem para um perfil de alunos de uma vez. Alunos do Método e da Pós podem receber na conversa privada com a pessoa escolhida; mentorados recebem só como notificação no celular.</p>
+
+      <div class="envio-campo">
+        <p class="envio-label">Para quem</p>
+        <select class="ps-input" id="envio-publico">${ENVIO_PUBLICOS.map(([k,l])=>`<option value="${k}" ${envioUI.publico===k?'selected':''}>${escapeHtml(l)}</option>`).join('')}</select>
+      </div>
 
       <div class="envio-campo">
         <p class="envio-label">Enviar como</p>
@@ -21283,7 +21303,7 @@ function envioBlocoHtml(){
         <div class="envio-campo">
           <p class="envio-label">Como chega</p>
           <div class="envio-ops" id="envio-canal">
-            ${op('data-envio-canal','mensagem',envioUI.canal,'Mensagem','Abre uma conversa 1 a 1, e o mentorado pode responder.')}
+            ${envioPermiteMensagem(envioUI.publico) ? op('data-envio-canal','mensagem',envioUI.canal,'Mensagem','Abre uma conversa 1 a 1, e o aluno pode responder.') : ''}
             ${op('data-envio-canal','notificacao',envioUI.canal,'Notificação','Só um aviso no celular de quem tem o app instalado.')}
           </div>
         </div>
@@ -21315,6 +21335,8 @@ function bindEnvioBloco(){
   if(!envioSouAutor()) return;
   const ta = document.getElementById('envio-texto');
   if(ta) ta.addEventListener('input', ()=>{ envioUI.texto = ta.value; });
+  const pub = document.getElementById('envio-publico');
+  if(pub) pub.addEventListener('change', ()=>{ if(ta) envioUI.texto = ta.value; envioUI.publico = pub.value; if(!envioPermiteMensagem(pub.value)) envioUI.canal = 'notificacao'; envioRedesenhar(); });
 
   document.querySelectorAll('[data-envio-rem]').forEach(b=>b.addEventListener('click', ()=>{
     if(ta) envioUI.texto = ta.value;
@@ -21362,18 +21384,19 @@ function bindEnvioBloco(){
     }
     const quem = envioNomeRemetente(envioUI.remetente);
     const como = envioUI.canal==='mensagem' ? 'como mensagem na conversa 1 a 1' : 'como notificação no celular';
+    const pubTxt = envioPublicoNome(envioUI.publico);
     const pergunta = quando
-      ? `Agendar para ${fmtDataHora(quando)}? Todos os mentorados vão receber ${como}, em nome de ${quem}.`
-      : `Enviar agora para todos os mentorados, ${como}, em nome de ${quem}?`;
+      ? `Agendar para ${fmtDataHora(quando)}? ${pubTxt} vão receber ${como}, em nome de ${quem}.`
+      : `Enviar agora para ${pubTxt}, ${como}, em nome de ${quem}?`;
     if(!(await showAppConfirm(pergunta, {title: quando?'Agendar envio':'Enviar para todos', confirmLabel: quando?'Agendar':'Enviar'}))) return;
     enviar.disabled = true;
     const { error } = await sb.rpc('envio_coletivo_criar', {
-      p_remetente: envioUI.remetente, p_texto: texto, p_canal: envioUI.canal, p_quando: quando });
+      p_remetente: envioUI.remetente, p_texto: texto, p_canal: envioPermiteMensagem(envioUI.publico) ? envioUI.canal : 'notificacao', p_quando: quando, p_publico: envioUI.publico });
     if(error){ showAppAviso('Não foi possível enviar: '+(error.message||'')); enviar.disabled = false; return; }
     envioUI.texto = ''; envioUI.modo = 'agora';
     await carregarEnvios();
     envioRedesenhar();
-    showAppAviso(quando ? 'Envio agendado.' : 'Mensagem enviada para todos os mentorados.');
+    showAppAviso(quando ? 'Envio agendado.' : 'Enviado para '+envioPublicoNome(envioUI.publico)+'.');
   });
 }
 
