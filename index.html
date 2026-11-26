@@ -2961,6 +2961,8 @@
   .msg-anexo-drop[hidden]{display:none;}
   .mg-foto{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
   .te-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .me-socia-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:11.5px;font-weight:600;white-space:nowrap;}
+  @media (max-width:640px){ .me-socia-tag{white-space:normal;} }
   .te-form{display:flex;flex-direction:column;gap:18px;}
   .te-form .te-cab .cat{margin-bottom:4px;} .te-form .te-cab h3{margin:0;}
   .te-form .field{display:flex;flex-direction:column;gap:6px;margin:0 !important;min-width:0;}
@@ -13932,9 +13934,10 @@ async function meSociasCarregar(){
 }
 function meArea(sid){ return (sid && ME_SOCIA[sid]) || sid; }
 function meSociasDe(area){ return Object.keys(ME_SOCIA).filter(k=>ME_SOCIA[k]===area); }
-function meSociedadeFaixaHtml(sid){
+function meSociedadeFaixaHtml(sid, comoTag){
   const area = meArea(sid); const nomes = [area].concat(meSociasDe(area)).filter(id=>id!==sid).map(id=>((getStudent(id)||PEOPLE[id]||{}).name||'').split(' ')[0]).filter(Boolean);
   if(!nomes.length || (area===sid && !meSociasDe(area).length)) return '';
+  if(comoTag) return `<span class="me-socia-tag" title="O que uma escreve, a outra vê.">${icon('users','tiny')} Área compartilhada com ${escapeHtml(nomes.join(' e '))}</span>`;
   return `<div class="me-conv-faixa">${icon('users','tiny')} Área compartilhada com ${escapeHtml(nomes.join(' e '))}, sócia${nomes.length>1?'s':''} no Mentores Essência. O que uma escreve, a outra vê.</div>`;
 }
 const ME_CONV = {}; // titular_id -> lista de convidados (equipe)
@@ -14407,7 +14410,7 @@ function meInternoHtml(s){
   const sid = meArea(s.id);
   if(!ME.sessoes[sid] || !ME.metas[sid]){ meCarregarAluno(sid); return '<div class="empty-state">Carregando…</div>'; }
   const ses = ME.sessoes[sid], metas = ME.metas[sid];
-  return `${meSociedadeFaixaHtml(s.id)}<p class="section-sub" style="margin-top:0">Sessões e metas próprias do Mentores Essência. O aluno vê em Mentores Essência → Minhas Sessões 1:1 e Minhas Metas.</p>
+  return `<p class="section-sub" style="margin-top:0">Sessões e metas próprias do Mentores Essência. O aluno vê em Mentores Essência → Minhas Sessões 1:1 e Minhas Metas.</p>
     <h3 class="me-sub">Sessões 1:1 do Mentores Essência</h3>
     <div class="table-wrap"><table class="check-table me-staff-tabela"><thead><tr><th>Data</th><th>Sessão</th><th>Anotações</th><th>Links</th><th></th></tr></thead><tbody>
       ${ses.map(x=>`<tr><td style="white-space:nowrap">${escapeHtml(meDataTxt(x.data)||'—')}</td><td><b>${escapeHtml(x.titulo)}</b></td><td style="min-width:220px">${x.notas ? linkify(x.notas) : '—'}</td>
@@ -15973,10 +15976,10 @@ function renderInterno(){
         </div>
       </div>
     </div>`;
-  const intHead = (chave, ic, titulo, qtd)=> `
+  const intHead = (chave, ic, titulo, qtd, extra)=> `
     <div class="vg-sec-head" data-int-toggle="${chave}">
       <h2 class="section-title com-titulo">${ic? icon(ic)+' ' : ''}${titulo}</h2>
-      ${qtd===null||qtd===undefined ? '' : `<span class="qtd">${qtd}</span>`}
+      ${qtd===null||qtd===undefined ? '' : `<span class="qtd">${qtd}</span>`}${extra||''}
       <button type="button" class="vg-sec-toggle ${aberto[chave]?'':'fechado'}" title="${aberto[chave]?'Recolher':'Expandir'}">${icon('down')} ${aberto[chave]?'Recolher':'Expandir'}</button>
     </div>`;
   const intBody = (chave)=> `<div class="int-sec-corpo" id="int-sec-${chave}" ${aberto[chave]? '' : 'hidden'}>`;
@@ -16183,7 +16186,7 @@ function renderInterno(){
       ${intAnaliseHtml(s)}
       ${intCompetenciasHtml(s)}
     </div>
-    ${s.mentorEssencia ? `${intHead('mentores', 'award', 'Mentores Essência', null)}
+    ${s.mentorEssencia ? `${intHead('mentores', 'award', 'Mentores Essência', null, meSociedadeFaixaHtml(s.id, true))}
     ${intBody('mentores')}${meInternoHtml(s)}</div>` : ''}
   `;
   document.getElementById('edit-aluno-btn').addEventListener('click',()=>openEditAlunoModal(s));
