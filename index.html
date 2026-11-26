@@ -2593,6 +2593,8 @@
   /* Rota de Embarque: ícone e palavras sempre lado a lado, na mesma linha (pedido do Murilo, 26/11/2026). */
   #view-embarque button:not(.emb-card-x), #view-embarque .emb-tag-lead, #view-embarque .emb-etapa-hd, #view-embarque .emb-col-hd, #view-embarque .emb-guia-msg-hd button, #view-embarque .emb-copiar-mini, #view-embarque .emb-fora-largo{display:inline-flex !important;flex-direction:row !important;align-items:center;gap:6px;}
   #view-embarque button:not(.emb-card-x) > svg, #view-embarque .emb-tag-lead > svg{flex:0 0 auto;margin:0 !important;}
+  /* Mentores Essência: a aba Aulas saiu do menu (pedido do Murilo, 26/11/2026). */
+  .nav-item.nav-oculto{display:none !important;}
   .vm-det{margin-top:14px;}
   .vm-det > summary{list-style:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
   .vm-det > summary::-webkit-details-marker{display:none;}
@@ -4631,7 +4633,7 @@
 
     <div class="nav-group-label nav-group-mentores" id="nav-group-mentores" style="display:none">Mentores Essência</div>
     <button class="nav-item mentores" data-view="me_jornada" style="display:none"></button>
-    <button class="nav-item mentores" data-view="me_aulas" style="display:none"></button>
+    <button class="nav-item mentores nav-oculto" data-view="me_aulas" style="display:none"></button>
     <button class="nav-item mentores" data-view="me_sessoes" style="display:none"></button>
     <button class="nav-item mentores" data-view="me_metas" style="display:none"></button>
     <button class="nav-item mentores" data-view="me_materiais" style="display:none"></button>
