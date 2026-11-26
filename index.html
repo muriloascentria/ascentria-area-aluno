@@ -6532,6 +6532,55 @@ function recadoAbrirJanela(){
     if(ev.key==='Escape'){ document.removeEventListener('keydown', esc); fechar(); }
   });
 }
+/* ---- Lembretes na tela (pedido do Murilo, 26/11/2026) ----
+   Mensagem para uma pessoa da equipe que aparece numa janela, como o recado do dia, a partir do
+   horário marcado (tabela lembretes_tela). A pessoa fecha com "Ok" e ele não volta mais. A página
+   confere a cada minuto, então o lembrete aparece mesmo com o ePLAT já aberto. */
+let LEMBRETES = [];
+let LEMB_TIMER = null;
+async function lembCarregar(){
+  if(currentUserRole!=='staff' || !currentUser){ LEMBRETES = []; return; }
+  try{
+    const { data, error } = await sb.from('lembretes_tela').select('*').eq('user_id', currentUser.id).is('visto_em', null).order('quando');
+    if(error) throw error;
+    LEMBRETES = data || [];
+  }catch(e){ console.warn('lembretes_tela', e); LEMBRETES = []; }
+}
+function lembChecar(){
+  if(document.querySelector('.recado-backdrop')) return;
+  const agora = Date.now();
+  const l = LEMBRETES.find(x=>!x.visto_em && new Date(x.quando).getTime() <= agora);
+  if(!l) return;
+  const autor = PEOPLE[l.criado_por] || {};
+  const wrap = document.createElement('div');
+  wrap.className = 'recado-backdrop';
+  wrap.innerHTML = `
+    <div class="recado-card" role="dialog" aria-modal="true" aria-label="Lembrete">
+      <div class="recado-topo">
+        ${initialsAvatar(autor.initials||'L', '#b8863b', 44, autor.avatarUrl||null)}
+        <div class="recado-de">
+          <strong>${escapeHtml(l.criado_por===currentUser.id ? 'Lembrete' : (autor.name||'Lembrete'))}</strong>
+          <small>Lembrete · ${escapeHtml(tzDataHora(l.quando, true))}</small>
+        </div>
+      </div>
+      <div class="recado-texto">${linkify(l.texto||'').replace(/\n/g,'<br>')}</div>
+      <div class="recado-acoes"><button type="button" class="btn-accent" data-lemb-ok>Ok</button></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const fechar = async ()=>{
+    wrap.remove(); l.visto_em = new Date().toISOString();
+    try{ await sb.from('lembretes_tela').update({ visto_em: l.visto_em }).eq('id', l.id); }catch(e){ console.warn('lembretes_tela', e); }
+    setTimeout(lembChecar, 400);
+  };
+  wrap.querySelector('[data-lemb-ok]').addEventListener('click', fechar);
+}
+function lembIniciar(){
+  if(LEMB_TIMER) clearInterval(LEMB_TIMER);
+  if(currentUserRole!=='staff') return;
+  let n = 0;
+  LEMB_TIMER = setInterval(async ()=>{ n++; if(n % 10 === 0) await lembCarregar(); lembChecar(); }, 60000);
+  setTimeout(lembChecar, 1500);
+}
 /* Bloco no Início da equipe — só o Murilo vê e escreve. */
 function recadoPainelHtml(){
   if(!recadoSouAutor()) return '';
@@ -7326,7 +7375,7 @@ async function bootstrapData(){
     }),
   ];
   if(currentUserRole!=='aluno') onda.push(carregarRecadoDia(), tvCarregar());
-  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios(), acessoCarregar());
+  if(currentUserRole==='staff') onda.push(tarefasBootstrap(), msgBootstrap(), carregarCheckpoint(), carregarAlertasAcomp(), carregarEnvios(), acessoCarregar(), lembCarregar());
   else if(msgSouMentorado()) onda.push(msgBootstrap(), e27Carregar());
   if(currentUserRole==='aluno') onda.push(termosCarregar());
 
@@ -7421,7 +7470,7 @@ async function enterApp(){
     }
   }catch(e){}
   goTo(abaInicial);
-  if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); setTimeout(scPreencherCasos, 1500); }
+  if(currentUserRole==='staff'){ carregarRecadoVistos(); setTimeout(recadoAbrirJanela, 350); setTimeout(scPreencherCasos, 1500); lembIniciar(); }
   if(currentUserRole==='staff' && location.hash.startsWith('#termo=')) setTimeout(()=>termoVerArquivo(location.hash.slice(7)), 600);
   setTimeout(aulaDoLinkAbrir, 900);
   if(currentUserRole==='aluno') setTimeout(npsVerificar, 1800);
