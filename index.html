@@ -2964,6 +2964,8 @@
   .apoio-op .apoio-usada{margin-left:auto;flex-shrink:0;padding:2px 8px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:10.5px;font-weight:600;white-space:nowrap;}
   .me-socia-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:rgba(212,175,55,.14);color:#c9a23a;font-size:11.5px;font-weight:600;white-space:nowrap;}
   @media (max-width:640px){ .me-socia-tag{white-space:normal;} }
+  .ev-parte2-btn{margin:10px 0 4px;display:inline-flex;align-items:center;gap:6px;}
+  #ev-parte2[hidden], .ev-parte2-btn[hidden]{display:none !important;}
   .te-form{display:flex;flex-direction:column;gap:18px;}
   .te-form .te-cab .cat{margin-bottom:4px;} .te-form .te-cab h3{margin:0;}
   .te-form .field{display:flex;flex-direction:column;gap:6px;margin:0 !important;min-width:0;}
@@ -7974,7 +7976,7 @@ function mapVendaSessaoRow(row){
     dataTexto: row.data_texto || (row.data_sessao ? formatDateBR(row.data_sessao) : ''),
     lead: row.lead_nome || '', vendedor: row.vendedor || '', produto: row.produto || '',
     upsell: !!row.upsell, formato: row.formato || '',
-    presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '', videoVenda: row.video_venda || '', transcricao: row.transcricao || '',
+    presenca: row.presenca || '', resultado: row.resultado || '', whatsapp: row.whatsapp || '', videoVenda: row.video_venda || '', transcricao: row.transcricao || '', videoVenda2: row.video_venda_2 || '', transcricao2: row.transcricao_2 || '',
     valorTexto: row.valor_texto || '', valorNumerico: row.valor_numerico!=null ? Number(row.valor_numerico) : null,
     objecoes: row.objecoes || '', objecoes2: row.objecoes2 || '', problemas: row.problemas_sessao || '', observacoes: row.observacoes || '',
     contrato: row.contrato_texto || '', garantia: row.garantia || '',
@@ -21640,7 +21642,7 @@ function topPhrases(items, n){
 function vendaLinksReuniao(v){
   const link = (url, txt) => /^https?:\/\//i.test(String(url||'').trim())
     ? `<a class="link-btn" href="${escapeAttr(String(url).trim())}" target="_blank" rel="noopener">${txt}</a>` : '';
-  const html = [link(v.videoVenda, 'Gravação'), link(v.transcricao, 'Transcrição')].filter(Boolean).join(' ');
+  const html = [link(v.videoVenda, 'Gravação'), link(v.transcricao, 'Transcrição'), link(v.videoVenda2, 'Gravação 2ª parte'), link(v.transcricao2, 'Transcrição 2ª parte')].filter(Boolean).join(' ');
   return html ? `<div class="vd-links" style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;font-weight:400">${html}</div>` : '';
 }
 function vendaTemRegistro(t, fallback){ return !!(t && String(t).trim() && String(t).trim()!==fallback); }
@@ -22043,6 +22045,13 @@ function openEditVendaModal(id){
         <input class="ps-input" type="text" id="ev-video" value="${escapeAttr(v.videoVenda||'')}" placeholder="https://...">
         <label class="ps-label">Link da transcrição da sessão</label>
         <input class="ps-input" type="text" id="ev-transcricao" value="${escapeAttr(v.transcricao||'')}" placeholder="https://...">
+        <button type="button" class="btn-outline btn-mini ev-parte2-btn" id="ev-parte2-btn" ${(v.videoVenda2||v.transcricao2)?'hidden':''}>${icon('plus','tiny')} Reunião quebrada: adicionar 2ª parte</button>
+        <div id="ev-parte2" ${(v.videoVenda2||v.transcricao2)?'':'hidden'}>
+          <label class="ps-label">Link da gravação da 2ª parte</label>
+          <input class="ps-input" type="text" id="ev-video2" value="${escapeAttr(v.videoVenda2||'')}" placeholder="https://...">
+          <label class="ps-label">Link da transcrição da 2ª parte</label>
+          <input class="ps-input" type="text" id="ev-transcricao2" value="${escapeAttr(v.transcricao2||'')}" placeholder="https://...">
+        </div>
       </div>
       <div class="ps-section">
         <div class="ps-h">Aluno vinculado (tag)</div>
@@ -22077,6 +22086,7 @@ function openEditVendaModal(id){
       evPreencher();
     });
   });
+  { const b2 = document.getElementById('ev-parte2-btn'); if(b2) b2.addEventListener('click', ()=>{ b2.hidden = true; const box = document.getElementById('ev-parte2'); box.hidden = false; document.getElementById('ev-video2').focus(); }); }
   document.getElementById('ev-save').addEventListener('click', ()=>{
     /* O link da gravação precisa ser o do vídeo (Drive), não da agenda nem da transcrição. */
     const vidLink = document.getElementById('ev-video').value.trim();
@@ -22104,6 +22114,8 @@ function openEditVendaModal(id){
     v.contrato = document.getElementById('ev-contrato').value.trim();
     v.videoVenda = document.getElementById('ev-video').value.trim();
     v.transcricao = document.getElementById('ev-transcricao').value.trim();
+    v.videoVenda2 = document.getElementById('ev-video2').value.trim();
+    v.transcricao2 = document.getElementById('ev-transcricao2').value.trim();
     const alunoSel = document.getElementById('ev-aluno');
     if(alunoSel) v.studentId = alunoSel.value || null;
     syncVendaSessaoUpdate(v.id, {
@@ -22116,6 +22128,7 @@ function openEditVendaModal(id){
       objecoes: v.objecoes || null, objecoes2: v.objecoes2 || null, observacoes: v.observacoes || null,
       contrato_texto: v.contrato || null, garantia: v.resultado==='Vendido' ? (v.garantia||'Permaneceu') : (v.garantia||null),
       video_venda: v.videoVenda || null, transcricao: v.transcricao || null,
+      video_venda_2: v.videoVenda2 || null, transcricao_2: v.transcricao2 || null,
     });
     closeModal();
     renderVendas();
