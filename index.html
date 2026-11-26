@@ -16109,7 +16109,7 @@ function renderInterno(){
 
     ${intHead('contatos', 'comment', 'Registro de Contatos', s.contatos.length)}
     ${intBody('contatos')}
-    <p class="section-sub" style="margin-top:0">Qualquer pessoa da equipe que teve contato com o mentorado — reunião no Google Meet, reunião presencial, contato por WhatsApp ou mensagem no Plat — pode registrar aqui.</p>
+    <p class="section-sub" style="margin-top:0">Qualquer pessoa da equipe que teve contato com o mentorado — reunião no Google Meet, reunião presencial ou contato por WhatsApp — pode registrar aqui.</p>
     <div class="table-wrap">
       <table class="check-table">
         <thead><tr><th>Data</th><th>Tipo</th><th>Responsável</th><th>Resumo</th><th>Link da Gravação</th><th>Link da Transcrição</th><th>Minhas Sessões 1:1</th><th class="ct-acoes"></th></tr></thead>
@@ -21179,7 +21179,7 @@ function gtBindEdicao(el, freq){
    as mesmas regras de acesso (equipeViewPode). O Início só mostra o que estiver visível no menu. */
 const EQUIPE_ATALHOS = [
   {view:'tarefas',    desc:'Tarefas da equipe: minhas, delegadas, quadro por pessoa e prazos.'},
-  {view:'comunicacao',desc:'Recado do dia para a equipe, lembretes na tela, checkpoint quinzenal e envio coletivo.'},
+  {view:'comunicacao',desc:'Recado do dia para a equipe, lembretes na tela e envio coletivo.'},
   {view:'mensagens',  desc:'Conversas com a equipe, grupos e o acompanhamento de cada mentorado, em tempo real.'},
   {view:'visaogeral', desc:'Mentorados, alunos do Método, códigos de acesso e backup.'},
   {view:'interno',    desc:'Diagnóstico, checklist, encontros e registros internos do mentorado selecionado.'},
@@ -21546,7 +21546,7 @@ function renderComunicacao(){
     <p class="section-sub" style="margin-top:-6px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
     ${recado || `<div class="tf-vazio" style="padding:14px">O recado do dia é escrito pela administração. Você vê a janela com o recado ao abrir o sistema.</div>`}
     ${lembBlocoHtml()}
-    ${checkpointHtml()}
+    ${''/* checkpoint quinzenal saiu: mandava mensagem do ePLAT para mentorados, que agora só usam WhatsApp (26/11/2026) */}
     ${envioBlocoHtml()}
     </div>
     `;
@@ -21558,7 +21558,6 @@ function renderComunicacao(){
   }));
   bindRecadoPainel();
   lembBlocoBind();
-  bindCheckpoint();
   bindEnvioBloco();
 }
 /* Trocar o filtro do NPS redesenha só a área do NPS: a tela não pula e a barra de rolagem fica onde
@@ -26862,7 +26861,7 @@ function obCompItensHtml(s){
       <div class="ob-datas">${re
         ? `<span class="ob-campo"><label for="ob-${e.k}-re">Realizado em</label><input class="ps-input" type="date" id="ob-${e.k}-re" data-ob="${e.k}_realizada" value="${escapeAttr(re)}"></span>`
         : `<span class="ob-campo"><label for="ob-${e.k}-ag">Agendado para</label><input class="ps-input" type="date" id="ob-${e.k}-ag" data-ob="${e.k}_agendada" value="${escapeAttr(ag)}"></span>`}</div></li>`;
-  }).join('') + `<li class="ob-nota"><small>${escapeHtml(obAvisoCheckpoint(s, o))}</small></li>`;
+  }).join('');
 }
 async function obSalvar(campo, valor){
   const row = Object.assign({ student_id: AE_UI.sid, updated_at: new Date().toISOString(), updated_by: currentUser && currentUser.id }, { [campo]: valor || null });
