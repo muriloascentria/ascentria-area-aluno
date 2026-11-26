@@ -21237,7 +21237,7 @@ function viewsDoPapel(){
   // A equipe interna, nos modos "Visualização Consultora/Editor", enxerga exatamente o que aquele papel enxerga.
   const papel = currentUserRole==='staff' ? (currentRole==='consultora' ? 'vendas' : currentRole==='editor' ? 'editor' : null) : currentUserRole;
   if(papel==='vendas') return ['equipe'].concat(MSG_SO_ALUNOS ? [] : ['mensagens']).concat(['vendas','analise','treinamento','reunioes','politicas']).concat(tarefasSouMembro()? ['tarefas'] : []).filter(areaAtiva);
-  if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(MSG_SO_ALUNOS ? [] : ['mensagens']).concat(['marca']).filter(areaAtiva);
+  if(papel==='editor') return ['equipe'].concat(tarefasSouMembro()? ['tarefas'] : []).concat(MSG_SO_ALUNOS ? [] : ['mensagens']).concat(['marca','politicas']).filter(areaAtiva);
   if(papel==='me_convidado') return ['me_jornada','me_aulas','me_sessoes','me_metas','me_materiais'];
   return null; // equipe interna: tudo
 }
@@ -22680,8 +22680,11 @@ function renderPoliticas(){
   /* Pedido do Murilo (25/11/2026): manuais de funcionamento (título começa com "Manual") ficam numa seção
      própria, "Manuais Vigentes", abaixo das políticas. Em construção continuam em Materiais em Desenvolvimento. */
   const polEhManual = x=>/^\s*manual\b/i.test(x.titulo||'');
+  /* Rotinas dos membros da Ascentria (pedido de 26/11/2026): título começando por "Rotina" vai para a seção própria. */
+  const polEhRotina = x=>/^\s*rotina\b/i.test(x.titulo||'');
   const ordemLista = (a,b)=> (b.status==='revisao') - (a.status==='revisao') || (b.ordem||0)-(a.ordem||0) || a.titulo.localeCompare(b.titulo,'pt-BR');
-  const lista = POL_UI.docs.filter(x=>x.tipo==='politica' && x.status!=='construcao' && !polEhManual(x)).sort(ordemLista);
+  const lista = POL_UI.docs.filter(x=>x.tipo==='politica' && x.status!=='construcao' && !polEhManual(x) && !polEhRotina(x)).sort(ordemLista);
+  const listaRot = POL_UI.docs.filter(x=>x.tipo==='politica' && x.status!=='construcao' && polEhRotina(x)).sort((a,b)=>String(a.titulo).localeCompare(String(b.titulo),'pt-BR'));
   const listaMan = POL_UI.docs.filter(x=>x.tipo==='politica' && x.status!=='construcao' && polEhManual(x)).sort(ordemLista);
   /* A coluna de revisão dos sócios só aparece enquanto houver política em aprovação. */
   const temRevisao = lista.some(x=>x.status==='revisao');
@@ -22702,6 +22705,8 @@ function renderPoliticas(){
     </div>
     ${listaMan.length ? `<div class="pol-sec-dev">${polSecHead('manuais', icon('file')+' Manuais Vigentes')}
     <div ${POL_RECOLHIDOS.manuais?'hidden':''}>${polTabela(listaMan, temRevisaoMan)}</div></div>` : ''}
+    ${listaRot.length ? `<div class="pol-sec-dev">${polSecHead('rotinas', icon('calendar')+' Rotinas dos Membros da Ascentria')}
+    <div ${POL_RECOLHIDOS.rotinas?'hidden':''}>${polTabela(listaRot, listaRot.some(x=>x.status==='revisao'))}</div></div>` : ''}
     ${listaDev.length ? `<div class="pol-sec-dev">${polSecHead('dev', icon('edit')+' Materiais em Desenvolvimento')}
     <div ${POL_RECOLHIDOS.dev?'hidden':''}><div class="table-wrap reu-tabela-wrap"><table class="check-table reu-tabela pol-tabela"><thead><tr><th>Documento</th><th>Responsável</th><th>Link</th></tr></thead><tbody>${listaDev.map(x=>`<tr data-pol-abrir="${x.id}">
         <td><b>${escapeHtml(x.titulo)}</b></td>
