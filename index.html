@@ -2978,6 +2978,7 @@
   @media (max-width:640px){ .me-socia-tag{white-space:normal;} }
   .ev-parte2-btn{margin:10px 0 4px;display:inline-flex;align-items:center;gap:6px;}
   #ev-parte2[hidden], .ev-parte2-btn[hidden]{display:none !important;}
+  .fs-enviado{display:flex;align-items:center;gap:6px;margin:4px 0 8px;font-size:12.5px;font-weight:600;color:#7fa36a;}
   .te-form{display:flex;flex-direction:column;gap:18px;}
   .te-form .te-cab .cat{margin-bottom:4px;} .te-form .te-cab h3{margin:0;}
   .te-form .field{display:flex;flex-direction:column;gap:6px;margin:0 !important;min-width:0;}
@@ -20399,6 +20400,7 @@ function fsFormHtml(cfg, semana){
   const linha = fsMinhaLinha(cfg, semana), r = (linha && linha.respostas) || {}, ch = fsChave(cfg);
   return `<form class="fs-form" data-fs-form="${escapeAttr(cfg.area)}">
       ${cfg.campos.map(([k,rot])=>`<div class="fs-campo"><label for="fs-${ch}-${k}">${escapeHtml(rot)}</label><textarea class="ps-input" id="fs-${ch}-${k}" data-fs-campo="${k}" rows="3" placeholder="Escreva aqui. Se não houver nada, escreva 'Nada nesta semana'.">${escapeHtml(r[k]||'')}</textarea></div>`).join('')}
+      ${linha ? `<div class="fs-enviado">${icon('check','tiny')}<span>${cfg.uid===GT_MURILO_UID ? 'Salvo' : 'Enviado ao Murilo'} em ${escapeHtml(fsQuando(linha.enviado_em||linha.atualizado_em))}${linha.atualizado_em && linha.enviado_em && Math.abs(new Date(linha.atualizado_em)-new Date(linha.enviado_em))>60000 ? ` · atualizado em ${escapeHtml(fsQuando(linha.atualizado_em))}` : ''}${cfg.uid!==GT_MURILO_UID ? (linha.lido_em ? ' · o Murilo já leu' : ' · o Murilo ainda não leu') : ''}</span></div>` : ''}
       <div class="fs-acoes"><button type="submit" class="btn-accent">${icon('send','tiny')}<span>${linha ? 'Atualizar o fechamento' : (cfg.uid===GT_MURILO_UID ? 'Salvar o fechamento' : 'Enviar ao Murilo')}</span></button></div>
     </form>`;
 }
