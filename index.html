@@ -2590,6 +2590,9 @@
   .tf-sinal.hoje{background:rgba(245,158,11,.16);color:#d97706;}
   .tf-sinal.urgente{background:var(--danger);color:#fff;}
   .tf-sinal.nova{background:rgba(37,99,235,.16);color:#2563eb;}
+  /* Rota de Embarque: ícone e palavras sempre lado a lado, na mesma linha (pedido do Murilo, 26/11/2026). */
+  #view-embarque button:not(.emb-card-x), #view-embarque .emb-tag-lead, #view-embarque .emb-etapa-hd, #view-embarque .emb-col-hd, #view-embarque .emb-guia-msg-hd button, #view-embarque .emb-copiar-mini, #view-embarque .emb-fora-largo{display:inline-flex !important;flex-direction:row !important;align-items:center;gap:6px;}
+  #view-embarque button:not(.emb-card-x) > svg, #view-embarque .emb-tag-lead > svg{flex:0 0 auto;margin:0 !important;}
   .vm-det{margin-top:14px;}
   .vm-det > summary{list-style:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
   .vm-det > summary::-webkit-details-marker{display:none;}
@@ -26946,8 +26949,9 @@ function embmRenderQuadro(el){
   lista.forEach(s=>porCol[embmColuna(s.id)].push(s));
   el.innerHTML = `
     ${embmAbasHtml()}
+    ${embmGuiaHtml(null)}
     <div class="vg-sec-head"><h2 class="section-title com-titulo">${icon('compass')} ROTA DE EMBARQUE · MÉTODO</h2><span class="qtd">${lista.length}</span></div>
-    <p class="section-sub" style="margin-top:4px">Cada aluno novo do Método Essência chega em Aluno novo. Abra o card, copie as 4 mensagens iniciais e marque Enviado em cada uma: com a primeira, o card passa para Mensagens iniciais; com as 4, vai para Embarque concluído. O check do cadastro marca sozinho quando o aluno envia a Ficha de Cadastro.</p>
+    <p class="section-sub" style="margin-top:4px">Cada aluno novo do Método Essência chega em Aluno novo. Abra o card, copie as 4 mensagens iniciais e marque o check de cada uma: com a primeira, o card passa para Mensagens iniciais; com as 4, vai para Embarque concluído. O check do cadastro marca sozinho quando o aluno envia a Ficha de Cadastro.</p>
     <div class="emb-quadro">
       ${colunas.map(c=>`
         <div class="emb-col ${c.id==='fim'?'emb-col-fim':''}">
@@ -26964,49 +26968,93 @@ function embmRenderQuadro(el){
         </div>`).join('')}
     </div>`;
   embmAbasBind(el);
+  embmCopiarBind(el, null);
   el.querySelectorAll('[data-embm-abrir]').forEach(b=>{
     b.addEventListener('click', ()=>embAbrir(b.dataset.embmAbrir));
     b.addEventListener('keydown', e=>{ if(e.key==='Enter') embAbrir(b.dataset.embmAbrir); });
   });
 }
-function embmRenderDetalhe(el, s){
-  const m = embmDados(s.id), cad = embmCadastro(s), n = embmEnviadas(s.id);
-  const quem = id=>{ const p = PEOPLE[id]; return p ? p.name.split(' ')[0] : ''; };
-  el.innerHTML = `
-    <button type="button" class="btn-outline embm-btn" id="embm-voltar" style="margin-bottom:12px">${icon('back','tiny')} Voltar</button>
-    <div class="emb-card-top" style="margin-bottom:10px">${initialsAvatar(s.initials,s.color,44,s.avatarUrl)}<div class="emb-card-nome"><strong style="font-size:17px">${escapeHtml(s.name)}</strong><small>Método Essência${s.bonus?' + Bônus':''} · conta criada em ${escapeHtml(tzDataCurta(s.contaCriada))} · ${n}/${EMBM_MSGS.length} mensagens enviadas</small></div></div>
-    <div class="recado-bloco">
-      <div class="recado-hd">${icon('idcard','tiny')} <strong>FICHA DE CADASTRO</strong></div>
-      ${cad ? `<div class="recado-sub" style="margin-bottom:0">${icon('check','tiny')} Preenchida${cad.createdAt ? ' em '+escapeHtml(tzDataHora(cad.createdAt, true)) : ''}. ${escapeHtml(s.name.split(' ')[0])} já está na base de clientes${cad.studentId===s.id ? ', ligada à conta (os Termos de Contratação são gerados sozinhos)' : ' (encontrada pelo e-mail ou CPF, ainda sem ligação com a conta)'}.</div>`
-            : `<div class="recado-sub">Ainda não preenchida. Ao entrar no ePLAT, o aluno vê o aviso para completar o cadastro. Se precisar, copie o link e mande para ele.</div>
-               <button type="button" class="btn-outline embm-btn" id="embm-link">${icon('copy','tiny')} Copiar o link da ficha</button>`}
-    </div>
-    ${EMBM_MSGS.map(x=>{ const v = m[x.k]||{};
-      return `<div class="recado-bloco">
-        <div class="recado-hd" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><span style="display:flex;align-items:center;gap:8px">${icon('comment','tiny')} <strong>${escapeHtml(x.titulo.toUpperCase())}</strong></span>
-          ${v.em ? `<span style="font-size:12px;color:#16a34a;font-weight:600;display:inline-flex;align-items:center;gap:4px">${icon('check','tiny')} Enviada${quem(v.por)?' por '+escapeHtml(quem(v.por)):''} em ${escapeHtml(tzDataHora(v.em, true))}</span>` : ''}</div>
-        <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.55;margin:10px 0;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px">${escapeHtml(embmTexto(x, s))}</div>
-        <div class="recado-btns">
-          <button type="button" class="btn-outline embm-btn" data-embm-copiar="${x.k}">${icon('copy','tiny')} Copiar</button>
-          ${v.em ? `<button type="button" class="btn-outline embm-btn" data-embm-desfazer="${x.k}">Desfazer</button>` : `<button type="button" class="btn-accent embm-btn" data-embm-enviado="${x.k}">${icon('check','tiny')} Enviado</button>`}
+/* Mesmo padrão visual da Rota da Mentoria: passo a passo recolhível com as mensagens e, no detalhe,
+   as etapas numeradas com checks; cada check de mensagem tem o "Copiar" ao lado. */
+function embmGuiaHtml(s){
+  const nome = s ? String(s.name||'').trim().split(/\s+/)[0] : '';
+  const cab = s ? `Passo a passo: mensagens para ${escapeHtml(nome)}` : 'Passo a passo: mensagens do embarque do Método';
+  const sub = s ? 'As mensagens já estão no gênero do aluno. Copie, envie no WhatsApp e marque o check.' : 'Roteiro e mensagens prontas para copiar e colar no WhatsApp.';
+  return `<details class="emb-guia" id="emb-guia" ${embGuiaAberto?'open':''}>
+    <summary>${icon('comment','tiny')}<span><strong>${cab}</strong><small>${sub}</small></span>${icon('down','tiny emb-seta')}</summary>
+    <div class="emb-guia-corpo">
+      <details class="emb-guia-passo ${s?'atual':''}" open>
+        <summary><span class="emb-guia-n">1</span><span class="emb-guia-tt"><strong>Mensagens iniciais</strong><small>Equipe · logo que o aluno novo chega</small></span>${icon('down','tiny emb-seta')}</summary>
+        <div class="emb-guia-itens">
+          <div class="emb-guia-acoes"><span>O que fazer</span><ul><li>Enviar as 4 mensagens abaixo no WhatsApp do aluno, na ordem.</li><li>Marcar cada uma na Rota: Mensagens iniciais › Mensagem enviada.</li><li>Com as 4 marcadas, o card vai para Embarque concluído.</li></ul></div>
+          ${EMBM_MSGS.map(x=>`<div class="emb-guia-msg">
+            <div class="emb-guia-msg-hd"><span>${escapeHtml(x.titulo)}</span><button type="button" class="btn-outline emb-guia-copiar" data-embm-copiar="${x.k}">${icon('copy','tiny')} <span>Copiar</span></button></div>
+            <div class="emb-guia-msg-txt">${escapeHtml(embmTexto(x, s))}</div>
+          </div>`).join('')}
         </div>
-      </div>`; }).join('')}
-    <div class="emb-salvo" id="emb-salvo" style="font-size:12px;color:var(--text-dim)"></div>`;
-  el.querySelector('#embm-voltar').addEventListener('click', ()=>embAbrir(null));
-  const bl = el.querySelector('#embm-link');
-  if(bl) bl.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(embmLinkFormulario(s)); bl.innerHTML = icon('check','tiny')+' Link copiado'; }catch(e){ showAppAviso(embmLinkFormulario(s)); } });
-  el.querySelectorAll('[data-embm-copiar]').forEach(b=>b.addEventListener('click', async ()=>{
-    const x = EMBM_MSGS.find(y=>y.k===b.dataset.embmCopiar);
-    try{ await navigator.clipboard.writeText(embmTexto(x, s)); b.innerHTML = icon('check','tiny')+' Copiada'; setTimeout(()=>{ b.innerHTML = icon('copy','tiny')+' Copiar'; }, 1800); }catch(e){ showAppAviso('Não foi possível copiar. Selecione o texto e copie.'); }
+      </details>
+    </div>
+  </details>`;
+}
+function embmCopiarBind(root, s){
+  const g = root.querySelector('#emb-guia');
+  if(g) g.addEventListener('toggle', ()=>{ embGuiaAberto = g.open; try{ localStorage.setItem('eplat_emb_guia', g.open?'1':'0'); }catch(e){} });
+  root.querySelectorAll('[data-embm-copiar]').forEach(b=>b.addEventListener('click', async (ev)=>{
+    ev.preventDefault(); ev.stopPropagation();   // dentro do check: copiar não marca a caixa
+    const k = b.dataset.embmCopiar;
+    const texto = k==='__link' ? embmLinkFormulario(s) : embmTexto(EMBM_MSGS.find(y=>y.k===k), s);
+    const lbl = b.querySelector('span');
+    try{ await navigator.clipboard.writeText(texto); }
+    catch(e){ const ta = document.createElement('textarea'); ta.value = texto; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } ta.remove(); }
+    b.classList.add('ok'); if(lbl) lbl.textContent = 'Copiado';
+    setTimeout(()=>{ b.classList.remove('ok'); if(lbl) lbl.textContent = b.dataset.lbl || 'Copiar'; }, 1800);
   }));
-  el.querySelectorAll('[data-embm-enviado]').forEach(b=>b.addEventListener('click', ()=>{
-    embmDados(s.id)[b.dataset.embmEnviado] = { em:new Date().toISOString(), por:currentUser && currentUser.id };
+}
+function embmRenderDetalhe(el, s){
+  const m = embmDados(s.id), cad = embmCadastro(s), n = embmEnviadas(s.id), col = embmColuna(s.id);
+  const dia = s.contaCriada ? rdDiasDesde(s.contaCriada+'T00:00:00-03:00') : null;
+  const quem = id=>{ const p = PEOPLE[id]; return p ? p.name.split(' ')[0] : ''; };
+  const copiarMini = (k, lbl)=>`<span class="emb-check-copiar"><button type="button" class="emb-copiar-mini" data-embm-copiar="${k}" data-lbl="${lbl||'Copiar'}" title="${lbl||'Copiar'}">${icon('copy','tiny')}<span>${lbl||'Copiar'}</span></button></span>`;
+  const etapas = [
+    { k:'novo', titulo:'Aluno novo', ic:'users', feita: col!=='novo', atual: col==='novo',
+      checks:[ `<label class="emb-check ${cad?'on':''}"><input type="checkbox" ${cad?'checked':''} disabled title="Marca sozinho quando o aluno envia a Ficha de Cadastro"> <span class="emb-check-n">1</span><span class="emb-check-txt">Ficha de Cadastro preenchida${cad ? ' · na base de clientes' : ''}</span>${cad ? '' : copiarMini('__link','Copiar link')}</label>` ] },
+    { k:'mensagens', titulo:'Mensagens iniciais', ic:'comment', feita: col==='fim', atual: col==='mensagens',
+      checks: EMBM_MSGS.map((x,i)=>{ const v = m[x.k]||{};
+        return `<label class="emb-check ${v.em?'on':''}"><input type="checkbox" ${v.em?'checked':''} data-embm-check="${x.k}"> <span class="emb-check-n">${i+1}</span><span class="emb-check-txt">${escapeHtml(x.titulo)}${v.em ? `<small style="display:block;font-weight:500;color:var(--text-dim)">Enviada${quem(v.por)?' por '+escapeHtml(quem(v.por)):''} em ${escapeHtml(tzDataHora(v.em, true))}</small>` : ''}</span>${copiarMini(x.k)}</label>`; }) },
+  ];
+  const feitas = etapas.filter(e=>e.feita).length;
+  el.innerHTML = `
+    <div class="back-row"><button class="back-btn" id="emb-voltar">${icon('back')} Voltar ao quadro</button></div>
+    <div class="emb-topo">
+      <div class="aluno-picker emb-picker">
+        <div class="aluno-picker-btn" style="cursor:default">
+          ${initialsAvatar(s.initials,s.color,44,s.avatarUrl)}
+          <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia===0 ? 'Chegou hoje' : `Chegou há ${dia} dia${dia===1?'':'s'}`) : ''} · Método Essência${s.bonus?' + Bônus':''} · ${col==='fim' ? 'Embarque concluído' : 'Etapa atual: '+(col==='novo'?'Aluno novo':'Mensagens iniciais')}</small></span>
+        </div>
+      </div>
+      <div class="emb-topo-prog"><div class="module-bar"><div class="fill" style="width:${Math.round(feitas/etapas.length*100)}%"></div></div><span>${n}/${EMBM_MSGS.length} mensagens</span><span class="emb-salvo" id="emb-salvo">Salvo</span></div>
+    </div>
+    ${embmGuiaHtml(s)}
+    <div class="emb-fluxo">
+      ${etapas.map((et,i)=>{
+        const estado = et.feita ? 'feita' : et.atual ? 'atual' : 'pendente';
+        const pill = et.feita ? 'Concluída' : et.atual ? 'Etapa atual' : 'Pendente';
+        return `<div class="emb-etapa ${estado}">
+          <div class="emb-num">${et.feita ? icon('check','tiny') : i+1}</div>
+          <div class="emb-etapa-box">
+            <div class="emb-etapa-hd">${icon(et.ic,'tiny')} <strong>${et.titulo}</strong><span class="emb-pill ${estado}">${pill}</span></div>
+            <div class="emb-checks emb-checks-passos">${et.checks.map(c=>`<div class="emb-linha" style="--n:1">${c}</div>`).join('')}</div>
+          </div>
+        </div>`; }).join('')}
+    </div>`;
+  embmCopiarBind(el, s);
+  el.querySelector('#emb-voltar').addEventListener('click', ()=>{ embAluno = null; renderEmbarque(); });
+  el.querySelectorAll('[data-embm-check]').forEach(inp=>inp.addEventListener('change', ()=>{
+    const k = inp.dataset.embmCheck, d = embmDados(s.id);
+    if(inp.checked) d[k] = { em:new Date().toISOString(), por:currentUser && currentUser.id }; else delete d[k];
     embSalvar(s.id);
-    if(embmEnviadas(s.id)>=EMBM_MSGS.length){ showAppAviso(`Embarque de ${s.name.split(' ')[0]} concluído.`); embAbrir(null); return; }
+    if(inp.checked && embmEnviadas(s.id)>=EMBM_MSGS.length){ showAppAviso(`Embarque de ${s.name.split(' ')[0]} concluído.`); embAluno = null; renderEmbarque(); return; }
     embmRenderDetalhe(el, s);
-  }));
-  el.querySelectorAll('[data-embm-desfazer]').forEach(b=>b.addEventListener('click', ()=>{
-    delete embmDados(s.id)[b.dataset.embmDesfazer]; embSalvar(s.id); embmRenderDetalhe(el, s);
   }));
 }
 /* ---- Lado do aluno do Método: aviso para completar a Ficha de Cadastro ---- */
