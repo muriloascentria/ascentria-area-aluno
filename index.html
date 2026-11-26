@@ -2966,7 +2966,11 @@
   .te-form{display:flex;flex-direction:column;gap:18px;}
   .te-form .te-cab .cat{margin-bottom:4px;} .te-form .te-cab h3{margin:0;}
   .te-form .field{display:flex;flex-direction:column;gap:6px;margin:0 !important;min-width:0;}
-  .te-form .field > label{margin:0;}
+  /* mesmo padrão dos formulários da plataforma (.add-form): rótulo pequeno em caixa alta, campos em 13px */
+  .te-form .field > label{margin:0;font-size:10.5px;font-weight:600;color:var(--text-mute);text-transform:uppercase;letter-spacing:.3px;}
+  .te-form .ps-input, .te-form textarea, .te-form select, .te-form .apoio-dd-btn{font-size:13px;}
+  .te-form .prazo-atalho{font-size:12px;}
+  .te-form .te-dica, .te-form .ae-dica, .te-form .prazo-antigo{font-size:11.5px;}
   .te-form textarea, .te-form .ps-input, .te-form select{width:100%;max-width:none !important;margin:0 !important;box-sizing:border-box;}
   .te-form textarea{min-height:0;}
   .te-form .te-linha2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
