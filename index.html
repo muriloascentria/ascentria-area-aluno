@@ -6581,6 +6581,69 @@ function lembIniciar(){
   LEMB_TIMER = setInterval(async ()=>{ n++; if(n % 10 === 0) await lembCarregar(); lembChecar(); }, 60000);
   setTimeout(lembChecar, 1500);
 }
+/* Bloco na Comunicação: qualquer pessoa da equipe marca um lembrete na tela para si ou para outra pessoa da equipe. */
+const LEMB_UI = { enviados:null, carregando:false, para:null };
+async function lembEnviadosCarregar(){
+  if(LEMB_UI.carregando) return; LEMB_UI.carregando = true;
+  try{
+    const { data, error } = await sb.from('lembretes_tela').select('*').eq('criado_por', currentUser.id).order('quando', {ascending:false}).limit(20);
+    if(error) throw error; LEMB_UI.enviados = data || [];
+  }catch(e){ console.warn('lembretes_tela', e); LEMB_UI.enviados = []; }
+  LEMB_UI.carregando = false;
+  if(currentView==='comunicacao') renderComunicacao();
+}
+function lembPessoas(){
+  const lst = (typeof TAREFAS_EQUIPE!=='undefined' ? TAREFAS_EQUIPE : []).filter(m=>m.ativo!==false).map(m=>({id:m.userId, nome:m.name||(PEOPLE[m.userId]||{}).name||''}));
+  if(currentUser && !lst.some(x=>x.id===currentUser.id)) lst.unshift({id:currentUser.id, nome:(currentUserProfile||{}).name||'Eu'});
+  return lst.filter(x=>x.nome).sort((a,b)=> (b.id===currentUser.id)-(a.id===currentUser.id) || a.nome.localeCompare(b.nome,'pt-BR'));
+}
+function lembBlocoHtml(){
+  if(currentUserRole!=='staff' || !currentUser) return '';
+  if(LEMB_UI.enviados===null) lembEnviadosCarregar();
+  const hoje = gtHojeISO();
+  const pessoas = lembPessoas(), para = LEMB_UI.para || currentUser.id;
+  const nome = id=>{ if(id===currentUser.id) return 'você'; const p = pessoas.find(x=>x.id===id) || PEOPLE[id] || {}; return (p.nome||p.name||'—').split(' ')[0]; };
+  const lista = (LEMB_UI.enviados||[]);
+  return `
+    <div class="recado-bloco">
+      <div class="recado-hd">${icon('bell','tiny')} <strong>LEMBRETE NA TELA</strong></div>
+      <div class="recado-sub">Abre uma janela no ePLAT da pessoa no dia e na hora marcados, como o recado do dia. Ela fecha com "Ok" e o lembrete não volta.</div>
+      <div style="display:grid;gap:8px">
+        <select class="ps-input" id="lemb-para">${pessoas.map(x=>`<option value="${escapeAttr(x.id)}" ${x.id===para?'selected':''}>${escapeHtml(x.id===currentUser.id ? 'Para mim' : x.nome)}</option>`).join('')}</select>
+        <textarea id="lemb-texto" maxlength="2000" placeholder="Ex.: Entrar em contato com a Fulana para ver a precificação."></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="date" class="ps-input" id="lemb-data" value="${hoje}" min="${hoje}" style="flex:1;min-width:140px">
+          <input type="time" class="ps-input" id="lemb-hora" value="14:00" style="flex:1;min-width:110px">
+        </div>
+      </div>
+      <div class="recado-rodape"><small id="lemb-msg"></small><div class="recado-btns"><button type="button" class="btn-accent" id="lemb-salvar" style="display:inline-flex;flex-direction:row;align-items:center;gap:6px;white-space:nowrap">${icon('bell','tiny')} Marcar lembrete</button></div></div>
+      ${lista.length ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${lista.slice(0,8).map(l=>`
+        <div style="font-size:12.5px;border-top:1px solid var(--border);padding-top:6px">
+          <b>${escapeHtml(tzDataHora(l.quando, true))}</b> · para ${escapeHtml(nome(l.user_id))} · <span style="color:var(--text-dim)">${l.visto_em ? 'visto em '+escapeHtml(tzDataHora(l.visto_em, true)) : (new Date(l.quando) <= new Date() ? 'aguardando a pessoa abrir o ePLAT' : 'agendado')}</span>
+          <div style="color:var(--text-dim);margin-top:2px">${escapeHtml(l.texto)}</div>
+        </div>`).join('')}</div>` : ''}
+    </div>`;
+}
+function lembBlocoBind(){
+  const b = document.getElementById('lemb-salvar'); if(!b) return;
+  const sel = document.getElementById('lemb-para'); sel.addEventListener('change', ()=>{ LEMB_UI.para = sel.value; });
+  b.addEventListener('click', async ()=>{
+    const texto = document.getElementById('lemb-texto').value.trim();
+    const data = document.getElementById('lemb-data').value, hora = document.getElementById('lemb-hora').value || '09:00';
+    const msg = document.getElementById('lemb-msg');
+    if(!texto){ msg.textContent = 'Escreva o lembrete.'; return; }
+    if(!data){ msg.textContent = 'Escolha o dia.'; return; }
+    const quando = new Date(`${data}T${hora}:00-03:00`);
+    b.disabled = true; msg.textContent = 'Salvando…';
+    const { data: row, error } = await sb.from('lembretes_tela').insert({ user_id: sel.value, texto, quando: quando.toISOString(), criado_por: currentUser.id }).select().single();
+    b.disabled = false;
+    if(error){ msg.textContent = 'Não foi possível salvar: '+(error.message||''); return; }
+    (LEMB_UI.enviados = LEMB_UI.enviados || []).unshift(row);
+    if(sel.value===currentUser.id){ LEMBRETES.push(row); LEMBRETES.sort((a,b)=>String(a.quando).localeCompare(String(b.quando))); setTimeout(lembChecar, 500); }
+    LEMB_UI.para = sel.value;
+    renderComunicacao();
+  });
+}
 /* Bloco no Início da equipe — só o Murilo vê e escreve. */
 function recadoPainelHtml(){
   if(!recadoSouAutor()) return '';
@@ -21326,6 +21389,7 @@ function renderComunicacao(){
     <div ${COM_RECOLHIDOS.com?'hidden':''}>
     <p class="section-sub" style="margin-top:-6px">O que a equipe fala para dentro e o que o sistema manda para os mentorados.</p>
     ${recado || `<div class="tf-vazio" style="padding:14px">O recado do dia é escrito pela administração. Você vê a janela com o recado ao abrir o sistema.</div>`}
+    ${lembBlocoHtml()}
     ${checkpointHtml()}
     ${envioBlocoHtml()}
     </div>
@@ -21342,6 +21406,7 @@ function renderComunicacao(){
     renderComunicacao();
   }));
   bindRecadoPainel();
+  lembBlocoBind();
   bindCheckpoint();
   bindEnvioBloco();
   comNpsBind();
