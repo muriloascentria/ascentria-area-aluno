@@ -27070,10 +27070,10 @@ function embmRenderDetalhe(el, s){
       <div class="aluno-picker emb-picker">
         <div class="aluno-picker-btn" style="cursor:default">
           ${initialsAvatar(s.initials,s.color,44,s.avatarUrl)}
-          <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia===0 ? 'Chegou hoje' : `Chegou há ${dia} dia${dia===1?'':'s'}`) : ''} · Método Essência${s.bonus?' + Bônus':''} · ${col==='fim' ? 'Embarque concluído' : 'Etapa atual: '+(col==='novo'?'Aluno novo':'Mensagens iniciais')}</small></span>
+          <span class="ap-nome"><strong>${escapeHtml(s.name)}</strong><small>${dia!=null ? (dia===0 ? 'Chegou hoje' : `Chegou há ${dia} dia${dia===1?'':'s'}`) : ''} · Método Essência${s.bonus?' + Bônus':''} · ${col==='fim' ? 'Embarque concluído' : 'Etapa atual: '+(col==='novo'?'Aluno novo':'Mensagens iniciais')}</small><small style="display:block;margin-top:6px;font-weight:700;color:var(--text-dim);font-size:12.5px">${n}/${EMBM_MSGS.length} mensagens</small></span>
         </div>
       </div>
-      <div class="emb-topo-prog"><span>${n}/${EMBM_MSGS.length} mensagens</span><span class="emb-salvo" id="emb-salvo">Salvo</span></div>
+      <div class="emb-topo-prog"><span class="emb-salvo" id="emb-salvo">Salvo</span></div>
     </div>
     ${embmGuiaHtml(s)}
     <div class="emb-fluxo">
