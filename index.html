@@ -2978,6 +2978,45 @@
   @media (max-width:640px){ .me-socia-tag{white-space:normal;} }
   .ev-parte2-btn{margin:10px 0 4px;display:inline-flex;align-items:center;gap:6px;}
   #ev-parte2[hidden], .ev-parte2-btn[hidden]{display:none !important;}
+  .fsr-botoes{display:flex;gap:8px;flex-wrap:wrap;}
+  #fsa-ov{position:fixed;inset:0;z-index:99999;background:#161a10;display:flex;flex-direction:column;}
+  #fsa-ov .fsa-palco{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+  #fsa-ov .fsa-quadro{width:1280px;height:720px;flex:0 0 auto;transform-origin:center center;cursor:pointer;box-shadow:0 20px 60px rgba(0,0,0,.45);}
+  #fsa-ov .fsa-bar{display:flex;justify-content:center;align-items:center;gap:10px;padding:10px;color:#E4E3DF;font:500 13px 'Exo 2',sans-serif;}
+  #fsa-ov .fsa-bar button{background:transparent;border:1px solid rgba(228,227,223,.35);color:#E4E3DF;border-radius:20px;padding:6px 14px;font:500 13px 'Exo 2',sans-serif;cursor:pointer;}
+  #fsa-ov .fsa-bar #fsa-ant,#fsa-ov .fsa-bar #fsa-prox{font-size:20px;line-height:1;padding:4px 14px;}
+  #fsa-ov:fullscreen .fsa-bar{opacity:.15;} #fsa-ov:fullscreen .fsa-bar:hover{opacity:1;}
+  .fsa-s{position:relative;width:1280px;height:720px;box-sizing:border-box;padding:64px 80px 90px;background:#E4E3DF;color:#2E381A;font-family:'Exo 2',Inter,sans-serif;overflow:hidden;}
+  .fsa-kick{font-size:15px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#AB6F30;}
+  .fsa-s h1{font-size:92px;font-weight:300;line-height:1.02;margin:16px 0 22px;color:#2E381A;letter-spacing:-.01em;}
+  .fsa-s h2{font-size:46px;font-weight:500;line-height:1.1;margin:10px 0 28px;color:#2E381A;}
+  .fsa-sub{font-size:22px;color:#5b6146;margin:0;}
+  .fsa-capa{background:#2E381A;color:#E4E3DF;display:flex;flex-direction:column;justify-content:center;padding-left:96px;}
+  .fsa-capa h1{color:#E4E3DF;} .fsa-capa .fsa-sub{color:#D5DDC8;} .fsa-capa .fsa-kick{color:#d79a5c;}
+  .fsa-logo-capa{position:absolute;top:56px;left:96px;height:64px;filter:brightness(0) invert(1) opacity(.92);}
+  .fsa-folhas{position:absolute;right:-160px;top:-120px;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(130,137,102,.55),rgba(130,137,102,.08) 70%);}
+  .fsa-folhas::after{content:'';position:absolute;inset:120px;border-radius:50%;border:1px solid rgba(213,221,200,.35);}
+  .fsa-rod{position:absolute;left:80px;right:80px;bottom:30px;display:flex;align-items:center;gap:18px;border-top:1px solid #BBBEC6;padding-top:14px;font-size:14px;color:#6b705a;}
+  .fsa-logo{height:30px;}
+  .fsa-pg{margin-left:auto;font-weight:600;}
+  .fsa-areas{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .fsa-area{background:#fff;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;border:1px solid #d3d2cc;}
+  .fsa-area b{font-size:20px;font-weight:600;} .fsa-area small{font-size:14px;color:#6b705a;}
+  .fsa-dot{width:12px;height:12px;border-radius:50%;background:#828966;}
+  .fsa-area.pend{background:transparent;border-style:dashed;} .fsa-area.pend .fsa-dot{background:#AB6F30;}
+  .fsa-num{position:absolute;right:80px;bottom:110px;display:flex;align-items:baseline;gap:12px;}
+  .fsa-num b{font-size:64px;font-weight:600;color:#AB6F30;line-height:1;} .fsa-num span{font-size:20px;color:#5b6146;}
+  .fsa-dec{margin:0;padding:0;list-style:none;counter-reset:d;display:flex;flex-direction:column;gap:14px;max-height:440px;overflow:hidden;}
+  .fsa-dec li{counter-increment:d;display:grid;grid-template-columns:56px 1fr;column-gap:16px;background:#fff;border-radius:14px;padding:16px 20px;border-left:6px solid #AB6F30;}
+  .fsa-dec li::before{content:counter(d);grid-row:1/3;font-size:34px;font-weight:600;color:#AB6F30;}
+  .fsa-dec-a{font-size:15px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#828966;} .fsa-dec-a small{color:#8b8f7d;letter-spacing:0;text-transform:none;font-weight:500;margin-left:6px;}
+  .fsa-dec-t{font-size:22px;line-height:1.35;margin-top:4px;max-height:96px;overflow:hidden;}
+  .fsa-grid{display:grid;gap:16px;height:440px;}
+  .fsa-grid.g1{grid-template-columns:1fr;} .fsa-grid.g2{grid-template-columns:1fr 1fr;} .fsa-grid.g3{grid-template-columns:1fr 1fr 1fr;} .fsa-grid.g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
+  .fsa-card{background:#fff;border-radius:16px;padding:18px 22px;border-top:5px solid #828966;display:flex;flex-direction:column;min-height:0;}
+  .fsa-card-t{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#828966;margin-bottom:8px;}
+  .fsa-card-x{flex:1;min-height:0;overflow:hidden;font-size:21px;line-height:1.38;color:#2E381A;}
+  .fsa-vazio{font-size:24px;color:#6b705a;}
   .fsr-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
   .fsr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
   .fsr-kpi{background:var(--bg-card-2,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
@@ -20503,6 +20542,74 @@ function fsReuniaoTexto(){
   });
   return linhas.join('\n');
 }
+/* ---- Apresentação do fechamento (pedido de 26/11/2026): slides 16:9 com a identidade da Ascentria, gerados das
+   respostas do fechamento, para projetar na Reunião Ascentria. Setas ou clique para avançar, Esc para sair. ---- */
+const FSA = { i:0, slides:[] };
+function fsaFonte(){
+  if(document.getElementById('fsa-fonte')) return;
+  const l = document.createElement('link'); l.id = 'fsa-fonte'; l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&display=swap'; document.head.appendChild(l);
+}
+function fsaTxt(t){ return escapeHtml(String(t||'').trim()).replace(/\n/g,'<br>'); }
+function fsaSlides(){
+  const { sem, itens } = fsReuniaoDados();
+  const env = itens.filter(x=>x.l), dec = itens.filter(x=>fsTemTexto(x.r.decisoes));
+  const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo', day:'2-digit', month:'long', year:'numeric'});
+  const logo = `<img class="fsa-logo" src="${FIN_LOGO_DATA_URI}" alt="Ascentria">`;
+  const rod = (n)=>`<div class="fsa-rod">${logo}<span>Fechamento da Semana · ${escapeHtml(fsRotSemana(sem))}</span><span class="fsa-pg">${n}</span></div>`;
+  const out = [];
+  out.push(`<div class="fsa-s fsa-capa"><div class="fsa-folhas"></div>${logo.replace('fsa-logo','fsa-logo-capa')}
+    <div class="fsa-kick">Reunião Ascentria</div><h1>Fechamento<br>da Semana</h1>
+    <p class="fsa-sub">Semana de ${escapeHtml(fsRotSemana(sem))} · ${escapeHtml(hoje)}</p></div>`);
+  out.push(n=>`<div class="fsa-s"><div class="fsa-kick">Visão geral</div><h2>${env.length} de ${itens.length} áreas enviaram o fechamento</h2>
+    <div class="fsa-areas">${itens.map(x=>`<div class="fsa-area ${x.l?'ok':'pend'}"><span class="fsa-dot"></span><b>${escapeHtml(x.c.area)}</b><small>${escapeHtml(x.c.pessoa)} · ${x.l?'enviado':'não enviado'}</small></div>`).join('')}</div>
+    <div class="fsa-num"><b>${dec.length}</b><span>${dec.length===1?'decisão pedida para esta reunião':'decisões pedidas para esta reunião'}</span></div>${rod(n)}</div>`);
+  out.push(n=>`<div class="fsa-s"><div class="fsa-kick">Para decidir hoje</div><h2>Decisões e pendências</h2>
+    ${dec.length ? `<ol class="fsa-dec">${dec.map(x=>`<li><div class="fsa-dec-a">${escapeHtml(x.c.area)} <small>${escapeHtml(x.c.pessoa)}</small></div><div class="fsa-dec-t">${fsaTxt(x.r.decisoes)}</div></li>`).join('')}</ol>` : '<p class="fsa-vazio">Nenhuma decisão pedida nesta semana.</p>'}${rod(n)}</div>`);
+  env.forEach(x=>{
+    const campos = x.c.campos.filter(([k])=>k!=='decisoes' && fsTemTexto(x.r[k]));
+    for(let i=0;i<Math.max(1,campos.length);i+=4){
+      const parte = campos.slice(i,i+4), tot = Math.ceil(campos.length/4);
+      out.push(n=>`<div class="fsa-s"><div class="fsa-kick">${escapeHtml(x.c.pessoa)}${tot>1?` · ${i/4+1}/${tot}`:''}</div><h2>${escapeHtml(x.c.area)}</h2>
+        ${parte.length ? `<div class="fsa-grid g${parte.length}">${parte.map(([k,rot])=>`<div class="fsa-card"><div class="fsa-card-t">${escapeHtml(rot)}</div><div class="fsa-card-x">${fsaTxt(x.r[k])}</div></div>`).join('')}</div>` : '<p class="fsa-vazio">Sem pontos registrados nesta semana.</p>'}${rod(n)}</div>`);
+    }
+  });
+  out.push(`<div class="fsa-s fsa-capa fsa-fim"><div class="fsa-folhas"></div>${logo.replace('fsa-logo','fsa-logo-capa')}<h1>Obrigado,<br>time!</h1><p class="fsa-sub">Bora para mais uma semana.</p></div>`);
+  return out.map((x,i)=>typeof x==='function' ? x(`${i+1}/${out.length}`) : x);
+}
+function fsaAbrir(){
+  fsaFonte(); FSA.slides = fsaSlides(); FSA.i = 0;
+  let ov = document.getElementById('fsa-ov'); if(ov) ov.remove();
+  ov = document.createElement('div'); ov.id = 'fsa-ov';
+  ov.innerHTML = `<div class="fsa-palco"><div class="fsa-quadro" id="fsa-quadro"></div></div>
+    <div class="fsa-bar"><button type="button" id="fsa-ant" aria-label="Anterior">‹</button><span id="fsa-pos"></span><button type="button" id="fsa-prox" aria-label="Próximo">›</button>
+    <button type="button" id="fsa-tela">Tela cheia</button><button type="button" id="fsa-fechar">Fechar (Esc)</button></div>`;
+  document.body.appendChild(ov);
+  const ir = d=>{ FSA.i = Math.max(0, Math.min(FSA.slides.length-1, FSA.i+d)); fsaMostrar(); };
+  ov.querySelector('#fsa-ant').onclick = ()=>ir(-1);
+  ov.querySelector('#fsa-prox').onclick = ()=>ir(1);
+  ov.querySelector('#fsa-quadro').onclick = ()=>ir(1);
+  ov.querySelector('#fsa-tela').onclick = ()=>{ try{ document.fullscreenElement ? document.exitFullscreen() : ov.requestFullscreen(); }catch(e){} };
+  const fechar = ()=>{ document.removeEventListener('keydown', tecla); try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){} ov.remove(); };
+  ov.querySelector('#fsa-fechar').onclick = fechar;
+  function tecla(e){ if(e.key==='Escape' && !document.fullscreenElement) fechar(); else if(['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); ir(1); } else if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); ir(-1); } }
+  document.addEventListener('keydown', tecla);
+  window.addEventListener('resize', fsaEscala);
+  fsaMostrar();
+}
+function fsaEscala(){
+  const q = document.getElementById('fsa-quadro'), p = q && q.parentElement; if(!q) return;
+  const k = Math.min(p.clientWidth/1280, p.clientHeight/720); q.style.transform = `scale(${k})`;
+}
+function fsaMostrar(){
+  const q = document.getElementById('fsa-quadro'); if(!q) return;
+  q.innerHTML = FSA.slides[FSA.i];
+  document.getElementById('fsa-pos').textContent = `${FSA.i+1} / ${FSA.slides.length}`;
+  fsaEscala();
+  /* texto longo: reduz a fonte do card até caber */
+  q.querySelectorAll('.fsa-card-x').forEach(x=>{ let f = 21; while(x.scrollHeight > x.clientHeight + 1 && f > 11){ f -= 1; x.style.fontSize = f+'px'; } });
+  q.querySelectorAll('.fsa-dec-t').forEach(x=>{ let f = 22; x.style.fontSize = f+'px'; });
+}
 function fsReuniaoHtml(){
   if(FS.linhas===null) return '';
   const { sem, itens } = fsReuniaoDados();
@@ -20511,7 +20618,7 @@ function fsReuniaoHtml(){
   const curto = t=>{ const x = String(t||'').trim().replace(/\s*\n+\s*/g,' · '); return x.length>220 ? x.slice(0,217).trim()+'…' : x; };
   return `<div class="fs-painel fsr">
     <div class="fs-cab fsr-cab"><div class="fs-tit">${icon('chart','tiny')} PAINEL DO FECHAMENTO · PARA A REUNIÃO ASCENTRIA <span class="fs-conta">semana de ${escapeHtml(fsRotSemana(sem))}</span></div>
-      <button type="button" class="btn-outline btn-mini" id="fsr-copiar">${icon('copy','tiny')} Copiar resumo para a pauta</button></div>
+      <div class="fsr-botoes"><button type="button" class="btn-accent btn-mini" id="fsr-apresentar">${icon('play','tiny')} Apresentação para a reunião</button><button type="button" class="btn-outline btn-mini" id="fsr-copiar">${icon('copy','tiny')} Copiar resumo para a pauta</button></div></div>
     <div class="fsr-kpis">
       <div class="fsr-kpi"><b>${env.length}/${itens.length}</b><span>áreas enviadas</span></div>
       <div class="fsr-kpi ${dec.length?'alerta':''}"><b>${dec.length}</b><span>decisões pedidas</span></div>
@@ -20545,6 +20652,7 @@ function fsPainelMuriloHtml(){
   </div>` : ''}`;
 }
 function fsBindMurilo(el){
+  { const a = el.querySelector('#fsr-apresentar'); if(a) a.addEventListener('click', fsaAbrir); }
   { const b = el.querySelector('#fsr-copiar'); if(b) b.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(fsReuniaoTexto()); b.innerHTML = `${icon('check','tiny')} Copiado`; setTimeout(()=>{ b.innerHTML = `${icon('copy','tiny')} Copiar resumo para a pauta`; }, 2200); }catch(e){ prompt('Copie o resumo:', fsReuniaoTexto()); } }); }
   el.querySelectorAll('[data-fs-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
     const chave = b.dataset.fsAbrir; const [uid, area, semana] = chave.split('|');
