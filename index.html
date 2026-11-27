@@ -2978,6 +2978,29 @@
   @media (max-width:640px){ .me-socia-tag{white-space:normal;} }
   .ev-parte2-btn{margin:10px 0 4px;display:inline-flex;align-items:center;gap:6px;}
   #ev-parte2[hidden], .ev-parte2-btn[hidden]{display:none !important;}
+  .fsr-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .fsr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
+  .fsr-kpi{background:var(--bg-card-2,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+  .fsr-kpi b{display:block;font-size:20px;line-height:1.1;}
+  .fsr-kpi span{font-size:11.5px;color:var(--text-mute);}
+  .fsr-kpi.alerta b{color:#e0a43a;}
+  .fsr-dec{border:1px solid rgba(224,164,58,.45);background:rgba(224,164,58,.08);border-radius:10px;padding:10px 14px;margin-bottom:12px;}
+  .fsr-lbl{font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#e0a43a;margin-bottom:6px;}
+  .fsr-dec ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13px;}
+  .fsr-quem{font-size:11.5px;color:var(--text-mute);margin-left:6px;}
+  .fsr-vazio{margin:0;font-size:12.5px;color:var(--text-mute);}
+  .fsr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+  .fsr-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px;}
+  .fsr-card.pend{opacity:.7;border-style:dashed;}
+  .fsr-card-hd{display:flex;align-items:baseline;gap:4px;margin-bottom:6px;}
+  .fsr-card-hd b{font-size:13.5px;}
+  .fsr-st{margin-left:auto;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#7fa36a;}
+  .fsr-card.pend .fsr-st{color:#e07a7a;}
+  .fsr-card dl{margin:0;}
+  .fsr-card dt{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);margin-top:6px;}
+  .fsr-card dd{margin:2px 0 0;line-height:1.45;}
+  .fsr-mais summary{cursor:pointer;margin-top:6px;font-size:12px;color:var(--accent);}
+  @media (max-width:640px){ .fsr-kpis{grid-template-columns:1fr;} }
   .fs-enviado{display:flex;align-items:center;gap:6px;margin:4px 0 8px;font-size:12.5px;font-weight:600;color:#7fa36a;}
   .te-form{display:flex;flex-direction:column;gap:18px;}
   .te-form .te-cab .cat{margin-bottom:4px;} .te-form .te-cab h3{margin:0;}
@@ -20459,6 +20482,54 @@ function fsLideresHtml(semana){
     </div>`;
   }).join('')}</div>`;
 }
+/* ---- Painel para a Reunião Ascentria (pedido de 26/11/2026): o fechamento da semana inteira numa tela só,
+   com quem enviou, as decisões que dependem do Murilo em destaque e um resumo de cada área para copiar na pauta. ---- */
+const FS_NADA = /^\s*(—|-|n\/a|nada|nenhum[a]?|sem novidades)(\s+(nesta|nessa|esta|essa)\s+semana)?\.?\s*$/i;
+function fsTemTexto(t){ const x = String(t||'').trim(); return x && !FS_NADA.test(x) && !/^Carmem, inclua aqui/i.test(x); }
+function fsReuniaoDados(){
+  const sem = fsSemana(1);
+  const itens = FS_LISTA.map(c=>{ const l = fsLinha(c.uid, sem, c.area); return { c, l, r:(l&&l.respostas)||{} }; });
+  return { sem, itens };
+}
+function fsReuniaoTexto(){
+  const { sem, itens } = fsReuniaoDados();
+  const linhas = [`FECHAMENTO DA SEMANA · ${fsRotSemana(sem)}`, ''];
+  const dec = itens.filter(x=>fsTemTexto(x.r.decisoes));
+  linhas.push('DECISÕES E PENDÊNCIAS PARA A REUNIÃO');
+  linhas.push(...(dec.length ? dec.map(x=>`- ${x.c.area} (${x.c.pessoa}): ${String(x.r.decisoes).trim()}`) : ['- Nenhuma decisão pedida.']));
+  itens.forEach(x=>{
+    linhas.push('', `${x.c.area.toUpperCase()} · ${x.c.pessoa}${x.l ? '' : ' · NÃO ENVIADO'}`);
+    if(x.l) x.c.campos.forEach(([k,rot])=>{ if(k!=='decisoes' && fsTemTexto(x.r[k])) linhas.push(`${rot}: ${String(x.r[k]).trim()}`); });
+  });
+  return linhas.join('\n');
+}
+function fsReuniaoHtml(){
+  if(FS.linhas===null) return '';
+  const { sem, itens } = fsReuniaoDados();
+  const env = itens.filter(x=>x.l), falta = itens.filter(x=>!x.l);
+  const dec = itens.filter(x=>fsTemTexto(x.r.decisoes));
+  const curto = t=>{ const x = String(t||'').trim().replace(/\s*\n+\s*/g,' · '); return x.length>220 ? x.slice(0,217).trim()+'…' : x; };
+  return `<div class="fs-painel fsr">
+    <div class="fs-cab fsr-cab"><div class="fs-tit">${icon('chart','tiny')} PAINEL DO FECHAMENTO · PARA A REUNIÃO ASCENTRIA <span class="fs-conta">semana de ${escapeHtml(fsRotSemana(sem))}</span></div>
+      <button type="button" class="btn-outline btn-mini" id="fsr-copiar">${icon('copy','tiny')} Copiar resumo para a pauta</button></div>
+    <div class="fsr-kpis">
+      <div class="fsr-kpi"><b>${env.length}/${itens.length}</b><span>áreas enviadas</span></div>
+      <div class="fsr-kpi ${dec.length?'alerta':''}"><b>${dec.length}</b><span>decisões pedidas</span></div>
+      <div class="fsr-kpi ${falta.length?'alerta':''}"><b>${falta.length}</b><span>${falta.length ? 'faltando: '+escapeHtml(falta.map(x=>x.c.area).join(', ')) : 'nenhuma faltando'}</span></div>
+    </div>
+    <div class="fsr-dec"><div class="fsr-lbl">Decisões e pendências para a reunião</div>
+      ${dec.length ? `<ul>${dec.map(x=>`<li><b>${escapeHtml(x.c.area)}</b> <span class="fsr-quem">${escapeHtml(x.c.pessoa)}</span><div>${escapeHtml(String(x.r.decisoes).trim()).replace(/\n/g,'<br>')}</div></li>`).join('')}</ul>` : '<p class="fsr-vazio">Nenhuma decisão pedida nesta semana.</p>'}
+    </div>
+    <div class="fsr-grid">${itens.map(x=>{
+      const campos = x.l ? x.c.campos.filter(([k])=>k!=='decisoes' && fsTemTexto(x.r[k])) : [];
+      return `<div class="fsr-card ${x.l?'':'pend'}">
+        <div class="fsr-card-hd"><b>${escapeHtml(x.c.area)}</b><span class="fsr-quem">${escapeHtml(x.c.pessoa)}</span><span class="fsr-st">${x.l ? (x.l.lido_em || x.c.uid===GT_MURILO_UID ? 'enviado' : 'novo') : 'não enviado'}</span></div>
+        ${x.l ? (campos.length ? `<dl>${campos.slice(0,3).map(([k,rot])=>`<dt>${escapeHtml(rot)}</dt><dd>${escapeHtml(curto(x.r[k]))}</dd>`).join('')}</dl>
+          ${campos.length>3 ? `<details class="fsr-mais"><summary>Ver mais ${campos.length-3}</summary><dl>${campos.slice(3).map(([k,rot])=>`<dt>${escapeHtml(rot)}</dt><dd>${escapeHtml(String(x.r[k]).trim()).replace(/\n/g,'<br>')}</dd>`).join('')}</dl></details>` : ''}` : '<p class="fsr-vazio">Sem pontos registrados.</p>')
+          : '<p class="fsr-vazio">Ainda não enviado.</p>'}
+      </div>`; }).join('')}</div>
+  </div>`;
+}
 function fsPainelMuriloHtml(){
   if(FS.linhas===null){ fsCarregar(); return '<div class="fs-painel"><div class="fs-tit">FECHAMENTO DA SEMANA</div><div class="gt-atual-det">Carregando…</div></div>'; }
   const atual = fsSemanaAberta(), aberta = fsAberta(atual);
@@ -20474,6 +20545,7 @@ function fsPainelMuriloHtml(){
   </div>` : ''}`;
 }
 function fsBindMurilo(el){
+  { const b = el.querySelector('#fsr-copiar'); if(b) b.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(fsReuniaoTexto()); b.innerHTML = `${icon('check','tiny')} Copiado`; setTimeout(()=>{ b.innerHTML = `${icon('copy','tiny')} Copiar resumo para a pauta`; }, 2200); }catch(e){ prompt('Copie o resumo:', fsReuniaoTexto()); } }); }
   el.querySelectorAll('[data-fs-abrir]').forEach(b=>b.addEventListener('click', async ()=>{
     const chave = b.dataset.fsAbrir; const [uid, area, semana] = chave.split('|');
     FS.aberto = FS.aberto===chave ? null : chave;
@@ -20980,6 +21052,7 @@ function renderGestaoTime(){
       </div>
       <button type="button" class="btn-outline gt-atualizar" id="gt-atualizar">${icon('check','tiny')} Atualizar</button>
     </div>
+    ${fsReuniaoHtml()}
     ${fsPainelMuriloHtml()}
     <div class="gt-grid">
       ${pessoas.map(p=>{
